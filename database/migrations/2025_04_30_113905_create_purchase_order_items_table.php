@@ -19,7 +19,6 @@ return new class extends Migration
             $table->decimal('received_quantity', 10, 3)->default(0);
             $table->decimal('unit_price', 10, 2);
             $table->decimal('total_price', 10, 2);
-            $table->timestamps();
             $table->boolean('is_active')->default(true);
             $table->softDeletes(); // Adds deleted_at column
             $table->timestamps();

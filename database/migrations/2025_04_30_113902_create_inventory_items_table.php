@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('reorder_level', 10, 3);
             $table->boolean('is_perishable')->default(false);
             $table->integer('shelf_life_days')->nullable(); // For perishable items
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_inactive')->default(false);
             $table->boolean('is_active')->default(true);
             $table->softDeletes(); // Adds deleted_at column
             $table->timestamps();
