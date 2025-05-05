@@ -120,6 +120,56 @@ class reservations extends Model
         
         $this->save();
     }
+
+    public function assignTable($partySize)
+    {
+        // Find an open table that fits the party size
+        $table = Table::where('status', 'open')
+            ->where('size', '>=', $partySize)
+            ->orderBy('size')
+            ->first();
+
+        if ($table) {
+            $this->tables()->attach($table->id);
+            $table->status = 'reserved';
+            $table->save();
+            return $table;
+        }
+        return null;
+    }
+
+    public function updateTableStatus($status)
+    {
+        foreach ($this->tables as $table) {
+            $table->status = $status;
+            $table->save();
+        }
+    }
+
+    public function addToWaitlist($customerId, $partySize)
+    {
+        $this->is_waitlisted = true;
+        $this->status = 'pending';
+        $this->customer_id = $customerId;
+        $this->party_size = $partySize;
+        $this->save();
+        // Optionally, trigger notification logic here
+    }
+
+    public static function createWalkInReservation($customerId, $partySize)
+    {
+        $reservation = new self([
+            'customer_id' => $customerId,
+            'party_size' => $partySize,
+            'reservation_type' => 'walk-in',
+            'status' => 'confirmed',
+            'reservation_date' => now()->toDateString(),
+            'reservation_time' => now(),
+        ]);
+        $reservation->save();
+        $reservation->assignTable($partySize);
+        return $reservation;
+    }
 }
 
 
