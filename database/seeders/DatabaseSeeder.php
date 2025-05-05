@@ -21,7 +21,14 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        // Call the LoginSeeder
-        $this->call(LoginSeeder::class);
+        $this->call([
+            LoginSeeder::class,
+            BranchSeeder::class,
+            InventoryCategorySeeder::class,
+            InventoryItemSeeder::class,
+            InventoryStockSeeder::class,
+            InventoryTransactionSeeder::class,
+          //  MenuRecipeSeeder::class,
+        ]);
     }
 }
