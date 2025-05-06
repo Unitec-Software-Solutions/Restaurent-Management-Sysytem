@@ -56,4 +56,59 @@ body {
     color: #ff6f61;
     font-weight: bold;
     font-size: 1.2rem;
+}
+
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-section {
+    background: #fff;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-section h2 {
+    color: #ff6f61;
+    margin-bottom: 15px;
+}
+
+.privileges-list p,
+.branch-info p,
+.company-info p {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.privilege-value,
+.info-value {
+    color: #ff6f61;
+    font-weight: bold;
+}
+
+.empty-dashboard {
+    text-align: center;
+    padding: 50px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.empty-image {
+    max-width: 200px;
+    margin-bottom: 20px;
+}
+
+.empty-dashboard h2 {
+    color: #ff6f61;
+    margin-bottom: 15px;
+}
+
+.empty-dashboard p {
+    color: #666;
+    font-size: 1.1rem;
 } 
