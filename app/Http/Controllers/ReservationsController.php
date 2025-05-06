@@ -12,20 +12,20 @@ class ReservationsController extends Controller
 {
     public function start()
     {
-        return view('reservations.start'); // Blade view with phone number form
+        return view('reservations.start'); // Form to enter phone number
     }
 
     public function checkPhone(Request $request)
     {
         $request->validate(['phone' => 'required']);
-        $customer = Customer::where('phone', $request->phone)->first();
+        $customer = \App\Models\Customer::where('phone', $request->phone)->first();
 
         if ($customer) {
-            // Redirect to login or auto-login if already authenticated
-            return redirect()->route('login')->with('phone', $request->phone);
+            // Ask if user wants to login
+            return view('reservations.ask_login', ['phone' => $request->phone]);
         } else {
-            // Redirect to signup or offer guest reservation
-            return redirect()->route('signup')->with('phone', $request->phone);
+            // Ask if user wants to sign up
+            return view('reservations.ask_signup', ['phone' => $request->phone]);
         }
     }
     
@@ -58,6 +58,15 @@ class ReservationsController extends Controller
             'reservation_date' => 'required|date',
             'reservation_time' => 'required',
             'reservation_type' => 'required|in:online,in-call,walk-in',
+            'customer_id' => 'required|exists:customers,id',
+            'branch_id' => 'required|exists:branches,id',
+            'organization_id' => 'required|exists:organizations,id',
+            'reservation_fee' => 'required|numeric|min:0',
+            'cancellation_fee' => 'required|numeric|min:0',
+            'is_waitlisted' => 'required|boolean',
+            'notification_preference' => 'required|in:email,sms,both',
+            'special_requests' => 'nullable|string',
+            'status' => 'required|in:pending,confirmed,canceled,completed',
             // ... other fields ...
         ]);
 
@@ -166,5 +175,20 @@ class ReservationsController extends Controller
             Mail::to($reservation->customer->email)->send(new \App\Mail\ReservationConfirmed($reservation));
         }
         // Add SMS logic if needed
+    }
+
+    public function summary($id)
+    {
+        $reservation = reservations::findOrFail($id);
+        return view('reservations.summary', compact('reservation'));
+    }
+
+    public function confirm(Request $request, $id)
+    {
+        $reservation = reservations::findOrFail($id);
+        $reservation->status = 'confirmed';
+        $reservation->save();
+        // Ask if making an order
+        return view('reservations.ask_order', compact('reservation'));
     }
 }
