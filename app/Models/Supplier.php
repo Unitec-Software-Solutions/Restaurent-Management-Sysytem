@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Models\PurchaseOrder;
+use App\Models\InventoryTransaction; 
+
 class Supplier extends Model
 {
     use HasFactory, SoftDeletes;
@@ -16,11 +19,14 @@ class Supplier extends Model
      * @var array
      */
     protected $fillable = [
+        'supplier_id',
         'name',
         'contact_person',
         'phone',
         'email',
         'address',
+        'has_vat_registration',
+        'vat_registration_no',
         'is_inactive',
         'is_active',
     ];
@@ -31,6 +37,7 @@ class Supplier extends Model
      * @var array
      */
     protected $casts = [
+        'has_vat_registration' => 'boolean',
         'is_inactive' => 'boolean',
         'is_active' => 'boolean',
     ];
