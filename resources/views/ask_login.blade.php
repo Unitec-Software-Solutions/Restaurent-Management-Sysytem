@@ -3,7 +3,7 @@
     <input type="hidden" name="phone" value="{{ $phone }}">
     <button type="submit">Yes, Login</button>
 </form>
-<form method="GET" action="{{ route('reservations.create') }}">
+<form method="GET" action="{{ route('reservation.create') }}">
     <input type="hidden" name="phone" value="{{ $phone }}">
     <button type="submit">No, Continue as Guest</button>
 </form>
