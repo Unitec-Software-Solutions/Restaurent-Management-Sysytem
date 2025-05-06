@@ -5,23 +5,21 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header">{{ __('Existing Customer') }}</div>
+                <div class="card-header">Welcome Back!</div>
 
                 <div class="card-body">
-                    <p class="text-center mb-4">This phone number is already registered. Would you like to login?</p>
+                    <p>We found your account with phone number: {{ $phone_number }}</p>
                     
-                    <div class="d-flex justify-content-center gap-3">
-                        <form method="GET" action="{{ route('login') }}">
-                            <input type="hidden" name="phone" value="{{ $phone }}">
-                            <button type="submit" class="btn btn-primary">
-                                {{ __('Yes, Login') }}
-                            </button>
-                        </form>
-
-                        <form method="GET" action="{{ route('reservation.create') }}">
-                            <input type="hidden" name="phone" value="{{ $phone }}">
-                            <button type="submit" class="btn btn-secondary">
-                                {{ __('No, Continue as Guest') }}
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('login') }}" class="btn btn-primary">
+                            Login to Your Account
+                        </a>
+                        
+                        <form action="{{ route('reservations.proceed-as-guest') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="phone_number" value="{{ $phone_number }}">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                Continue as Guest
                             </button>
                         </form>
                     </div>
