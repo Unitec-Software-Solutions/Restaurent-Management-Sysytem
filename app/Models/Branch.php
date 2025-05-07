@@ -10,17 +10,16 @@ class Branch extends Model
 {
     use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
+        'organization_id',
         'name',
         'address',
-        'phone',
+        'phone_number',
         'email',
+        'is_head_office',
         'is_active',
+        'opening_time',
+        'closing_time',
     ];
 
     /**
@@ -30,6 +29,7 @@ class Branch extends Model
      */
     protected $casts = [
         'is_active' => 'boolean',
+        'is_head_office' => 'boolean',
     ];
 
     /**
