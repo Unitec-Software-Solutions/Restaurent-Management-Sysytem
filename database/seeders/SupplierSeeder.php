@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Supplier;
+use Illuminate\Support\Str;
 
 class SupplierSeeder extends Seeder
 {
@@ -16,6 +17,7 @@ class SupplierSeeder extends Seeder
     {
         $suppliers = [
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Farm Fresh Produce',
                 'contact_person' => 'John Farmer',
                 'phone' => '(555) 111-2222',
@@ -23,8 +25,11 @@ class SupplierSeeder extends Seeder
                 'address' => '1234 Rural Road, Farmland, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => true,
+                'vat_registration_no' => 'VAT123456789',
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Quality Meats & Seafood',
                 'contact_person' => 'Mary Butcher',
                 'phone' => '(555) 222-3333',
@@ -32,8 +37,11 @@ class SupplierSeeder extends Seeder
                 'address' => '567 Harbor Way, Portside, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => true,
+                'vat_registration_no' => 'VAT987654321',
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Beverage Distributors Inc.',
                 'contact_person' => 'Robert Drinks',
                 'phone' => '(555) 333-4444',
@@ -41,8 +49,11 @@ class SupplierSeeder extends Seeder
                 'address' => '890 Brewery Lane, Distillery District, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => false,
+                'vat_registration_no' => null,
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Restaurant Equipment Suppliers',
                 'contact_person' => 'Susan Tools',
                 'phone' => '(555) 444-5555',
@@ -50,8 +61,11 @@ class SupplierSeeder extends Seeder
                 'address' => '246 Industrial Park, Manufacturing Zone, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => true,
+                'vat_registration_no' => 'VAT456789123',
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Packaging Solutions',
                 'contact_person' => 'David Wrapper',
                 'phone' => '(555) 555-6666',
@@ -59,8 +73,11 @@ class SupplierSeeder extends Seeder
                 'address' => '135 Box Street, Container City, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => false,
+                'vat_registration_no' => null,
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Cleaning & Sanitation Co.',
                 'contact_person' => 'Jennifer Clean',
                 'phone' => '(555) 666-7777',
@@ -68,8 +85,11 @@ class SupplierSeeder extends Seeder
                 'address' => '579 Sparkle Avenue, Sanitaryville, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => true,
+                'vat_registration_no' => 'VAT789123456',
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Bakery Ingredients Supply',
                 'contact_person' => 'Michael Baker',
                 'phone' => '(555) 777-8888',
@@ -77,8 +97,11 @@ class SupplierSeeder extends Seeder
                 'address' => '802 Flour Mill Road, Breadtown, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => false,
+                'vat_registration_no' => null,
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Dairy Delivery LLC',
                 'contact_person' => 'Sarah Milker',
                 'phone' => '(555) 888-9999',
@@ -86,8 +109,11 @@ class SupplierSeeder extends Seeder
                 'address' => '463 Pasture Lane, Creamery Hills, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => true,
+                'vat_registration_no' => 'VAT321654987',
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Spice & Seasoning Traders',
                 'contact_person' => 'Tom Spicy',
                 'phone' => '(555) 999-0000',
@@ -95,8 +121,11 @@ class SupplierSeeder extends Seeder
                 'address' => '751 Flavor Street, Aromaville, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => false,
+                'vat_registration_no' => null,
             ],
             [
+                'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
                 'name' => 'Office & Paper Supply Co.',
                 'contact_person' => 'Linda Stapler',
                 'phone' => '(555) 000-1111',
@@ -104,6 +133,8 @@ class SupplierSeeder extends Seeder
                 'address' => '369 Document Drive, Papertown, State 54321',
                 'is_inactive' => false,
                 'is_active' => true,
+                'has_vat_registration' => true,
+                'vat_registration_no' => 'VAT654987321',
             ],
         ];
 
@@ -113,4 +144,4 @@ class SupplierSeeder extends Seeder
 
         $this->command->info('Suppliers seeded successfully!');
     }
-} 
+}
