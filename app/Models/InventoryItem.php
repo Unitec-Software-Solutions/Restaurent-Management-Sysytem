@@ -23,6 +23,8 @@ class InventoryItem extends Model
         'reorder_level',
         'is_perishable',
         'shelf_life_days',
+        'expiry_date',
+        'show_in_menu',
         'is_inactive',
         'is_active',
     ];
