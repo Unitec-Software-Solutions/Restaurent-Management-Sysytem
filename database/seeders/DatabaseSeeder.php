@@ -36,6 +36,8 @@ class DatabaseSeeder extends Seeder
             // MenuRecipeSeeder::class,
             PurchaseOrderSeeder::class,
             PurchaseOrderItemSeeder::class,
+            GoodReceivedNoteSeeder::class,
+            GoodReceivedNoteItemSeeder::class,
         ]);
     }
 }
