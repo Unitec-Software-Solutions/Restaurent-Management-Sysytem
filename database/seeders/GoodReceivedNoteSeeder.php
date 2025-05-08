@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Models\Branch;
 use App\Models\Supplier;
+use App\Models\PurchaseOrder;
 
 class GoodReceivedNoteSeeder extends Seeder
 {
@@ -22,8 +23,8 @@ class GoodReceivedNoteSeeder extends Seeder
             GoodReceivedNote::create([
                 'grn_number' => 'GRN-' . strtoupper(Str::random(6)),
                 'branch_id' => Branch::inRandomOrder()->value('id'),
-                'purchase_order_id' => $purchaseOrderId,
-                'supplier_id' => Supplier::inRandomOrder()->value('supplier_id'),
+                'purchase_order_id' => PurchaseOrder::inRandomOrder()->value('id'),
+                'supplier_id' => Supplier::inRandomOrder()->value('id'),
                 'received_by' => $receivedBy,
                 'checked_by' => $checkedBy,
                 'received_date' => Carbon::now()->toDateString(),
