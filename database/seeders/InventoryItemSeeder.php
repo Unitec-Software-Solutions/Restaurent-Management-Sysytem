@@ -312,20 +312,21 @@ class InventoryItemSeeder extends Seeder
                 $expiryDate = Carbon::now()->addDays($item['shelf_life_days']);
             }
 
-            InventoryItem::create([
-                'inventory_category_id' => $categories[$item['category']]->id,
-                'name' => $item['name'],
-                'sku' => $item['sku'],
-                'unit_of_measurement' => $item['unit_of_measurement'],
-                'reorder_level' => $item['reorder_level'],
-                'is_perishable' => $item['is_perishable'],
-                'shelf_life_days' => $item['shelf_life_days'],
-                'expiry_date' => $expiryDate,
-                'is_inactive' => false,
-                'is_active' => true,
-                'deleted_at' => null,
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now()
+            InventoryItem::firstOrCreate(
+                ['sku' => $item['sku']], // Search by SKU to prevent duplicates
+                [
+                    'inventory_category_id' => $categories[$item['category']]->id,
+                    'name' => $item['name'],
+                    'unit_of_measurement' => $item['unit_of_measurement'],
+                    'reorder_level' => $item['reorder_level'],
+                    'is_perishable' => $item['is_perishable'],
+                    'shelf_life_days' => $item['shelf_life_days'],
+                    'expiry_date' => $expiryDate,
+                    'is_inactive' => false,
+                    'is_active' => true,
+                    'deleted_at' => null,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now()
             ]);
         }
 
