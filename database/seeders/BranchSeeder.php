@@ -13,9 +13,9 @@ class BranchSeeder extends Seeder
             [
                 'organization_id' => 1, 
                 'name' => 'Main Branch',
-                'address' => '123 Main St, Cityville, State 12345',
-                'phone_number' => '(555) 123-4567',
-                'email' => 'main@restaurant.com',
+                'address' => 'No. 25, Galle Road, Colombo 03, Sri Lanka',
+                'phone_number' => '+94 11 234 5678',
+                'email' => 'main@restaurant.lk',
                 'is_head_office' => true,
                 'is_active' => true,
                 'opening_time' => '08:00:00',
@@ -23,21 +23,32 @@ class BranchSeeder extends Seeder
             ],
             [
                 'organization_id' => 1,
-                'name' => 'Downtown Location',
-                'address' => '456 Center Ave, Downtown, State 12345',
-                'phone_number' => '(555) 987-6543',
-                'email' => 'downtown@restaurant.com',
+                'name' => 'Kandy Branch',
+                'address' => 'No. 12, Peradeniya Road, Kandy, Sri Lanka',
+                'phone_number' => '+94 81 223 4567',
+                'email' => 'kandy@restaurant.lk',
                 'is_head_office' => false,
                 'is_active' => true,
                 'opening_time' => '09:00:00',
+                'closing_time' => '22:30:00',
+            ],
+            [
+                'organization_id' => 1,
+                'name' => 'Galle Branch',
+                'address' => 'No. 7, Lighthouse Street, Galle Fort, Sri Lanka',
+                'phone_number' => '+94 91 223 7890',
+                'email' => 'galle@restaurant.lk',
+                'is_head_office' => false,
+                'is_active' => true,
+                'opening_time' => '10:00:00',
                 'closing_time' => '23:00:00',
             ],
             [
                 'organization_id' => 1,
-                'name' => 'Uptown Branch',
-                'address' => '789 Highland Blvd, Uptown, State 12345',
-                'phone_number' => '(555) 456-7890',
-                'email' => 'uptown@restaurant.com',
+                'name' => 'Negombo Branch',
+                'address' => 'No. 56, Lewis Place, Negombo, Sri Lanka',
+                'phone_number' => '+94 31 222 3344',
+                'email' => 'negombo@restaurant.lk',
                 'is_head_office' => false,
                 'is_active' => true,
                 'opening_time' => '08:30:00',
@@ -45,30 +56,22 @@ class BranchSeeder extends Seeder
             ],
             [
                 'organization_id' => 1,
-                'name' => 'Beachside Location',
-                'address' => '321 Ocean Dr, Beachville, State 12345',
-                'phone_number' => '(555) 234-5678',
-                'email' => 'beach@restaurant.com',
+                'name' => 'Airport Express',
+                'address' => 'Bandaranaike International Airport, Katunayake, Sri Lanka',
+                'phone_number' => '+94 11 225 5555',
+                'email' => 'airport@restaurant.lk',
                 'is_head_office' => false,
                 'is_active' => true,
-                'opening_time' => '10:00:00',
-                'closing_time' => '22:30:00',
-            ],
-            [
-                'organization_id' => 1,
-                'name' => 'Airport Branch',
-                'address' => 'Terminal 2, International Airport, State 12345',
-                'phone_number' => '(555) 765-4321',
-                'email' => 'airport@restaurant.com',
-                'is_head_office' => false,
-                'is_active' => true,
-                'opening_time' => '06:00:00',
+                'opening_time' => '05:00:00',
                 'closing_time' => '23:59:00',
             ],
         ];
 
         foreach ($branches as $branch) {
-            Branch::create($branch);
+            Branch::firstOrCreate(
+                ['organization_id' => $branch['organization_id'], 'name' => $branch['name']],
+                $branch
+            );
         }
 
         $this->command->info('Branches seeded successfully!');
