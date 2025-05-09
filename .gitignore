@@ -21,6 +21,4 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-
-# Ignore temporary files
-*.temp
+*.temp 
