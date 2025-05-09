@@ -7,12 +7,14 @@ use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class InventoryDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $branchId = $request->get('branch_id', auth()->user()->branch_id ?? null);
+        $branchId = $request->get('branch_id', Auth::user()?->branch_id ?? null);
         
         // Get soon to expire items (within next 7 days)
         $soonToExpireItems = InventoryItem::where('is_perishable', true)
@@ -29,19 +31,18 @@ class InventoryDashboardController extends Controller
 
         // Get low stock items with additional warning levels
         $lowStockItems = InventoryItem::whereHas('stocks', function ($query) use ($branchId) {
-            $query->whereRaw('current_quantity <= reorder_level');
-            if ($branchId) {
-                $query->where('branch_id', $branchId);
-            }
-        })
-        ->with(['category', 'stocks'])
-        ->get()
-        ->map(function ($item) {
-            $item->stock_status = $item->stocks->sum('current_quantity') <= ($item->reorder_level / 2) 
-                ? 'critical' 
-                : 'warning';
-            return $item;
-        });
+                $query->whereRaw('current_quantity <= reorder_level');
+                if ($branchId) {
+                    $query->where('branch_id', $branchId);
+                }
+            })
+            ->with(['category', 'stocks'])
+            ->get()
+            ->map(function ($item) {
+                $currentStock = $item->stocks->sum('current_quantity');
+                $item->stock_status = $currentStock <= ($item->reorder_level / 2) ? 'critical' : 'warning';
+                return $item;
+            });
 
         // Get recent transactions with expanded details
         $recentTransactions = InventoryTransaction::with(['item', 'branch', 'user'])
@@ -53,69 +54,110 @@ class InventoryDashboardController extends Controller
             ->take(10)
             ->get();
 
-        // Get inventory value by category with trends
-        $inventoryValueByCategory = InventoryItem::with(['category', 'stocks' => function ($query) use ($branchId) {
-            if ($branchId) {
-                $query->where('branch_id', $branchId);
-            }
-        }])
-        ->get()
-        ->groupBy('category.name')
-        ->map(function ($items) use ($branchId) {
-            $currentValue = $items->sum(function ($item) use ($branchId) {
+        // Calculate total inventory value
+        $totalStockValue = InventoryItem::with(['stocks' => function ($query) use ($branchId) {
+                if ($branchId) {
+                    $query->where('branch_id', $branchId);
+                }
+            }])
+            ->get()
+            ->sum(function ($item) {
                 return $item->stocks->sum(function ($stock) use ($item) {
-                    return $stock->current_quantity * $item->getLastPurchasePrice($stock->branch_id);
+                    return $stock->current_quantity * $item->unit_cost;
                 });
             });
 
-            // Calculate 30-day trend
-            $lastMonthValue = $this->calculateLastMonthValue($items, $branchId);
-            $trend = $lastMonthValue > 0 ? (($currentValue - $lastMonthValue) / $lastMonthValue) * 100 : 0;
-
-            return [
-                'value' => $currentValue,
-                'trend' => $trend,
-                'items_count' => $items->count()
-            ];
-        });
-
+        // Get total number of items
         $totalItems = InventoryItem::count();
-        $totalStockValue = $inventoryValueByCategory->sum('value');
 
-        // Calculate global stock health score
+        // Calculate stock health score
         $stockHealthScore = $this->calculateStockHealthScore($lowStockItems, $soonToExpireItems);
 
-        return view('inventory.dashboard', compact(
-            'soonToExpireItems',
-            'lowStockItems',
-            'recentTransactions',
-            'inventoryValueByCategory',
-            'totalItems',
-            'totalStockValue',
-            'stockHealthScore'
-        ));
-    }
+        // Get top selling items (last 30 days)
+        $topSellingItems = InventoryItem::with(['category'])
+            ->withCount(['transactions as quantity_sold' => function($query) use ($branchId) {
+                $query->select(DB::raw('SUM(quantity)'))
+                    ->where('transaction_type', 'out')
+                    ->where('created_at', '>=', Carbon::now()->subDays(30))
+                    ->when($branchId, function($query) use ($branchId) {
+                        $query->where('branch_id', $branchId);
+                    });
+            }])
+            ->orderByDesc('quantity_sold')
+            ->limit(5)
+            ->get()
+            ->each(function($item) {
+                $item->revenue = $item->quantity_sold * $item->price;
+            });
 
-    private function calculateLastMonthValue($items, $branchId)
-    {
-        $lastMonth = Carbon::now()->subDays(30);
-        $value = 0;
+        // Get purchase order count (last 30 days)
+        $purchaseOrdersCount = InventoryTransaction::where('transaction_type', 'in')
+            ->where('created_at', '>=', Carbon::now()->subDays(30))
+            ->when($branchId, function($query) use ($branchId) {
+                $query->where('branch_id', $branchId);
+            })
+            ->count();
 
-        foreach ($items as $item) {
-            $historicalTransactions = $item->transactions()
-                ->where('created_at', '<=', $lastMonth)
-                ->when($branchId, function ($query) use ($branchId) {
-                    return $query->where('branch_id', $branchId);
+        // Get sales order count (last 30 days)
+        $salesOrdersCount = InventoryTransaction::where('transaction_type', 'out')
+            ->where('created_at', '>=', Carbon::now()->subDays(30))
+            ->when($branchId, function($query) use ($branchId) {
+                $query->where('branch_id', $branchId);
+            })
+            ->count();
+
+        // Get purchase order summary (last 30 days)
+        $purchaseOrderSummary = [
+            'quantity_ordered' => InventoryTransaction::where('transaction_type', 'in')
+                ->where('created_at', '>=', Carbon::now()->subDays(30))
+                ->when($branchId, function($query) use ($branchId) {
+                    $query->where('branch_id', $branchId);
                 })
-                ->orderBy('created_at', 'desc')
-                ->first();
+                ->sum('quantity'),
+            'total_cost' => InventoryTransaction::where('transaction_type', 'in')
+                ->where('created_at', '>=', Carbon::now()->subDays(30))
+                ->when($branchId, function($query) use ($branchId) {
+                    $query->where('branch_id', $branchId);
+                })
+                ->sum(DB::raw('quantity * unit_price'))
+        ];
 
-            if ($historicalTransactions) {
-                $value += $historicalTransactions->current_quantity * $historicalTransactions->unit_price;
-            }
-        }
+        // Simplified sales order channels data (since status column doesn't exist)
+        $salesOrderChannels = [
+            [
+                'name' => 'All Channels',
+                'draft' => 0,
+                'confirmed' => $salesOrdersCount,
+                'packed' => 0,
+                'shipped' => 0,
+                'invoiced' => $salesOrdersCount
+            ]
+        ];
 
-        return $value;
+        // Active items (items with recent transactions)
+        $activeItems = InventoryItem::with(['stocks'])
+            ->whereHas('transactions', function($query) {
+                $query->where('created_at', '>=', Carbon::now()->subDays(7));
+            })
+            ->limit(5)
+            ->get()
+            ->pluck('name')
+            ->toArray();
+
+        return view('inventory.dashboard', [
+            'soonToExpireItems' => $soonToExpireItems,
+            'lowStockItems' => $lowStockItems,
+            'recentTransactions' => $recentTransactions,
+            'totalItems' => $totalItems,
+            'totalStockValue' => $totalStockValue,
+            'stockHealthScore' => $stockHealthScore,
+            'topSellingItems' => $topSellingItems,
+            'activeItems' => $activeItems,
+            'purchaseOrdersCount' => $purchaseOrdersCount,
+            'salesOrdersCount' => $salesOrdersCount,
+            'purchaseOrderSummary' => $purchaseOrderSummary,
+            'salesOrderChannels' => $salesOrderChannels
+        ]);
     }
 
     private function calculateStockHealthScore($lowStockItems, $soonToExpireItems)
@@ -137,16 +179,12 @@ class InventoryDashboardController extends Controller
 
     public function getTransactionHistory(Request $request)
     {
-        $branchId = $request->get('branch_id', auth()->user()->branch_id ?? null);
-        $startDate = $request->get('start_date', Carbon::now()->subDays(30));
-        $endDate = $request->get('end_date', Carbon::now());
-
+        $branchId = $request->get('branch_id', Auth::user()?->branch_id ?? null);
         $transactions = InventoryTransaction::with(['item', 'branch', 'user'])
             ->when($branchId, function ($query) use ($branchId) {
                 return $query->where('branch_id', $branchId);
             })
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->orderBy('created_at', 'desc')
+            ->latest()
             ->paginate(15);
 
         return view('inventory.transactions', compact('transactions'));
@@ -154,7 +192,7 @@ class InventoryDashboardController extends Controller
 
     public function getExpiryReport(Request $request)
     {
-        $branchId = $request->get('branch_id', auth()->user()->branch_id ?? null);
+        $branchId = $request->get('branch_id', Auth::user()?->branch_id ?? null);
         $daysThreshold = $request->get('days', 30);
 
         $expiringItems = InventoryItem::where('is_perishable', true)
