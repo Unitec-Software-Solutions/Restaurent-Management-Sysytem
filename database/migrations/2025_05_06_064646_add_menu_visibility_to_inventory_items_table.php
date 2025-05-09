@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('suppliers', function (Blueprint $table) {
-            $table->id();
+        Schema::table('inventory_items', function (Blueprint $table) {
+            $table->boolean('show_in_menu')->default(true)->after('is_active');
         });
     }
 
@@ -21,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('suppliers');
+        Schema::table('inventory_items', function (Blueprint $table) {
+            $table->dropColumn('show_in_menu');
+        });
     }
 };

@@ -16,30 +16,35 @@ class Branch extends Model
         'address',
         'phone_number',
         'email',
+        'is_head_office',
         'is_active',
+        'opening_time',
+        'closing_time',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
     protected $casts = [
         'is_active' => 'boolean',
+        'is_head_office' => 'boolean',
     ];
 
-    public function organization()
+    /**
+     * Get the inventory stock for the branch.
+     */
+    public function inventoryStock()
     {
-        return $this->belongsTo(Organization::class);
+        return $this->hasMany(InventoryStock::class);
     }
 
-    public function tables()
+    /**
+     * Get the inventory transactions for the branch.
+     */
+    public function inventoryTransactions()
     {
-        return $this->hasMany(Table::class);
-    }
-
-    public function reservations()
-    {
-        return $this->hasMany(Reservation::class);
-    }
-
-    public function staff()
-    {
-        return $this->hasMany(StaffProfile::class);
+        return $this->hasMany(InventoryTransaction::class);
     }
 } 

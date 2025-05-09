@@ -7,13 +7,16 @@
     },
     "devDependencies": {
         "@popperjs/core": "^2.11.6",
-        "@tailwindcss/vite": "^4.0.0",
+        "@tailwindcss/vite": "^4.1.5",
         "axios": "^1.8.2",
         "bootstrap": "^5.2.3",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^1.2.0",
         "sass": "^1.56.1",
-        "tailwindcss": "^4.0.0",
+        "tailwindcss": "^4.1.5",
         "vite": "^6.2.4"
+    },
+    "dependencies": {
+        "flowbite": "^3.1.2"
     }
 }

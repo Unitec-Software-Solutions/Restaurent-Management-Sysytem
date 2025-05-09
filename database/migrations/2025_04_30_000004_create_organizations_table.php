@@ -13,7 +13,6 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->text('address');
-            $table->string('phone_number');
             $table->string('email');
             $table->string('website')->nullable();
             $table->string('logo')->nullable();
@@ -26,7 +25,11 @@ return new class extends Migration
             $table->enum('status', ['pending', 'active', 'suspended', 'inactive'])->default('pending');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->unique('name');
+
             $table->softDeletes();
+
         });
     }
 

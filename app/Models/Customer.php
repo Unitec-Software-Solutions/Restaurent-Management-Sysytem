@@ -33,6 +33,18 @@ class User extends Authenticatable
     ];
 
     public function checkPhone(Request $request)
+<<<<<<< HEAD
+{
+    $request->validate(['phone_number' => 'required']);
+    $customer = \App\Models\Customer::where('phone', $request->phone)->first();
+
+    if ($customer) {
+        // Show a view asking if the user wants to login
+        return view('reservations.ask_login', ['phone_number' => $request->phone]);
+    } else {
+        // Show a view asking if the user wants to sign up
+        return view('reservations.ask_signup', ['phone_number' => $request->phone]);
+=======
     {
         $request->validate(['phone' => 'required']);
         $user = self::where('phone_number', $request->phone)->first();
@@ -55,5 +67,6 @@ class User extends Authenticatable
     public static function findByPhone($phone)
     {
         return self::where('phone_number', $phone)->first();
+>>>>>>> d6cd5ae3ac1bcbf08acf12b5c693b04502ea10be
     }
 }
