@@ -11,15 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('menu_categories', function (Blueprint $table) {
+        Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->text('description')->nullable();
-            $table->decimal('price', 8, 2);
-            $table->string('img')->nullable();
-            $table->boolean('is_available')->default(true);
-            $table->unsignedBigInteger('category_id')->nullable();
-            $table->unsignedBigInteger('inventory_item_id')->nullable();
             $table->timestamps();
         });
     }
@@ -29,9 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('menu_categories');
+        Schema::dropIfExists('categories');
     }
 };
-
-
-
