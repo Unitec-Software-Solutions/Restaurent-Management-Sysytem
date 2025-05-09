@@ -8,6 +8,8 @@ use App\Models\Branch;
 use App\Models\Supplier;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderSeeder extends Seeder
 {
@@ -65,11 +67,7 @@ class PurchaseOrderSeeder extends Seeder
                 $status = $this->getRandomWeightedStatus($statuses);
                 
                 // Generate PO number (format: PO-YYYYMMDD-XXX)
-                $poNumber = sprintf(
-                    "PO-%s-%03d",
-                    $orderDate->format('Ymd'),
-                    rand(1, 999)
-                );
+                $poNumber = 'PO-' . $orderDate->format('YmdHis') . '-' . Str::random(3);
 
                 PurchaseOrder::create([
                     'branch_id' => $branch->id,
@@ -81,7 +79,10 @@ class PurchaseOrderSeeder extends Seeder
                     'status' => $status,
                     'total_amount' => 0, // Will be updated when items are added
                     'notes' => $this->generateNotes($status),
-                    'is_active' => true
+                    'is_active' => true,
+                    'updates' => '1',
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }

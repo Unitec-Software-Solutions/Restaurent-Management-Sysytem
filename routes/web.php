@@ -7,13 +7,14 @@ use App\Http\Controllers\InventoryDashboardController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\InventoryItemController;
 use App\Http\Controllers\StockController;
-
+use App\Http\Controllers\ImageUploadController;
+use App\Http\Controllers\MenuController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/menu');
 });
 
-Auth::routes();
+Auth::routes(['register' => false, 'login' => false]);
 
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
@@ -60,4 +61,17 @@ Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.st
 // Other routes
 Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
 Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
+Route::get('/upload', function () {
+    return view('upload');
+});
+
+Route::post('/upload', [ImageUploadController::class, 'store'])->name('image.upload');
+Route::get('/menu', function () {
+    return view('menu');
+
+});
+
+Route::get('/menu/addmenucategory', [MenuController::class, 'showAddMenuCategoryForm'])->name('menu.addmenucategory');
+Route::post('/menu/addmenucategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storemenucategory');
+Route::post('/menu/storeCategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storeCategory');
 
