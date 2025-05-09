@@ -12,17 +12,17 @@ return new class extends Migration
             $table->id();
             $table->foreignId('organization_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->text('address');
-            $table->string('phone_number');
+            $table->string('address');
+            $table->string('phone');
             $table->string('email')->nullable();
-            $table->boolean('is_head_office')->default(false);
             $table->time('opening_time');
             $table->time('closing_time');
+            $table->integer('total_capacity');
+            $table->decimal('reservation_fee', 10, 2);
+            $table->decimal('cancellation_fee', 10, 2);
             $table->boolean('is_active')->default(true);
-            $table->softDeletes();
             $table->timestamps();
-
-            $table->unique(['organization_id', 'name']);
+            $table->softDeletes();
         });
     }
 
