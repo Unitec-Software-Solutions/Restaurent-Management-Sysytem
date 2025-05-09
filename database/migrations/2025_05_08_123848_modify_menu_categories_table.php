@@ -11,19 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('categories')) {
-            Schema::create('categories', function (Blueprint $table) {
-                $table->id();
-                $table->timestamps();
-            });
-        }
+        Schema::table('menu_categories', function (Blueprint $table) {
+            // Add or modify columns here
+            $table->string('new_column')->nullable();
+        });
     }
-    
+
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('categories');
+        Schema::table('menu_categories', function (Blueprint $table) {
+            // Reverse the changes
+            $table->dropColumn('new_column');
+        });
     }
 };

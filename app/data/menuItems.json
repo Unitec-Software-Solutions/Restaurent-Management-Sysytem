@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Pizza",
+    "description": "Delicious cheese pizza",
+    "price": 10.99,
+    "image": "images/pizza.jpg"
+  },
+  {
+    "name": "Burger",
+    "description": "Juicy beef burger",
+    "price": 8.99,
+    "image": "images/burger.jpg"
+  },
+  {
+    "name": "Pasta",
+    "description": "Creamy Alfredo pasta",
+    "price": 12.99,
+    "image": "images/pasta.jpg"
+  }
+] 

@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('menu_categories', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('description')->nullable();
-            $table->boolean('is_inactive')->default(false);
-            $table->integer('display_order')->default(0);
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes(); // Adds deleted_at column
+            $table->text('description')->nullable();
+            $table->decimal('price', 8, 2);
+            $table->string('img')->nullable();
+            $table->boolean('is_available')->default(true);
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->unsignedBigInteger('inventory_item_id')->nullable();
             $table->timestamps();
         });
     }
@@ -31,3 +32,6 @@ return new class extends Migration
         Schema::dropIfExists('menu_categories');
     }
 };
+
+
+

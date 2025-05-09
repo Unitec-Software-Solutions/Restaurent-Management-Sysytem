@@ -42,4 +42,9 @@ class Branch extends Model
     {
         return $this->hasMany(StaffProfile::class);
     }
+
+    public function menuCategories()
+    {
+        return $this->belongsToMany(MenuCategory::class, 'menu_category_branch');
+    }
 } 
