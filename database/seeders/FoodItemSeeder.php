@@ -31,6 +31,23 @@ class FoodItemSeeder extends Seeder
             'discounts' => null,
         ]);
 
+        FoodItem::create([
+            'name' => 'Veggie Burger',
+            'price' => 8.99,
+            'cost' => 4.00,
+            'ingredients' => 'Vegetables, Bun, Sauce',
+            'image_url' => 'images/burger.jpg',
+            'prep_time' => 15,
+            'is_active' => true,
+            'portion_size' => 'full',
+            'display_in_menu' => true,
+            'available_from' => '11:00',
+            'available_to' => '21:00',
+            'days_available' => 'Mon,Tue,Wed,Thu,Fri',
+            'promotions' => true,
+            'discounts' => 1.50,
+        ]);
+
         // Add more seed data as needed
     }
 }
