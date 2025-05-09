@@ -73,6 +73,14 @@ class ReservationsController extends Controller
             ]
         );
 
+        // Store guest info in session
+        session(['guest_user' => [
+            'id' => $user->id,
+            'phone_number' => $user->phone_number,
+            'name' => $user->name,
+            'is_registered' => false
+        ]]);
+
         // Log in the user
         Auth::login($user);
 
@@ -108,13 +116,55 @@ class ReservationsController extends Controller
     {
         $validated = $request->validate([
             'reservation_date' => 'required|date|after_or_equal:today',
-            'reservation_time' => 'required',
+            'start_time' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    $time = Carbon::parse($value);
+                    $opening = Carbon::parse('09:00');
+                    $closing = Carbon::parse('21:00');
+                    
+                    if ($time->lt($opening) || $time->gt($closing)) {
+                        $fail('Start time must be between 9:00 AM and 9:00 PM.');
+                    }
+                },
+            ],
+            'end_time' => [
+                'required',
+                'after:start_time',
+                function ($attribute, $value, $fail) use ($request) {
+                    $start = Carbon::parse($request->start_time);
+                    $end = Carbon::parse($value);
+                    $duration = $end->diffInHours($start);
+                    
+                    if ($duration < 1) {
+                        $fail('Reservation must be at least 1 hour long.');
+                    }
+                    if ($duration > 4) {
+                        $fail('Reservation cannot exceed 4 hours.');
+                    }
+                    
+                    $closing = Carbon::parse('22:00');
+                    if ($end->gt($closing)) {
+                        $fail('End time cannot be after 10:00 PM.');
+                    }
+                },
+            ],
             'party_size' => 'required|integer|min:1|max:20',
-            'special_requests' => 'nullable|string|max:500'
+            'special_requests' => 'nullable|string|max:500',
+            'customer_name' => 'required|string|max:255'
         ]);
 
-        // Combine date and time
-        $reservation_datetime = Carbon::parse($validated['reservation_date'] . ' ' . $validated['reservation_time']);
+        // Combine date with start and end times
+        $start_datetime = Carbon::parse($validated['reservation_date'] . ' ' . $validated['start_time']);
+        $end_datetime = Carbon::parse($validated['reservation_date'] . ' ' . $validated['end_time']);
+
+        // Additional validation for same-day reservations
+        if ($validated['reservation_date'] == Carbon::today()->format('Y-m-d')) {
+            $now = Carbon::now();
+            if ($start_datetime->lt($now)) {
+                return back()->with('error', 'Start time cannot be in the past.');
+            }
+        }
 
         // Get the first branch
         $branch = Branch::first();
@@ -122,24 +172,41 @@ class ReservationsController extends Controller
             return back()->with('error', 'No branch found. Please contact the restaurant administrator.');
         }
 
-        // Create reservation
-        $reservation = new reservations([
-            'user_id' => auth()->id(),
-            'customer_name' => auth()->user()->name,
-            'customer_phone' => auth()->user()->phone_number,
-            'customer_email' => auth()->user()->email,
-            'branch_id' => $branch->id,
-            'reservation_datetime' => $reservation_datetime,
-            'party_size' => $validated['party_size'],
-            'special_requests' => $validated['special_requests'],
-            'status' => 'pending',
-            'reservation_type' => 'online',
-            'reservation_fee' => 0.00,
-            'cancellation_fee' => 0.00,
-            'is_waitlist' => false,
-            'notify_when_available' => false,
-            'is_active' => true
-        ]);
+        // Get the authenticated user
+        $user = auth()->user();
+        if (!$user) {
+            return back()->with('error', 'You must be logged in to make a reservation.');
+        }
+
+        // Update guest user's name if they're a guest
+        if (!$user->is_registered) {
+            $user->name = $validated['customer_name'];
+            $user->save();
+            
+            // Update guest info in session
+            $guestInfo = session('guest_user', []);
+            $guestInfo['name'] = $validated['customer_name'];
+            session(['guest_user' => $guestInfo]);
+        }
+
+        // Create reservation with all required fields
+        $reservation = new reservations();
+        $reservation->user_id = $user->id;
+        $reservation->customer_name = $validated['customer_name'];
+        $reservation->customer_phone = $user->phone_number;
+        $reservation->customer_email = $user->email;
+        $reservation->branch_id = $branch->id;
+        $reservation->reservation_datetime = $start_datetime;
+        $reservation->end_datetime = $end_datetime;
+        $reservation->party_size = $validated['party_size'];
+        $reservation->special_requests = $validated['special_requests'];
+        $reservation->status = 'pending';
+        $reservation->reservation_type = 'online';
+        $reservation->reservation_fee = 0.00;
+        $reservation->cancellation_fee = 0.00;
+        $reservation->is_waitlist = false;
+        $reservation->notify_when_available = false;
+        $reservation->is_active = true;
 
         // Save reservation
         $reservation->save();
@@ -233,6 +300,12 @@ class ReservationsController extends Controller
     public function summary($id)
     {
         $reservation = reservations::findOrFail($id);
+        
+        // Clear guest session after successful reservation
+        if (!auth()->user()->is_registered) {
+            session()->forget('guest_user');
+        }
+        
         return view('reservations.summary', compact('reservation'));
     }
 
