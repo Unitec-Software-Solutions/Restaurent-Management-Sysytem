@@ -25,11 +25,11 @@ return new class extends Migration
             $table->enum('status', ['pending', 'active', 'suspended', 'inactive'])->default('pending');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-<<<<<<< HEAD
+
             $table->unique('name');
-=======
+
             $table->softDeletes();
->>>>>>> d6cd5ae3ac1bcbf08acf12b5c693b04502ea10be
+
         });
     }
 

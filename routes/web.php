@@ -15,7 +15,7 @@ Route::get('/', function () {
 
 Auth::routes();
 
-<<<<<<< HEAD
+
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(function () {
@@ -40,7 +40,7 @@ Route::prefix('inventory/stock')->name('inventory.stock.')->group(function () {
     Route::put('/{stock}', [StockController::class, 'update'])->name('update');
     Route::delete('/{stock}', [StockController::class, 'destroy'])->name('destroy');
 });
-=======
+
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
 // Reservation routes
@@ -60,4 +60,4 @@ Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.st
 // Other routes
 Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
 Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
->>>>>>> d6cd5ae3ac1bcbf08acf12b5c693b04502ea10be
+
