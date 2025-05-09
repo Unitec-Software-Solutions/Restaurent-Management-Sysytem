@@ -15,6 +15,7 @@ Route::get('/', function () {
 
 Auth::routes();
 
+<<<<<<< HEAD
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(function () {
@@ -39,3 +40,24 @@ Route::prefix('inventory/stock')->name('inventory.stock.')->group(function () {
     Route::put('/{stock}', [StockController::class, 'update'])->name('update');
     Route::delete('/{stock}', [StockController::class, 'destroy'])->name('destroy');
 });
+=======
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+// Reservation routes
+Route::get('/reservation/start', [ReservationsController::class, 'start'])->name('reservation.start');
+Route::post('/reservation/check-phone', [ReservationsController::class, 'checkPhone'])->name('reservation.check-phone');
+Route::post('/reservations/proceed-as-guest', [ReservationsController::class, 'proceedAsGuest'])->name('reservations.proceed-as-guest');
+Route::get('/reservations/choose-action', [ReservationsController::class, 'chooseAction'])->name('reservations.choose-action');
+Route::get('/reservation/create', [ReservationsController::class, 'create'])->name('reservation.create');
+Route::post('/reservation/store', [ReservationsController::class, 'store'])->name('reservation.store');
+Route::get('/reservation/{id}/summary', [ReservationsController::class, 'summary'])->name('reservation.summary');
+Route::post('/reservation/{id}/confirm', [ReservationsController::class, 'confirm'])->name('reservation.confirm');
+
+// Order routes
+Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
+Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
+
+// Other routes
+Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
+Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
+>>>>>>> d6cd5ae3ac1bcbf08acf12b5c693b04502ea10be
