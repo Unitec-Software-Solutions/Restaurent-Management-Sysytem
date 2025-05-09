@@ -1,124 +1,149 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">Make a Reservation</div>
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b">
+                <h1 class="text-2xl font-bold text-gray-800">Make a Reservation</h1>
+            </div>
 
-                <div class="card-body">
-                    <form method="POST" action="{{ route('reservation.store') }}">
-                        @csrf
+            <div class="p-6">
+                @if ($errors->any())
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
-                        @if(!auth()->user()->is_registered)
-                        <div class="mb-3">
-                            <label for="customer_name" class="form-label">Your Name</label>
-                            <input type="text" 
-                                   class="form-control @error('customer_name') is-invalid @enderror" 
-                                   id="customer_name" 
-                                   name="customer_name" 
-                                   value="{{ old('customer_name') }}" 
+                <form method="POST" action="{{ route('reservations.review') }}" id="reservationForm">
+                    @csrf
+                    @if($phone)
+                        <input type="hidden" name="phone" value="{{ $phone }}">
+                    @else
+                        <div class="mb-4">
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="tel" 
+                                   id="phone" 
+                                   name="phone" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   value="{{ old('phone') }}"
                                    required>
-                            @error('customer_name')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
                         </div>
-                        @endif
+                    @endif
 
-                        <div class="mb-3">
-                            <label for="reservation_date" class="form-label">Date</label>
-                            <input type="date" 
-                                   class="form-control @error('reservation_date') is-invalid @enderror" 
-                                   id="reservation_date" 
-                                   name="reservation_date" 
-                                   value="{{ old('reservation_date') }}" 
-                                   required>
-                            @error('reservation_date')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="start_time" class="form-label">Start Time</label>
-                                    <input type="time" 
-                                           class="form-control @error('start_time') is-invalid @enderror" 
-                                           id="start_time" 
-                                           name="start_time" 
-                                           value="{{ old('start_time') }}" 
-                                           min="09:00"
-                                           max="21:00"
-                                           required>
-                                    @error('start_time')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
-                                </div>
+                    <!-- Personal Information -->
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Personal Information</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                                <input type="text" 
+                                       name="name" 
+                                       id="name" 
+                                       value="{{ old('name') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="end_time" class="form-label">End Time</label>
-                                    <input type="time" 
-                                           class="form-control @error('end_time') is-invalid @enderror" 
-                                           id="end_time" 
-                                           name="end_time" 
-                                           value="{{ old('end_time') }}" 
-                                           min="10:00"
-                                           max="22:00"
-                                           required>
-                                    @error('end_time')
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $message }}</strong>
-                                        </span>
-                                    @enderror
-                                </div>
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
+                                <input type="email" 
+                                       name="email" 
+                                       id="email" 
+                                       value="{{ old('email') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="party_size" class="form-label">Party Size</label>
+                    <!-- Reservation Details -->
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Reservation Details</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Select Branch</label>
+                                <select name="branch_id" 
+                                        id="branch_id" 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        required>
+                                    <option value="">Select a branch</option>
+                                    @foreach($branches as $branch)
+                                        <option value="{{ $branch->id }}" 
+                                                data-opening="{{ $branch->opening_time }}"
+                                                data-closing="{{ $branch->closing_time }}"
+                                                {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                            {{ $branch->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <input type="date" 
+                                       name="date" 
+                                       id="date" 
+                                       min="{{ now()->format('Y-m-d') }}"
+                                       value="{{ old('date') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                                <input type="time" 
+                                       name="start_time" 
+                                       id="start_time" 
+                                       value="{{ old('start_time') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                                <input type="time" 
+                                       name="end_time" 
+                                       id="end_time" 
+                                       value="{{ old('end_time') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label for="number_of_people" class="block text-sm font-medium text-gray-700 mb-1">Number of People</label>
                             <input type="number" 
-                                   class="form-control @error('party_size') is-invalid @enderror" 
-                                   id="party_size" 
-                                   name="party_size" 
-                                   value="{{ old('party_size') }}" 
-                                   min="1" 
-                                   max="20" 
+                                   name="number_of_people" 
+                                   id="number_of_people" 
+                                   min="1"
+                                   value="{{ old('number_of_people') }}"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                    required>
-                            @error('party_size')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="special_requests" class="form-label">Special Requests</label>
-                            <textarea class="form-control @error('special_requests') is-invalid @enderror" 
-                                      id="special_requests" 
-                                      name="special_requests" 
-                                      rows="3">{{ old('special_requests') }}</textarea>
-                            @error('special_requests')
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $message }}</strong>
-                                </span>
-                            @enderror
-                        </div>
+                    <!-- Special Requests -->
+                    <div class="mb-6">
+                        <label for="comments" class="block text-sm font-medium text-gray-700 mb-1">Special Requests (Optional)</label>
+                        <textarea name="comments" 
+                                  id="comments" 
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">{{ old('comments') }}</textarea>
+                    </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">
-                                Continue to Summary
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <!-- Submit Button -->
+                    <div class="flex justify-between items-center">
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Review Reservation
+                        </button>
+                        <a href="{{ route('home') }}" class="text-gray-600 hover:text-gray-800">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -127,85 +152,65 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('reservationForm');
+    const branchSelect = document.getElementById('branch_id');
+    const dateInput = document.getElementById('date');
     const startTimeInput = document.getElementById('start_time');
     const endTimeInput = document.getElementById('end_time');
-    const dateInput = document.getElementById('reservation_date');
+    const peopleInput = document.getElementById('number_of_people');
 
-    function updateTimeConstraints() {
-        const startTime = new Date('1970-01-01T' + startTimeInput.value);
-        const minEndTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour minimum
-        const maxEndTime = new Date(startTime.getTime() + 4 * 60 * 60 * 1000); // 4 hours maximum
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+
+    // Validate time inputs
+    function validateTimeInputs() {
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+        const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
         
-        // Set min and max for end time
-        endTimeInput.min = minEndTime.toTimeString().slice(0, 5);
-        endTimeInput.max = maxEndTime.toTimeString().slice(0, 5);
-        
-        // If current end time is invalid, update it
-        if (endTimeInput.value) {
-            const endTime = new Date('1970-01-01T' + endTimeInput.value);
-            if (endTime < minEndTime) {
-                endTimeInput.value = endTimeInput.min;
-            } else if (endTime > maxEndTime) {
-                endTimeInput.value = endTimeInput.max;
-            }
-        }
-    }
-
-    function validateStartTime() {
-        const startTime = new Date('1970-01-01T' + startTimeInput.value);
-        const openingTime = new Date('1970-01-01T09:00');
-        const closingTime = new Date('1970-01-01T21:00');
-
-        if (startTime < openingTime || startTime > closingTime) {
-            startTimeInput.setCustomValidity('Start time must be between 9:00 AM and 9:00 PM.');
-        } else {
-            startTimeInput.setCustomValidity('');
-        }
-
-        // For same-day reservations, check if time is in the past
-        if (dateInput.value === new Date().toISOString().split('T')[0]) {
-            const now = new Date();
-            const selectedTime = new Date();
-            selectedTime.setHours(startTime.getHours(), startTime.getMinutes());
+        if (startTime && endTime && selectedBranch.value) {
+            const openingTime = selectedBranch.dataset.opening;
+            const closingTime = selectedBranch.dataset.closing;
             
-            if (selectedTime < now) {
-                startTimeInput.setCustomValidity('Start time cannot be in the past.');
-            }
-        }
-    }
-
-    function validateEndTime() {
-        const startTime = new Date('1970-01-01T' + startTimeInput.value);
-        const endTime = new Date('1970-01-01T' + endTimeInput.value);
-        const closingTime = new Date('1970-01-01T22:00');
-
-        if (endTime <= startTime) {
-            endTimeInput.setCustomValidity('End time must be after start time.');
-        } else if (endTime > closingTime) {
-            endTimeInput.setCustomValidity('End time cannot be after 10:00 PM.');
-        } else {
-            const duration = (endTime - startTime) / (1000 * 60 * 60); // duration in hours
-            if (duration < 1) {
-                endTimeInput.setCustomValidity('Reservation must be at least 1 hour long.');
-            } else if (duration > 4) {
-                endTimeInput.setCustomValidity('Reservation cannot exceed 4 hours.');
+            // Check if times are within branch hours
+            if (startTime < openingTime) {
+                startTimeInput.setCustomValidity(`Start time must be after ${openingTime}`);
+            } else if (endTime > closingTime) {
+                endTimeInput.setCustomValidity(`End time must be before ${closingTime}`);
+            } else if (startTime >= endTime) {
+                endTimeInput.setCustomValidity('End time must be after start time');
             } else {
+                startTimeInput.setCustomValidity('');
                 endTimeInput.setCustomValidity('');
             }
         }
     }
 
-    // Add event listeners
-    startTimeInput.addEventListener('change', function() {
-        validateStartTime();
-        updateTimeConstraints();
-        validateEndTime();
+    // Event listeners
+    branchSelect.addEventListener('change', validateTimeInputs);
+    startTimeInput.addEventListener('change', validateTimeInputs);
+    endTimeInput.addEventListener('change', validateTimeInputs);
+    dateInput.addEventListener('change', function() {
+        if (dateInput.value === today) {
+            const now = new Date();
+            const minStart = new Date(now.getTime() + 30 * 60000);
+            startTimeInput.min = minStart.toTimeString().slice(0,5);
+        } else {
+            startTimeInput.min = '';
+        }
+        validateTimeInputs();
     });
 
-    endTimeInput.addEventListener('change', validateEndTime);
-    dateInput.addEventListener('change', validateStartTime);
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        validateTimeInputs();
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            form.reportValidity();
+        }
+    });
 });
 </script>
 @endpush
-
-@endsection 
+@endsection
