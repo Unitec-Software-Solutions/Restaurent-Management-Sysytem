@@ -1,82 +1,71 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <x-card>
-        <!-- Header -->
-        <div class="mb-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Expiry Report</h3>
-            <p class="mt-1 text-sm text-gray-500">Monitor items approaching their expiration date.</p>
-        </div>
-
-        <!-- Filters -->
-        <div class="bg-gray-50 p-4 rounded-lg mb-6">
-            <form action="{{ route('inventory.expiry-report') }}" method="GET" class="sm:flex sm:items-center">
-                <div class="w-full sm:max-w-xs">
-                    <label for="days" class="block text-sm font-medium text-gray-700">Days Until Expiry</label>
-                    <select name="days" id="days" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                        <option value="7" {{ request('days', $daysThreshold) == 7 ? 'selected' : '' }}>Next 7 days</option>
-                        <option value="14" {{ request('days', $daysThreshold) == 14 ? 'selected' : '' }}>Next 14 days</option>
-                        <option value="30" {{ request('days', $daysThreshold) == 30 ? 'selected' : '' }}>Next 30 days</option>
-                        <option value="60" {{ request('days', $daysThreshold) == 60 ? 'selected' : '' }}>Next 60 days</option>
-                        <option value="90" {{ request('days', $daysThreshold) == 90 ? 'selected' : '' }}>Next 90 days</option>
-                    </select>
+    <div class="grid gap-4">
+        <!-- Filter Form -->
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4">
+            <form method="GET" class="flex gap-4 items-end">
+                <div>
+                    <label for="days" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Days Threshold</label>
+                    <input type="number" id="days" name="days" value="{{ $daysThreshold }}" min="1" max="90"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                 </div>
-                <div class="mt-4 sm:mt-0 sm:ml-4">
-                    <button type="submit" 
-                            class="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                        Update Report
-                    </button>
-                </div>
+                <button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                    Apply Filter
+                </button>
             </form>
         </div>
 
-        <!-- Items Table -->
-        <x-table :headers="['Item Details', 'Category', 'Current Stock', 'Expiry Date', 'Status']">
-            @forelse($expiringItems as $item)
-                @php
-                    $daysUntilExpiry = Carbon\Carbon::parse($item->expiry_date)->diffInDays(now());
-                    $badgeType = $daysUntilExpiry <= 7 ? 'danger' : 
-                                ($daysUntilExpiry <= 14 ? 'warning' : 'success');
-                    $status = $daysUntilExpiry <= 7 ? 'Critical' : 
-                             ($daysUntilExpiry <= 14 ? 'Warning' : 'Monitor');
-                @endphp
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">{{ $item->name }}</div>
-                        <div class="text-sm text-gray-500">SKU: {{ $item->sku }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">{{ $item->category->name }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">
-                            {{ $item->stocks->sum('current_quantity') }} {{ $item->unit_of_measurement }}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">
-                            {{ Carbon\Carbon::parse($item->expiry_date)->format('M d, Y') }}
-                        </div>
-                        <div class="text-xs text-gray-500">
-                            {{ $daysUntilExpiry }} days remaining
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <x-badge :type="$badgeType">
-                            {{ $status }}
-                        </x-badge>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                        No items expiring within {{ $daysThreshold }} days
-                    </td>
-                </tr>
-            @endforelse
-        </x-table>
-    </x-card>
-</div>
+        <!-- Expiring Items Table -->
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Items Expiring Within {{ $daysThreshold }} Days</h3>
+                <button type="button" onclick="window.print()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Item Name</th>
+                            <th scope="col" class="px-6 py-3">Category</th>
+                            <th scope="col" class="px-6 py-3">Current Stock</th>
+                            <th scope="col" class="px-6 py-3">Expiry Date</th>
+                            <th scope="col" class="px-6 py-3">Days Until Expiry</th>
+                            <th scope="col" class="px-6 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($expiringItems as $item)
+                            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ $item->name }}</td>
+                                <td class="px-6 py-4">{{ $item->category->name }}</td>
+                                <td class="px-6 py-4">{{ $item->stocks->sum('current_quantity') }}</td>
+                                <td class="px-6 py-4">{{ $item->expiry_date->format('M d, Y') }}</td>
+                                <td class="px-6 py-4">{{ $item->expiry_date->diffInDays(now()) }}</td>
+                                <td class="px-6 py-4">
+                                    @php
+                                        $daysLeft = $item->expiry_date->diffInDays(now());
+                                        $statusColor = $daysLeft <= 3 ? 'red' : ($daysLeft <= 7 ? 'yellow' : 'green');
+                                    @endphp
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                        {{ $statusColor === 'red' ? 'bg-red-100 text-red-800' : 
+                                           ($statusColor === 'yellow' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800') }}">
+                                        {{ $daysLeft <= 3 ? 'Critical' : ($daysLeft <= 7 ? 'Warning' : 'Upcoming') }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center">No items expiring within the specified timeframe.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 @endsection

@@ -1,86 +1,56 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <x-card>
-        <!-- Header -->
-        <div class="mb-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Transaction History</h3>
-            <p class="mt-1 text-sm text-gray-500">View and filter all inventory transactions.</p>
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Transaction History</h3>
+            <button type="button" onclick="window.print()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+            </button>
         </div>
-
-        <!-- Filters -->
-        <div class="bg-gray-50 p-4 rounded-lg mb-6">
-            <form action="{{ route('inventory.transactions') }}" method="GET" 
-                  class="space-y-4 sm:space-y-0 sm:flex sm:items-center sm:space-x-4">
-                <div class="flex-1">
-                    <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
-                    <input type="date" name="start_date" id="start_date" value="{{ request('start_date') }}"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                </div>
-                <div class="flex-1">
-                    <label for="end_date" class="block text-sm font-medium text-gray-700">End Date</label>
-                    <input type="date" name="end_date" id="end_date" value="{{ request('end_date') }}"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                </div>
-                <div class="flex items-end">
-                    <button type="submit" 
-                            class="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                        Filter Results
-                    </button>
-                </div>
-            </form>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                    <tr>
+                        <th scope="col" class="px-6 py-3">Date</th>
+                        <th scope="col" class="px-6 py-3">Item</th>
+                        <th scope="col" class="px-6 py-3">Type</th>
+                        <th scope="col" class="px-6 py-3">Quantity</th>
+                        <th scope="col" class="px-6 py-3">Unit Cost</th>
+                        <th scope="col" class="px-6 py-3">Total</th>
+                        <th scope="col" class="px-6 py-3">Branch</th>
+                        <th scope="col" class="px-6 py-3">User</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($transactions as $transaction)
+                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                            <td class="px-6 py-4">{{ $transaction->created_at->format('M d, Y H:i') }}</td>
+                            <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ $transaction->item->name }}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                    {{ $transaction->type === 'in' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                    {{ ucfirst($transaction->type) }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">{{ $transaction->quantity }}</td>
+                            <td class="px-6 py-4">${{ number_format($transaction->unit_price, 2) }}</td>
+                            <td class="px-6 py-4">${{ number_format($transaction->quantity * $transaction->unit_price, 2) }}</td>
+                            <td class="px-6 py-4">{{ $transaction->branch->name }}</td>
+                            <td class="px-6 py-4">{{ $transaction->user->name }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="px-6 py-4 text-center">No transactions found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-
-        <!-- Transactions Table -->
-        <x-table :headers="['Date & Time', 'Item Details', 'Type', 'Quantity', 'User', 'Notes']">
-            @forelse($transactions as $transaction)
-                <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ $transaction->created_at->format('M d, Y H:i') }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">{{ $transaction->item->name }}</div>
-                        <div class="text-sm text-gray-500">{{ $transaction->item->category->name }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <x-badge type="{{ $transaction->isIncomingTransaction() ? 'success' : 'danger' }}">
-                            {{ $transaction->getFormattedTypeAttribute() }}
-                        </x-badge>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm {{ $transaction->isIncomingTransaction() ? 'text-green-600' : 'text-red-600' }} font-medium">
-                            {{ $transaction->isIncomingTransaction() ? '+' : '-' }}{{ $transaction->quantity }} {{ $transaction->item->unit_of_measurement }}
-                        </div>
-                        @if($transaction->unit_price)
-                            <div class="text-xs text-gray-500">${{ number_format($transaction->unit_price, 2) }} per unit</div>
-                        @endif
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ $transaction->user->name }}
-                        @if($transaction->branch)
-                            <div class="text-xs text-gray-400">{{ $transaction->branch->name }}</div>
-                        @endif
-                    </td>
-                    <td class="px-6 py-4 text-sm text-gray-500">
-                        <div class="max-w-xs truncate">{{ $transaction->notes }}</div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                        No transactions found for the selected period
-                    </td>
-                </tr>
-            @endforelse
-        </x-table>
-
-        <!-- Pagination -->
-        @if($transactions->hasPages())
-            <div class="mt-4">
-                {{ $transactions->withQueryString()->links() }}
-            </div>
-        @endif
-    </x-card>
-</div>
+        <div class="p-4">
+            {{ $transactions->links() }}
+        </div>
+    </div>
 @endsection
