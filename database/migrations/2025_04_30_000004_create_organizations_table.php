@@ -17,11 +17,16 @@ return new class extends Migration
             $table->string('email');
             $table->string('website')->nullable();
             $table->string('logo')->nullable();
+            $table->string('trading_name')->nullable();
+            $table->string('registration_number')->unique()->nullable();
+            $table->string('phone')->nullable();
+            $table->string('alternative_phone')->nullable();
+            $table->json('business_hours')->nullable();
+            $table->enum('business_type', ['restaurant', 'cafe', 'bar', 'food_truck', 'catering', 'other'])->default('restaurant');
+            $table->enum('status', ['pending', 'active', 'suspended', 'inactive'])->default('pending');
             $table->boolean('is_active')->default(true);
-            $table->softDeletes();
             $table->timestamps();
-
-            $table->unique('name');
+            $table->softDeletes();
         });
     }
 
