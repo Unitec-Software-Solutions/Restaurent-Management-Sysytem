@@ -88,12 +88,12 @@
 
         <!-- Filter Buttons -->
         <div class="md:col-span-2 flex justify-end space-x-2">
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            <button type="submit" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
                 Apply Filters
             </button>
             @if(request()->hasAny(['date_range', 'transaction_type', 'branch_id', 'search', 'start_date', 'end_date']))
                 <a href="{{ route('inventory.transactions.index') }}" 
-                   class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                class="px-3 py-1.5 text-sm bg-gray-500 text-white rounded hover:bg-gray-600">
                     Clear Filters
                 </a>
             @endif
@@ -157,9 +157,9 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             {{ $transaction->branch->name }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
                             <a href="{{ route('inventory.transactions.show', $transaction) }}" 
-                               class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                            class="px-2 py-1 text-xs text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
                                 View
                             </a>
                         </td>
