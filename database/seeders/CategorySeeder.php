@@ -16,5 +16,7 @@ class CategorySeeder extends Seeder
         Category::create([
             'name' => 'Pizza',
         ]);
+
+        // Add more categories as needed
     }
 }
