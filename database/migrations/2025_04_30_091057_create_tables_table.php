@@ -11,14 +11,15 @@ return new class extends Migration
         Schema::create('tables', function (Blueprint $table) {
             $table->id();
             $table->foreignId('branch_id')->constrained()->onDelete('cascade');
-            $table->string('table_number');
+            $table->string('number');
             $table->integer('capacity');
             $table->enum('status', ['available', 'occupied', 'reserved', 'maintenance'])->default('available');
             $table->string('location')->nullable();
             $table->timestamps();
+            $table->text('description')->nullable();
             $table->integer('x_position')->nullable(); // For table mapping visualization
             $table->integer('y_position')->nullable(); // For table mapping visualization
-            $table->unique(['branch_id', 'table_number']);
+            $table->unique(['branch_id', 'number']);
         });
 
         Schema::create('reservation_tables', function (Blueprint $table) {

@@ -39,8 +39,8 @@
 
             <!-- Transactions -->
             <li>
-                <a href="{{ route('inventory.transactions') }}"
-                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.transactions') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('inventory.transactions.index') }}"
+                class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.transactions.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
                     </svg>
@@ -48,7 +48,19 @@
                 </a>
             </li>
 
+            <!-- GRN -->
+            <li>
+                <a href="{{ route('inventory.grn.index') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.grn.') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
+                    </svg>
+                    <span class="ml-3">G R N</span>
+                </a>
+            </li>
+
             <!-- Expiry Report -->
+            {{-- 
             <li>
                 <a href="{{ route('inventory.expiry-report') }}"
                    class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.expiry-report') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
@@ -58,6 +70,7 @@
                     <span class="ml-3">Expiry Report</span>
                 </a>
             </li>
+            --}}
 
             <!-- Create Item                     
             <li>
