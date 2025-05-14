@@ -22,10 +22,26 @@
         <!-- GRN Header -->
         <div class="bg-blue-600 dark:bg-blue-800 text-white p-6">
             <div class="flex justify-between items-start">
+                <!-- GRN number section -->
                 <div>
                     <h1 class="text-2xl font-bold">GOODS RECEIVED NOTE</h1>
-                    <p class="mt-2">GRN No: <span class="font-semibold">Auto-generated</span></p>
+                    <p class="mt-2">GRN No: <span class="font-semibold">{{ $grnNumber }}</span></p>
+                    <input type="hidden" name="grn_number" value="{{ $grnNumber }}">
                 </div>
+
+                <!-- Add this after supplier selection -->
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Order*</label>
+                    <select name="purchase_order_id" id="purchase-order" required class="w-full rounded-md">
+                        <option value="">Select Purchase Order</option>
+                        @foreach($pendingPOs as $po)
+                            <option value="{{ $po->id }}" data-items='@json($po->items)'>
+                                {{ $po->po_number }} - {{ $po->supplier->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                
                 <div class="text-right">
                     <p class="text-lg">Date: <span class="font-semibold">{{ date('d M, Y') }}</span></p>
                     <p class="mt-2">Branch: 
@@ -83,7 +99,6 @@
                         <thead class="bg-gray-50 dark:bg-gray-700">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Item Code</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Unit Cost</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quantity</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Free Items</th>
@@ -95,22 +110,22 @@
                             <!-- Dynamic rows will be added here -->
                             <tr class="item-row">
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <input type="text" name="items[0][code]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                    <select name="items[0][inventory_item_id]" class="item-select w-full rounded-md" required>
+                                        <option value="">Select Item</option>
+                                    </select>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="number" step="0.01" name="items[0][unit_price]" class="unit-cost w-full rounded-md" required>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <input type="text" name="items[0][description]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                    <input type="number" name="items[0][quantity]" class="quantity w-full rounded-md" required>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <input type="number" step="0.01" name="items[0][unit_cost]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                    <input type="number" name="items[0][free_quantity]" class="free-quantity w-full rounded-md" value="0">
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <input type="number" name="items[0][quantity]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <input type="number" name="items[0][free_quantity]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <input type="number" step="0.01" name="items[0][discount]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                                    <input type="number" step="0.01" name="items[0][discount_percentage]" class="discount w-full rounded-md" value="0">
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="item-total">0.00</span>
@@ -197,102 +212,98 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Add new item row
-    let itemCount = 1;
-    document.getElementById('add-item').addEventListener('click', function() {
-        const newRow = document.createElement('tr');
-        newRow.className = 'item-row';
-        newRow.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap">
-                <input type="text" name="items[${itemCount}][code]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <input type="text" name="items[${itemCount}][description]" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <input type="number" step="0.01" name="items[${itemCount}][unit_cost]" class="unit-cost w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <input type="number" name="items[${itemCount}][quantity]" class="quantity w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <input type="number" name="items[${itemCount}][free_quantity]" class="free-quantity w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <input type="number" step="0.01" name="items[${itemCount}][discount]" class="discount w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white dark:border-gray-600">
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <span class="item-total">0.00</span>
-            </td>
-        `;
-        document.getElementById('items-container').appendChild(newRow);
-        itemCount++;
-    });
-
-    // Calculate totals when inputs change
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('unit-cost') || 
-            e.target.classList.contains('quantity') || 
-            e.target.classList.contains('discount')) {
-            calculateRowTotal(e.target.closest('tr'));
-            calculateGrandTotal();
+    const poSelect = document.getElementById('purchase-order');
+    const taxRate = {{ config('app.tax_rate', 0) }}; // Get from config or system settings
+    
+    poSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+            const items = JSON.parse(selectedOption.dataset.items);
+            populateItemDropdowns(items);
         }
     });
 
-    // Calculate row total
+    function populateItemDropdowns(items) {
+        const itemSelects = document.querySelectorAll('.item-select');
+        itemSelects.forEach(select => {
+            select.innerHTML = '<option value="">Select Item</option>';
+            items.forEach(item => {
+                const option = new Option(
+                    `${item.inventory_item.sku} - ${item.inventory_item.name}`,
+                    item.inventory_item_id
+                );
+                option.dataset.item = JSON.stringify(item);
+                select.add(option);
+            });
+        });
+    }
+
     function calculateRowTotal(row) {
         const unitCost = parseFloat(row.querySelector('.unit-cost').value) || 0;
         const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+        const freeQty = parseFloat(row.querySelector('.free-quantity').value) || 0;
         const discount = parseFloat(row.querySelector('.discount').value) || 0;
         
         const subtotal = unitCost * quantity;
-        const discountedAmount = subtotal * (discount / 100);
-        const rowTotal = subtotal - discountedAmount;
+        const discountAmount = subtotal * (discount / 100);
+        const rowTotal = subtotal - discountAmount;
         
         row.querySelector('.item-total').textContent = rowTotal.toFixed(2);
+        return {
+            subtotal,
+            discountAmount,
+            rowTotal
+        };
     }
 
-    // Calculate grand total
     function calculateGrandTotal() {
         let subtotal = 0;
         let totalDiscount = 0;
         
         document.querySelectorAll('.item-row').forEach(row => {
-            const unitCost = parseFloat(row.querySelector('.unit-cost').value) || 0;
-            const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-            const discount = parseFloat(row.querySelector('.discount').value) || 0;
-            
-            const rowSubtotal = unitCost * quantity;
-            const rowDiscount = rowSubtotal * (discount / 100);
-            
-            subtotal += rowSubtotal;
-            totalDiscount += rowDiscount;
+            const totals = calculateRowTotal(row);
+            subtotal += totals.subtotal;
+            totalDiscount += totals.discountAmount;
         });
         
-        // Assuming tax rate of 15% - you can make this configurable
-        const taxRate = 0.15;
-        const tax = (subtotal - totalDiscount) * taxRate;
-        const totalAmount = subtotal - totalDiscount + tax;
+        const taxableAmount = subtotal - totalDiscount;
+        const tax = taxableAmount * taxRate;
+        const grandTotal = taxableAmount + tax;
         
         document.getElementById('subtotal').textContent = subtotal.toFixed(2);
         document.getElementById('total-discount').textContent = totalDiscount.toFixed(2);
         document.getElementById('tax').textContent = tax.toFixed(2);
-        document.getElementById('total-amount').textContent = totalAmount.toFixed(2);
+        document.getElementById('total-amount').textContent = grandTotal.toFixed(2);
         
-        // Update balance due based on amount paid
+        // Update hidden fields for form submission
+        document.getElementById('input-subtotal').value = subtotal;
+        document.getElementById('input-discount').value = totalDiscount;
+        document.getElementById('input-tax').value = tax;
+        document.getElementById('input-total').value = grandTotal;
+        
         updateBalanceDue();
     }
 
-    // Update balance due when amount paid changes
-    document.querySelector('input[name="amount_paid"]').addEventListener('input', updateBalanceDue);
-    
-    function updateBalanceDue() {
-        const totalAmount = parseFloat(document.getElementById('total-amount').textContent) || 0;
-        const amountPaid = parseFloat(document.querySelector('input[name="amount_paid"]').value) || 0;
-        const balanceDue = totalAmount - amountPaid;
-        
-        document.querySelector('input[name="balance_due"]').value = balanceDue.toFixed(2);
-    }
+    // Add event listeners for calculation triggers
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('.unit-cost, .quantity, .free-quantity, .discount')) {
+            calculateGrandTotal();
+        }
+    });
+
+    // Add item selection handler
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('.item-select')) {
+            const row = e.target.closest('tr');
+            const option = e.target.options[e.target.selectedIndex];
+            if (option.dataset.item) {
+                const item = JSON.parse(option.dataset.item);
+                row.querySelector('.item-description').textContent = item.inventory_item.name;
+                row.querySelector('.unit-cost').value = item.unit_price;
+                calculateGrandTotal();
+            }
+        }
+    });
 });
 </script>
 @endsection

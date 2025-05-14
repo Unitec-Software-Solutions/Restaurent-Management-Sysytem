@@ -87,4 +87,32 @@ class ItemController extends Controller
         $item->load(['inventoryCategory', 'stocks.branch']);
         return view('inventory.items.show', compact('item'));
     }
+
+    /**
+     * Remove the specified item from storage.
+     */
+    public function destroy(InventoryItem $item)
+    {
+        DB::beginTransaction();
+        try {
+            // Check if the item has any related stock or transactions
+            if ($item->stocks()->exists() || $item->transactions()->exists()) {
+                // Instead of deleting, mark as inactive
+                $item->update(['is_active' => false]);
+                $message = 'Item has been marked as inactive.';
+            } else {
+                // If no related records, we can safely delete
+                $item->delete();
+                $message = 'Item has been deleted.';
+            }
+            
+            DB::commit();
+            return redirect()->route('inventory.items.index')
+                ->with('success', $message);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('inventory.items.index')
+                ->with('error', 'Failed to delete item: ' . $e->getMessage());
+        }
+    }
 }

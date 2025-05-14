@@ -51,60 +51,83 @@ class GoodReceivedNoteController extends Controller
         return view('inventory.grn.index', compact('grns', 'branches', 'suppliers'));
     }
 
+    
     public function create()
     {
-       $user = Auth::user();
-    $pendingPOs = collect(); 
-    
-    if ($user && $user->branch_id) {
+        $user = Auth::user();
         $pendingPOs = PurchaseOrder::where('status', 'approved')
             ->where('branch_id', $user->branch_id)
-            ->with('supplier')
-            ->orderBy('po_number', 'asc') 
+            ->with(['supplier', 'items.inventoryItem'])
+            ->orderBy('po_number', 'asc')
             ->get();
+        
+        $branches = Branch::where('is_active', true)->get();
+        $suppliers = Supplier::where('is_active', true)->get();
+        $grnNumber = $this->generateGRNNumber(); // Pre-generate GRN number
+        
+        return view('inventory.grn.create', compact('pendingPOs', 'branches', 'suppliers', 'grnNumber'));
     }
+
     
-    $branches = Branch::all(); 
-    $suppliers = Supplier::all(); 
-    
-    return view('inventory.grn.create', compact('pendingPOs', 'branches', 'suppliers'));
-    }
-
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'purchase_order_id' => 'required|exists:purchase_orders,id',
-            'supplier_id' => 'required|exists:suppliers,id',
-            'delivery_note_number' => 'nullable|string',
-            'supplier_invoice_number' => 'nullable|string',
-            'notes' => 'nullable|string',
-        ]);
-
-        try {
-            $grn = GoodReceivedNote::create([
-                'grn_number' => $this->generateGRNNumber(),
-                'branch_id' => Auth::user()->branch_id,
-                'purchase_order_id' => $validated['purchase_order_id'],
-                'supplier_id' => $validated['supplier_id'],
-                'received_by' => Auth::id(),
-                'received_date' => Carbon::now()->toDateString(),
-                'received_time' => Carbon::now()->toTimeString(),
-                'delivery_note_number' => $validated['delivery_note_number'],
-                'supplier_invoice_number' => $validated['supplier_invoice_number'],
-                'status' => 'pending',
-                'notes' => $validated['notes'],
-                'ip_address' => $request->ip(),
+        public function store(Request $request)
+        {
+            $validated = $request->validate([
+                'grn_number' => 'required|unique:good_received_notes,grn_number',
+                'purchase_order_id' => 'required|exists:purchase_orders,id',
+                'supplier_id' => 'required|exists:suppliers,id',
+                'delivery_note_number' => 'nullable|string',
+                'supplier_invoice_number' => 'required|string',
+                'notes' => 'nullable|string',
+                'items' => 'required|array|min:1',
+                'items.*.inventory_item_id' => 'required|exists:inventory_items,id',
+                'items.*.quantity' => 'required|numeric|min:0',
+                'items.*.unit_price' => 'required|numeric|min:0',
+                'items.*.free_quantity' => 'nullable|numeric|min:0',
+                'items.*.discount_percentage' => 'nullable|numeric|min:0|max:100',
             ]);
 
-            return redirect()->route('inventory.grn.show', $grn)
-                ->with('success', 'GRN created successfully');
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Error creating GRN: ' . $e->getMessage())
-                ->withInput();
+            DB::beginTransaction();
+            try {
+                $grn = GoodReceivedNote::create([
+                    'grn_number' => $validated['grn_number'],
+                    'branch_id' => Auth::user()->branch_id,
+                    'purchase_order_id' => $validated['purchase_order_id'],
+                    'supplier_id' => $validated['supplier_id'],
+                    'received_by' => Auth::id(),
+                    'received_date' => now()->toDateString(),
+                    'received_time' => now()->toTimeString(),
+                    'delivery_note_number' => $validated['delivery_note_number'],
+                    'supplier_invoice_number' => $validated['supplier_invoice_number'],
+                    'status' => 'pending',
+                    'notes' => $validated['notes'],
+                    'total_amount' => $request->input('total_amount', 0),
+                    'discount_amount' => $request->input('discount_amount', 0),
+                    'tax_amount' => $request->input('tax_amount', 0),
+                    'ip_address' => $request->ip(),
+                ]);
+
+                foreach ($validated['items'] as $item) {
+                    $grn->items()->create([
+                        'inventory_item_id' => $item['inventory_item_id'],
+                        'quantity' => $item['quantity'],
+                        'received_quantity' => $item['quantity'],
+                        'accepted_quantity' => $item['quantity'],
+                        'unit_price' => $item['unit_price'],
+                        'free_quantity' => $item['free_quantity'] ?? 0,
+                        'discount_percentage' => $item['discount_percentage'] ?? 0,
+                    ]);
+                }
+
+                DB::commit();
+                return redirect()->route('inventory.grn.show', $grn)
+                    ->with('success', 'GRN created successfully');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return redirect()->back()
+                    ->with('error', 'Error creating GRN: ' . $e->getMessage())
+                    ->withInput();
+            }
         }
-    }
 
     public function show(GoodReceivedNote $grn)
     {
@@ -130,16 +153,15 @@ class GoodReceivedNoteController extends Controller
     private function generateGRNNumber()
     {
         $prefix = 'GRN';
-        $year = Carbon::now()->format('Y');
-        $month = Carbon::now()->format('m');
+        $branch = Auth::user()->branch_id ?? '00';
+        $year = date('y');
+        $month = date('m');
         
-        $lastGRN = GoodReceivedNote::whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->latest()
+        $latestGrn = GoodReceivedNote::where('grn_number', 'like', "{$prefix}{$branch}{$year}{$month}%")
+            ->orderBy('grn_number', 'desc')
             ->first();
 
-        $sequence = $lastGRN ? intval(substr($lastGRN->grn_number, -4)) + 1 : 1;
-        
-        return $prefix . $year . $month . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        $sequence = $latestGrn ? intval(substr($latestGrn->grn_number, -4)) + 1 : 1;
+        return $prefix . str_pad($branch, 2, '0', STR_PAD_LEFT) . $year . $month . str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 }
