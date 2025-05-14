@@ -77,7 +77,7 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/review', [ReservationController::class, 'review'])->name('review.get');
     Route::post('/review', [ReservationController::class, 'review'])->name('review');
     Route::post('/store', [ReservationController::class, 'store'])->name('store');
-    Route::post('/waitlist', [ReservationController::class, 'joinWaitlist'])->name('waitlist');
+    Route::get('/waitlist/{waitlist}', [ReservationController::class, 'waitlist'])->name('waitlist');
     Route::get('/cancellation-success', [ReservationController::class, 'cancellationSuccess'])->name('cancellation-success');
 
     // Phone verification routes
