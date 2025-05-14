@@ -49,4 +49,9 @@ class User extends Authenticatable
             'is_registered' => 'boolean',
         ];
     }
+
+    public function isAdmin()
+    {
+        return $this->user_type === 'admin';
+    }
 }

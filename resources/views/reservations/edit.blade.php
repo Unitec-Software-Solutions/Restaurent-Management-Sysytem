@@ -5,7 +5,7 @@
     <div class="max-w-2xl mx-auto">
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
             <div class="px-6 py-4 bg-gray-50 border-b">
-                <h1 class="text-2xl font-bold text-gray-800">Make a Reservation</h1>
+                <h1 class="text-2xl font-bold text-gray-800">Edit Reservation</h1>
             </div>
 
             <div class="p-6">
@@ -21,19 +21,7 @@
 
                 <form method="POST" action="{{ route('reservations.review') }}" id="reservationForm">
                     @csrf
-                    @if($phone)
-                        <input type="hidden" name="phone" value="{{ $phone }}">
-                    @else
-                        <div class="mb-4">
-                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                            <input type="tel" 
-                                   id="phone" 
-                                   name="phone" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                   value="{{ old('phone') }}"
-                                   required>
-                        </div>
-                    @endif
+                    <input type="hidden" name="phone" value="{{ request('phone') }}">
 
                     <!-- Personal Information -->
                     <div class="mb-6">
@@ -44,7 +32,7 @@
                                 <input type="text" 
                                        name="name" 
                                        id="name" 
-                                       value="{{ old('name') }}"
+                                       value="{{ request('name') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -53,7 +41,7 @@
                                 <input type="email" 
                                        name="email" 
                                        id="email" 
-                                       value="{{ old('email') }}"
+                                       value="{{ request('email') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
@@ -74,7 +62,7 @@
                                         <option value="{{ $branch->id }}" 
                                                 data-opening="{{ $branch->opening_time }}"
                                                 data-closing="{{ $branch->closing_time }}"
-                                                {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                                {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
                                             {{ $branch->name }}
                                         </option>
                                     @endforeach
@@ -86,7 +74,7 @@
                                        name="date" 
                                        id="date" 
                                        min="{{ now()->format('Y-m-d') }}"
-                                       value="{{ old('date') }}"
+                                       value="{{ request('date') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -98,7 +86,7 @@
                                 <input type="time" 
                                        name="start_time" 
                                        id="start_time" 
-                                       value="{{ old('start_time') }}"
+                                       value="{{ request('start_time') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -107,7 +95,7 @@
                                 <input type="time" 
                                        name="end_time" 
                                        id="end_time" 
-                                       value="{{ old('end_time') }}"
+                                       value="{{ request('end_time') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -119,7 +107,7 @@
                                    name="number_of_people" 
                                    id="number_of_people" 
                                    min="1"
-                                   value="{{ old('number_of_people') }}"
+                                   value="{{ request('number_of_people') }}"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                    required>
                         </div>
@@ -131,15 +119,15 @@
                         <textarea name="comments" 
                                   id="comments" 
                                   rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">{{ old('comments') }}</textarea>
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">{{ request('comments') }}</textarea>
                     </div>
 
                     <!-- Submit Button -->
                     <div class="flex justify-between items-center">
                         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            Review Reservation
+                            Review Changes
                         </button>
-                        <a href="{{ route('home') }}" class="text-gray-600 hover:text-gray-800">
+                        <a href="{{ route('reservations.review') }}" class="text-gray-600 hover:text-gray-800">
                             Cancel
                         </a>
                     </div>
@@ -213,4 +201,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-@endsection
+@endsection 
