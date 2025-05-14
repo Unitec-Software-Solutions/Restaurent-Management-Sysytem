@@ -103,14 +103,11 @@
                     </a>
                     
                     @if($reservation->status === 'pending')
-                    <form action="{{ route('reservations.cancel', $reservation) }}" method="POST" class="inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" 
-                                onclick="return confirm('Are you sure you want to cancel this reservation?')">
-                            Cancel Reservation
-                        </button>
-                    </form>
+                    <a href="{{ route('reservations.cancel', $reservation) }}" 
+                       class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                       onclick="return confirm('Are you sure you want to cancel this reservation?')">
+                        Cancel Reservation
+                    </a>
                     @endif
                 </div>
             </div>
