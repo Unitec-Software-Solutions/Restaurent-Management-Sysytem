@@ -1,0 +1,31 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Create an Account</div>
+
+                <div class="card-body">
+                    <p class="text-center mb-4">We don't have an account with the phone number: <strong>{{ $phone }}</strong></p>
+                    
+                    <div class="d-grid gap-3">
+                        <a href="{{ route('register') }}" class="btn btn-primary">
+                            Create an Account
+                        </a>
+                        
+                        <form method="POST" action="{{ route('reservations.proceed-as-guest') }}">
+                            @csrf
+                            <input type="hidden" name="phone" value="{{ $phone }}">
+                            <button type="submit" class="btn btn-outline-secondary w-100">
+                                Continue as Guest
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection 
