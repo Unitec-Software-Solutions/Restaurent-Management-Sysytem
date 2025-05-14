@@ -78,7 +78,17 @@
                         <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
                             Confirm Reservation
                         </button>
-                        <a href="{{ route('reservations.edit') }}" class="text-gray-600 hover:text-gray-800">
+                        <a href="{{ route('reservations.create', [
+                            'name' => $request->name,
+                            'email' => $request->email,
+                            'branch_id' => $request->branch_id,
+                            'phone' => $request->phone,
+                            'date' => $request->date,
+                            'start_time' => $request->start_time,
+                            'end_time' => $request->end_time,
+                            'number_of_people' => $request->number_of_people,
+                            'comments' => $request->comments
+                        ]) }}" class="text-gray-600 hover:text-gray-800">
                             Edit Details
                         </a>
                     </div>
