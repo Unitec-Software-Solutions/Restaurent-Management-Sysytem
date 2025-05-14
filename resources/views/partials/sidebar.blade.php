@@ -26,6 +26,17 @@
                 </a>
             </li>
 
+            <!-- Inventory Items -->
+            <li>
+                <a href="{{ route('inventory.items.index') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.items.index') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 3h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/>
+                    </svg>
+                    <span class="ml-3">Inventory Items</span>
+                </a>
+            </li>
+
             <!-- Stock -->
             <li>
                 <a href="{{ route('inventory.stock.index') }}"

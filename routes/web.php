@@ -35,12 +35,14 @@ Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(func
     
     // Item routes
     Route::prefix('items')->name('items.')->group(function () {
-    Route::get('/', [ItemController::class, 'index'])->name('index');
-    Route::get('/items/create', [ItemController::class, 'create'])->name('create');
-    Route::post('/items', [ItemController::class, 'store'])->name('store');
-    Route::get('/items/{item}', [ItemController::class, 'show'])->name('show');
-    Route::get('/items/{item}/edit', [ItemController::class, 'edit'])->name('edit');
-    Route::put('/items/{item}', [ItemController::class, 'update'])->name('update');
+        Route::get('/', [ItemController::class, 'index'])->name('index');
+        Route::get('/create', [ItemController::class, 'create'])->name('create');
+        Route::post('/items', [ItemController::class, 'store'])->name('store');
+        Route::get('/items/{item}', [ItemController::class, 'show'])->name('show');
+        Route::get('/items/{item}/edit', [ItemController::class, 'edit'])->name('edit');
+        Route::put('/items/{item}', [ItemController::class, 'update'])->name('update');
+        Route::delete('/{stock}', [ItemController::class, 'destroy'])->name('destroy');
+
     });
 
     // Stock routes
