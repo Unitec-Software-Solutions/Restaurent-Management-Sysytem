@@ -6,13 +6,12 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryDashboardController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\StockController;
-use App\Http\Controllers\ReservationsController;
+use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\GoodReceivedNoteController;
 use App\Http\Controllers\GoodReceivedNoteItemController;
 use App\Http\Controllers\InventoryTransactionController;
 
-use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\AdminReservationController;
 
 
@@ -70,27 +69,7 @@ Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(func
     
 });
 
-// Reservation routes
-Route::get('/reservation/start', [ReservationsController::class, 'start'])->name('reservation.start');
-Route::post('/reservation/check-phone', [ReservationsController::class, 'checkPhone'])->name('reservation.check-phone');
-Route::post('/reservations/proceed-as-guest', [ReservationsController::class, 'proceedAsGuest'])->name('reservations.proceed-as-guest');
-Route::get('/reservations/choose-action', [ReservationsController::class, 'chooseAction'])->name('reservations.choose-action');
-Route::get('/reservation/create', [ReservationsController::class, 'create'])->name('reservation.create');
-Route::post('/reservation/store', [ReservationsController::class, 'store'])->name('reservation.store');
-Route::get('/reservation/{id}/summary', [ReservationsController::class, 'summary'])->name('reservation.summary');
-Route::post('/reservation/{id}/confirm', [ReservationsController::class, 'confirm'])->name('reservation.confirm');
-
-
-// Order routes
-// Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
-// Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
-
-
-// Other routes
-// Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
-// Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
-
-// Reservation Routes
+// Reservation Routes - Keep this main group as it contains all necessary routes
 Route::prefix('reservations')->name('reservations.')->group(function () {
     // Main reservation routes first
     Route::get('/create', [ReservationController::class, 'create'])->name('create');
@@ -110,9 +89,8 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     // Parameterized routes last
     Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary')->where('reservation', '[0-9]+');
     Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment'])->name('payment')->where('reservation', '[0-9]+');
-    Route::delete('/{reservation}', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
+    Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
-    Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
 });
 
 // Admin Routes
