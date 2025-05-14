@@ -7,10 +7,12 @@ use App\Models\InventoryTransaction;
 use App\Models\InventoryStock;
 use App\Models\InventoryCategory;
 use App\Models\Branch;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ItemController extends Controller
 {
@@ -21,99 +23,50 @@ class ItemController extends Controller
     {
         $categories = InventoryCategory::all();
         $branches = Branch::all();
-        $suppliers = \App\Models\Supplier::where('is_active', true)
-                                   ->orderBy('name')
-                                   ->get();
-        return view('inventory.items.create', compact('categories', 'branches','suppliers'));
+        $suppliers = Supplier::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('inventory.items.create', compact('categories', 'branches', 'suppliers'));
     }
 
     /**
-     * Store a newly created item in storage.
+     * Store a newly created item and initial stock in storage.
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'sku' => 'required|string|unique:inventory_items,sku',
-            'unit_of_measurement' => 'required|string|max:50',
-            'reorder_level' => 'required|numeric',
-            'inventory_category_id' => 'required|exists:inventory_categories,id',
-            'is_perishable' => 'nullable|boolean',
-            'shelf_life_days' => 'nullable|integer',
-            'expiry_date' => 'nullable|date',
-            'show_in_menu' => 'nullable|boolean',
-            'branch_id' => 'required|exists:branches,id',
-            'transaction_type' => 'required|in:purchase,transfer_in,adjustment',
-            'quantity' => 'required|numeric|min:0',
-            'unit_price' => 'nullable|numeric|min:0',
+        $request->validate([
+            'items.*.name' => 'required|string|max:255',
+            'items.*.sku' => 'required|string|max:50|unique:inventory_items,sku',
+            'items.*.inventory_category_id' => 'required|exists:inventory_categories,id',
+            'items.*.unit_of_measurement' => 'required|string|max:50',
+            'items.*.reorder_level' => 'required|numeric|min:0',
+            'items.*.purchase_price' => 'required|numeric|min:0',
+            'items.*.selling_price' => 'required|numeric|min:0'
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput()
-                ->with('error', 'Failed to create item. Please check the form for errors.');
-        }
-
+        DB::beginTransaction();
         try {
-            $validated = $validator->validated();
-
-            // Normalize checkboxes
-            $validated['is_perishable'] = $request->has('is_perishable');
-            $validated['show_in_menu'] = $request->has('show_in_menu');
-            $validated['is_active'] = true; // default to active
-            $validated['is_inactive'] = false;
-
-            // Create the inventory item
-            $item = InventoryItem::create([
-                'name' => $validated['name'],
-                'sku' => $validated['sku'],
-                'unit_of_measurement' => $validated['unit_of_measurement'],
-                'reorder_level' => $validated['reorder_level'],
-                'inventory_category_id' => $validated['inventory_category_id'],
-                'is_perishable' => $validated['is_perishable'],
-                'shelf_life_days' => $validated['shelf_life_days'] ?? null,
-                'expiry_date' => $validated['expiry_date'] ?? null,
-                'show_in_menu' => $validated['show_in_menu'],
-                'is_active' => true,
-                'is_inactive' => false,
-            ]);
-
-            // Record initial inventory transaction
-            $transaction = InventoryTransaction::create([
-                'branch_id' => $validated['branch_id'],
-                'inventory_item_id' => $item->id,
-                'transaction_type' => $validated['transaction_type'],
-                'quantity' => $validated['quantity'],
-                'unit_price' => $validated['unit_price'] ?? null,
-                'user_id' => Auth::id(),
-                'notes' => 'Initial stock entry at item creation',
-            ]);
-
-            // Create initial stock record
-            $stock = InventoryStock::create([
-                'branch_id' => $validated['branch_id'],
-                'inventory_item_id' => $item->id,
-                'current_quantity' => $validated['quantity'],
-                'committed_quantity' => 0,
-                'available_quantity' => $validated['quantity'],
-                'is_active' => true,
-            ]);
-
-            // Verify all records were created successfully
-            if (!$item || !$transaction || !$stock) {
-                throw new \Exception('Failed to create one or more required records');
+            foreach ($request->items as $itemData) {
+                $item = InventoryItem::create([
+                    'name' => $itemData['name'],
+                    'sku' => $itemData['sku'],
+                    'inventory_category_id' => $itemData['inventory_category_id'],
+                    'unit_of_measurement' => $itemData['unit_of_measurement'],
+                    'reorder_level' => $itemData['reorder_level'],
+                    'purchase_price' => $itemData['purchase_price'],
+                    'selling_price' => $itemData['selling_price'],
+                    'is_active' => true
+                ]);
             }
 
+            DB::commit();
             return redirect()->route('inventory.items.index')
-                ->with('success', 'Item created successfully with initial stock of ' . $validated['quantity'] . ' ' . $validated['unit_of_measurement']);
-
+                ->with('success', 'Items created successfully');
         } catch (\Exception $e) {
-            // Log the error for debugging
-            
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Failed to create inventory item. Please try again or contact support if the problem persists.');
+            DB::rollBack();
+            return back()->withInput()
+                ->with('error', 'Failed to create items. ' . $e->getMessage());
         }
     }
 
@@ -131,6 +84,7 @@ class ItemController extends Controller
      */
     public function show(InventoryItem $item)
     {
+        $item->load(['inventoryCategory', 'stocks.branch']);
         return view('inventory.items.show', compact('item'));
     }
 }

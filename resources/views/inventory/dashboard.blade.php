@@ -50,11 +50,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Left Column -->
         <div class="lg:col-span-2 space-y-4">
-            <div class="flex justify-end mb-4">
-                <a href="{{ route('inventory.items.create') }}" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-                    + Add Item
-                </a>
-            </div>
+ 
             <!-- Product Details Section -->
             <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700">
