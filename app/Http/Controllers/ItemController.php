@@ -105,7 +105,7 @@ class ItemController extends Controller
                 throw new \Exception('Failed to create one or more required records');
             }
 
-            return redirect()->route('items.index')
+            return redirect()->route('inventory.items.index')
                 ->with('success', 'Item created successfully with initial stock of ' . $validated['quantity'] . ' ' . $validated['unit_of_measurement']);
 
         } catch (\Exception $e) {
@@ -123,7 +123,7 @@ class ItemController extends Controller
     public function index()
     {
         $items = InventoryItem::latest()->paginate(15);
-        return view('items.index', compact('items'));
+        return view('inventory.items.index', compact('items'));
     }
 
     /**
@@ -131,6 +131,6 @@ class ItemController extends Controller
      */
     public function show(InventoryItem $item)
     {
-        return view('items.show', compact('item'));
+        return view('inventory.items.show', compact('item'));
     }
 }

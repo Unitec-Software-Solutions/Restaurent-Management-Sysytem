@@ -26,6 +26,7 @@ Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 // Inventory routes with proper naming
 Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(function () {
+    
     // Dashboard routes
     Route::get('/', [InventoryDashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [InventoryDashboardController::class, 'index'])->name('dashboard');
@@ -33,12 +34,15 @@ Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(func
     Route::get('/expiry-report', [InventoryDashboardController::class, 'getExpiryReport'])->name('expiry-report');
     
     // Item routes
-    Route::get('/items/create', [ItemController::class, 'create'])->name('items.create');
-    Route::post('/items', [ItemController::class, 'store'])->name('items.store');
-    Route::get('/items/{item}', [ItemController::class, 'show'])->name('items.show');
-    Route::get('/items/{item}/edit', [ItemController::class, 'edit'])->name('items.edit');
-    Route::put('/items/{item}', [ItemController::class, 'update'])->name('items.update');
-    
+    Route::prefix('items')->name('items.')->group(function () {
+    Route::get('/', [ItemController::class, 'index'])->name('index');
+    Route::get('/items/create', [ItemController::class, 'create'])->name('create');
+    Route::post('/items', [ItemController::class, 'store'])->name('store');
+    Route::get('/items/{item}', [ItemController::class, 'show'])->name('show');
+    Route::get('/items/{item}/edit', [ItemController::class, 'edit'])->name('edit');
+    Route::put('/items/{item}', [ItemController::class, 'update'])->name('update');
+    });
+
     // Stock routes
     Route::prefix('stock')->name('stock.')->group(function () {
         Route::get('/', [StockController::class, 'index'])->name('index');
@@ -71,14 +75,14 @@ Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(func
 });
 
 // Reservation routes
-Route::get('/reservation/start', [ReservationsController::class, 'start'])->name('reservation.start');
-Route::post('/reservation/check-phone', [ReservationsController::class, 'checkPhone'])->name('reservation.check-phone');
-Route::post('/reservations/proceed-as-guest', [ReservationsController::class, 'proceedAsGuest'])->name('reservations.proceed-as-guest');
-Route::get('/reservations/choose-action', [ReservationsController::class, 'chooseAction'])->name('reservations.choose-action');
-Route::get('/reservation/create', [ReservationsController::class, 'create'])->name('reservation.create');
-Route::post('/reservation/store', [ReservationsController::class, 'store'])->name('reservation.store');
-Route::get('/reservation/{id}/summary', [ReservationsController::class, 'summary'])->name('reservation.summary');
-Route::post('/reservation/{id}/confirm', [ReservationsController::class, 'confirm'])->name('reservation.confirm');
+//  Route::get('/reservation/start', [ReservationsController::class, 'start'])->name('reservation.start');
+//  Route::post('/reservation/check-phone', [ReservationsController::class, 'checkPhone'])->name('reservation.check-phone');
+//  Route::post('/reservations/proceed-as-guest', [ReservationsController::class, 'proceedAsGuest'])->name('reservations.proceed-as-guest');
+//  Route::get('/reservations/choose-action', [ReservationsController::class, 'chooseAction'])->name('reservations.choose-action');
+//  Route::get('/reservation/create', [ReservationsController::class, 'create'])->name('reservation.create');
+//  Route::post('/reservation/store', [ReservationsController::class, 'store'])->name('reservation.store');
+//  Route::get('/reservation/{id}/summary', [ReservationsController::class, 'summary'])->name('reservation.summary');
+//  Route::post('/reservation/{id}/confirm', [ReservationsController::class, 'confirm'])->name('reservation.confirm');
 
 
 // Order routes
@@ -116,15 +120,15 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
 });
 
 // Admin Routes
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Reservation Management
-    Route::get('/reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
-    Route::get('/reservations/pending', [AdminReservationController::class, 'pending'])->name('reservations.pending');
-    Route::get('/reservations/{reservation}', [AdminReservationController::class, 'show'])->name('reservations.show');
-    Route::post('/reservations/{reservation}/confirm', [AdminReservationController::class, 'confirm'])->name('reservations.confirm');
-    Route::post('/reservations/{reservation}/reject', [AdminReservationController::class, 'reject'])->name('reservations.reject');
-    Route::get('/reservations/{reservation}/edit', [AdminReservationController::class, 'edit'])->name('reservations.edit');
-    Route::put('/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('reservations.update');
-});
+//  Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+//      // Reservation Management
+//      Route::get('/reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
+//      Route::get('/reservations/pending', [AdminReservationController::class, 'pending'])->name('reservations.pending');
+//      Route::get('/reservations/{reservation}', [AdminReservationController::class, 'show'])->name('reservations.show');
+//      Route::post('/reservations/{reservation}/confirm', [AdminReservationController::class, 'confirm'])->name('reservations.confirm');
+//      Route::post('/reservations/{reservation}/reject', [AdminReservationController::class, 'reject'])->name('reservations.reject');
+//      Route::get('/reservations/{reservation}/edit', [AdminReservationController::class, 'edit'])->name('reservations.edit');
+//      Route::put('/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('reservations.update');
+//  });
 
 
