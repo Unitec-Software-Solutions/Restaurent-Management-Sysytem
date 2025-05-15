@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ReservationConfirmed;
 use App\Mail\ReservationRejected;
+use App\Mail\ReservationConfirmationMail;
+use App\Mail\ReservationCancellationMail;
+use App\Services\SmsService;
 
 class AdminReservationController extends Controller
 {
@@ -94,35 +97,48 @@ class AdminReservationController extends Controller
 
     public function update(Request $request, Reservation $reservation)
     {
-        $admin = auth()->user();
-
-        if ($reservation->branch_id !== $admin->branch_id) {
-            return redirect()->route('admin.reservations.index')->with('error', 'You are not authorized to update this reservation.');
-        }
-
         $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|min:10|max:15',
+            'email' => 'required|email|max:255',
             'status' => 'required|in:pending,confirmed,cancelled',
             'assigned_table_ids' => 'nullable|array',
             'assigned_table_ids.*' => 'exists:tables,id',
+            'send_notification' => 'nullable|in:none,email,sms,both',
         ]);
 
         $reservation->update([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'email' => $validated['email'],
             'status' => $validated['status'],
             'assigned_table_ids' => $validated['assigned_table_ids'] ? json_encode($validated['assigned_table_ids']) : null,
         ]);
 
+        // Send notification if required
+        if ($validated['send_notification'] !== 'none') {
+            $this->sendNotification($reservation, $validated['send_notification']);
+        }
+
         return redirect()->route('admin.reservations.index')->with('success', 'Reservation updated successfully.');
     }
 
-    public function cancel(Reservation $reservation)
+    public function cancel(Request $request, Reservation $reservation)
     {
-        $admin = auth()->user();
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:1000',
+            'send_notification' => 'nullable|in:none,email,sms,both',
+        ]);
 
-        if ($reservation->branch_id !== $admin->branch_id) {
-            return redirect()->route('admin.reservations.index')->with('error', 'You are not authorized to cancel this reservation.');
+        $reservation->update([
+            'status' => 'cancelled',
+            'cancel_reason' => $validated['cancel_reason'],
+        ]);
+
+        // Send cancellation notification
+        if ($validated['send_notification'] !== 'none') {
+            $this->sendCancellationNotification($reservation, $validated['send_notification']);
         }
-
-        $reservation->update(['status' => 'cancelled']);
 
         return redirect()->route('admin.reservations.index')->with('success', 'Reservation cancelled successfully.');
     }
@@ -158,5 +174,31 @@ class AdminReservationController extends Controller
         ]);
 
         return redirect()->route('admin.reservations.index')->with('success', 'Reservation created successfully.');
+    }
+
+    protected function sendNotification(Reservation $reservation, $method)
+    {
+        if (in_array($method, ['email', 'both'])) {
+            // Send email
+            Mail::to($reservation->email)->send(new ReservationConfirmationMail($reservation));
+        }
+
+        if (in_array($method, ['sms', 'both'])) {
+            // Send SMS (use a service like Twilio)
+            SmsService::send($reservation->phone, "Your reservation has been confirmed.");
+        }
+    }
+
+    protected function sendCancellationNotification(Reservation $reservation, $method)
+    {
+        if (in_array($method, ['email', 'both'])) {
+            // Send cancellation email
+            Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
+        }
+
+        if (in_array($method, ['sms', 'both'])) {
+            // Send cancellation SMS
+            SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
+        }
     }
 }
