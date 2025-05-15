@@ -77,7 +77,7 @@ class InventoryDashboardController extends Controller
         $topSellingItems = InventoryItem::with(['category'])
             ->withCount(['transactions as quantity_sold' => function($query) use ($branchId) {
                 $query->select(DB::raw('SUM(quantity)'))
-                    ->where('transaction_type', 'out')
+                    ->where('transaction_type', 'usage')
                     ->where('created_at', '>=', Carbon::now()->subDays(30))
                     ->when($branchId, function($query) use ($branchId) {
                         $query->where('branch_id', $branchId);

@@ -78,9 +78,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Current Stock
                     </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Available
-                    </th>
+
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Status
                     </th>
@@ -104,11 +102,7 @@
                                 {{ number_format($stock->current_quantity, 3) }} {{ $stock->item->unit_of_measurement }}
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900 dark:text-white">
-                                {{ number_format($stock->available_quantity, 3) }} {{ $stock->item->unit_of_measurement }}
-                            </div>
-                        </td>
+                        
                         <td class="px-6 py-4 whitespace-nowrap">
                             @if($stock->item->isLowStock($stock->branch_id))
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full 

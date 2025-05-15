@@ -83,10 +83,10 @@ class ItemController extends Controller
      * Display the specified item.
      */
     public function show(InventoryItem $item)
-    {
-        $item->load(['inventoryCategory', 'stocks.branch']);
-        return view('inventory.items.show', compact('item'));
-    }
+{
+    $item->load(['category', 'stocks.branch']);
+    return view('inventory.items.show', compact('item'));
+}
 
     /**
      * Remove the specified item from storage.

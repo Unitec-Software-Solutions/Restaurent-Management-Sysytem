@@ -24,7 +24,7 @@ Auth::routes();
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-// Inventory routes with proper naming
+// Inventory routes 
 Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(function () {
     
     // Dashboard routes
@@ -37,12 +37,11 @@ Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(func
     Route::prefix('items')->name('items.')->group(function () {
         Route::get('/', [ItemController::class, 'index'])->name('index');
         Route::get('/create', [ItemController::class, 'create'])->name('create');
-        Route::post('/items', [ItemController::class, 'store'])->name('store');
-        Route::get('/items/{item}', [ItemController::class, 'show'])->name('show');
-        Route::get('/items/{item}/edit', [ItemController::class, 'edit'])->name('edit');
-        Route::put('/items/{item}', [ItemController::class, 'update'])->name('update');
-        Route::delete('/{stock}', [ItemController::class, 'destroy'])->name('destroy');
-
+        Route::post('/', [ItemController::class, 'store'])->name('store');
+        Route::get('/{item}', [ItemController::class, 'show'])->name('show');
+        Route::get('/{item}/edit', [ItemController::class, 'edit'])->name('edit');
+        Route::put('/{item}', [ItemController::class, 'update'])->name('update');
+        Route::delete('/{item}', [ItemController::class, 'destroy'])->name('destroy');
     });
 
     // Stock routes

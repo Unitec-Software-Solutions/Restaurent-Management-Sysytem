@@ -53,15 +53,34 @@
 
         <!-- Transaction Type Filter -->
         <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Transaction Type</label>
-            <select name="transaction_type" class="w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white">
-                <option value="">All Types</option>
-                <option value="purchase" {{ request('transaction_type') == 'purchase' ? 'selected' : '' }}>Purchase</option>
-                <option value="transfer_in" {{ request('transaction_type') == 'transfer_in' ? 'selected' : '' }}>Transfer In</option>
-                <option value="transfer_out" {{ request('transaction_type') == 'transfer_out' ? 'selected' : '' }}>Transfer Out</option>
-                <option value="usage" {{ request('transaction_type') == 'usage' ? 'selected' : '' }}>Usage</option>
-                <option value="wastage" {{ request('transaction_type') == 'wastage' ? 'selected' : '' }}>Wastage</option>
-                <option value="adjustment" {{ request('transaction_type') == 'adjustment' ? 'selected' : '' }}>Adjustment</option>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Transaction Type*</label>
+            <select name="transaction_type" required class="mt-1 block w-full rounded-md border-gray-300 dark:bg-gray-700 dark:text-white">
+                <optgroup label="Incoming Transactions">
+                    <option value="purchase" {{ old('transaction_type') == 'purchase' ? 'selected' : '' }}>Purchase</option>
+                    <option value="transfer_in" {{ old('transaction_type') == 'transfer_in' ? 'selected' : '' }}>Transfer In</option>
+                    <option value="return" {{ old('transaction_type') == 'return' ? 'selected' : '' }}>Return</option>
+                    <option value="grn_adjustment" {{ old('transaction_type') == 'grn_adjustment' ? 'selected' : '' }}>GRN Adjustment</option>
+                    <option value="stock_addition" {{ old('transaction_type') == 'stock_addition' ? 'selected' : '' }}>Stock Addition</option>
+                    <option value="positive_adjustment" {{ old('transaction_type') == 'positive_adjustment' ? 'selected' : '' }}>Positive Adjustment</option>
+                    <option value="stocktake_positive_variance" {{ old('transaction_type') == 'stocktake_positive_variance' ? 'selected' : '' }}>Stocktake Positive Variance</option>
+                    <option value="supplier_stock_return" {{ old('transaction_type') == 'supplier_stock_return' ? 'selected' : '' }}>Supplier Stock Return</option>
+                    <option value="recipe_reversal" {{ old('transaction_type') == 'recipe_reversal' ? 'selected' : '' }}>Recipe Reversal</option>
+                    <option value="stock_replenishment" {{ old('transaction_type') == 'stock_replenishment' ? 'selected' : '' }}>Stock Replenishment</option>
+                    <option value="initial_stock" {{ old('transaction_type') == 'initial_stock' ? 'selected' : '' }}>Initial Stock</option>
+                </optgroup>
+                <optgroup label="Outgoing Transactions">
+                    <option value="transfer_out" {{ old('transaction_type') == 'transfer_out' ? 'selected' : '' }}>Transfer Out</option>
+                    <option value="usage" {{ old('transaction_type') == 'usage' ? 'selected' : '' }}>Usage</option>
+                    <option value="wastage" {{ old('transaction_type') == 'wastage' ? 'selected' : '' }}>Wastage</option>
+                    <option value="negative_adjustment" {{ old('transaction_type') == 'negative_adjustment' ? 'selected' : '' }}>Negative Adjustment</option>
+                    <option value="stocktake_negative_variance" {{ old('transaction_type') == 'stocktake_negative_variance' ? 'selected' : '' }}>Stocktake Negative Variance</option>
+                    <option value="donation" {{ old('transaction_type') == 'donation' ? 'selected' : '' }}>Donation</option>
+                    <option value="theft_or_loss" {{ old('transaction_type') == 'theft_or_loss' ? 'selected' : '' }}>Theft/Loss</option>
+                    <option value="supplier_return" {{ old('transaction_type') == 'supplier_return' ? 'selected' : '' }}>Supplier Return</option>
+                    <option value="sample_given" {{ old('transaction_type') == 'sample_given' ? 'selected' : '' }}>Sample Given</option>
+                    <option value="promotional_item" {{ old('transaction_type') == 'promotional_item' ? 'selected' : '' }}>Promotional Item</option>
+                    <option value="employee_meal" {{ old('transaction_type') == 'employee_meal' ? 'selected' : '' }}>Employee Meal</option>
+                </optgroup>
             </select>
         </div>
 
