@@ -46,12 +46,13 @@
                                        required>
                             </div>
                             <div>
-                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                 <input type="email" 
                                        name="email" 
                                        id="email" 
                                        value="{{ old('email', $reservation->email) }}"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
                             </div>
                         </div>
                     </div>
@@ -88,6 +89,22 @@
                                 <option value="pending" {{ $reservation->status == 'pending' ? 'selected' : '' }}>Pending</option>
                                 <option value="confirmed" {{ $reservation->status == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
                                 <option value="cancelled" {{ $reservation->status == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Email/SMS Notification -->
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Notification Options</h2>
+                        <div>
+                            <label for="send_notification" class="block text-sm font-medium text-gray-700 mb-1">Send Notification</label>
+                            <select name="send_notification" 
+                                    id="send_notification" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="none">None</option>
+                                <option value="email">Email</option>
+                                <option value="sms">SMS</option>
+                                <option value="both">Both</option>
                             </select>
                         </div>
                     </div>
