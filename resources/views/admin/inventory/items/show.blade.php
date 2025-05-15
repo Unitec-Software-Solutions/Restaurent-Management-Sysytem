@@ -18,11 +18,11 @@
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Item Details</h2>
         <div class="flex space-x-4">
-            <a href="{{ route('inventory.items.index') }}" 
+            <a href="{{ route('admin.inventory.items.index') }}" 
                class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
                 Back to Items
             </a>
-            <a href="{{ route('inventory.items.edit', $item) }}" 
+            <a href="{{ route('admin.inventory.items.edit', $item) }}" 
                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                 Edit Item
             </a>
@@ -183,7 +183,7 @@
             
             @if($item->transactions()->count() > 5)
                 <div class="mt-4 text-center">
-                    <a href="{{ route('inventory.transactions.index', ['item_id' => $item->id]) }}" 
+                    <a href="{{ route('admin.inventory.transactions.index', ['item_id' => $item->id]) }}" 
                        class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
                         View All Transactions
                     </a>

@@ -17,8 +17,8 @@
 
             <!-- Inventory Dashboard -->
             <li>
-                <a href="{{ route('inventory.dashboard') }}"
-                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.dashboard') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('admin.inventory.dashboard') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('admin.inventory.dashboard') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M3 3h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/>
                     </svg>
@@ -28,8 +28,8 @@
 
             <!-- Inventory Items -->
             <li>
-                <a href="{{ route('inventory.items.index') }}"
-                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.items.index') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('admin.inventory.items.index') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('admin.inventory.items.index') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M3 3h18v2H3zm0 6h18v2H3zm0 6h18v2H3z"/>
                     </svg>
@@ -39,8 +39,8 @@
 
             <!-- Stock -->
             <li>
-                <a href="{{ route('inventory.stock.index') }}"
-                class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.stock.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('admin.inventory.stock.index') }}"
+                class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('admin.inventory.stock.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
                     </svg>
@@ -50,8 +50,8 @@
 
             <!-- Transactions -->
             <li>
-                <a href="{{ route('inventory.transactions.index') }}"
-                class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.transactions.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('admin.inventory.transactions.index') }}"
+                class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('admin.inventory.transactions.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
                     </svg>
@@ -61,8 +61,8 @@
 
             <!-- GRN -->
             <li>
-                <a href="{{ route('inventory.grn.index') }}"
-                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.grn.') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('admin.inventory.grn.index') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('admin.inventory.grn.') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
                     </svg>
@@ -73,8 +73,8 @@
             <!-- Expiry Report -->
             {{-- 
             <li>
-                <a href="{{ route('inventory.expiry-report') }}"
-                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.expiry-report') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('admin.inventory.expiry-report') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('admin.inventory.expiry-report') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M10 2a8 8 0 108 8 8 8 0 00-8-8zM9 4h2v5H9zm1 9a1.5 1.5 0 11-1.5-1.5A1.5 1.5 0 0110 13z"/>
                     </svg>
@@ -85,8 +85,8 @@
 
             <!-- Create Item                     
             <li>
-                <a href="{{ route('inventory.items.create') }}"
-                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.items.create') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                <a href="{{ route('admin.inventory.items.create') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('admin.inventory.items.create') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
                     <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/>
                     </svg>

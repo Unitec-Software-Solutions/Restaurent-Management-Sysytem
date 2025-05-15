@@ -4,7 +4,7 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Add New Inventory Items</h2>
-        <a href="{{ route('inventory.items.index') }}" 
+        <a href="{{ route('admin.inventory.items.index') }}" 
            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Back to Items List</a>
     </div>
 
@@ -19,7 +19,7 @@
     @endif
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-        <form action="{{ route('inventory.items.store') }}" method="POST" class="p-6">
+        <form action="{{ route('admin.inventory.items.store') }}" method="POST" class="p-6">
             @csrf
             
             <!-- Add Item Section -->

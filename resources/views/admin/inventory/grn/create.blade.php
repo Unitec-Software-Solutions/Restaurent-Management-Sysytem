@@ -4,7 +4,7 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Create Goods Received Note</h2>
-        <a href="{{ route('inventory.grn.index') }}" 
+        <a href="{{ route('admin.inventory.grn.index') }}" 
            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Back to GRN List</a>
     </div>
 
@@ -54,7 +54,7 @@
         </div>
 
         <!-- GRN Form -->
-        <form action="{{ route('inventory.grn.store') }}" method="POST" class="p-6">
+        <form action="{{ route('admin.inventory.grn.store') }}" method="POST" class="p-6">
             @csrf
             
             <!-- Supplier Information -->

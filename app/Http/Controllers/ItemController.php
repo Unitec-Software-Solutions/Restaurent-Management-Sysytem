@@ -27,7 +27,7 @@ class ItemController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('inventory.items.create', compact('categories', 'branches', 'suppliers'));
+        return view('admin.inventory.items.create', compact('categories', 'branches', 'suppliers'));
     }
 
     /**
@@ -61,7 +61,7 @@ class ItemController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('inventory.items.index')
+            return redirect()->route('admin.inventory.items.index')
                 ->with('success', 'Items created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -76,7 +76,7 @@ class ItemController extends Controller
     public function index()
     {
         $items = InventoryItem::latest()->paginate(15);
-        return view('inventory.items.index', compact('items'));
+        return view('admin.inventory.items.index', compact('items'));
     }
 
     /**
@@ -85,7 +85,7 @@ class ItemController extends Controller
     public function show(InventoryItem $item)
 {
     $item->load(['category', 'stocks.branch']);
-    return view('inventory.items.show', compact('item'));
+    return view('admin.inventory.items.show', compact('item'));
 }
 
     /**
@@ -107,11 +107,11 @@ class ItemController extends Controller
             }
             
             DB::commit();
-            return redirect()->route('inventory.items.index')
+            return redirect()->route('admin.inventory.items.index')
                 ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->route('inventory.items.index')
+            return redirect()->route('admin.inventory.items.index')
                 ->with('error', 'Failed to delete item: ' . $e->getMessage());
         }
     }

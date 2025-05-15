@@ -24,7 +24,7 @@
 
     <!-- Filters -->
 <div class="mb-6">
-    <form method="GET" action="{{ route('inventory.transactions.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <form method="GET" action="{{ route('admin.inventory.transactions.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <!-- Date Range Filter -->
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date Range</label>
@@ -111,7 +111,7 @@
                 Apply Filters
             </button>
             @if(request()->hasAny(['date_range', 'transaction_type', 'branch_id', 'search', 'start_date', 'end_date']))
-                <a href="{{ route('inventory.transactions.index') }}" 
+                <a href="{{ route('admin.inventory.transactions.index') }}" 
                 class="px-3 py-1.5 text-sm bg-gray-500 text-white rounded hover:bg-gray-600">
                     Clear Filters
                 </a>
@@ -177,7 +177,7 @@
                             {{ $transaction->branch->name }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            <a href="{{ route('inventory.transactions.show', $transaction) }}" 
+                            <a href="{{ route('admin.inventory.transactions.show', $transaction) }}" 
                             class="px-2 py-1 text-xs text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
                                 View
                             </a>

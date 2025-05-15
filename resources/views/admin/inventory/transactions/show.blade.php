@@ -5,7 +5,7 @@
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Transaction Details</h2>
         <div class="flex space-x-2">
-            <a href="{{ route('inventory.transactions.index') }}" 
+            <a href="{{ route('admin.inventory.transactions.index') }}" 
                class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Back</a>
             <button onclick="window.print()" 
                     class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">

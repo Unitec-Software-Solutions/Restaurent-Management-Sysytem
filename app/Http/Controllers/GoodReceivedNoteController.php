@@ -48,7 +48,7 @@ class GoodReceivedNoteController extends Controller
                     ->paginate(15)
                     ->withQueryString(); 
                 
-        return view('inventory.grn.index', compact('grns', 'branches', 'suppliers'));
+        return view('admin.inventory.grn.index', compact('grns', 'branches', 'suppliers'));
     }
 
     
@@ -65,7 +65,7 @@ class GoodReceivedNoteController extends Controller
         $suppliers = Supplier::where('is_active', true)->get();
         $grnNumber = $this->generateGRNNumber(); // Pre-generate GRN number
         
-        return view('inventory.grn.create', compact('pendingPOs', 'branches', 'suppliers', 'grnNumber'));
+        return view('admin.inventory.grn.create', compact('pendingPOs', 'branches', 'suppliers', 'grnNumber'));
     }
 
     
@@ -119,7 +119,7 @@ class GoodReceivedNoteController extends Controller
                 }
 
                 DB::commit();
-                return redirect()->route('inventory.grn.show', $grn)
+                return redirect()->route('admin.inventory.grn.show', $grn)
                     ->with('success', 'GRN created successfully');
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -132,7 +132,7 @@ class GoodReceivedNoteController extends Controller
     public function show(GoodReceivedNote $grn)
     {
         $grn->load(['items.inventoryItem', 'supplier', 'receivedBy', 'checkedBy']);
-        return view('inventory.grn.show', compact('grn'));
+        return view('admin.inventory.grn.show', compact('grn'));
     }
 
     public function finalize(GoodReceivedNote $grn)
@@ -146,7 +146,7 @@ class GoodReceivedNoteController extends Controller
             'checked_by' => Auth::id()
         ]);
 
-        return redirect()->route('inventory.grn.show', $grn)
+        return redirect()->route('admin.inventory.grn.show', $grn)
             ->with('success', 'GRN finalized successfully');
     }
 

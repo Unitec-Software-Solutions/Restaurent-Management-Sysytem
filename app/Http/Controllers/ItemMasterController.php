@@ -50,7 +50,7 @@ class ItemMasterController extends Controller
         
         $items = $query->latest()->paginate(15);
         
-        return view('inventory.items.index', compact('items'));
+        return view('admin.inventory.items.index', compact('items'));
     }
 
     /**
@@ -62,7 +62,7 @@ class ItemMasterController extends Controller
         $branches = Branch::where('is_active', true)->get();
         $suppliers = Supplier::where('is_active', true)->get();
         
-        return view('inventory.items.create', compact('organizations', 'branches', 'suppliers'));
+        return view('admin.inventory.items.create', compact('organizations', 'branches', 'suppliers'));
     }
 
     /**
@@ -143,7 +143,7 @@ class ItemMasterController extends Controller
             }
             
             DB::commit();
-            return redirect()->route('inventory.items.index')
+            return redirect()->route('admin.inventory.items.index')
                 ->with('success', 'Item created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -167,7 +167,7 @@ class ItemMasterController extends Controller
             ->take(10)
             ->get();
         
-        return view('inventory.items.show', compact('item', 'transactions'));
+        return view('admin.inventory.items.show', compact('item', 'transactions'));
     }
 
     /**
@@ -179,7 +179,7 @@ class ItemMasterController extends Controller
         $branches = Branch::where('is_active', true)->get();
         $suppliers = Supplier::where('is_active', true)->get();
         
-        return view('inventory.items.edit', compact('item', 'organizations', 'branches', 'suppliers'));
+        return view('admin.inventory.items.edit', compact('item', 'organizations', 'branches', 'suppliers'));
     }
 
     /**
@@ -236,7 +236,7 @@ class ItemMasterController extends Controller
             ]);
             
             DB::commit();
-            return redirect()->route('inventory.items.show', $item)
+            return redirect()->route('admin.inventory.items.show', $item)
                 ->with('success', 'Item updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -265,12 +265,12 @@ class ItemMasterController extends Controller
             }
             
             DB::commit();
-            return redirect()->route('inventory.items.index')
+            return redirect()->route('admin.inventory.items.index')
                 ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to delete item: ' . $e->getMessage());
-            return redirect()->route('inventory.items.index')
+            return redirect()->route('admin.inventory.items.index')
                 ->with('error', 'Failed to delete item: ' . $e->getMessage());
         }
     }
@@ -292,7 +292,7 @@ class ItemMasterController extends Controller
             return $item->isLowStock($branchId);
         });
         
-        return view('inventory.items.low-stock', [
+        return view('admin.inventory.items.low-stock', [
             'items' => $lowStockItems,
             'branch' => Branch::find($branchId)
         ]);
@@ -374,7 +374,7 @@ class ItemMasterController extends Controller
             }
             
             DB::commit();
-            return redirect()->route('inventory.items.show', $item)
+            return redirect()->route('admin.inventory.items.show', $item)
                 ->with('success', 'Stock updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -414,7 +414,7 @@ class ItemMasterController extends Controller
      */
     public function importForm()
     {
-        return view('inventory.items.import');
+        return view('admin.inventory.items.import');
     }
 
     /**
@@ -429,7 +429,7 @@ class ItemMasterController extends Controller
         try {
             Excel::import(new ItemsImport, $request->file('file'));
             
-            return redirect()->route('inventory.items.index')
+            return redirect()->route('admin.inventory.items.index')
                 ->with('success', 'Items imported successfully');
         } catch (\Exception $e) {
             Log::error('Failed to import items: ' . $e->getMessage());

@@ -4,7 +4,7 @@
 <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Adjust Stock</h2>
-        <a href="{{ route('inventory.stock.index') }}" 
+        <a href="{{ route('admin.inventory.stock.index') }}" 
            class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Back</a>
     </div>
 
@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <form action="{{ route('inventory.stock.update', $stock) }}" method="POST">
+    <form action="{{ route('admin.inventory.stock.update', $stock) }}" method="POST">
         @csrf
         @method('PUT')
         

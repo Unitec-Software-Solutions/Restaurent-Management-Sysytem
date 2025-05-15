@@ -34,7 +34,7 @@ class StockController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('inventory.stock.index', compact('stocks', 'branches'));
+        return view('admin.inventory.stock.index', compact('stocks', 'branches'));
     }
 
     public function create()
@@ -42,7 +42,7 @@ class StockController extends Controller
         $items = InventoryItem::where('is_active', true)->orderBy('name')->get();
         $branches = Branch::where('is_active', true)->orderBy('name')->get();
         
-        return view('inventory.stock.create', compact('items', 'branches'));
+        return view('admin.inventory.stock.create', compact('items', 'branches'));
     }
 
     public function store(Request $request)
@@ -85,7 +85,7 @@ class StockController extends Controller
             ]);
 
             DB::commit();
-            return redirect()->route('inventory.stock.index')
+            return redirect()->route('admin.inventory.stock.index')
                 ->with('success', 'Stock updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -99,7 +99,7 @@ class StockController extends Controller
         $items = InventoryItem::where('is_active', true)->orderBy('name')->get();
         $branches = Branch::where('is_active', true)->orderBy('name')->get();
         
-        return view('inventory.stock.edit', compact('stock', 'items', 'branches'));
+        return view('admin.inventory.stock.edit', compact('stock', 'items', 'branches'));
     }
 
     public function update(Request $request, InventoryStock $stock)
@@ -132,7 +132,7 @@ class StockController extends Controller
             ]);
 
             DB::commit();
-            return redirect()->route('inventory.stock.index')
+            return redirect()->route('admin.inventory.stock.index')
                 ->with('success', 'Stock adjusted successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -166,7 +166,7 @@ class StockController extends Controller
             $stock->delete();
 
             DB::commit();
-            return redirect()->route('inventory.stock.index')
+            return redirect()->route('admin.inventory.stock.index')
                 ->with('success', 'Stock deleted successfully');
         } catch (\Exception $e) {
             DB::rollBack();

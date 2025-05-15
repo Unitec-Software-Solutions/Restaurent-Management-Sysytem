@@ -16,13 +16,13 @@
 
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Goods Received Notes</h2>
-        <a href="{{ route('inventory.grn.create') }}" 
+        <a href="{{ route('admin.inventory.grn.create') }}" 
            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Create GRN</a>
     </div>
 
     <!-- Filters -->
     <div class="mb-6">
-        <form method="GET" action="{{ route('inventory.grn.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form method="GET" action="{{ route('admin.inventory.grn.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Search -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search GRN</label>
@@ -67,7 +67,7 @@
                     Apply Filters
                 </button>
                 @if(request('search') || request('branch_id'))
-                    <a href="{{ route('inventory.grn.index') }}" 
+                    <a href="{{ route('admin.inventory.grn.index') }}" 
                        class="ml-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
                         Clear
                     </a>
@@ -134,16 +134,16 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-3">
-                                <a href="{{ route('inventory.grn.show', $grn) }}" 
+                                <a href="{{ route('admin.inventory.grn.show', $grn) }}" 
                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
                                     View
                                 </a>
                                 @if($grn->status === 'pending')
-                                    <a href="{{ route('inventory.grn.edit', $grn) }}" 
+                                    <a href="{{ route('admin.inventory.grn.edit', $grn) }}" 
                                        class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
                                         Edit
                                     </a>
-                                    <form action="{{ route('inventory.grn.destroy', $grn) }}" method="POST" class="inline-block">
+                                    <form action="{{ route('admin.inventory.grn.destroy', $grn) }}" method="POST" class="inline-block">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 

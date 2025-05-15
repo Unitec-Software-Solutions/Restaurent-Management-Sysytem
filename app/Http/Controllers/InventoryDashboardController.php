@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InventoryItem;
+use App\Models\ItemMaster;
 use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
 use Carbon\Carbon;
@@ -144,7 +145,7 @@ class InventoryDashboardController extends Controller
             ->pluck('name')
             ->toArray();
 
-        return view('inventory.dashboard', [
+        return view('admin.inventory.dashboard', [
             'soonToExpireItems' => $soonToExpireItems,
             'lowStockItems' => $lowStockItems,
             'recentTransactions' => $recentTransactions,
@@ -187,7 +188,7 @@ class InventoryDashboardController extends Controller
             ->latest()
             ->paginate(15);
 
-        return view('inventory.transactions.index', compact('transactions'));
+        return view('admin.inventory.transactions.index', compact('transactions'));
     }
 
     public function getExpiryReport(Request $request)
@@ -206,6 +207,6 @@ class InventoryDashboardController extends Controller
             }])
             ->get();
 
-        return view('inventory.expiry-report', compact('expiringItems', 'daysThreshold'));
+        return view('admin.inventory.expiry-report', compact('expiringItems', 'daysThreshold'));
     }
 }

@@ -18,7 +18,7 @@
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Inventory Items</h2>
         <div class="flex space-x-4">
-            <a href="{{ route('inventory.items.create') }}" 
+            <a href="{{ route('admin.inventory.items.create') }}" 
                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
                 Add New Item ( Multiple )
             </a>
@@ -27,7 +27,7 @@
 
     <!-- Filters -->
     <div class="mb-6">
-        <form method="GET" action="{{ route('inventory.items.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form method="GET" action="{{ route('admin.inventory.items.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Search -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Items</label>
@@ -56,7 +56,7 @@
                     Apply Filters
                 </button>
                 @if(request()->hasAny(['search', 'category_id']))
-                    <a href="{{ route('inventory.items.index') }}" 
+                    <a href="{{ route('admin.inventory.items.index') }}" 
                        class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
                         Clear
                     </a>
@@ -112,15 +112,15 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-3">
-                                <a href="{{ route('inventory.items.show', $item) }}" 
+                                <a href="{{ route('admin.inventory.items.show', $item) }}" 
                                    class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
                                     View
                                 </a>
-                                <a href="{{ route('inventory.items.edit', $item) }}" 
+                                <a href="{{ route('admin.inventory.items.edit', $item) }}" 
                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
                                     Edit
                                 </a>
-                                <form action="{{ route('inventory.items.destroy', $item) }}" method="POST" class="inline-block">
+                                <form action="{{ route('admin.inventory.items.destroy', $item) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" 

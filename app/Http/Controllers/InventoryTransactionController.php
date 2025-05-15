@@ -57,7 +57,7 @@ class InventoryTransactionController extends Controller
         $transactions = $query->latest()->paginate(15)->withQueryString();
         $branches = Branch::where('is_active', true)->orderBy('name')->get();
 
-        return view('inventory.transactions.index', [
+        return view('admin.inventory.transactions.index', [
             'transactions' => $transactions,
             'branches' => $branches,
             'totalValue' => $summary->total_value ?? 0,
@@ -69,6 +69,6 @@ class InventoryTransactionController extends Controller
     public function show(InventoryTransaction $transaction)
     {
         $transaction->load(['item.category', 'branch', 'user']);
-        return view('inventory.transactions.show', compact('transaction'));
+        return view('admin.inventory.transactions.show', compact('transaction'));
     }
 }

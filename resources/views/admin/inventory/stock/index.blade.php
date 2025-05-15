@@ -18,14 +18,14 @@
 
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Inventory Stock Management</h2>
-        <a href="{{ route('inventory.stock.create') }}" 
+        <a href="{{ route('admin.inventory.stock.create') }}" 
            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Add Stock</a>
     </div>
     <!-- Delete Notification -->
 
     <!-- Filters -->
     <div class="mb-6">
-        <form method="GET" action="{{ route('inventory.stock.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form method="GET" action="{{ route('admin.inventory.stock.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Search -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Item</label>
@@ -55,7 +55,7 @@
                     Apply Filters
                 </button>
                 @if(request('search') || request('branch_id'))
-                    <a href="{{ route('inventory.stock.index') }}" 
+                    <a href="{{ route('admin.inventory.stock.index') }}" 
                        class="ml-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
                         Clear
                     </a>
@@ -119,11 +119,11 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-3">
-                                <a href="{{ route('inventory.stock.edit', $stock) }}" 
+                                <a href="{{ route('admin.inventory.stock.edit', $stock) }}" 
                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
                                     Adjust
                                 </a>
-                                <form action="{{ route('inventory.stock.destroy', $stock) }}" method="POST" class="inline-block">
+                                <form action="{{ route('admin.inventory.stock.destroy', $stock) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" 
