@@ -68,7 +68,7 @@
                                     multiple>
                                 @foreach ($tables as $table)
                                     <option value="{{ $table->id }}" 
-                                            {{ in_array($table->id, json_decode($reservation->assigned_table_ids ?? '[]')) ? 'selected' : '' }}>
+                                            {{ in_array($table->id, $reservation->tables->pluck('id')->toArray()) ? 'selected' : '' }}>
                                         Table {{ $table->id }} (Capacity: {{ $table->capacity }})
                                     </option>
                                 @endforeach
