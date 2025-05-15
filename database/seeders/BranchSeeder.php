@@ -13,6 +13,7 @@ class BranchSeeder extends Seeder
             [
                 'organization_id' => 1, 
                 'name' => 'Main Branch',
+                'branch_id' => '1',
                 'address' => 'No. 25, Galle Road, Colombo 03, Sri Lanka',
                 'phone' => '+94 11 234 5678',
                 'email' => 'main@restaurant.lk',
