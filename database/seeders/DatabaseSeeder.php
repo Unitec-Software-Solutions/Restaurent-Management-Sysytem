@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
             LoginSeeder::class,
             SupplierSeeder::class,
             InventoryCategorySeeder::class,
-            InventoryItemSeeder::class,
+            // InventoryItemSeeder::class, // Removed 
             InventoryStockSeeder::class,
             InventoryTransactionSeeder::class,
             MenuCategorySeeder::class,
@@ -37,8 +37,9 @@ class DatabaseSeeder extends Seeder
             // MenuRecipeSeeder::class,
             PurchaseOrderSeeder::class,
             PurchaseOrderItemSeeder::class,
-            GoodReceivedNoteSeeder::class,
-            GoodReceivedNoteItemSeeder::class,
+            // GoodReceivedNoteSeeder::class,  // temporory disabled for testing of ItemMasterSeeder
+            // GoodReceivedNoteItemSeeder::class,
+            ItemMasterSeeder ::class,
         ]);
     }
 }
