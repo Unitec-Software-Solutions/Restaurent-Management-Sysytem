@@ -47,43 +47,7 @@ class ReservationController extends Controller
                 return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')']);
             }
 
-            // Check if table is available first
-            $isAvailable = $this->checkTableAvailability(
-                $validated['date'],
-                $validated['start_time'],
-                $validated['end_time'],
-                $validated['number_of_people'],
-                $validated['branch_id']
-            );
-            
-            Log::info('Table availability check result:', [
-                'is_available' => $isAvailable,
-                'date' => $validated['date'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'people' => $validated['number_of_people'],
-                'branch_id' => $validated['branch_id']
-            ]);
-
-            if (!$isAvailable) {
-                // If no table available, add to waitlist
-                $waitlist = Waitlist::create([
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'phone' => $validated['phone'],
-                    'date' => $validated['date'],
-                    'preferred_time' => $validated['start_time'],
-                    'number_of_people' => $validated['number_of_people'],
-                    'comments' => $validated['comments'],
-                    'branch_id' => $validated['branch_id'],
-                    'status' => 'waiting'
-                ]);
-
-                return redirect()->route('reservations.waitlist', $waitlist)
-                    ->with('warning', 'No tables available for your requested time. You have been added to the waitlist.');
-            }
-
-            // Create the reservation only if table is available
+            // Directly create the reservation
             $reservation = Reservation::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -100,7 +64,7 @@ class ReservationController extends Controller
             ]);
 
             return redirect()->route('reservations.summary', $reservation)
-                ->with('success', 'Your reservation has been submitted and is pending confirmation.');
+                ->with('success', 'Your reservation has been created successfully.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
@@ -182,8 +146,7 @@ class ReservationController extends Controller
     public function confirm(Reservation $reservation)
     {
         $reservation->update(['status' => 'confirmed']);
-        return redirect()->route('reservations.show', $reservation)
-            ->with('success', 'Reservation confirmed successfully.');
+        return response('Reservation confirmed successfully.');
     }
 
     public function cancel(Reservation $reservation)
@@ -318,4 +281,4 @@ class ReservationController extends Controller
                 ->withInput();
         }
     }
-} 
+}

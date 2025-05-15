@@ -91,18 +91,17 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment'])->name('payment')->where('reservation', '[0-9]+');
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
+    Route::get('/{reservation}/show', [ReservationController::class, 'show'])->name('reservations.show');
+    Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('reservations.confirm');
 });
 
 // Admin Routes
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Reservation Management
+Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
-    Route::get('/reservations/pending', [AdminReservationController::class, 'pending'])->name('reservations.pending');
-    Route::get('/reservations/{reservation}', [AdminReservationController::class, 'show'])->name('reservations.show');
-    Route::post('/reservations/{reservation}/confirm', [AdminReservationController::class, 'confirm'])->name('reservations.confirm');
-    Route::post('/reservations/{reservation}/reject', [AdminReservationController::class, 'reject'])->name('reservations.reject');
     Route::get('/reservations/{reservation}/edit', [AdminReservationController::class, 'edit'])->name('reservations.edit');
     Route::put('/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('reservations.update');
+    Route::delete('/reservations/{reservation}', [AdminReservationController::class, 'cancel'])->name('reservations.cancel');
+    Route::post('/reservations', [AdminReservationController::class, 'store'])->name('reservations.store');
 });
 
 
