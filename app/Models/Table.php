@@ -31,7 +31,7 @@ class Table extends Model
 
     public function reservations()
     {
-        return $this->hasMany(Reservation::class);
+        return $this->belongsToMany(Reservation::class, 'reservation_tables');
     }
 
     public function isAvailable()
@@ -74,4 +74,4 @@ class Table extends Model
     {
         return $query->where('capacity', '>=', $capacity);
     }
-} 
+}
