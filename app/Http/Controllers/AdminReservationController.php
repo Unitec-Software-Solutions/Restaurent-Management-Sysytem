@@ -20,7 +20,14 @@ class AdminReservationController extends Controller
     {
         $admin = auth()->user();
 
-        // Fetch reservations for the admin's branch
+        if (!$admin) {
+            return redirect()->route('admin.login')->with('error', 'You must be logged in to access this page.');
+        }
+
+        if (!$admin->branch_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Branch information is missing for this user.');
+        }
+
         $reservations = Reservation::where('branch_id', $admin->branch_id)->get();
 
         return view('admin.reservations.index', compact('reservations'));
