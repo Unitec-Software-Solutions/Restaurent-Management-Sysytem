@@ -21,7 +21,7 @@ class LoginSeeder extends Seeder
                 'password' => Hash::make('admin123'),
                 'phone_number' => '1234567890',
                 'user_type' => 'admin',
-                'branch_id' => 1,
+                'branch_id' => 1, 
                 'is_registered' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),

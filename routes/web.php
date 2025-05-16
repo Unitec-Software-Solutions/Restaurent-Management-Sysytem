@@ -57,7 +57,7 @@ Route::middleware(['auth:admin'])->prefix('inventory')->name('inventory.')->grou
 });
 
 // Admin routes
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::resource('reservations', AdminReservationController::class);
 
@@ -75,18 +75,9 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/edit', [ReservationController::class, 'edit'])->name('edit');
     Route::get('/review', [ReservationController::class, 'review'])->name('review.get');
     Route::post('/review', [ReservationController::class, 'review'])->name('review');
-    Route::get('/waitlist/{waitlist}', [ReservationController::class, 'waitlist'])->name('waitlist');
     Route::get('/cancellation-success', [ReservationController::class, 'cancellationSuccess'])->name('cancellation-success');
-
-    // Phone verification
-    Route::get('/check-phone', [ReservationController::class, 'showPhoneCheck'])->name('check-phone-form');
-    Route::post('/check-phone', [ReservationController::class, 'checkPhone'])->name('check-phone');
-    Route::post('/guest', [ReservationController::class, 'proceedAsGuest'])->name('guest');
-    Route::post('/user', [ReservationController::class, 'proceedAsUser'])->name('user');
-
-    // Parameterized routes
+    // Parameterized reservation routes
     Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary')->where('reservation', '[0-9]+');
-    Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment'])->name('payment')->where('reservation', '[0-9]+');
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
     Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
