@@ -14,11 +14,15 @@ use App\Http\Controllers\InventoryTransactionController;
 use App\Http\Controllers\AdminReservationController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\CustomerDashboardController;
 
 // Public routes
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
+
+// Customer dashboard: show all reservations by phone number
+Route::get('/customer-dashboard', [CustomerDashboardController::class, 'showReservationsByPhone'])->name('customer.dashboard');
 
 // Inventory routes
 Route::middleware(['auth:admin'])->prefix('inventory')->name('inventory.')->group(function () {
