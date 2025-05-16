@@ -22,6 +22,7 @@ class ReservationController extends Controller
         ]);
     }
 
+    
     public function store(Request $request)
     {
         try {
