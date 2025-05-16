@@ -34,9 +34,32 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Inventory Item Routes
         Route::prefix('inventory')->name('inventory.')->group(function () {
+
             Route::get('/ ', [ItemMasterController::class, 'index'])->name('index');
             
+
+            Route::prefix('items')->name('items.')->group(function () {
+                Route::get('/', [ItemMasterController::class, 'index'])->name('index');
+                Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
+                Route::post('/', [ItemMasterController::class, 'store'])->name('store');
+                Route::get('/{item}', [ItemMasterController::class, 'show'])->name('show');
+                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
+                Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
+            });
+            
         });
+
+
+
+
+    // Items routes
+    
+    
+    // Categories routes
+    Route::resource('categories', ItemCategoryController::class);
+
+
     });
 });
 
