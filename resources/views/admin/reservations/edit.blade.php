@@ -91,7 +91,7 @@
                                 <input type="time" 
                                        name="start_time" 
                                        id="start_time" 
-                                       value="{{ old('start_time', $reservation->start_time) }}"
+                                       value="{{ old('start_time', $reservation->start_time ? \Carbon\Carbon::parse($reservation->start_time)->format('H:i') : null) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -100,7 +100,7 @@
                                 <input type="time" 
                                        name="end_time" 
                                        id="end_time" 
-                                       value="{{ old('end_time', $reservation->end_time) }}"
+                                       value="{{ old('end_time', $reservation->end_time ? \Carbon\Carbon::parse($reservation->end_time)->format('H:i') : null) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -119,20 +119,29 @@
                     <!-- Assign Tables -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Assign Tables</h2>
-                        <div>
-                            <label for="assigned_table_ids" class="block text-sm font-medium text-gray-700 mb-1">Select Tables</label>
-                            <select name="assigned_table_ids[]" 
-                                    id="assigned_table_ids" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    multiple>
-                                @foreach ($tables as $table)
-                                    <option value="{{ $table->id }}" {{ in_array($table->id, $assignedTableIds ?? []) ? 'selected' : '' }}>
-                                        Table {{ $table->id }} (Capacity: {{ $table->capacity }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            <p class="text-sm text-gray-500 mt-1">Hold down Ctrl (Windows) or Command (Mac) to select multiple tables.</p>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach ($tables as $table)
+                                @php
+                                    $isAvailable = in_array($table->id, $availableTableIds ?? []);
+                                    $isAssigned = in_array($table->id, $assignedTableIds ?? []);
+                                @endphp
+                                <label class="cursor-pointer">
+                                    <input type="checkbox"
+                                           name="assigned_table_ids[]"
+                                           value="{{ $table->id }}"
+                                           class="hidden peer"
+                                           {{ $isAssigned ? 'checked' : '' }}
+                                           {{ $isAvailable ? '' : 'disabled' }}>
+                                    <div class="w-20 h-20 flex flex-col items-center justify-center border rounded-md text-xs p-2
+                                        peer-checked:bg-blue-500 peer-checked:text-white
+                                        {{ $isAvailable ? 'bg-white hover:bg-blue-100 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }}">
+                                        <span>Table {{ $table->id }}</span>
+                                        <span>Cap: {{ $table->capacity }}</span>
+                                    </div>
+                                </label>
+                            @endforeach
                         </div>
+                        <p class="text-sm text-gray-500 mt-1">Unavailable tables are grayed out and cannot be selected.</p>
                     </div>
 
                     <!-- Reservation Status -->
