@@ -40,7 +40,7 @@
                     <!-- Settings Dropdown -->
                     <div class="hidden sm:flex sm:items-center sm:ml-6">
                         <div class="ml-3 relative">
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('admin.logout') }}">
                                 @csrf
                                 <button type="submit" class="text-gray-500 hover:text-gray-700">
                                     Logout
@@ -74,4 +74,4 @@
         </main>
     </div>
 </body>
-</html> 
+</html>
