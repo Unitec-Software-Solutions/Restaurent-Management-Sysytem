@@ -13,10 +13,15 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminAuthController;
 use App\Models\ItemMaster;
 
+
+
 // Public routes
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('home');
+
+// Customer dashboard: show all reservations by phone number
+Route::get('/customer-dashboard', [CustomerDashboardController::class, 'showReservationsByPhone'])->name('customer.dashboard');
 
 // Admin routes
 Route::prefix('admin')->name('admin.')->group(function () {

@@ -1,11 +1,3 @@
-<?php
-$admin = auth('admin')->user();
-
-if (!$admin) {
-    return redirect()->route('admin.login')->with('error', 'You must be logged in to access this page.');
-}
-?>
-
 @extends('layouts.admin')
 
 @section('content')
@@ -26,6 +18,7 @@ if (!$admin) {
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tables</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
@@ -44,7 +37,17 @@ if (!$admin) {
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ ucfirst($reservation->status) }}
                         </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            @if($reservation->tables && $reservation->tables->count())
+                                @foreach($reservation->tables as $table)
+                                    <span class="inline-block bg-gray-200 rounded px-2 py-1 text-xs mr-1 mb-1">Table {{ $table->number }}</span>
+                                @endforeach
+                            @else
+                                <span class="text-gray-400">None</span>
+                            @endif
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <a href="{{ route('admin.reservations.show', $reservation) }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
                             <a href="{{ route('admin.reservations.edit', $reservation) }}" class="text-yellow-600 hover:text-yellow-900 mr-3">Edit</a>
                             <form action="{{ route('admin.reservations.destroy', $reservation) }}" method="POST" class="inline">
                                 @csrf
@@ -55,7 +58,7 @@ if (!$admin) {
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">No reservations found.</td>
+                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">No reservations found.</td>
                     </tr>
                 @endforelse
             </tbody>

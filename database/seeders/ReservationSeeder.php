@@ -26,7 +26,7 @@ class ReservationSeeder extends Seeder
                 'reservation_fee' => 10.00 + $i,
                 'cancellation_fee' => 5.00 + $i,
                 'status' => $i % 3 === 0 ? 'confirmed' : ($i % 2 === 0 ? 'cancelled' : 'pending'),
-                'branch_id' => $branchId,
+                'branch_id' => 1,
                 'created_at' => Carbon::now()->subDays(rand(0, 10)),
                 'updated_at' => Carbon::now()->subDays(rand(0, 5)),
             ]);
@@ -44,7 +44,7 @@ class ReservationSeeder extends Seeder
             'reservation_fee' => 25.00,
             'cancellation_fee' => 10.00,
             'status' => 'pending',
-            'branch_id' => $branchId,
+            'branch_id' => 1,
         ]);
 
         Reservation::create([
@@ -59,7 +59,7 @@ class ReservationSeeder extends Seeder
             'reservation_fee' => 50.00,
             'cancellation_fee' => 20.00,
             'status' => 'confirmed',
-            'branch_id' => $branchId,
+            'branch_id' => 1,
         ]);
 
         Reservation::create([
@@ -74,7 +74,7 @@ class ReservationSeeder extends Seeder
             'reservation_fee' => 12.00,
             'cancellation_fee' => 6.00,
             'status' => 'pending',
-            'branch_id' => $branchId,
+            'branch_id' => 1,
         ]);
     }
 }

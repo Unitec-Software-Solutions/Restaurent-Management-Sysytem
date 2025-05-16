@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             OrganizationSeeder::class,
             AdminSeeder::class,
             BranchSeeder::class,
+            TableSeeder::class,
             LoginSeeder::class,
             SupplierSeeder::class,
             ItemCategorySeeder::class,  // New Item Category Seeder
@@ -38,10 +39,15 @@ class DatabaseSeeder extends Seeder
             // MenuCategorySeeder::class,
             // MenuItemSeeder::class,
             // MenuRecipeSeeder::class,
+
             // PurchaseOrderSeeder::class,
             // PurchaseOrderItemSeeder::class,
             // GoodReceivedNoteSeeder::class,
             // GoodReceivedNoteItemSeeder::class,
+
+            AdminSeeder::class,
+            ReservationSeeder::class,
+
         ]);
     }
 }
