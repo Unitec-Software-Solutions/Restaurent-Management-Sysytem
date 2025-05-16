@@ -50,7 +50,7 @@
                     <div class="flex items-center">
                         @guest
                             @if (Route::has('login'))
-                                <a href="{{ route('login') }}"
+                                <a href="{{ route('admin.login') }}"
                                    class="text-gray-800 dark:text-white hover:bg-gray-50 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2 dark:hover:bg-gray-700 dark:focus:ring-gray-800">
                                     Login
                                 </a>
@@ -62,36 +62,7 @@
                                 </a>
                             @endif
                         @else
-                            <button type="button"
-                                    class="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                                    id="user-menu-button" aria-expanded="false" data-dropdown-toggle="user-dropdown">
-                                <span class="sr-only">Open user menu</span>
-                                <div class="relative w-8 h-8 overflow-hidden bg-gray-100 rounded-full dark:bg-gray-600">
-                                    <svg class="absolute w-10 h-10 text-gray-400 -left-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                                              clip-rule="evenodd" />
-                                    </svg>
-                                </div>
-                            </button>
-                            <div id="user-dropdown"
-                                 class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600">
-                                <div class="px-4 py-3">
-                                    <span class="block text-sm text-gray-900 dark:text-white">{{ Auth::user()->name }}</span>
-                                </div>
-                                <ul class="py-1" aria-labelledby="user-menu-button">
-                                    <li>
-                                        <a href="{{ route('logout') }}"
-                                           onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
-                                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">
-                                            Sign out
-                                        </a>
-                                        <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
-                                            @csrf
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
+                            <!-- Remove logout link and form since only admin login is used -->
                         @endguest
                     </div>
                 </div>
