@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             OrganizationSeeder::class,
             BranchSeeder::class,
+            TableSeeder::class,
             LoginSeeder::class,
             SupplierSeeder::class,
             InventoryCategorySeeder::class,
@@ -39,6 +40,8 @@ class DatabaseSeeder extends Seeder
             PurchaseOrderItemSeeder::class,
             GoodReceivedNoteSeeder::class,
             GoodReceivedNoteItemSeeder::class,
+            AdminSeeder::class,
+            ReservationSeeder::class,
         ]);
     }
 }

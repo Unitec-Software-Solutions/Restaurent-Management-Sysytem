@@ -20,4 +20,12 @@ class Admin extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    /**
+     * Get the branch that the admin belongs to.
+     */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }
