@@ -1,11 +1,3 @@
-<?php
-$admin = auth('admin')->user();
-
-if (!$admin) {
-    return redirect()->route('admin.login')->with('error', 'You must be logged in to access this page.');
-}
-?>
-
 @extends('layouts.admin')
 
 @section('content')
