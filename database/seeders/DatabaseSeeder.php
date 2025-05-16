@@ -40,6 +40,8 @@ class DatabaseSeeder extends Seeder
             PurchaseOrderItemSeeder::class,
             GoodReceivedNoteSeeder::class,
             GoodReceivedNoteItemSeeder::class,
+            AdminSeeder::class,
+            ReservationSeeder::class,
         ]);
     }
 }
