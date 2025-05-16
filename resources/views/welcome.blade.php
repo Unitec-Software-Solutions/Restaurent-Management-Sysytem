@@ -26,7 +26,7 @@
                         <span class="ml-2 text-gray-600">Restaurant Management System</span>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                        <a href="/login" class="px-4 py-2 text-gray-600 hover:text-blue-600 transition-colors">
+                        <a href="{{ route('admin.login') }}" class="px-4 py-2 text-gray-600 hover:text-blue-600 transition-colors">
                             Sign In
                         </a>
                     </div>

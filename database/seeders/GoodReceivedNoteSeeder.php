@@ -57,7 +57,7 @@ class GoodReceivedNoteSeeder extends Seeder
                 'branch_id' => $branches[array_rand($branches)],
                 'purchase_order_id' => $purchaseOrders[array_rand($purchaseOrders)],
                 'supplier_id' => $supplierId,
-                // Removed supplier_code as it doesn't exist in your table
+                'supplier_code' => Supplier::find($supplierId)->supplier_id,
                 'received_by' => $users[array_rand($users)],
                 'checked_by' => rand(0, 1) ? $users[array_rand($users)] : null,
                 'received_date' => $now->subDays(rand(1, 30))->format('Y-m-d'),

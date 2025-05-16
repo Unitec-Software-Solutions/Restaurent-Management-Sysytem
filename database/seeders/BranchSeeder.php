@@ -11,9 +11,9 @@ class BranchSeeder extends Seeder
     {
         $branches = [
             [
+                'id' => 1,
                 'organization_id' => 1, 
                 'name' => 'Main Branch',
-                'branch_id' => '1',
                 'address' => 'No. 25, Galle Road, Colombo 03, Sri Lanka',
                 'phone' => '+94 11 234 5678',
                 'email' => 'main@restaurant.lk',
@@ -25,6 +25,7 @@ class BranchSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'id' => 2,
                 'organization_id' => 1,
                 'name' => 'Kandy Branch',
                 'address' => 'No. 12, Peradeniya Road, Kandy, Sri Lanka',
@@ -38,6 +39,7 @@ class BranchSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'id' => 3,
                 'organization_id' => 1,
                 'name' => 'Galle Branch',
                 'address' => 'No. 7, Lighthouse Street, Galle Fort, Sri Lanka',
@@ -51,6 +53,7 @@ class BranchSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'id' => 4,
                 'organization_id' => 1,
                 'name' => 'Negombo Branch',
                 'address' => 'No. 56, Lewis Place, Negombo, Sri Lanka',
@@ -64,6 +67,7 @@ class BranchSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'id' => 5,
                 'organization_id' => 1,
                 'name' => 'Airport Express',
                 'address' => 'Bandaranaike International Airport, Katunayake, Sri Lanka',
@@ -79,8 +83,8 @@ class BranchSeeder extends Seeder
         ];
 
         foreach ($branches as $branch) {
-            Branch::firstOrCreate(
-                ['organization_id' => $branch['organization_id'], 'name' => $branch['name']],
+            Branch::updateOrCreate(
+                ['id' => $branch['id']],
                 $branch
             );
         }
