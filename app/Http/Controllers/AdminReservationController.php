@@ -102,7 +102,25 @@ class AdminReservationController extends Controller
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
 
-        return view('admin.reservations.edit', compact('reservation', 'tables', 'assignedTableIds'));
+        // Determine available tables for the reservation's date/time
+        $reservedTableIds = \App\Models\Table::where('branch_id', $admin->branch->id)
+            ->whereHas('reservations', function ($query) use ($reservation) {
+                $query->where('reservations.date', $reservation->date)
+                    ->where(function ($q) use ($reservation) {
+                        $q->whereBetween('reservations.start_time', [$reservation->start_time, $reservation->end_time])
+                          ->orWhereBetween('reservations.end_time', [$reservation->start_time, $reservation->end_time])
+                          ->orWhere(function($q2) use ($reservation) {
+                              $q2->where('reservations.start_time', '<=', $reservation->start_time)
+                                 ->where('reservations.end_time', '>=', $reservation->end_time);
+                          });
+                    })
+                    ->where('reservations.id', '!=', $reservation->id); // Exclude current reservation
+            })
+            ->pluck('tables.id')
+            ->toArray();
+        $availableTableIds = $tables->pluck('id')->diff($reservedTableIds)->merge($assignedTableIds)->unique()->toArray();
+
+        return view('admin.reservations.edit', compact('reservation', 'tables', 'assignedTableIds', 'availableTableIds'));
     }
 
     public function update(Request $request, Reservation $reservation)
@@ -208,7 +226,11 @@ class AdminReservationController extends Controller
         $admin = auth('admin')->user();
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $branch = $admin->branch;
-        return view('admin.reservations.create', compact('tables', 'branch'));
+
+        // For create, initially all tables are available (no reservation yet)
+        $availableTableIds = $tables->pluck('id')->toArray();
+
+        return view('admin.reservations.create', compact('tables', 'branch', 'availableTableIds'));
     }
 
     protected function sendNotification(Reservation $reservation, $method)
