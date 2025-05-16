@@ -24,11 +24,11 @@ class AdminReservationController extends Controller
             return redirect()->route('admin.login')->with('error', 'You must be logged in to access this page.');
         }
 
-        if (!$admin->branch_id) {
+        if (!$admin->branch || !$admin->branch->id) {
             return redirect()->route('admin.dashboard')->with('error', 'Branch information is missing for this user.');
         }
 
-        $reservations = Reservation::where('branch_id', $admin->branch_id)->get();
+        $reservations = Reservation::where('branch_id', $admin->branch->id)->get();
 
         return view('admin.reservations.index', compact('reservations'));
     }
@@ -95,11 +95,11 @@ class AdminReservationController extends Controller
     {
         $admin = auth('admin')->user();
 
-        if ($reservation->branch_id !== $admin->branch_id) {
+        if ($reservation->branch->id !== $admin->branch->id) {
             return redirect()->route('admin.reservations.index')->with('error', 'You are not authorized to edit this reservation.');
         }
 
-        $tables = Table::where('branch_id', $admin->branch_id)->get();
+        $tables = Table::where('branch_id', $admin->branch->id)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
 
         return view('admin.reservations.edit', compact('reservation', 'tables', 'assignedTableIds'));
@@ -120,7 +120,7 @@ class AdminReservationController extends Controller
         ]);
 
         // Get branch and its fees
-        $branch = Branch::find($reservation->branch_id);
+        $branch = $reservation->branch;
         $reservationFee = $branch && $branch->reservation_fee !== null ? $branch->reservation_fee : 0;
         $cancellationFee = $branch && $branch->cancellation_fee !== null ? $branch->cancellation_fee : 0;
 
@@ -177,8 +177,7 @@ class AdminReservationController extends Controller
             'assigned_table_ids.*' => 'exists:tables,id',
         ]);
 
-        // Get branch and its fees
-        $branch = Branch::find($admin->branch_id);
+        $branch = $admin->branch;
         $reservationFee = $branch && $branch->reservation_fee !== null ? $branch->reservation_fee : 0;
         $cancellationFee = $branch && $branch->cancellation_fee !== null ? $branch->cancellation_fee : 0;
 
@@ -191,7 +190,7 @@ class AdminReservationController extends Controller
             'end_time' => $validated['end_time'],
             'number_of_people' => $validated['number_of_people'],
             'status' => 'pending',
-            'branch_id' => $admin->branch_id,
+            'branch_id' => $branch->id,
             'reservation_fee' => $reservationFee,
             'cancellation_fee' => $cancellationFee,
         ]);
@@ -207,8 +206,8 @@ class AdminReservationController extends Controller
     public function create()
     {
         $admin = auth('admin')->user();
-        $tables = Table::where('branch_id', $admin->branch_id)->get();
-        $branch = Branch::find($admin->branch_id); // Use find() for a single branch
+        $tables = Table::where('branch_id', $admin->branch->id)->get();
+        $branch = $admin->branch;
         return view('admin.reservations.create', compact('tables', 'branch'));
     }
 
