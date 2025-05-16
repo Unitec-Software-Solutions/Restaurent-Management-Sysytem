@@ -1,28 +1,23 @@
 <?php
-// filepath: c:\Restaurant_Management_System\Restaurant-Management-System\config\auth.php
 
-return [
-    'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
+namespace App\Models;
 
-        'admin' => [
-            'driver' => 'session',
-            'provider' => 'admins',
-        ],
-    ],
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-    'providers' => [
-        'users' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\User::class,
-        ],
+class Admin extends Authenticatable
+{
+    use Notifiable;
 
-        'admins' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\Admin::class,
-        ],
-    ],
-];
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'branch_id',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+}
