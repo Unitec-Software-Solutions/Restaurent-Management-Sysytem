@@ -93,15 +93,16 @@ class AdminReservationController extends Controller
 
     public function edit(Reservation $reservation)
     {
-        $admin = auth()->user();
+        $admin = auth('admin')->user();
 
         if ($reservation->branch_id !== $admin->branch_id) {
             return redirect()->route('admin.reservations.index')->with('error', 'You are not authorized to edit this reservation.');
         }
 
         $tables = Table::where('branch_id', $admin->branch_id)->get();
+        $assignedTableIds = $reservation->tables->pluck('id')->toArray();
 
-        return view('admin.reservations.edit', compact('reservation', 'tables'));
+        return view('admin.reservations.edit', compact('reservation', 'tables', 'assignedTableIds'));
     }
 
     public function update(Request $request, Reservation $reservation)
@@ -128,12 +129,8 @@ class AdminReservationController extends Controller
             'number_of_people' => $validated['number_of_people'],
         ]);
 
-        // Reassign tables to the reservation
-        if (!empty($validated['assigned_table_ids'])) {
-            $reservation->tables()->sync($validated['assigned_table_ids']);
-        } else {
-            $reservation->tables()->detach();
-        }
+        // Assign tables
+        $reservation->tables()->sync($validated['assigned_table_ids'] ?? []);
 
         return redirect()->route('admin.reservations.index')->with('success', 'Reservation updated successfully.');
     }
@@ -160,6 +157,7 @@ class AdminReservationController extends Controller
 
     public function store(Request $request)
     {
+        $admin = auth('admin')->user();
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|min:10|max:15',
@@ -171,7 +169,6 @@ class AdminReservationController extends Controller
             'assigned_table_ids' => 'nullable|array',
             'assigned_table_ids.*' => 'exists:tables,id',
         ]);
-
         $reservation = Reservation::create([
             'name' => $validated['name'],
             'phone' => $validated['phone'],
@@ -181,25 +178,20 @@ class AdminReservationController extends Controller
             'end_time' => $validated['end_time'],
             'number_of_people' => $validated['number_of_people'],
             'status' => 'pending',
-            'branch_id' => auth()->user()->branch_id,
+            'branch_id' => $admin->branch_id,
         ]);
-
         // Assign tables to the reservation
         if (!empty($validated['assigned_table_ids'])) {
             $reservation->tables()->sync($validated['assigned_table_ids']);
         }
-
         return redirect()->route('admin.reservations.index')->with('success', 'Reservation created successfully.');
     }
 
     public function create()
     {
-        $admin = auth()->user();
-
-        // Fetch tables and branches for the admin's branch
+        $admin = auth('admin')->user();
         $tables = Table::where('branch_id', $admin->branch_id)->get();
         $branches = Branch::where('id', $admin->branch_id)->get();
-
         return view('admin.reservations.create', compact('tables', 'branches'));
     }
 
