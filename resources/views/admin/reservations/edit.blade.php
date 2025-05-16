@@ -23,6 +23,29 @@
                     @csrf
                     @method('PUT')
 
+                    <!-- Show reservation details for admin reference -->
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Reservation Details (Read Only)</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Reservation ID</label>
+                                <input type="text" value="{{ $reservation->id }}" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Created At</label>
+                                <input type="text" value="{{ $reservation->created_at }}" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <input type="text" value="{{ ucfirst($reservation->status) }}" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                <input type="text" value="{{ $reservation->branch_id }}" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100" readonly>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Reservation Details -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Reservation Details</h2>
@@ -103,8 +126,7 @@
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     multiple>
                                 @foreach ($tables as $table)
-                                    <option value="{{ $table->id }}" 
-                                            {{ in_array($table->id, $reservation->tables->pluck('id')->toArray()) ? 'selected' : '' }}>
+                                    <option value="{{ $table->id }}" {{ in_array($table->id, $assignedTableIds ?? []) ? 'selected' : '' }}>
                                         Table {{ $table->id }} (Capacity: {{ $table->capacity }})
                                     </option>
                                 @endforeach
