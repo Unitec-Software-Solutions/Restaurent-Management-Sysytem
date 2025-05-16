@@ -57,7 +57,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Authentication (login/logout) should be outside the auth:admin middleware
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login']);
-    Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+    // New logout confirmation page and action
+    Route::get('/logout', [AdminAuthController::class, 'adminLogoutPage'])->name('logout.page');
+    Route::post('/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
 
     // Protected admin routes
     Route::middleware('auth:admin')->group(function () {
