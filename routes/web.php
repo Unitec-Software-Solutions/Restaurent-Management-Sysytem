@@ -18,7 +18,7 @@ use App\Http\Controllers\AdminAuthController;
 // Public routes
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('home');
 
 // Inventory routes
 Route::middleware(['auth:admin'])->prefix('inventory')->name('inventory.')->group(function () {
