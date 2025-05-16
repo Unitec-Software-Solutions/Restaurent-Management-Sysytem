@@ -101,56 +101,11 @@ class AdminReservationController extends Controller
             return redirect()->route('admin.reservations.index')->with('error', 'You are not authorized to edit this reservation.');
         }
 
-        $validated = request()->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|min:10|max:15',
-            'email' => 'nullable|email|max:255',
-            'date' => 'required|date|after_or_equal:today',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
-            'number_of_people' => 'required|integer|min:1',
-            'assigned_table_ids' => 'nullable|array',
-            'assigned_table_ids.*' => 'exists:tables,id',
-        ]);
-
-        // Validate branch operating hours
-        $branch = $reservation->branch;
-        $branchOpenTime = \Carbon\Carbon::parse($branch->opening_time)->format('H:i');
-        $branchCloseTime = \Carbon\Carbon::parse($branch->closing_time)->format('H:i');
-        if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
-            return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')'])->withInput();
-        }
-        // For same-day reservations, ensure start time is at least 30 minutes from now
-        if ($validated['date'] === now()->format('Y-m-d')) {
-            $minStartTime = now()->addMinutes(30)->format('H:i');
-            if ($validated['start_time'] < $minStartTime) {
-                return back()->withErrors(['time' => 'For same-day reservations, start time must be at least 30 minutes from now.'])->withInput();
-            }
-        }
-        // Check capacity
-        $reservedCapacity = $branch->reservations()
-            ->where('date', $validated['date'])
-            ->where(function($query) use ($validated) {
-                $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                    ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                    ->orWhere(function($q) use ($validated) {
-                        $q->where('start_time', '<=', $validated['start_time'])
-                            ->where('end_time', '>=', $validated['end_time']);
-                    });
-            })
-            ->where('id', '!=', $reservation->id)
-            ->where('status', '!=', 'cancelled')
-            ->sum('number_of_people');
-        $availableCapacity = $branch->total_capacity - $reservedCapacity;
-        if ($availableCapacity < $validated['number_of_people']) {
-            return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
-        }
-
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
 
         // Determine available tables for the reservation's date/time
-        $reservedTableIds = \App\Models\Table::where('branch_id', $admin->branch->id)
+        $reservedTableIds = Table::where('branch_id', $admin->branch->id)
             ->whereHas('reservations', function ($query) use ($reservation) {
                 $query->where('reservations.date', $reservation->date)
                     ->where(function ($q) use ($reservation) {
