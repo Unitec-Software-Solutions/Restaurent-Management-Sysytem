@@ -54,6 +54,42 @@
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
+                            <div>
+                                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <input type="date" 
+                                       name="date" 
+                                       id="date" 
+                                       value="{{ old('date', $reservation->date ? \Carbon\Carbon::parse($reservation->date)->format('Y-m-d') : null) }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                                <input type="time" 
+                                       name="start_time" 
+                                       id="start_time" 
+                                       value="{{ old('start_time', $reservation->start_time) }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                                <input type="time" 
+                                       name="end_time" 
+                                       id="end_time" 
+                                       value="{{ old('end_time', $reservation->end_time) }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
+                            <div>
+                                <label for="number_of_people" class="block text-sm font-medium text-gray-700 mb-1">Number of People</label>
+                                <input type="number" 
+                                       name="number_of_people" 
+                                       id="number_of_people" 
+                                       value="{{ old('number_of_people', $reservation->number_of_people) }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                            </div>
                         </div>
                     </div>
 
