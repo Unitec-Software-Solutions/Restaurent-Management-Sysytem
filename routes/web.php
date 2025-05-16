@@ -20,10 +20,6 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Auth::routes();
-
-Route::get('/home', [HomeController::class, 'index'])->name('home');
-
 // Inventory routes
 Route::middleware(['auth:admin'])->prefix('inventory')->name('inventory.')->group(function () {
     // Dashboard
@@ -57,14 +53,17 @@ Route::middleware(['auth:admin'])->prefix('inventory')->name('inventory.')->grou
 });
 
 // Admin routes
-Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-    Route::resource('reservations', AdminReservationController::class);
-
-    // Authentication
+Route::prefix('admin')->name('admin.')->group(function () {
+    // Authentication (login/logout) should be outside the auth:admin middleware
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login']);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+
+    // Protected admin routes
+    Route::middleware('auth:admin')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::resource('reservations', AdminReservationController::class);
+    });
 });
 
 // Reservation routes
