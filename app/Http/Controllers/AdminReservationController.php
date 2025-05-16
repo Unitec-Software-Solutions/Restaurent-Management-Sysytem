@@ -37,8 +37,10 @@ class AdminReservationController extends Controller
 
     public function pending()
     {
+        $admin = auth('admin')->user();
         $reservations = Reservation::with(['branch', 'user'])
             ->where('status', 'pending')
+            ->where('branch_id', $admin->branch->id)
             ->latest()
             ->paginate(10);
 
@@ -164,12 +166,35 @@ class AdminReservationController extends Controller
                             ->where('end_time', '>=', $validated['end_time']);
                     });
             })
-            ->where('id', '!=', $reservation->id)
-            ->where('status', '!=', 'cancelled')
+            ->where('reservations.id', '!=', $reservation->id)
+            ->where('reservations.status', '!=', 'cancelled')
             ->sum('number_of_people');
         $availableCapacity = $branch->total_capacity - $reservedCapacity;
         if ($availableCapacity < $validated['number_of_people']) {
             return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
+        }
+
+        // Check if any selected tables are already reserved for the same date and overlapping time
+        if (!empty($validated['assigned_table_ids'])) {
+            $conflictingTables = Table::whereIn('id', $validated['assigned_table_ids'])
+                ->whereHas('reservations', function ($query) use ($validated, $reservation) {
+                    $query->where('date', $validated['date'])
+                        ->where(function ($q) use ($validated) {
+                            $q->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                              ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                              ->orWhere(function($q2) use ($validated) {
+                                  $q2->where('start_time', '<=', $validated['start_time'])
+                                     ->where('end_time', '>=', $validated['end_time']);
+                              });
+                        })
+                        ->where('reservations.id', '!=', $reservation->id ?? null)
+                        ->where('reservations.status', '!=', 'cancelled');
+                })
+                ->pluck('number')
+                ->toArray();
+            if (count($conflictingTables) > 0) {
+                return back()->withErrors(['assigned_table_ids' => 'The following tables are already reserved for the selected time: ' . implode(', ', $conflictingTables)])->withInput();
+            }
         }
 
         // Get branch and its fees
@@ -254,11 +279,34 @@ class AdminReservationController extends Controller
                             ->where('end_time', '>=', $validated['end_time']);
                     });
             })
-            ->where('status', '!=', 'cancelled')
+            ->where('reservations.status', '!=', 'cancelled')
             ->sum('number_of_people');
         $availableCapacity = $branch->total_capacity - $reservedCapacity;
         if ($availableCapacity < $validated['number_of_people']) {
             return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
+        }
+
+        // Check if any selected tables are already reserved for the same date and overlapping time
+        if (!empty($validated['assigned_table_ids'])) {
+            $conflictingTables = Table::whereIn('id', $validated['assigned_table_ids'])
+                ->whereHas('reservations', function ($query) use ($validated) {
+                    $query->where('date', $validated['date'])
+                        ->where(function ($q) use ($validated) {
+                            $q->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                              ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                              ->orWhere(function($q2) use ($validated) {
+                                  $q2->where('start_time', '<=', $validated['start_time'])
+                                     ->where('end_time', '>=', $validated['end_time']);
+                              });
+                        })
+                        ->where('reservations.id', '!=', $reservation->id ?? null)
+                        ->where('reservations.status', '!=', 'cancelled');
+                })
+                ->pluck('number')
+                ->toArray();
+            if (count($conflictingTables) > 0) {
+                return back()->withErrors(['assigned_table_ids' => 'The following tables are already reserved for the selected time: ' . implode(', ', $conflictingTables)])->withInput();
+            }
         }
 
         $reservationFee = $branch && $branch->reservation_fee !== null ? $branch->reservation_fee : 0;
