@@ -1,6 +1,8 @@
 @extends('layouts.admin')
 
 @section('content')
+@php $admin = auth('admin')->user(); @endphp
+
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-md mx-auto">
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
