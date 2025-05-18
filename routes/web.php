@@ -8,7 +8,7 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\AdminReservationController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminAuthController;
-use App\Http\Controllers\InventoryDashboardController;
+use App\Http\Controllers\ItemDashboardController;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\ItemTransactionController;
@@ -39,6 +39,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('inventory')->name('inventory.')->group(function () {
             // Dashboard
             Route::get('/', [ItemMasterController::class, 'index'])->name('index');
+            Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
 
             // Inventory Item Routes
             Route::prefix('items')->name('items.')->group(function () {

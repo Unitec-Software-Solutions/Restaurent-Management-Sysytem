@@ -28,7 +28,7 @@ class ItemMasterController extends Controller
                 
     $categories = ItemCategory::active()->get();
     
-    return view('admin.inventory.index', compact('items', 'categories'));
+    return view('admin.inventory.items.index', compact('items', 'categories'));
     }
 
     /**
