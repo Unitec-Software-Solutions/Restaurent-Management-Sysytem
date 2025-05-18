@@ -38,7 +38,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Inventory routes
         Route::prefix('inventory')->name('inventory.')->group(function () {
             // Dashboard
-            Route::get('/', [InventoryDashboardController::class, 'index'])->name('index');
+            Route::get('/', [ItemMasterController::class, 'index'])->name('index');
 
             // Inventory Item Routes
             Route::prefix('items')->name('items.')->group(function () {
@@ -51,14 +51,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
             });
 
-            Route::prefix('stock')->name('stock.')->group(function () {
-                Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
-                Route::get('/summary', [ItemTransactionController::class, 'stockSummary'])->name('summary');
-                Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
-                Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-                Route::get('/{item}/history', [ItemTransactionController::class, 'stockHistory'])->name('history');
-                Route::get('/movement-report', [ItemTransactionController::class, 'stockMovementReport'])->name('movement-report');
-            });
+            //  Route::prefix('stock')->name('stock.')->group(function () {
+            //      Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
+            //      Route::get('/summary', [ItemTransactionController::class, 'stockSummary'])->name('summary');
+            //      Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
+            //      Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
+            //      Route::get('/{item}/history', [ItemTransactionController::class, 'stockHistory'])->name('history');
+            //      Route::get('/movement-report', [ItemTransactionController::class, 'stockMovementReport'])->name('movement-report');
+            //  });
 
             // Categories routes
             Route::resource('categories', ItemCategoryController::class);
