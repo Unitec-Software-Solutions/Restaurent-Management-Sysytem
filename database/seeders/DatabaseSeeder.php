@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             ItemCategorySeeder::class,  // New Item Category Seeder
             ItemMasterSeeder::class,    // New Item Master Seeder
+            ItemTransactionSeeder::class,
             // InventoryCategorySeeder::class,
             // InventoryItemSeeder::class,
             // InventoryStockSeeder::class,

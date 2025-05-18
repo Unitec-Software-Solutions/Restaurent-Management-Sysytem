@@ -3,17 +3,15 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\InventoryDashboardController;
-
+use App\Http\Controllers\CustomerDashboardController;
 use App\Http\Controllers\ReservationController;
-use App\Http\Controllers\ItemCategoryController;
-use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\AdminReservationController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminAuthController;
-use App\Models\ItemMaster;
-
-
+use App\Http\Controllers\InventoryDashboardController;
+use App\Http\Controllers\ItemCategoryController;
+use App\Http\Controllers\ItemMasterController;
+use App\Http\Controllers\ItemTransactionController;
 
 // Public routes
 Route::get('/', function () {
@@ -37,12 +35,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::resource('reservations', AdminReservationController::class);
 
-        // Inventory Item Routes
+        // Inventory routes
         Route::prefix('inventory')->name('inventory.')->group(function () {
+            // Dashboard
+            Route::get('/', [InventoryDashboardController::class, 'index'])->name('index');
 
-            Route::get('/ ', [ItemMasterController::class, 'index'])->name('index');
-            
-
+            // Inventory Item Routes
             Route::prefix('items')->name('items.')->group(function () {
                 Route::get('/', [ItemMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
@@ -52,19 +50,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
             });
-            
+
+            Route::prefix('stock')->name('stock.')->group(function () {
+                Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
+                Route::get('/summary', [ItemTransactionController::class, 'stockSummary'])->name('summary');
+                Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
+                Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
+                Route::get('/{item}/history', [ItemTransactionController::class, 'stockHistory'])->name('history');
+                Route::get('/movement-report', [ItemTransactionController::class, 'stockMovementReport'])->name('movement-report');
+            });
+
+            // Categories routes
+            Route::resource('categories', ItemCategoryController::class);
         });
-
-
-
-
-    // Items routes
-    
-    
-    // Categories routes
-    Route::resource('categories', ItemCategoryController::class);
-
-
     });
 });
 
