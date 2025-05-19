@@ -6,7 +6,6 @@ use App\Models\ItemMaster;
 use App\Models\ItemTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
 
 class ItemDashboardController extends Controller
 {

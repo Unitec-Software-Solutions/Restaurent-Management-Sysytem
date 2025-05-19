@@ -59,6 +59,14 @@ class ItemMaster extends Model
     }
 
     /**
+     * Define the transactions relationship
+     */
+    public function transactions()
+    {
+        return $this->hasMany(ItemTransaction::class, 'inventory_item_id');
+    }
+
+    /**
      * Accessor Example: Get Ingredients if available in attributes
      */
     public function getIngredientsAttribute()

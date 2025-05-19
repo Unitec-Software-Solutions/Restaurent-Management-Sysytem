@@ -38,7 +38,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Inventory routes
         Route::prefix('inventory')->name('inventory.')->group(function () {
             // Dashboard
-            Route::get('/', [ItemMasterController::class, 'index'])->name('index');
+            // Route::get('/', [ItemMasterController::class, 'index'])->name('index');
+            Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
             Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
 
             // Inventory Item Routes

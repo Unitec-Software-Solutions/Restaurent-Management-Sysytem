@@ -1,3 +1,7 @@
+@php
+use App\Models\ItemTransaction;
+@endphp
+
 @extends('layouts.admin')
 
 @section('title', 'Inventory Dashboard')
@@ -86,18 +90,18 @@
                         </thead>
                         <tbody>
                             @foreach ($lowStockItems as $item)
+                            @php
+                            $stock = \App\Models\ItemTransaction::stockOnHand($item->id);
+                            $status = $stock <= $item->reorder_level ? 'Warning' : 'OK';
+                                @endphp
                                 <tr>
                                     <td>{{ $item->name }}</td>
-                                    <td>{{ ItemTransaction::stockOnHand($item->id) }}</td>
+                                    <td>{{ $stock }}</td>
                                     <td>
-                                        @if (ItemTransaction::stockOnHand($item->id) <= $item->reorder_level)
-                                            <span class="badge bg-warning">Warning</span>
-                                        @else
-                                            <span class="badge bg-success">OK</span>
-                                        @endif
+                                        <span class="badge bg-{{ $status === 'Warning' ? 'warning' : 'success' }}">{{ $status }}</span>
                                     </td>
                                 </tr>
-                            @endforeach
+                                @endforeach
                         </tbody>
                     </table>
                 </div>
@@ -122,12 +126,12 @@
                         </thead>
                         <tbody>
                             @foreach ($topSellingItems as $item)
-                                <tr>
-                                    <td>{{ $item->category->name ?? '-' }}</td>
-                                    <td>{{ $item->name }}</td>
-                                    <td>{{ $item->quantity_sold }}</td>
-                                    <td>${{ number_format($item->revenue, 2) }}</td>
-                                </tr>
+                            <tr>
+                                <td>{{ $item->category->name ?? '-' }}</td>
+                                <td>{{ $item->name }}</td>
+                                <td>{{ $item->quantity_sold }}</td>
+                                <td>${{ number_format($item->revenue, 2) }}</td>
+                            </tr>
                             @endforeach
                         </tbody>
                     </table>
@@ -174,24 +178,24 @@
                         </thead>
                         <tbody>
                             @foreach ($salesOrders as $order)
-                                <tr>
-                                    <td>{{ $order->category->name ?? '-' }}</td>
-                                    <td>{{ $order->quantity }}</td>
-                                    <td>
-                                        @if ($order->status === 'pending')
-                                            <span class="badge bg-warning">Pending</span>
-                                        @elseif ($order->status === 'shipped')
-                                            <span class="badge bg-info">Shipped</span>
-                                        @elseif ($order->status === 'delivered')
-                                            <span class="badge bg-success">Delivered</span>
-                                        @else
-                                            <span class="badge bg-danger">Cancelled</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <a href="#" class="btn btn-sm btn-primary">View</a>
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td>{{ $order->category->name ?? '-' }}</td>
+                                <td>{{ $order->quantity }}</td>
+                                <td>
+                                    @if ($order->status === 'pending')
+                                    <span class="badge bg-warning">Pending</span>
+                                    @elseif ($order->status === 'shipped')
+                                    <span class="badge bg-info">Shipped</span>
+                                    @elseif ($order->status === 'delivered')
+                                    <span class="badge bg-success">Delivered</span>
+                                    @else
+                                    <span class="badge bg-danger">Cancelled</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-primary">View</a>
+                                </td>
+                            </tr>
                             @endforeach
                         </tbody>
                     </table>
