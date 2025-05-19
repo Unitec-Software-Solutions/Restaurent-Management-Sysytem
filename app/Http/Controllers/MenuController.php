@@ -51,11 +51,4 @@ class MenuController extends Controller
     }
 
     // New method to fetch items using DB facade (if needed separately)
-    public function create()
-    {
-        $menuItems = DB::table('menu_items')->pluck('name', 'id');
-        $foodItems = DB::table('food_items')->pluck('name', 'id');
-
-        return view('your_form_view', compact('menuItems', 'foodItems'));
-    }
 }
