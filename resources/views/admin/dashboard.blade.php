@@ -1,4 +1,5 @@
 @extends('layouts.main')
+
 @section('content')
 @php $admin = auth('admin')->user(); @endphp
 <div class="flex items-center justify-between mb-4">
