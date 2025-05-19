@@ -1,15 +1,23 @@
 @import "tailwindcss";
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+html, body {
+    height: 100%;
+    margin: 0;
 }
 
+<<<<<<< HEAD
+.min-h-screen {
+    min-height: 100vh;
+}
+
+.flex-1 {
+    flex: 1;
+    overflow-y: auto;
+}
+
+
+=======
 @import "flowbite/src/themes/default";
 @plugin "flowbite/plugin";
 @source "../../node_modules/flowbite";
+>>>>>>> 9b0d85d46c950a4c8ad21af3b600ca06fa755550
