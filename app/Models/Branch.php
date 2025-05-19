@@ -37,23 +37,10 @@ class Branch extends Model
         'reservation_fee' => 'decimal:2',
         'cancellation_fee' => 'decimal:2',
     ];
-
-    /**
-     * Get the inventory stock for the branch.
-     */
-    public function inventoryStock()
-    {
-        return $this->hasMany(InventoryStock::class);
-    }
-
+    
     /**
      * Get the inventory transactions for the branch.
      */
-    public function inventoryTransactions()
-    {
-        return $this->hasMany(InventoryTransaction::class);
-    }
-
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);

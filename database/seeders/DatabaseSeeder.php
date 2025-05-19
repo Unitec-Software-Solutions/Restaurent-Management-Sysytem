@@ -25,23 +25,30 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             OrganizationSeeder::class,
+            AdminSeeder::class,
             BranchSeeder::class,
             TableSeeder::class,
             LoginSeeder::class,
             SupplierSeeder::class,
-            InventoryCategorySeeder::class,
-            InventoryItemSeeder::class,
-            InventoryStockSeeder::class,
-            InventoryTransactionSeeder::class,
-            MenuCategorySeeder::class,
-            MenuItemSeeder::class,
+            ItemCategorySeeder::class,  // New Item Category Seeder
+            ItemMasterSeeder::class,    // New Item Master Seeder
+            ItemTransactionSeeder::class,
+            // InventoryCategorySeeder::class,
+            // InventoryItemSeeder::class,
+            // InventoryStockSeeder::class,
+            // InventoryTransactionSeeder::class,
+            // MenuCategorySeeder::class,
+            // MenuItemSeeder::class,
             // MenuRecipeSeeder::class,
-            PurchaseOrderSeeder::class,
-            PurchaseOrderItemSeeder::class,
-            GoodReceivedNoteSeeder::class,
-            GoodReceivedNoteItemSeeder::class,
+
+            // PurchaseOrderSeeder::class,
+            // PurchaseOrderItemSeeder::class,
+            // GoodReceivedNoteSeeder::class,
+            // GoodReceivedNoteItemSeeder::class,
+
             AdminSeeder::class,
             ReservationSeeder::class,
+
         ]);
     }
 }
