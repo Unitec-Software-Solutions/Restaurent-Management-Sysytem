@@ -47,22 +47,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [ItemMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
                 Route::post('/', [ItemMasterController::class, 'store'])->name('store');
-                Route::get('/{item}', [ItemMasterController::class, 'show'])->name('show');
+                Route::get('/{item}', [ItemMasterController::class, 'show'])->whereNumber('item')->name('show');
                 Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
-                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
+                Route::put('/{item}', [ItemMasterController::class, 'edit'])->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
+                Route::get('/create-template/{index}/', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
+
             });
 
-            //  Route::prefix('stock')->name('stock.')->group(function () {
-            //      Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
-            //      Route::get('/summary', [ItemTransactionController::class, 'stockSummary'])->name('summary');
-            //      Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
-            //      Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-            //      Route::get('/{item}/history', [ItemTransactionController::class, 'stockHistory'])->name('history');
-            //      Route::get('/movement-report', [ItemTransactionController::class, 'stockMovementReport'])->name('movement-report');
-            //  });
+            Route::prefix('stock')->name('stock.')->group(function () {
+                Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
+                Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
+                Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
+                // Route::get('/transactions', [ItemTransactionController::class, 'transactions'])->name('transactions');
+                Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
+                Route::get('/{transaction}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
+                Route::put('/{transaction}', [ItemTransactionController::class, 'update'])->name('update');
+                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
+            
+                Route::prefix('transactions')->name('transactions.')->group(function () {
+                    Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
+                });
+            
+            });
 
-            // Categories routes
             Route::resource('categories', ItemCategoryController::class);
         });
     });
