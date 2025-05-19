@@ -100,6 +100,14 @@
                 Packaging
             </div>
         </div>
+
+        @foreach($foodItems as $foodItem)
+            <div>
+                <h3>{{ $foodItem->name }}</h3>
+                <p>{{ $foodItem->description }}</p>
+                <!-- Add more fields as needed -->
+            </div>
+        @endforeach
     </div>
 
     <script>
