@@ -20,11 +20,16 @@ use App\Http\Controllers\ItemDashboardController;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\ItemTransactionController;
+use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\MenuFrontendController;
 
 // Public routes
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/frontend');
 });
+
+Route::get('/frontend', [MenuFrontendController::class, 'index']);
+Route::get('/menu', [MenuFrontendController::class, 'index']);
 
 Auth::routes();
 
