@@ -44,8 +44,16 @@ class ItemCategorySeeder extends Seeder
                 'is_active' => true,
             ],
         ];
+
         foreach ($categories as $category) {
-            ItemCategory::create($category);
+            // Check if category exists by name or code
+            $existingCategory = ItemCategory::where('name', $category['name'])
+                ->orWhere('code', $category['code'])
+                ->first();
+
+            if (!$existingCategory) {
+                ItemCategory::create($category);
+            }
         }
     }
 }

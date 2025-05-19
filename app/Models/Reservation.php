@@ -90,3 +90,6 @@ class Reservation extends Model
         });
     }
 }
+
+// Example usage in controller:
+Reservation::where('phone', $phone)->orderBy('date', 'desc')->get();
