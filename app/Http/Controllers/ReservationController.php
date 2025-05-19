@@ -2,6 +2,15 @@
 
 namespace App\Http\Controllers;
 
+<<<<<<< HEAD
+use Illuminate\Http\Request;
+
+class ReservationController extends Controller
+{
+    public function index()
+    {
+        return view('reservations.index'); // Ensure this view exists
+=======
 use App\Models\Reservation;
 use App\Models\Branch;
 use App\Models\Payment;

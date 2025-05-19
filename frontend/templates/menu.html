@@ -1,0 +1,8 @@
+{% for item in food_items %}
+    <div class="menu-item">
+        <h3>{{ item.name }}</h3>
+        <img src="{{ item.image_url }}" alt="{{ item.name }}">
+        <p>{{ item.description }}</p>
+        <p>Price: ${{ item.price }}</p>
+    </div>
+{% endfor %}
