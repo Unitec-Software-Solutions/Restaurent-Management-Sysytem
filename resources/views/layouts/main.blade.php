@@ -64,12 +64,12 @@
 
                         <!-- Profile dropdown -->
                     <!-- Settings Dropdown -->
-                    <div class="hidden sm:flex sm:items-center sm:ml-6">
+                    {{-- <div class="hidden sm:flex sm:items-center sm:ml-6">
                         <div class="ml-3 relative">
                             <a href="{{ route('admin.logout.page') }}" class="text-gray-500 hover:text-gray-700">Logout</a>
                         </div>
                     </div>
-                    </div>
+                    </div> --}}
                 </div>
             </div>
         </div>
