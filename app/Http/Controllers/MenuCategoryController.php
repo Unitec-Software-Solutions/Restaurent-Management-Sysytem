@@ -4,45 +4,27 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\TimeSlot;
-use App\Models\MenuItem;
-use App\Models\FoodItem;
-use Illuminate\Support\Facades\DB;
+use App\Models\MenuItem; // Assuming you have a MenuItem model
+use App\Models\TimeSlot; // Assuming you have a TimeSlot model
 
 class MenuCategoryController extends Controller
 {
     public function create()
     {
-        // Fetch data from menu_items and food_items tables
-        $menuItems = DB::table('menu_items')->get();
-        $foodItems = DB::table('food_items')->get();
+        // Fetch menu items from the database, filtering by menu_category_id
+        $menuItems = MenuItem::select('id', 'name', 'menu_category_id')
+            ->whereNotNull('menu_category_id') // Filter items with a non-null menu_category_id
+            ->get();
 
-        // Group items by category (assuming 'category' is a column in both tables)
-        $groupedItems = [];
-        foreach ($menuItems as $item) {
-            $groupedItems[$item->category][] = $item;
-        }
-        foreach ($foodItems as $item) {
-            $groupedItems[$item->category][] = $item;
-        }
+        // Fetch time slots from the database
+        $timeSlots = TimeSlot::select('id', 'name')->get();
 
-        // Fetch time slots (assuming you have a time_slots table)
-        $timeSlots = DB::table('time_slots')->get();
-
-        // Pass the data to the view
-        return view('menu.addmenucategory', compact('groupedItems', 'timeSlots'));
+        return view('menu.addmenucategory', compact('menuItems', 'timeSlots'));
     }
 
     public function store(Request $request)
     {
-        // Handle form submission
-        $categoryName = $request->input('category_name');
-        $timeSlots = $request->input('time_slots');
-        $selectedItems = $request->input('items');
-
-        // Save the new menu category and associate items (logic depends on your database structure)
-        // Example: Save to a `menu_categories` table and associate items in a pivot table
-
-        return redirect()->back()->with('success', 'Menu category added successfully!');
+        // Your store logic here
+        // Validate and store the new menu category
     }
 }

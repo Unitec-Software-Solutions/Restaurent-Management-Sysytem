@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ItemController extends Controller
 {
@@ -132,5 +133,19 @@ class ItemController extends Controller
     public function show(InventoryItem $item)
     {
         return view('items.show', compact('item'));
+    }
+
+    public function getItemList()
+    {
+        try {
+            $items = DB::connection('test_db')
+                ->table('item_master')
+                ->select('item_category_id', 'name', 'unicode_name')
+                ->get();
+            
+            return view('frontend.itemlist', compact('items'));
+        } catch (\Exception $e) {
+            return back()->withError('Database connection error: ' . $e->getMessage());
+        }
     }
 }

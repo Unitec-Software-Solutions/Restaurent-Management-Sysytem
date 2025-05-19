@@ -8,25 +8,24 @@ use App\Models\FoodItem;
 use App\Models\TimeSlot;
 use App\Models\MenuCategory;
 use Illuminate\Support\Facades\DB;
+use App\Models\InventoryCategory;
 
 class MenuController extends Controller
 {
     public function showAddMenuCategoryForm()
     {
-        // Fetch data from menu_items and food_items tables
-        $menuItems = MenuItem::all();
-        $foodItems = FoodItem::all();
+        // Fetch all menu categories for the dropdown
+        $menuCategories = MenuCategory::where('is_active', true)->orderBy('display_order')->get();
+        
+        return view('menu.addmenucategory', compact('menuCategories'));
+    }
 
-        // Combine the data
-        $items = $menuItems->merge($foodItems);
-
-        // Group items by category (assuming there's a 'category' column in both tables)
-        $groupedItems = $items->groupBy('category');
-
-        // Fetch data from the time_slots table
-        $timeSlots = TimeSlot::all();
-
-        return view('menu.addmenucategory', compact('groupedItems', 'timeSlots'));
+    public function addMenuCategory(Request $request)
+    {
+        // Handle form submission (e.g., save the category to the database)
+        $categoryName = $request->input('category_name');
+        // Add your logic to save the category here
+        return redirect('/menu/addmenucategory')->with('success', 'Category added successfully!');
     }
 
     public function storeMenuCategory(Request $request)
@@ -35,7 +34,6 @@ class MenuController extends Controller
         $request->validate([
             'category_name' => 'required|string|max:255',
             'time_slots' => 'required|array',
-            'items' => 'required|array',
         ]);
 
         // Save the menu category
@@ -43,9 +41,8 @@ class MenuController extends Controller
         $menuCategory->name = $request->input('category_name');
         $menuCategory->save();
 
-        // Attach time slots and items to the menu category
+        // Attach time slots to the menu category
         $menuCategory->timeSlots()->attach($request->input('time_slots'));
-        $menuCategory->items()->attach($request->input('items'));
 
         return redirect()->back()->with('success', 'Menu category added successfully!');
     }
@@ -54,8 +51,91 @@ class MenuController extends Controller
     public function create()
     {
         $menuItems = DB::table('menu_items')->pluck('name', 'id');
-        $foodItems = DB::table('food_items')->pluck('name', 'id');
+        
+    }
 
-        return view('your_form_view', compact('menuItems', 'foodItems'));
+    public function addCategory()
+    {
+        return view('menu.add_category'); // Ensure this view exists
+    }
+    
+    /**
+     * Fetch menu items by category ID
+     *
+     * @param int $categoryId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getMenuItemsByCategory($categoryId)
+    {
+        // Fetch the 'name' column from menu_items table filtered by menu_category_id
+        $menuItems = MenuItem::where('menu_category_id', $categoryId)
+            ->where('is_active', true)
+            ->select('id', 'name')
+            ->get();
+        
+        return response()->json($menuItems);
+    }
+
+    public function index()
+    {
+        // Fetch data from food_items table
+        $menuItems = DB::table('food_items')
+            ->select('name', 'price')
+            ->get();
+
+        return view('menu', ['menuItems' => $menuItems]);
+    }
+
+    public function filterMenu(Request $request)
+    {
+        $category = $request->input('category');
+        
+        $query = DB::table('food_items')
+            ->select('name', 'price');
+        
+        if ($category !== 'all') {
+            $query->where('category', $category);
+        }
+        
+
+        
+        return view('frontend.menu', compact('foodItems'));
+    }
+
+    public function frontend()
+    {
+        // Fetch data from the database
+        $menuData = DB::table('inventory_categories')
+            ->leftJoin('food_items', 'inventory_categories.id', '=', 'food_items.id')
+            ->select(
+                'inventory_categories.id AS category_id',
+                'inventory_categories.name AS category_name',
+                'food_items.item_id',
+                'food_items.name AS food_name',
+                'food_items.price'
+            )
+            ->orderBy('inventory_categories.id')
+            ->get();
+
+        // Group the data by category
+        $groupedMenuData = $menuData->groupBy('category_name');
+
+        return view('menu.frontend', compact('groupedMenuData'));
+    }
+
+    // Admin view
+    public function adminIndex()
+    {
+        return view('menu.admin-index', [
+            'isAdmin' => true
+        ]);
+    }
+
+    // Customer view
+    public function customerIndex()
+    {
+        return view('menu.customer-index', [
+            'isAdmin' => false
+        ]);
     }
 }
