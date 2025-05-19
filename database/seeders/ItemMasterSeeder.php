@@ -830,7 +830,10 @@ class ItemMasterSeeder extends Seeder
         ];
 
         foreach ($items as $item) {
-            ItemMaster::create($item);
-        }
+    ItemMaster::firstOrCreate(
+        ['item_code' => $item['item_code']], // Check by unique item code
+        $item // Create with all data if not exists
+    );
+}
     }
 }
