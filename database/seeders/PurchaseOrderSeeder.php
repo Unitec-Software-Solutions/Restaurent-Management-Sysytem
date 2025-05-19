@@ -17,38 +17,28 @@ class PurchaseOrderSeeder extends Seeder
      * Run the database seeds.
      */
     public function run(): void
-    {
-        $branches = Branch::all();
-        $suppliers = Supplier::all();
-        $users = User::all();
+{
+    $branches = Branch::all();
+    $suppliers = Supplier::all();
+    $users = User::all();
 
-        if ($branches->isEmpty()) {
-            $this->command->error('No branches found. Please run the branch seeder first.');
-            return;
-        }
+    if ($branches->isEmpty()) {
+        $this->command->error('No branches found. Please run the branch seeder first.');
+        return;
+    }
 
-        if ($suppliers->isEmpty()) {
-            $this->command->error('No suppliers found. Please run the supplier seeder first.');
-            return;
-        }
+    if ($suppliers->isEmpty()) {
+        $this->command->error('No suppliers found. Please run the supplier seeder first.');
+        return;
+    }
 
-        if ($users->isEmpty()) {
-            $this->command->error('No users found. Please run the user seeder first.');
-            return;
-        }
+    if ($users->isEmpty()) {
+        $this->command->error('No users found. Please run the user seeder first.');
+        return;
+    }
 
-        // Generate purchase orders for the last 3 months
-        $startDate = Carbon::now()->subMonths(3);
-        $endDate = Carbon::now();
-
-        // Status possibilities with their weights
-        $statuses = [
-            'received' => 40,
-            'partially_received' => 20,
-            'sent' => 20,
-            'draft' => 15,
-            'cancelled' => 5
-        ];
+    $startDate = Carbon::now()->subMonths(3);
+    $endDate = Carbon::now();
 
         // Each branch will have 10-20 purchase orders
         foreach ($branches as $branch) {
@@ -87,8 +77,57 @@ class PurchaseOrderSeeder extends Seeder
             }
         }
 
-        $this->command->info('Purchase orders seeded successfully!');
+    $statuses = [
+        'received' => 40,
+        'partially_received' => 20,
+        'sent' => 20,
+        'draft' => 15,
+        'cancelled' => 5
+    ];
+
+    $existingPoNumbers = [];
+
+    foreach ($branches as $branch) {
+        $numOrders = rand(10, 20);
+
+        for ($i = 0; $i < $numOrders; $i++) {
+            $orderDate = Carbon::createFromTimestamp(
+                rand($startDate->timestamp, $endDate->timestamp)
+            );
+
+            $expectedDelivery = (clone $orderDate)->addDays(rand(3, 7));
+
+            $status = $this->getRandomWeightedStatus($statuses);
+
+            // Ensure unique PO number generation
+            do {
+                $poNumber = sprintf(
+                    "PO-%s-%03d",
+                    $orderDate->format('Ymd'),
+                    rand(1, 999)
+                );
+            } while (in_array($poNumber, $existingPoNumbers) || PurchaseOrder::where('po_number', $poNumber)->exists());
+
+            $existingPoNumbers[] = $poNumber;
+
+
+            PurchaseOrder::create([
+                'branch_id' => $branch->id,
+                'supplier_id' => $suppliers->random()->id,
+                'user_id' => $users->random()->id,
+                'po_number' => $poNumber,
+                'order_date' => $orderDate,
+                'expected_delivery_date' => $expectedDelivery,
+                'status' => $status,
+                'total_amount' => 0,
+                'notes' => $this->generateNotes($status),
+                'is_active' => true
+            ]);
+        }
     }
+
+    $this->command->info('Purchase orders seeded successfully!');
+}
 
     /**
      * Generate appropriate notes based on the PO status

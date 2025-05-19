@@ -67,10 +67,21 @@ class InventoryCategorySeeder extends Seeder
             ],
         ];
 
+        $createdCount = 0;
+        $skippedCount = 0;
+
         foreach ($categories as $category) {
-            InventoryCategory::create($category);
+            // Check if category already exists by name
+            if (!InventoryCategory::where('name', $category['name'])->exists()) {
+                InventoryCategory::create($category);
+                $createdCount++;
+            } else {
+                $skippedCount++;
+            }
         }
 
-        $this->command->info('Inventory categories seeded successfully!');
+        $this->command->info('Inventory categories seeding completed!');
+        $this->command->info("Created {$createdCount} new categories.");
+        $this->command->info("Skipped {$skippedCount} existing categories.");
     }
-} 
+}

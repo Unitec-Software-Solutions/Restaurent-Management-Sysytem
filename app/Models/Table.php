@@ -12,11 +12,11 @@ class Table extends Model
 
     protected $fillable = [
         'branch_id',
-        'table_number',
+        'number',
         'capacity',
         'status',
         'location',
-        'is_active',
+        'description',
     ];
 
     protected $casts = [
@@ -31,8 +31,7 @@ class Table extends Model
 
     public function reservations()
     {
-        return $this->belongsToMany(Reservation::class, 'reservation_tables')
-            ->withTimestamps();
+        return $this->hasMany(Reservation::class);
     }
 
     public function isAvailable()
@@ -53,5 +52,26 @@ class Table extends Model
     public function isMaintenance()
     {
         return $this->status === 'maintenance';
+    }
+
+    public function scopeAvailable($query, $date, $startTime, $endTime)
+    {
+        return $query->whereDoesntHave('reservations', function($q) use ($date, $startTime, $endTime) {
+            $q->where('date', $date)
+                ->where(function($q) use ($startTime, $endTime) {
+                    $q->whereBetween('start_time', [$startTime, $endTime])
+                        ->orWhereBetween('end_time', [$startTime, $endTime])
+                        ->orWhere(function($q) use ($startTime, $endTime) {
+                            $q->where('start_time', '<=', $startTime)
+                                ->where('end_time', '>=', $endTime);
+                        });
+                })
+                ->where('status', '!=', 'cancelled');
+        });
+    }
+
+    public function scopeWithCapacity($query, $capacity)
+    {
+        return $query->where('capacity', '>=', $capacity);
     }
 } 

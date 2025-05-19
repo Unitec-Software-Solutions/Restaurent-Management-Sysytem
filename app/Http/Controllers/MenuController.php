@@ -48,6 +48,7 @@ class MenuController extends Controller
     }
 
     // New method to fetch items using DB facade (if needed separately)
+<<<<<<< HEAD
     public function create()
     {
         $menuItems = DB::table('menu_items')->pluck('name', 'id');
@@ -138,4 +139,6 @@ class MenuController extends Controller
             'isAdmin' => false
         ]);
     }
+=======
+>>>>>>> b483a3a3398074130768c9b0df9a99bcd430acd0
 }

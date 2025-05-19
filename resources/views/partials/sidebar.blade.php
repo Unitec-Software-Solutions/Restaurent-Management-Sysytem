@@ -48,6 +48,7 @@
             @endif
         @endauth
 
+<<<<<<< HEAD
         <a href="{{ route('settings') }}" 
            onclick="console.log('Settings clicked')"
            class="block py-2 px-4 rounded hover:bg-blue-700">
@@ -63,3 +64,82 @@
         </form>
     </nav>
 </aside>
+=======
+            <!-- Stock -->
+            <li>
+                <a href="{{ route('inventory.stock.index') }}"
+                class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.stock.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
+                    </svg>
+                    <span class="ml-3">Stock Management</span>
+                </a>
+            </li>
+
+            <!-- Transactions -->
+            <li>
+                <a href="{{ route('inventory.transactions.index') }}"
+                class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.transactions.*') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
+                    </svg>
+                    <span class="ml-3">Transactions</span>
+                </a>
+            </li>
+
+            <!-- GRN -->
+            <li>
+                <a href="{{ route('inventory.grn.index') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.grn.') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4h12v2H4zm0 4h8v2H4zm0 4h6v2H4z"/>
+                    </svg>
+                    <span class="ml-3">G R N</span>
+                </a>
+            </li>
+
+            <!-- Expiry Report -->
+            {{-- 
+            <li>
+                <a href="{{ route('inventory.expiry-report') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.expiry-report') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a8 8 0 108 8 8 8 0 00-8-8zM9 4h2v5H9zm1 9a1.5 1.5 0 11-1.5-1.5A1.5 1.5 0 0110 13z"/>
+                    </svg>
+                    <span class="ml-3">Expiry Report</span>
+                </a>
+            </li>
+            --}}
+
+            <!-- Create Item                     
+            <li>
+                <a href="{{ route('inventory.items.create') }}"
+                   class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 {{ request()->routeIs('inventory.items.create') ? 'bg-gray-100 dark:bg-gray-700' : '' }}">
+                    <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/>
+                    </svg>
+                    <span class="ml-3">Add New Item</span>
+                </a>
+            </li>
+            -->
+
+            <!-- Logout -->
+            <li>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit"
+                            class="w-full flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M3 4a1 1 0 011-1h5a1 1 0 110 2H5v10h4a1 1 0 110 2H4a1 1 0 01-1-1V4zm9.293 1.293a1 1 0 011.414 0L17 8.586a2 2 0 010 2.828l-3.293 3.293a1 1 0 11-1.414-1.414L14.586 11H8a1 1 0 110-2h6.586l-1.293-1.293a1 1 0 010-1.414z"
+                                  clip-rule="evenodd"/>
+                        </svg>
+                        <span class="ml-3">Logout</span>
+                    </button>
+                </form>
+            </li>
+
+        </ul>
+    </div>
+</aside>
+>>>>>>> b483a3a3398074130768c9b0df9a99bcd430acd0

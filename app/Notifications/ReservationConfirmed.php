@@ -1,0 +1,1 @@
+<x-reservation-status :status="$reservation->status" /> 

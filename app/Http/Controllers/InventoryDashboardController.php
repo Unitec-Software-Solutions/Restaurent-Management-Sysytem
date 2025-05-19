@@ -187,7 +187,7 @@ class InventoryDashboardController extends Controller
             ->latest()
             ->paginate(15);
 
-        return view('inventory.transactions', compact('transactions'));
+        return view('inventory.transactions.index', compact('transactions'));
     }
 
     public function getExpiryReport(Request $request)
