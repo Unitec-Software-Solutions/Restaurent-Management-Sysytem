@@ -48,6 +48,11 @@ class Reservation extends Model
         return $this->morphMany(Payment::class, 'payable');
     }
 
+    public function tables()
+    {
+        return $this->belongsToMany(Table::class, 'reservation_tables');
+    }
+
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
@@ -84,4 +89,4 @@ class Reservation extends Model
                 });
         });
     }
-} 
+}

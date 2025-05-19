@@ -7,12 +7,20 @@
 
     <title>{{ config('app.name', 'Restaurant Management System') }} - Admin</title>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <!-- Preload Fonts -->
+    <link rel="preload" href="https://fonts.bunny.net/css?family=Nunito" as="style">
+    <link rel="dns-prefetch" href="//fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet" />
 
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- Styles -->
+    @vite(['resources/sass/app.scss', 'resources/css/app.css'])
+
+    <!-- Flowbite CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.css" rel="stylesheet" />
+
+    <!-- Scripts (deferred for performance) -->
+    @vite(['resources/js/app.js'])
+</head>
 </head>
 <body class="font-sans antialiased bg-gray-100">
     <div class="min-h-screen">
@@ -23,7 +31,7 @@
                     <div class="flex">
                         <!-- Logo -->
                         <div class="shrink-0 flex items-center">
-                            <a href="{{ route('admin.reservations.index') }}" class="text-xl font-bold text-gray-800">
+                            <a href="{{ route('admin.dashboard') }}" class="text-xl font-bold text-gray-800">
                                 {{ config('app.name', 'Restaurant Management System') }}
                             </a>
                         </div>
@@ -34,18 +42,17 @@
                                class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('admin.reservations.*') ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                                 Reservations
                             </a>
+                            <a href="{{ route('admin.inventory.index') }}" 
+                               class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('admin.inventory.*') ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                                Inventory
+                            </a>
                         </div>
                     </div>
 
                     <!-- Settings Dropdown -->
                     <div class="hidden sm:flex sm:items-center sm:ml-6">
                         <div class="ml-3 relative">
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="text-gray-500 hover:text-gray-700">
-                                    Logout
-                                </button>
-                            </form>
+                            <a href="{{ route('admin.logout.page') }}" class="text-gray-500 hover:text-gray-700">Logout</a>
                         </div>
                     </div>
                 </div>
@@ -74,4 +81,4 @@
         </main>
     </div>
 </body>
-</html> 
+</html>
