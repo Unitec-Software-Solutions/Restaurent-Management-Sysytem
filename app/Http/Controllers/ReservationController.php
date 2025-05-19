@@ -2,15 +2,6 @@
 
 namespace App\Http\Controllers;
 
-<<<<<<< HEAD
-use Illuminate\Http\Request;
-
-class ReservationController extends Controller
-{
-    public function index()
-    {
-        return view('reservations.index'); // Ensure this view exists
-=======
 use App\Models\Reservation;
 use App\Models\Branch;
 use App\Models\Payment;
@@ -31,7 +22,6 @@ class ReservationController extends Controller
         ]);
     }
 
-    
     public function store(Request $request)
     {
         try {
@@ -234,8 +224,6 @@ class ReservationController extends Controller
         // Load the branch relationship
         $reservation->load('branch');
         
-        
-        
         $branches = Branch::where('is_active', true)->get();
         return view('reservations.edit', compact('reservation', 'branches'));
     }
@@ -290,5 +278,15 @@ class ReservationController extends Controller
                 ->withErrors(['error' => 'Failed to update reservation. Please try again.'])
                 ->withInput();
         }
+    }
+
+    public function showReservationsByPhone(Request $request)
+    {
+        $phone = $request->input('phone');
+        $reservations = [];
+        if ($phone) {
+            $reservations = Reservation::where('phone', $phone)->orderBy('date', 'desc')->get();
+        }
+        return view('reservations.customer-dashboard', compact('reservations', 'phone'));
     }
 }
