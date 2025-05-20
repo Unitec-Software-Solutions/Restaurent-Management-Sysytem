@@ -25,8 +25,15 @@ class OrderController extends Controller
     public function create(Request $request)
     {
         $reservationId = $request->input('reservation_id');
-        $menuItems = ItemMaster::where('is_menu_item', true)->get();
-        return view('orders.create', compact('reservationId', 'menuItems'));
+        $menuItems = \App\Models\ItemMaster::where('is_menu_item', true)->get(); // <-- FIXED
+        $branches = \App\Models\Branch::all();
+
+        $reservation = null;
+        if ($reservationId) {
+            $reservation = \App\Models\Reservation::find($reservationId);
+        }
+
+        return view('orders.create', compact('reservationId', 'menuItems', 'branches', 'reservation'));
     }
 
     // Store new order (dine-in, under reservation)
@@ -34,46 +41,55 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'reservation_id' => 'required|exists:reservations,id',
+            'customer_name' => 'required_without:reservation_id|string',
+            'customer_phone' => 'required_without:reservation_id|string',
+            'order_type' => 'required_without:reservation_id|string',
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        $reservation = Reservation::findOrFail($data['reservation_id']);
+        $reservation = null;
+        if (!empty($data['reservation_id'])) {
+            $reservation = Reservation::find($data['reservation_id']);
+        }
 
         $order = Order::create([
-            'user_id' => auth()->id(),
-            'reservation_id' => $reservation->id,
-            'customer_name' => $reservation->customer_name,
-            'customer_phone' => $reservation->customer_phone,
-            'order_type' => $reservation->order_type,
-            'status' => 'active',
+            'reservation_id' => $reservation ? $reservation->id : null,
+            'branch_id'      => $reservation ? $reservation->branch_id : null,
+            'customer_name'  => $reservation ? $reservation->name : $data['customer_name'],
+            'customer_phone' => $reservation ? $reservation->phone : $data['customer_phone'],
+            'order_type'     => $reservation ? ($reservation->order_type ?? 'dine_in_online_scheduled') : ($data['order_type'] ?? 'dine_in_online_scheduled'),
+            'status'         => 'active',
         ]);
 
         $subtotal = 0;
         foreach ($data['items'] as $item) {
             $inventoryItem = ItemMaster::find($item['item_id']);
+            if (!$inventoryItem) {
+                continue;
+            }
             $lineTotal = $inventoryItem->selling_price * $item['quantity'];
             $subtotal += $lineTotal;
+
             OrderItem::create([
                 'order_id' => $order->id,
-                'inventory_item_id' => $inventoryItem->id,
+                'menu_item_id' => $item['item_id'],
+                'inventory_item_id' => $item['item_id'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $inventoryItem->selling_price,
                 'total_price' => $lineTotal,
             ]);
         }
 
-        // Price calculation
-        $tax = $subtotal * 0.1;
-        $service = $subtotal * 0.05;
+        // Example: 10% tax, 0 discount
+        $tax = $subtotal * 0.10;
         $discount = 0;
-        $total = $subtotal + $tax + $service - $discount;
+        $total = $subtotal + $tax - $discount;
 
         $order->update([
             'subtotal' => $subtotal,
             'tax' => $tax,
-            'service_charge' => $service,
             'discount' => $discount,
             'total' => $total,
         ]);
@@ -111,11 +127,15 @@ class OrderController extends Controller
         $subtotal = 0;
         foreach ($data['items'] as $item) {
             $inventoryItem = ItemMaster::find($item['item_id']);
+            if (!$inventoryItem) {
+                continue;
+            }
             $lineTotal = $inventoryItem->selling_price * $item['quantity'];
             $subtotal += $lineTotal;
             OrderItem::create([
                 'order_id' => $order->id,
-                'inventory_item_id' => $inventoryItem->id,
+                'menu_item_id' => $item['item_id'],
+                'inventory_item_id' => $item['item_id'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $inventoryItem->selling_price,
                 'total_price' => $lineTotal,
