@@ -32,13 +32,25 @@
         </div>
 
         <!-- Transaction Type -->
-        <div>
-            <label for="transaction_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-            <select name="transaction_type" id="transaction_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white">
-                <option value="in" {{ $transaction->transaction_type === 'in' ? 'selected' : '' }}>Stock In</option>
-                <option value="out" {{ $transaction->transaction_type === 'out' ? 'selected' : '' }}>Stock Out</option>
-            </select>
-        </div>
+<div>
+    <label for="transaction_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Transaction Type</label>
+    <select name="transaction_type" id="transaction_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:text-white" required>
+        <optgroup label="Stock In">
+            <option value="purchase_order">Purchase Order</option>
+            <option value="return">Return</option>
+            <option value="adjustment">Adjustment</option>
+            <option value="audit">Audit</option>
+            <option value="transfer_in">Transfer In</option>
+        </optgroup>
+        <optgroup label="Stock Out">
+            <option value="sales_order">Sales Order</option>
+            <option value="write_off">Write Off</option>
+            <option value="transfer">Transfer</option>
+            <option value="usage">Usage</option>
+            <option value="transfer_out">Transfer Out</option>
+        </optgroup>
+    </select>
+</div>
 
         <!-- Quantity -->
         <div>
