@@ -45,7 +45,7 @@
     </div>
 
     <div class="mt-6 flex justify-between">
-        <a href="{{ route('admin.inventory.stock.edit', $transaction) }}" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">Edit</a>
+        {{-- <a href="{{ route('admin.inventory.stock.edit', $transaction) }}" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">Edit</a> --}}
         <a href="{{ route('admin.inventory.stock.index') }}" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Back to List</a>
     </div>
 </div>
