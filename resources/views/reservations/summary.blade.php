@@ -64,9 +64,25 @@
                             </a>
                         @endif
                     </div>
+
+                    @if($reservation->status === 'pending')
+                        <div class="mt-8 flex flex-col md:flex-row gap-4 justify-center items-center">
+                            <form action="{{ route('reservations.payment', $reservation) }}" method="GET">
+                                <button type="submit" class="bg-green-600 hover:bg-green-800 text-white font-bold py-2 px-4 rounded">
+                                    Proceed to Payment
+                                </button>
+                            </form>
+                            <form action="{{ route('orders.create') }}" method="GET">
+                                <input type="hidden" name="reservation_id" value="{{ $reservation->id }}">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded">
+                                    Place an Order
+                                </button>
+                            </form>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
-@endsection 
+@endsection
