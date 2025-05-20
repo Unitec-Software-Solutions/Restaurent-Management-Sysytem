@@ -14,42 +14,39 @@ use App\Http\Controllers\LogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReservationController;
-use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SettingController;
 
-<<<<<<< HEAD
+
 // Remove or comment out the default welcome route
 // Route::get('/', function () {
 //     return view('welcome');
 // });
 
 // Redirect root URL to /frontend
-=======
+
 use App\Http\Controllers\ReservationsController;
-use App\Http\Controllers\OrderController;
 use App\Http\Controllers\GoodReceivedNoteController;
 use App\Http\Controllers\GoodReceivedNoteItemController;
 use App\Http\Controllers\InventoryTransactionController;
 
-use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\AdminReservationController;
 
 
 
->>>>>>> b483a3a3398074130768c9b0df9a99bcd430acd0
+
 Route::get('/', function () {
     return redirect('/frontend');
 });
 
-<<<<<<< HEAD
+
 Auth::routes();
-=======
+
 Auth::routes(['register' => false, 'login' => false]);
->>>>>>> b483a3a3398074130768c9b0df9a99bcd430acd0
+
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
@@ -138,11 +135,9 @@ Route::get('/frontend/menu', function () {
     return view('frontend.menu');
 });
 
-<<<<<<< HEAD
+
 // Keep your existing frontend route (optional, but good to keep)
-Route::get('/frontend', function () {
-    return view('menu.index');
-})->name('menu.index');
+Route::get('/frontend', [FrontendController::class, 'index'])->name('frontend');
 
 // Sidebar function routes
 Route::post('/log-click', [LogController::class, 'logClick'])->name('log.click');
@@ -250,11 +245,11 @@ Route::get('/frontend', function() {
 Route::get('/frontend/customers', function() {
     return view('menu.customer-index');
 });
-=======
+
 Route::get('/menu/addmenucategory', [MenuController::class, 'showAddMenuCategoryForm'])->name('menu.addmenucategory');
 Route::post('/menu/addmenucategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storemenucategory');
 Route::post('/menu/storeCategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storeCategory');
-=======
+
 // Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
 // Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
 
@@ -295,5 +290,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::put('/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('reservations.update');
 });
 
->>>>>>> b483a3a3398074130768c9b0df9a99bcd430acd0
+Route::get('/frontend/items', [ItemController::class, 'getItemList'])->name('frontend.items');
+Route::get('/frontend/items/create', [ItemController::class, 'create'])->name('frontend.items.create');
+Route::post('/frontend/items', [ItemController::class, 'store'])->name('frontend.items.store');
+Route::get('/frontend/items/{id}/edit', [ItemController::class, 'edit'])->name('frontend.items.edit');
+Route::put('/frontend/items/{id}', [ItemController::class, 'update'])->name('frontend.items.update');
+Route::delete('/frontend/items/{id}', [ItemController::class, 'destroy'])->name('frontend.items.destroy');
+
+
 

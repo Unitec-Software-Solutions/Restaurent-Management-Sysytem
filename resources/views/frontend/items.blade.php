@@ -2,7 +2,10 @@
 
 @section('content')
 <div class="container">
-    <h1>Menu</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Item List</h2>
+        <a href="{{ route('frontend.items.create') }}" class="btn btn-primary">+ Add New Item</a>
+    </div>
 
     @foreach($groupedItems as $categoryName => $items)
         <div class="category-section mb-5">
@@ -11,24 +14,10 @@
                 @foreach($items as $item)
                     <div class="col-md-4 mb-4">
                         <div class="card">
-                            @if($item->image)
-                                <img src="{{ asset('storage/' . $item->image) }}" class="card-img-top" alt="{{ $item->name }}">
-                            @else
-                                <img src="{{ asset('images/default-item.jpg') }}" class="card-img-top" alt="Default Image">
-                            @endif
                             <div class="card-body">
                                 <h5 class="card-title">{{ $item->name }}</h5>
                                 <p class="card-text">Price: ${{ number_format($item->selling_price, 2) }}</p>
-                                @auth
-                                    <div class="admin-actions">
-                                        <a href="{{ route('frontend.items.edit', $item->id) }}" class="btn btn-sm btn-primary">Edit</a>
-                                        <form action="{{ route('frontend.items.destroy', $item->id) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
-                                        </form>
-                                    </div>
-                                @endauth
+                                <a href="{{ route('frontend.items.edit', $item->id) }}" class="btn btn-sm btn-primary">Edit</a>
                             </div>
                         </div>
                     </div>
@@ -37,7 +26,6 @@
         </div>
     @endforeach
 </div>
-@endsection
 
 <style>
     .category-section {
@@ -61,3 +49,4 @@
         transform: translateY(-5px);
     }
 </style>
+@endsection 

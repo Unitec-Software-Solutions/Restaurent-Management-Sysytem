@@ -48,7 +48,7 @@
             @endif
         @endauth
 
-<<<<<<< HEAD
+
         <a href="{{ route('settings') }}" 
            onclick="console.log('Settings clicked')"
            class="block py-2 px-4 rounded hover:bg-blue-700">
@@ -64,7 +64,7 @@
         </form>
     </nav>
 </aside>
-=======
+
             <!-- Stock -->
             <li>
                 <a href="{{ route('inventory.stock.index') }}"
@@ -142,4 +142,4 @@
         </ul>
     </div>
 </aside>
->>>>>>> b483a3a3398074130768c9b0df9a99bcd430acd0
+

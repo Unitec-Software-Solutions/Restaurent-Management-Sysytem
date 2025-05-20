@@ -17,7 +17,7 @@ class MenuItemSeeder extends Seeder
         DB::table('menu_items')->truncate();
 
         $menuItems = [
-            // ==================== Breakfast Items ====================
+            // ====== Breakfast Items ======
             [
                 'menu_category_id' => 1, // Breakfast
                 'name' => 'Egg Hoppers',
@@ -64,7 +64,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Rice & Curry ====================
+            // ====== Rice & Curry ======
             [
                 'menu_category_id' => 13, // Rice & Curry
                 'name' => 'White Rice with 3 Curries',
@@ -111,7 +111,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Colombo Favorites ====================
+            // ====== Colombo Favorites ======
             [
                 'menu_category_id' => 5, // Colombo Favorites
                 'name' => 'Lamprais',
@@ -143,7 +143,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Kandy Specials ====================
+            // ====== Kandy Specials ======
             [
                 'menu_category_id' => 6, // Kandy Specials
                 'name' => 'Kandy Mixed Rice',
@@ -160,7 +160,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Jaffna Cuisine ====================
+            // ====== Jaffna Cuisine ======
             [
                 'menu_category_id' => 7, // Jaffna Cuisine
                 'name' => 'Jaffna Crab Curry',
@@ -192,7 +192,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Coastal Delights ====================
+            // ====== Coastal Delights ======
             [
                 'menu_category_id' => 8, // Coastal Delights
                 'name' => 'Ambul Thiyal (Sour Fish Curry)',
@@ -224,7 +224,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Avurudu Special ====================
+            // ====== Avurudu Special ======
             [
                 'menu_category_id' => 9, // Avurudu Special
                 'name' => 'Kiribath (Milk Rice)',
@@ -256,7 +256,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Beverages ====================
+            // ====== Beverages ======
             [
                 'menu_category_id' => 16, // Beverages
                 'name' => 'King Coconut Water',
@@ -303,7 +303,7 @@ class MenuItemSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ==================== Desserts ====================
+            // ====== Desserts ======
             [
                 'menu_category_id' => 17, // Desserts
                 'name' => 'Watalappan',

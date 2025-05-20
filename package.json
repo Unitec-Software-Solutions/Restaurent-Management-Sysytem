@@ -18,7 +18,7 @@
         "vite": "^6.2.4"
     },
     "dependencies": {
-<<<<<<< HEAD
+
         "express": "^4.18.2",
         "flowbite": "^3.1.2",
         "react-icons": "^5.5.0",
@@ -42,9 +42,9 @@
         "url": "https://github.com/Unitec-Software-Solutions/Restaurent-Management-Sysytem/issues"
     },
     "homepage": "https://github.com/Unitec-Software-Solutions/Restaurent-Management-Sysytem#readme"
-=======
+
         "flatpickr": "^4.6.13",
         "flowbite": "^3.1.2"
     }
->>>>>>> b483a3a3398074130768c9b0df9a99bcd430acd0
+
 }

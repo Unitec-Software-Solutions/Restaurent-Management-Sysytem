@@ -5,7 +5,7 @@
 @section('content')
     <header class="flex justify-between items-center mb-8">
         <h2 class="text-2xl font-bold text-gray-700">Admin Digital Menu</h2>
-        <a href="{{ route('frontend.itemlist') }}" class="btn btn-primary">+ Add menu item</a>
+        <a href="{{ route('frontend.items') }}" class="btn btn-primary">+ Add menu item</a>
     </header>
 
     <!-- Category Sections -->
