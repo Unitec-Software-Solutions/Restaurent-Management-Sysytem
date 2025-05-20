@@ -6,6 +6,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryDashboardController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\StockController;
+<<<<<<< HEAD
 
 use App\Http\Controllers\ImageUploadController;
 use App\Http\Controllers\MenuController;
@@ -28,72 +29,94 @@ use App\Http\Controllers\SettingController;
 
 // Redirect root URL to /frontend
 
+=======
+>>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
 use App\Http\Controllers\ReservationsController;
 use App\Http\Controllers\GoodReceivedNoteController;
 use App\Http\Controllers\GoodReceivedNoteItemController;
 use App\Http\Controllers\InventoryTransactionController;
 
 use App\Http\Controllers\AdminReservationController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\ItemDashboardController;
+use App\Http\Controllers\ItemCategoryController;
+use App\Http\Controllers\ItemMasterController;
+use App\Http\Controllers\ItemTransactionController;
+use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\MenuFrontendController;
+
+<<<<<<< HEAD
 
 
 
-
+=======
+// Public routes
+>>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
 Route::get('/', function () {
     return redirect('/frontend');
 });
 
+<<<<<<< HEAD
 
 Auth::routes();
 
 Auth::routes(['register' => false, 'login' => false]);
 
+=======
+Route::get('/frontend', [MenuFrontendController::class, 'index']);
+Route::get('/menu', [MenuFrontendController::class, 'index']);
+
+Auth::routes();
+>>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-// Inventory routes with proper naming
-Route::middleware(['auth'])->prefix('inventory')->name('inventory.')->group(function () {
-    // Dashboard routes
-    Route::get('/', [InventoryDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard', [InventoryDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/transactions', [InventoryDashboardController::class, 'getTransactionHistory'])->name('transactions');
-    Route::get('/expiry-report', [InventoryDashboardController::class, 'getExpiryReport'])->name('expiry-report');
-    
-    // Item routes
-    Route::get('/items/create', [ItemController::class, 'create'])->name('items.create');
-    Route::post('/items', [ItemController::class, 'store'])->name('items.store');
-    Route::get('/items/{item}', [ItemController::class, 'show'])->name('items.show');
-    Route::get('/items/{item}/edit', [ItemController::class, 'edit'])->name('items.edit');
-    Route::put('/items/{item}', [ItemController::class, 'update'])->name('items.update');
-    
-    // Stock routes
-    Route::prefix('stock')->name('stock.')->group(function () {
-        Route::get('/', [StockController::class, 'index'])->name('index');
-        Route::get('/create', [StockController::class, 'create'])->name('create');
-        Route::post('/store', [StockController::class, 'store'])->name('store');
-        Route::get('/{stock}/edit', [StockController::class, 'edit'])->name('edit');
-        Route::put('/{stock}', [StockController::class, 'update'])->name('update');
-        Route::delete('/{stock}', [StockController::class, 'destroy'])->name('destroy');
-    });
+// Admin routes
+Route::prefix('admin')->name('admin.')->group(function () {
+    // Authentication (login/logout) should be outside the auth:admin middleware
+    Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AdminAuthController::class, 'login']);
+    // New logout confirmation page and action
+    Route::get('/logout', [AdminAuthController::class, 'adminLogoutPage'])->name('logout.page');
+    Route::post('/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
 
-    // Transaction routes
-    Route::prefix('transactions')->name('transactions.')->group(function () {
-        Route::get('/', [InventoryTransactionController::class, 'index'])->name('index');
-        Route::get('/{transaction}', [InventoryTransactionController::class, 'show'])->name('show');
+    // Protected admin routes
+    Route::middleware('auth:admin')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::resource('reservations', AdminReservationController::class);
+
+        // Inventory routes
+        Route::prefix('inventory')->name('inventory.')->group(function () {
+            // Dashboard
+            // Route::get('/', [ItemMasterController::class, 'index'])->name('index');
+            Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
+            Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
+
+            // Inventory Item Routes
+            Route::prefix('items')->name('items.')->group(function () {
+                Route::get('/', [ItemMasterController::class, 'index'])->name('index');
+                Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
+                Route::post('/', [ItemMasterController::class, 'store'])->name('store');
+                Route::get('/{item}', [ItemMasterController::class, 'show'])->name('show');
+                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
+                Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
+            });
+
+            //  Route::prefix('stock')->name('stock.')->group(function () {
+            //      Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
+            //      Route::get('/summary', [ItemTransactionController::class, 'stockSummary'])->name('summary');
+            //      Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
+            //      Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
+            //      Route::get('/{item}/history', [ItemTransactionController::class, 'stockHistory'])->name('history');
+            //      Route::get('/movement-report', [ItemTransactionController::class, 'stockMovementReport'])->name('movement-report');
+            //  });
+
+            // Categories routes
+            Route::resource('categories', ItemCategoryController::class);
+        });
     });
-    
-    // GRN routes 
-    Route::prefix('grn')->name('grn.')->group(function () {
-        Route::resource('/', GoodReceivedNoteController::class)->except(['create']);
-        Route::get('/create', [GoodReceivedNoteController::class, 'create'])->name('create');
-        Route::post('/{grn}/finalize', [GoodReceivedNoteController::class, 'finalize'])->name('finalize');
-        
-        // GRN Items routes
-        Route::post('/{grn}/items', [GoodReceivedNoteItemController::class, 'store'])->name('items.store');
-        Route::put('/items/{item}', [GoodReceivedNoteItemController::class, 'update'])->name('items.update');
-        Route::delete('/items/{item}', [GoodReceivedNoteItemController::class, 'destroy'])->name('items.destroy');
-        Route::post('/items/{item}/quality-check', [GoodReceivedNoteItemController::class, 'qualityCheck'])->name('items.quality-check');
-    });
-    
 });
 
 // Reservation routes
@@ -113,6 +136,7 @@ Route::post('/reservation/{id}/confirm', [ReservationsController::class, 'confir
 
 
 // Other routes
+<<<<<<< HEAD
 
 Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
 Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
@@ -250,31 +274,25 @@ Route::get('/menu/addmenucategory', [MenuController::class, 'showAddMenuCategory
 Route::post('/menu/addmenucategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storemenucategory');
 Route::post('/menu/storeCategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storeCategory');
 
+=======
+>>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
 // Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
 // Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
 
 // Reservation Routes
 Route::prefix('reservations')->name('reservations.')->group(function () {
-    // Main reservation routes first
+    // Main reservation routes
     Route::get('/create', [ReservationController::class, 'create'])->name('create');
+    Route::post('/store', [ReservationController::class, 'store'])->name('store');
     Route::get('/edit', [ReservationController::class, 'edit'])->name('edit');
     Route::get('/review', [ReservationController::class, 'review'])->name('review.get');
     Route::post('/review', [ReservationController::class, 'review'])->name('review');
-    Route::post('/store', [ReservationController::class, 'store'])->name('store');
-    Route::post('/waitlist', [ReservationController::class, 'joinWaitlist'])->name('waitlist');
     Route::get('/cancellation-success', [ReservationController::class, 'cancellationSuccess'])->name('cancellation-success');
-
-    // Phone verification routes
-    Route::get('/check-phone', [ReservationController::class, 'showPhoneCheck'])->name('check-phone-form');
-    Route::post('/check-phone', [ReservationController::class, 'checkPhone'])->name('check-phone');
-    Route::post('/guest', [ReservationController::class, 'proceedAsGuest'])->name('guest');
-    Route::post('/user', [ReservationController::class, 'proceedAsUser'])->name('user');
-
-    // Parameterized routes last
+    // Parameterized reservation routes
     Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary')->where('reservation', '[0-9]+');
-    Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment'])->name('payment')->where('reservation', '[0-9]+');
-    Route::delete('/{reservation}', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
+    Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
+<<<<<<< HEAD
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
 });
 
@@ -299,3 +317,7 @@ Route::delete('/frontend/items/{id}', [ItemController::class, 'destroy'])->name(
 
 
 
+=======
+    Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
+});
+>>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993

@@ -5,6 +5,7 @@ html, body {
     margin: 0;
 }
 
+<<<<<<< HEAD
 .min-h-screen {
     min-height: 100vh;
 }
@@ -15,3 +16,8 @@ html, body {
 }
 
 
+=======
+@import "flowbite/src/themes/default";
+@plugin "flowbite/plugin";
+@source "../../node_modules/flowbite";
+>>>>>>> 9b0d85d46c950a4c8ad21af3b600ca06fa755550

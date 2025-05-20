@@ -1,0 +1,33 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Branch;
+use App\Models\Table;
+
+class TableSeeder extends Seeder
+{
+    public function run()
+    {
+        // Define number of tables for each branch (customize as needed)
+        $tablesPerBranch = [
+            1 => 15, // Main Branch
+            2 => 10, // Kandy Branch
+            3 => 8,  // Galle Branch
+        ];
+
+        foreach ($tablesPerBranch as $branchId => $tableCount) {
+            for ($i = 1; $i <= $tableCount; $i++) {
+                Table::create([
+                    'branch_id' => $branchId,
+                    'number' => $i,
+                    'capacity' => rand(2, 8),
+                    'status' => 'available',
+                    'location' => null,
+                    'description' => null,
+                ]);
+            }
+        }
+    }
+}

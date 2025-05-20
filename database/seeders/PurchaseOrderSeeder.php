@@ -9,7 +9,6 @@ use App\Models\Supplier;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderSeeder extends Seeder
 {

@@ -19,9 +19,9 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('reservations.review') }}" id="reservationForm">
+                <form method="POST" action="{{ route('reservations.update', $reservation) }}" id="reservationForm">
                     @csrf
-                    <input type="hidden" name="phone" value="{{ request('phone') }}">
+                    @method('PUT')
 
                     <!-- Personal Information -->
                     <div class="mb-6">
@@ -32,7 +32,7 @@
                                 <input type="text" 
                                        name="name" 
                                        id="name" 
-                                       value="{{ request('name') }}"
+                                       value="{{ old('name', $reservation->name) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -41,8 +41,23 @@
                                 <input type="email" 
                                        name="email" 
                                        id="email" 
-                                       value="{{ request('email') }}"
+                                       value="{{ old('email', $reservation->email) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                <input type="tel" 
+                                       name="phone" 
+                                       id="phone" 
+                                       value="{{ isset($reservation->phone) ? $reservation->phone : old('phone') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       required>
+                                @if($errors->has('phone'))
+                                    <p class="text-red-500 text-sm mt-1">{{ $errors->first('phone') }}</p>
+                                @endif
+                                @if(isset($reservation->phone))
+                                    <p class="text-sm text-gray-500 mt-1">Current phone: {{ $reservation->phone }}</p>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -62,7 +77,7 @@
                                         <option value="{{ $branch->id }}" 
                                                 data-opening="{{ $branch->opening_time }}"
                                                 data-closing="{{ $branch->closing_time }}"
-                                                {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                                {{ old('branch_id', $reservation->branch_id) == $branch->id ? 'selected' : '' }}>
                                             {{ $branch->name }}
                                         </option>
                                     @endforeach
@@ -74,7 +89,7 @@
                                        name="date" 
                                        id="date" 
                                        min="{{ now()->format('Y-m-d') }}"
-                                       value="{{ request('date') }}"
+                                       value="{{ old('date', $reservation->date) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -86,7 +101,7 @@
                                 <input type="time" 
                                        name="start_time" 
                                        id="start_time" 
-                                       value="{{ request('start_time') }}"
+                                       value="{{ old('start_time', $reservation->start_time) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -95,7 +110,7 @@
                                 <input type="time" 
                                        name="end_time" 
                                        id="end_time" 
-                                       value="{{ request('end_time') }}"
+                                       value="{{ old('end_time', $reservation->end_time) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -107,7 +122,7 @@
                                    name="number_of_people" 
                                    id="number_of_people" 
                                    min="1"
-                                   value="{{ request('number_of_people') }}"
+                                   value="{{ old('number_of_people', $reservation->number_of_people) }}"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                    required>
                         </div>
@@ -119,15 +134,15 @@
                         <textarea name="comments" 
                                   id="comments" 
                                   rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">{{ request('comments') }}</textarea>
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">{{ old('comments', $reservation->comments) }}</textarea>
                     </div>
 
                     <!-- Submit Button -->
                     <div class="flex justify-between items-center">
                         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            Review Changes
+                            Update Reservation
                         </button>
-                        <a href="{{ route('reservations.review') }}" class="text-gray-600 hover:text-gray-800">
+                        <a href="{{ route('reservations.show', $reservation) }}" class="text-gray-600 hover:text-gray-800">
                             Cancel
                         </a>
                     </div>
@@ -142,6 +157,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('reservationForm');
     const branchSelect = document.getElementById('branch_id');
+    const phoneInput = document.getElementById('phone');
     const dateInput = document.getElementById('date');
     const startTimeInput = document.getElementById('start_time');
     const endTimeInput = document.getElementById('end_time');

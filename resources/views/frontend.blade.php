@@ -35,9 +35,21 @@
                 @endforeach
             </div>
         </div>
+<<<<<<< HEAD
     @endforeach
 </div>
 @endsection
+=======
+
+        @foreach($foodItems as $foodItem)
+            <div>
+                <h3>{{ $foodItem->name }}</h3>
+                <p>{{ $foodItem->description }}</p>
+                <!-- Add more fields as needed -->
+            </div>
+        @endforeach
+    </div>
+>>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
 
 <style>
     .category-section {
