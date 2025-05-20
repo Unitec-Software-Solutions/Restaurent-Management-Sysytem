@@ -67,8 +67,8 @@ A comprehensive restaurant management platform for seamless reservations, order 
 
 2. **Install dependencies**
    ```bash
-   composer install --optimize-autoloader
-   npm install --legacy-peer-deps
+   composer i
+   npm i
    ```
 
 3. **Configure environment**
@@ -81,6 +81,8 @@ A comprehensive restaurant management platform for seamless reservations, order 
 4. **Database setup**
    ```bash
    php artisan migrate:fresh --seed
+   ```
+   ```bash
    php artisan optimize:clear
    ```
 
@@ -94,15 +96,10 @@ A comprehensive restaurant management platform for seamless reservations, order 
    php artisan serve
    ```
 
-## 🐳 Docker Deployment (Alternative)
-```bash
-docker-compose up -d --build
-docker-compose exec app php artisan migrate --seed
-```
 
 ## 📊 Demo Access
 Demo credentials for testing:
-- **Admin Panel**: `admin@example.com` / `Admin@1234`
+- **Admin Panel**: `admin@rms.com` / `admin123`
 - **Manager Portal**: `manager@example.com` / `Manager@1234`
 - **Staff Portal**: `staff@example.com` / `Staff@1234`
 
@@ -122,12 +119,3 @@ For technical support:
 ---
 
 > **Note**: ~snip~
-```
-
-### Key Features of This README:
-1. **Complete Structure**: All essential sections included
-2. **Ready-to-Use**: Copy-paste friendly with proper markdown formatting
-3. **Placeholder Notes**: Clearly marked areas needing your specific information
-4. **Docker Option**: Added alternative deployment method
-5. **Security**: Strong placeholder passwords in demo credentials
-6. **Professional Contacts**: Structured support information
