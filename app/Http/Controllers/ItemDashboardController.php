@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\ItemCategory;
 use App\Models\ItemMaster;
 use App\Models\ItemTransaction;
 use Illuminate\Http\Request;
@@ -75,6 +75,22 @@ class ItemDashboardController extends Controller
             ->take(10)
             ->get();
 
+
+            $items = ItemMaster::with('category')
+            ->when(request('search'), function ($query) {
+                return $query->where('name', 'like', '%' . request('search') . '%')
+                    ->orWhere('item_code', 'like', '%' . request('search') . '%');
+            })
+            ->when(request('category'), function ($query) {
+                return $query->where('item_category_id', request('category'));
+            })
+            ->when(request()->has('status'), function ($query) {
+                return $query->where('is_active', request('status'));
+            })
+            ->paginate(15);
+
+        $categories = ItemCategory::active()->get();
+
         return view('admin.inventory.dashboard', compact(
             'totalItems',
             'newItemsToday',
@@ -88,7 +104,8 @@ class ItemDashboardController extends Controller
             'topSellingItems',
             'purchaseOrderQuantity',
             'purchaseOrderTotalCost',
-            'salesOrders'
+            'salesOrders',
+            'items'
         ));
     }
 }

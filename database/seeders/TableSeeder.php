@@ -19,14 +19,21 @@ class TableSeeder extends Seeder
 
         foreach ($tablesPerBranch as $branchId => $tableCount) {
             for ($i = 1; $i <= $tableCount; $i++) {
-                Table::create([
-                    'branch_id' => $branchId,
-                    'number' => $i,
-                    'capacity' => rand(2, 8),
-                    'status' => 'available',
-                    'location' => null,
-                    'description' => null,
-                ]);
+                 // Check if table already exists
+                $existingTable = Table::where('branch_id', $branchId)
+                    ->where('number', $i)
+                    ->first();
+                    
+                if (!$existingTable) {
+                    Table::create([
+                        'branch_id' => $branchId,
+                        'number' => $i,
+                        'capacity' => rand(2, 8),
+                        'status' => 'available',
+                        'location' => null,
+                        'description' => null,
+                    ]);
+                }
             }
         }
 
