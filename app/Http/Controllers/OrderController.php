@@ -29,7 +29,9 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        // Example: Redirect to order creation with reservation_id
+        $reservation = $request->input('reservation');
+        return redirect()->route('orders.create', ['reservation_id' => $reservation->id]);
     }
 
     /**
