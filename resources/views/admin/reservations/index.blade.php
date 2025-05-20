@@ -9,6 +9,14 @@
         </a>
     </div>
 
+    <form method="GET" action="{{ route('admin.reservations.index') }}" class="mb-6 flex items-center gap-4">
+        <input type="text" name="phone" value="{{ request('phone') }}" placeholder="Search by phone number" class="border rounded px-4 py-2 w-64" required>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Search</button>
+        @if(request('phone'))
+            <a href="{{ route('admin.reservations.index') }}" class="text-gray-600 ml-2">Clear</a>
+        @endif
+    </form>
+
     <!-- Reservations Table -->
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
