@@ -282,4 +282,10 @@ class ReservationController extends Controller
                 ->withInput();
         }
     }
+
+    public function payment(Reservation $reservation)
+    {
+        // You can customize this view as needed
+        return view('reservations.payment', compact('reservation'));
+    }
 }
