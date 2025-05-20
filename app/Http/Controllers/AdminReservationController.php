@@ -28,9 +28,14 @@ class AdminReservationController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Branch information is missing for this user.');
         }
 
-        $reservations = Reservation::with(['tables', 'branch', 'user'])
-            ->where('branch_id', $admin->branch->id)
-            ->get();
+        $query = Reservation::with(['tables', 'branch', 'user'])
+            ->where('branch_id', $admin->branch->id);
+
+        if (request('phone')) {
+            $query->where('phone', request('phone'));
+        }
+
+        $reservations = $query->get();
 
         return view('admin.reservations.index', compact('reservations'));
     }
