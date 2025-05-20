@@ -90,4 +90,8 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
     Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
+    Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');
 });
+
+// Order routes
+Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,6 +14,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
+
         // User::factory(10)->create();
 
         // Test User
@@ -32,13 +35,13 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             ItemCategorySeeder::class,  // New Item Category Seeder
             ItemMasterSeeder::class,    // New Item Master Seeder
-            ItemTransactionSeeder::class,
+            // ItemTransactionSeeder::class,
             // InventoryCategorySeeder::class,
             // InventoryItemSeeder::class,
             // InventoryStockSeeder::class,
             // InventoryTransactionSeeder::class,
             // MenuCategorySeeder::class,
-            // MenuItemSeeder::class,
+            MenuItemSeeder::class,
             // MenuRecipeSeeder::class,
 
             // PurchaseOrderSeeder::class,
