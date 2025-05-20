@@ -36,5 +36,15 @@ class TableSeeder extends Seeder
                 }
             }
         }
+
+        Table::updateOrCreate(
+            ['branch_id' => 1, 'number' => 1],
+            [
+                'capacity' => 3,
+                'status' => 'available',
+                'location' => 'Main Hall',
+                'description' => 'Window seat'
+            ]
+        );
     }
 }
