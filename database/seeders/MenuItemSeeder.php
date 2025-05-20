@@ -10,18 +10,21 @@ class MenuItemSeeder extends Seeder
     public function run()
     {
         MenuItem::create([
+            'menu_category_id' => 1, // <-- required!
             'name' => 'Margherita Pizza',
-            'price' => 1200, // <-- change here
+            'price' => 1200,
             'is_active' => true,
         ]);
         MenuItem::create([
+            'menu_category_id' => 1,
             'name' => 'Chicken Burger',
-            'price' => 900, // <-- change here
+            'price' => 900,
             'is_active' => true,
         ]);
         MenuItem::create([
+            'menu_category_id' => 1,
             'name' => 'French Fries',
-            'price' => 400, // <-- change here
+            'price' => 400,
             'is_active' => false,
         ]);
         // Add more items as needed
