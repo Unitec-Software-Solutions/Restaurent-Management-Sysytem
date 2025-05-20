@@ -179,7 +179,8 @@ class ItemTransactionController extends Controller
         $validated = $request->validate([
             'inventory_item_id' => 'required|exists:item_master,id',
             'branch_id' => 'required|exists:branches,id',
-            'transaction_type' => 'required|in:in,out',
+            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out',
+
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
@@ -223,7 +224,8 @@ class ItemTransactionController extends Controller
         $validated = $request->validate([
             'inventory_item_id' => 'required|exists:item_master,id',
             'branch_id' => 'required|exists:branches,id',
-            'transaction_type' => 'required|in:in,out',
+            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out',
+
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
@@ -251,4 +253,11 @@ class ItemTransactionController extends Controller
         return redirect()->route('admin.inventory.stock.index')
             ->with('success', 'Transaction deleted successfully.');
     }
+
+    protected function isStockIn($type)
+{
+    $inTypes = ['purchase_order', 'return', 'adjustment', 'audit', 'transfer_in'];
+    return in_array($type, $inTypes);
+}
+
 }
