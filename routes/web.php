@@ -49,10 +49,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/', [ItemMasterController::class, 'store'])->name('store');
                 Route::get('/{item}', [ItemMasterController::class, 'show'])->whereNumber('item')->name('show');
                 Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
-                Route::put('/{item}', [ItemMasterController::class, 'edit'])->name('update');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
                 Route::get('/create-template/{index}/', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
-
             });
 
             Route::prefix('stock')->name('stock.')->group(function () {
@@ -64,11 +63,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{transaction}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
                 Route::put('/{transaction}', [ItemTransactionController::class, 'update'])->name('update');
                 Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
-            
+
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
-            
             });
 
             Route::resource('categories', ItemCategoryController::class);
