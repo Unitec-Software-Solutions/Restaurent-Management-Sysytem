@@ -55,14 +55,9 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{{ route('admin.reservations.show', $reservation) }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
-                            <a href="{{ route('admin.reservations.edit', $reservation) }}" class="text-yellow-600 hover:text-yellow-900 mr-3">Edit</a>
-                            <form action="{{ route('admin.reservations.destroy', $reservation) }}" method="POST" class="inline">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-900">Cancel</button>
-                            </form>
-                        </td>
+    <a href="{{ route('admin.reservations.show', $reservation) }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
+    <a href="{{ route('admin.reservations.edit', $reservation) }}" class="text-yellow-600 hover:text-yellow-900 mr-3">Edit</a>
+</td>
                     </tr>
                 @empty
                     <tr>
