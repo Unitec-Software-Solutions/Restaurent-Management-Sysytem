@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('layouts.main')
 
 @section('content')
 @php $admin = auth('admin')->user(); @endphp

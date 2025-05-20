@@ -28,7 +28,7 @@ class ItemTransactionSeeder extends Seeder
                 'organization_id' => fake()->randomElement($orgIds),
                 'branch_id' => fake()->randomElement($branchIds),
                 'inventory_item_id' => fake()->randomElement($itemIds),
-                'transaction_type' => fake()->randomElement(['in', 'out', 'transfer']),
+                'transaction_type' => fake()->randomElement(['in', 'out', 'purchase_order', 'sales_order', 'transfer']),
                 'transfer_to_branch_id' => fake()->randomElement($branchIds),
                 'receiver_user_id' => fake()->randomElement($userIds),
                 'quantity' => rand(50, 1000),
