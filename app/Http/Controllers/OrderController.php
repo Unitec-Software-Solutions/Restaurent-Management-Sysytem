@@ -47,6 +47,10 @@ class OrderController extends Controller
             'status' => 'active',
         ]);
 
+        $reservationId = $request->input('reservation');
+        $reservation = $reservationId ? \App\Models\Reservation::find($reservationId) : null;
+        $order->reservation_id = $reservation ? $reservation->id : null;
+
         $subtotal = 0;
         foreach ($data['items'] as $item) {
             $menuItem = MenuItem::find($item['menu_item_id']);
@@ -61,10 +65,10 @@ class OrderController extends Controller
             ]);
         }
 
-        // Price calculation (add tax, service, discount as needed)
-        $tax = $subtotal * 0.1; // Example 10% tax
-        $service = $subtotal * 0.05; // Example 5% service
-        $discount = 0; // Add logic for discounts
+        // Price calculation
+        $tax = $subtotal * 0.1;
+        $service = $subtotal * 0.05;
+        $discount = 0;
         $total = $subtotal + $tax + $service - $discount;
 
         $order->update([
@@ -98,9 +102,37 @@ class OrderController extends Controller
     public function update(Request $request, $id)
     {
         $order = Order::findOrFail($id);
-        // Similar validation and update logic as store()
-        // Update order items, recalculate price, etc.
-        // ...
+        $data = $request->validate([
+            'items' => 'required|array',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+        // Remove old items
+        $order->orderItems()->delete();
+        $subtotal = 0;
+        foreach ($data['items'] as $item) {
+            $menuItem = MenuItem::find($item['menu_item_id']);
+            $lineTotal = $menuItem->selling_price * $item['quantity'];
+            $subtotal += $lineTotal;
+            OrderItem::create([
+                'order_id' => $order->id,
+                'menu_item_id' => $menuItem->id,
+                'quantity' => $item['quantity'],
+                'unit_price' => $menuItem->selling_price,
+                'total_price' => $lineTotal,
+            ]);
+        }
+        $tax = $subtotal * 0.1;
+        $service = $subtotal * 0.05;
+        $discount = 0;
+        $total = $subtotal + $tax + $service - $discount;
+        $order->update([
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'service_charge' => $service,
+            'discount' => $discount,
+            'total' => $total,
+        ]);
         return redirect()->route('orders.show', $order->id)
             ->with('success', 'Order updated successfully.');
     }
@@ -110,9 +142,19 @@ class OrderController extends Controller
     {
         $itemId = $request->input('menu_item_id');
         $quantity = $request->input('quantity', 1);
-        // Store in session or DB as per your cart logic
-        // ...
-        return response()->json(['success' => true]);
+        $cart = session()->get('cart', []);
+        if(isset($cart[$itemId])) {
+            $cart[$itemId]['quantity'] += $quantity;
+        } else {
+            $menuItem = MenuItem::find($itemId);
+            $cart[$itemId] = [
+                "name" => $menuItem->name,
+                "quantity" => $quantity,
+                "price" => $menuItem->selling_price
+            ];
+        }
+        session()->put('cart', $cart);
+        return response()->json(['success' => true, 'cart' => $cart]);
     }
 
     // Cancel order (admin/customer)
