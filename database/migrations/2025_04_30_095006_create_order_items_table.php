@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained();
-            $table->foreignId('sub_order_id')->nullable()->constrained();
-            $table->foreignId('menu_item_id')->constrained();
+            $table->foreignId('inventory_item_id')->constrained('item_master');
+            $table->foreign('menu_item_id')->references('id')->on('item_master');
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);
             $table->decimal('total_price', 10, 2);
@@ -24,6 +24,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->softDeletes(); // Adds deleted_at column
             $table->timestamps();
+        });
+
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->dropForeign(['menu_item_id']);
+            $table->foreign('menu_item_id')->references('id')->on('item_master');
         });
     }
 
