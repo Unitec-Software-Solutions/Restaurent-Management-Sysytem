@@ -49,10 +49,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/', [ItemMasterController::class, 'store'])->name('store');
                 Route::get('/{item}', [ItemMasterController::class, 'show'])->whereNumber('item')->name('show');
                 Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
-                Route::put('/{item}', [ItemMasterController::class, 'edit'])->name('update');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
                 Route::get('/create-template/{index}/', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
-
             });
 
             Route::prefix('stock')->name('stock.')->group(function () {
@@ -64,11 +63,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{transaction}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
                 Route::put('/{transaction}', [ItemTransactionController::class, 'update'])->name('update');
                 Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
-            
+
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
-            
             });
 
             Route::resource('categories', ItemCategoryController::class);
@@ -90,8 +88,9 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
     Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
-    Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');
+    Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');  // conflict 
 });
 
 // Order routes
 Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
+
