@@ -107,16 +107,16 @@ Demo credentials for testing:
 - **Staff Portal**: `staff@example.com` / `Staff@1234`
 
 ## 📜 License
-This project is proprietary software developed by [Unitec Software Solutions](https://www.unitecsoft.com). All rights reserved.
+This project is proprietary software developed by [Unitec Software Solutions](https://www.unitecsoftware.lk). All rights reserved.
 
 ## 🤝 Contributing
-- Email: contact@unitecsoft.com
+- Email: contact@unitecsoftware.lk
 - Phone: ~snip~
 
 ## 📞 Support
 For technical support:
-- [Open a support ticket](https://support.unitecsoft.com)
-- Email: support@unitecsoft.com
+- [Open a support ticket](https://support.unitecsoftware.lk)
+- Email: support@unitecsoftware.lk
 - Emergency line: ~snip~
 
 ---
