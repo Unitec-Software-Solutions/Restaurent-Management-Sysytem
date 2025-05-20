@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
             // InventoryStockSeeder::class,
             // InventoryTransactionSeeder::class,
             // MenuCategorySeeder::class,
-            MenuItemSeeder::class,
+            // MenuItemSeeder::class,
             // MenuRecipeSeeder::class,
 
             // PurchaseOrderSeeder::class,
