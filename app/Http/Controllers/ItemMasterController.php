@@ -110,7 +110,6 @@ class ItemMasterController extends Controller
     public function update(Request $request, $id)
     {
         $item = ItemMaster::findOrFail($id);
-
         $data = $request->validate([
             'name' => 'sometimes|string',
             'unicode_name' => 'nullable|string',
@@ -131,9 +130,8 @@ class ItemMasterController extends Controller
         ]);
 
         $item->update($data);
-
-        return response()->json($item);
-
+        return redirect()->route('admin.inventory.items.index', $item->id)
+            ->with('success', 'Item updated successfully');
     }
 
 
@@ -168,6 +166,4 @@ class ItemMasterController extends Controller
 
         return response()->json(['message' => 'Item deleted successfully.']);
     }
-
-
 }
