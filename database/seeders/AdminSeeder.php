@@ -23,6 +23,9 @@ class AdminSeeder extends Seeder
                 'password' => Hash::make('admin123'),
                 'branch_id' => '1',
             ]
+
         );
+
+        $this->command->info('  ✅ Item Admin seeded successfully.');
     }
 }

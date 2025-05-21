@@ -44,7 +44,7 @@ class ItemCategorySeeder extends Seeder
                 'is_active' => true,
             ],
         ];
-        
+
         foreach ($categories as $category) {
             // Check if category exists by name or code
             $existingCategory = ItemCategory::where('name', $category['name'])
@@ -55,5 +55,8 @@ class ItemCategorySeeder extends Seeder
                 ItemCategory::create($category);
             }
         }
+
+        $this->command->info("  Total Item Categories in the database : " . ItemCategory::count());
+        $this->command->info("  ✅ Item Categories seeded successfully!");
     }
 }
