@@ -23,7 +23,7 @@ class Order extends Model
 
     public function orderItems()
     {
-        return $this->hasMany(\App\Models\OrderItem::class, 'order_id');
+        return $this->hasMany(OrderItem::class);
     }
 
     public function getAmountDueAttribute()
@@ -35,7 +35,8 @@ class Order extends Model
     public function reservation()
     {
         return $this->belongsTo(Reservation::class)->withDefault([
-            
+            'name' => 'Deleted Reservation',
+            'scheduled_time' => null
         ]);
     }
 };
