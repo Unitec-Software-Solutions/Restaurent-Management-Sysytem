@@ -15,12 +15,10 @@ class OrderController extends Controller
     {
         $reservationId = $request->input('reservation_id');
         
-        $orders = Order::with([
-            'orderItems.menuItem',
-            'reservation' // Ensure this relationship is loaded
-        ])->when($reservationId, fn($q) => $q->where('reservation_id', $reservationId))
-          ->latest()
-          ->paginate(20);
+        $orders = Order::with(['orderItems.menuItem', 'reservation'])
+            ->when($reservationId, fn($q) => $q->where('reservation_id', $reservationId))
+            ->latest()
+            ->paginate(10);
 
         // Calculate grand totals
         $grandTotals = [
@@ -109,8 +107,8 @@ class OrderController extends Controller
             'total' => $total,
         ]);
 
-            return redirect()->route('orders.show', $order->id)
-        ->with('success', 'Order created successfully. Add more items or proceed to payment.');
+        return redirect()->route('orders.index', ['reservation_id' => $order->reservation_id])
+            ->with('success', 'Order created successfully!');
     }
 
     // View order details
