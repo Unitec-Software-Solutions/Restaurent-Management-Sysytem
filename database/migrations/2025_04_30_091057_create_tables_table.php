@@ -20,6 +20,8 @@ return new class extends Migration
             $table->integer('x_position')->nullable(); // For table mapping visualization
             $table->integer('y_position')->nullable(); // For table mapping visualization
             $table->unique(['branch_id', 'number']);
+            $table->boolean('is_active')->default(true);
+            $table->softDeletes(); // Adds deleted_at column
         });
 
         Schema::create('reservation_tables', function (Blueprint $table) {
