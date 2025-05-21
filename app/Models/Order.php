@@ -31,4 +31,11 @@ class Order extends Model
         // If you have a payments table, sum payments and subtract from total
         return $this->total - ($this->payments()->sum('amount') ?? 0);
     }
+
+    public function reservation()
+    {
+        return $this->belongsTo(Reservation::class)->withDefault([
+            
+        ]);
+    }
 };
