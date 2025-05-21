@@ -96,3 +96,5 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
 
 // Order routes
 Route::resource('orders', OrderController::class);
+Route::get('/orders/{order}/payment', [OrderController::class, 'payment'])
+    ->name('orders.payment');
