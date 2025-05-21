@@ -76,5 +76,7 @@ class ReservationSeeder extends Seeder
             'status' => 'pending',
             'branch_id' => 1,
         ]);
+        $this->command->info("  Total Reservations in the database : " . Reservation::count());
+        $this->command->info("  ✅ Reservations seeded successfully!");
     }
 }

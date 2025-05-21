@@ -144,7 +144,7 @@ class ItemTransactionSeeder extends Seeder
                 'is_active'              => true,
             ]);
         }
-
-        $this->command->info('✅ Item transactions seeded successfully.');
+        $this->command->info('  Total Item transactions in the database : ' . ItemTransaction::count());
+        $this->command->info('  ✅ Item transactions seeded successfully.');
     }
 }
