@@ -1,6 +1,19 @@
-{{-- filepath: resources/views/orders/show.blade.php --}}
 @extends('layouts.app')
 @section('content')
+@if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+    <div class="alert alert-info mt-3">
+        <strong>What would you like to do next?</strong>
+        <div class="mt-2 d-flex gap-2">
+            <a href="{{ route('orders.create', ['reservation_id' => $reservationId]) }}" class="btn btn-primary">
+                Place Another Order
+            </a>
+            <a href="{{ route('reservations.payment', $reservationId) }}" class="btn btn-success">
+                Proceed to Payment
+            </a>
+        </div>
+    </div>
+@endif
 <h2>Order #{{ $order->id }}</h2>
 <p>Name: {{ $order->customer_name }}</p>
 <p>Phone: {{ $order->customer_phone }}</p>
