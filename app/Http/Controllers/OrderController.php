@@ -14,11 +14,24 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $reservationId = $request->input('reservation_id');
-        $orders = Order::with('orderItems')
-            ->when($reservationId, fn($q) => $q->where('reservation_id', $reservationId))
-            ->latest()->paginate(20);
+        
+        $orders = Order::with([
+            'orderItems.menuItem',
+            'reservation' // Ensure this relationship is loaded
+        ])->when($reservationId, fn($q) => $q->where('reservation_id', $reservationId))
+          ->latest()
+          ->paginate(20);
 
-        return view('orders.index', compact('orders', 'reservationId'));
+        // Calculate grand totals
+        $grandTotals = [
+            'subtotal' => $orders->sum('subtotal'),
+            'tax' => $orders->sum('tax'),
+            'service_charge' => $orders->sum('service_charge'),
+            'discount' => $orders->sum('discount'),
+            'total' => $orders->sum('total')
+        ];
+
+        return view('orders.index', compact('orders', 'reservationId', 'grandTotals'));
     }
 
     // Show order creation form (dine-in, under reservation)
@@ -61,6 +74,8 @@ class OrderController extends Controller
             'customer_phone' => $reservation ? $reservation->phone : $data['customer_phone'],
             'order_type'     => $reservation ? ($reservation->order_type ?? 'dine_in_online_scheduled') : ($data['order_type'] ?? 'dine_in_online_scheduled'),
             'status'         => 'active',
+        
+        
         ]);
 
         $subtotal = 0;
@@ -94,14 +109,16 @@ class OrderController extends Controller
             'total' => $total,
         ]);
 
-        return redirect()->route('orders.index', ['reservation_id' => $order->reservation_id])
-            ->with('success', 'Order placed successfully.');
+            return redirect()->route('orders.show', $order->id)
+        ->with('success', 'Order created successfully. Add more items or proceed to payment.');
     }
 
     // View order details
     public function show($id)
     {
-        $order = Order::with('orderItems.inventoryItem')->findOrFail($id);
+        $order = Order::with(['reservation', 'orderItems.menuItem'])
+               ->findOrFail($id);
+
         return view('orders.show', compact('order'));
     }
 
@@ -165,5 +182,32 @@ class OrderController extends Controller
         $order->delete();
         return redirect()->route('orders.index', ['reservation_id' => $reservationId])
             ->with('success', 'Order deleted successfully.');
+    }
+
+    // Show payment or repeat order options
+    public function paymentOrRepeat($order_id)
+    {
+        $order = Order::findOrFail($order_id);
+        return view('orders.payment_or_repeat', compact('order'));
+    }
+
+    // Handle user choice: proceed to payment or place another order
+    public function handleChoice(Request $request, $order_id)
+    {
+        $request->validate(['action' => 'required|in:payment,repeat']);
+
+        if ($request->action === 'payment') {
+            return redirect()->route('payments.create', ['order_id' => $order_id]);
+        } else {
+            // Redirect to order creation with reservation_id if exists
+            $order = Order::findOrFail($order_id);
+            return redirect()->route('orders.create', [
+                'reservation_id' => $order->reservation_id
+            ])->with('success', 'Order placed. Add another item below.');
+        }
+    }
+    public function payment(Order $order)
+    {
+        return view('orders.payment', compact('order'));
     }
 }
