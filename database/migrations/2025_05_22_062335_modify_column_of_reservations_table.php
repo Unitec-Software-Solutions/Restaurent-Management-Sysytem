@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('reservation_tables', function (Blueprint $table) {
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes(); // Adds deleted_at column
+        Schema::table('reservations', function (Blueprint $table) {
+            // $table->dateTime('scheduled_time')->nullable(false);
         });
     }
 
@@ -22,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('reservation_tables', function (Blueprint $table) {
-            //
+        Schema::table('reservations', function (Blueprint $table) {
+            // $table->dropColumn('scheduled_time');
         });
     }
 };

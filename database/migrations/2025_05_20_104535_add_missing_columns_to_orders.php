@@ -8,15 +8,17 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::table('inventory_items', function (Blueprint $table) {
-            $table->date('expiry_date')->nullable()->after('shelf_life_days');
+        Schema::table('orders', function (Blueprint $table) {
+            
+                $table->foreignId('branch_id')->after('id')->constrained(); 
+            
         });
     }
 
     public function down()
     {
-        Schema::table('inventory_items', function (Blueprint $table) {
-            $table->dropColumn('expiry_date');
+        Schema::table('orders', function (Blueprint $table) {
+            //
         });
     }
 };

@@ -13,7 +13,7 @@
                     <h5 class="font-bold">Reservation Submitted!</h5>
                     <p>Your reservation has been submitted and is pending confirmation. We will notify you once it's confirmed.</p>
                 </div>
-
+               
                 <div class="space-y-6">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-800 mb-3">Reservation Details</h2>
@@ -67,15 +67,15 @@
 
                     @if($reservation->status === 'pending')
                         <div class="mt-8 flex flex-col md:flex-row gap-4 justify-center items-center">
-                            <form action="{{ route('reservations.payment', $reservation) }}" method="GET">
-                                <button type="submit" class="bg-green-600 hover:bg-green-800 text-white font-bold py-2 px-4 rounded">
-                                    Proceed to Payment
-                                </button>
-                            </form>
                             <form action="{{ route('orders.create') }}" method="GET">
                                 <input type="hidden" name="reservation_id" value="{{ $reservation->id }}">
                                 <button type="submit" class="bg-blue-600 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded">
                                     Place an Order
+                                </button>
+                            </form>
+                            <form action="{{ route('reservations.payment', $reservation) }}" method="GET">
+                                <button type="submit" class="bg-green-600 hover:bg-green-800 text-white font-bold py-2 px-4 rounded">
+                                    Proceed to Payment
                                 </button>
                             </form>
                         </div>
