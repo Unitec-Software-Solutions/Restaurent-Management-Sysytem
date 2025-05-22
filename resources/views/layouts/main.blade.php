@@ -54,7 +54,7 @@
     @endauth
 
     <!-- Header -->
-    @include('partials.header')
+    @include('partials.header.admin-header')
 
     <!-- Main Content -->
     <main class="p-4 lg:ml-64 pt-16 h-full">
@@ -67,7 +67,7 @@
     </main>
 
     <!-- Logout Modal -->
-    @include('partials.logout-modal')
+    @include('partials.modals.logout-modal')
 
     <!-- Scripts -->
     <script>
