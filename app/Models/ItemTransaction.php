@@ -85,12 +85,20 @@ class ItemTransaction extends Model
      */
     public static function stockOnHand($itemId, $branchId = null)
     {
-        $query = self::active()->where('inventory_item_id', $itemId);
+        $inTypes = ['purchase_order', 'return', 'adjustment', 'audit', 'transfer_in'];
+        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'transfer_out'];
+
+        $query = self::where('inventory_item_id', $itemId)->where('is_active', true);
 
         if ($branchId) {
             $query->where('branch_id', $branchId);
         }
 
-        return $query->sum('quantity') - $query->sum('damaged_quantity');
+        $transactions = $query->get();
+
+        $stockIn = $transactions->whereIn('transaction_type', $inTypes)->sum('quantity');
+        $stockOut = $transactions->whereIn('transaction_type', $outTypes)->sum('quantity');
+
+        return $stockIn - $stockOut;
     }
 }

@@ -28,5 +28,6 @@ class MenuItemSeeder extends Seeder
             'is_active' => false,
         ]);
         // Add more items as needed
+
     }
 }

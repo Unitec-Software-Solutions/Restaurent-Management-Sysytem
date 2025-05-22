@@ -1,3 +1,5 @@
+{{-- Not in use --}}
+{{-- resources\views\partials\logout-modal.blade.php --}}
 @extends('layouts.main')
 
 @section('content')

@@ -26,7 +26,7 @@ class SupplierSeeder extends Seeder
                 'is_inactive' => false,
                 'is_active' => true,
                 'has_vat_registration' => true,
-                'vat_registration_no' => 'VAT-'. Str::upper(Str::random(9)),
+                'vat_registration_no' => 'VAT-' . Str::upper(Str::random(9)),
             ],
             [
                 'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
@@ -38,7 +38,7 @@ class SupplierSeeder extends Seeder
                 'is_inactive' => false,
                 'is_active' => true,
                 'has_vat_registration' => true,
-                'vat_registration_no' => 'VAT-'. Str::upper(Str::random(9)),
+                'vat_registration_no' => 'VAT-' . Str::upper(Str::random(9)),
             ],
             [
                 'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
@@ -62,7 +62,7 @@ class SupplierSeeder extends Seeder
                 'is_inactive' => false,
                 'is_active' => true,
                 'has_vat_registration' => true,
-                'vat_registration_no' => 'VAT-'. Str::upper(Str::random(9)),
+                'vat_registration_no' => 'VAT-' . Str::upper(Str::random(9)),
             ],
             [
                 'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
@@ -86,7 +86,7 @@ class SupplierSeeder extends Seeder
                 'is_inactive' => false,
                 'is_active' => true,
                 'has_vat_registration' => true,
-                'vat_registration_no' => 'VAT-'. Str::upper(Str::random(9)),
+                'vat_registration_no' => 'VAT-' . Str::upper(Str::random(9)),
             ],
             [
                 'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
@@ -110,7 +110,7 @@ class SupplierSeeder extends Seeder
                 'is_inactive' => false,
                 'is_active' => true,
                 'has_vat_registration' => true,
-                'vat_registration_no' => 'VAT-'. Str::upper(Str::random(9)),
+                'vat_registration_no' => 'VAT-' . Str::upper(Str::random(9)),
             ],
             [
                 'supplier_id' => 'SUP-' . Str::upper(Str::random(6)),
@@ -134,16 +134,16 @@ class SupplierSeeder extends Seeder
                 'is_inactive' => false,
                 'is_active' => true,
                 'has_vat_registration' => true,
-                'vat_registration_no' => 'VAT-'. Str::upper(Str::random(9)),
+                'vat_registration_no' => 'VAT-' . Str::upper(Str::random(9)),
             ],
         ];
 
         $createdCount = 0;
-        
+
         foreach ($suppliers as $supplier) {
             // Check if a supplier with this name already exists
             $exists = Supplier::where('name', $supplier['name'])->exists();
-            
+
             if (!$exists) {
                 Supplier::create($supplier);
                 $createdCount++;
@@ -152,9 +152,10 @@ class SupplierSeeder extends Seeder
 
         $totalSuppliers = count($suppliers);
         $skippedCount = $totalSuppliers - $createdCount;
-        
-        $this->command->info("Suppliers seeding completed!");
-        $this->command->info("Created {$createdCount} new suppliers.");
-        $this->command->info("Skipped {$skippedCount} existing suppliers.");
+
+        $this->command->info("  Created {$createdCount} new suppliers.");
+        $this->command->info("  Skipped {$skippedCount} existing suppliers.");
+        $this->command->info("  Total suppliers in the database: " . Supplier::count());
+        $this->command->info("  ✅ Suppliers seeding completed!");
     }
 }

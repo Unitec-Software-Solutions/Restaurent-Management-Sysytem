@@ -26,9 +26,9 @@
             <span class="text-indigo-500 font-bold text-xl">RM SYSTEMS</span>
         </div>
 
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Admin Login</h1>
-        <p class="text-gray-600 mb-6">Login to access your admin panel</p>
-
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">user Login</h1>
+        <p class="text-gray-600 mb-6">Login to access your admin panel</p>  
+        {{-- not the admin panel login this is user login page --}}
         @if ($errors->any())
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                 <ul class="list-disc list-inside">

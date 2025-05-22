@@ -16,16 +16,6 @@ class DatabaseSeeder extends Seeder
     {
         DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
 
-        // User::factory(10)->create();
-
-        // Test User
-        /*
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-        */
-
         $this->call([
             OrganizationSeeder::class,
             AdminSeeder::class,
@@ -34,8 +24,8 @@ class DatabaseSeeder extends Seeder
             LoginSeeder::class,
             SupplierSeeder::class,
             ItemCategorySeeder::class,  // New Item Category Seeder
-            ItemMasterSeeder::class,    // New Item Master Seeder
-            // ItemTransactionSeeder::class,
+            ItemMasterSeeder::class,        // New Item Master Seeder
+            ItemTransactionSeeder::class,   // New Item Transaction Seeder
             // InventoryCategorySeeder::class,
             // InventoryItemSeeder::class,
             // InventoryStockSeeder::class,

@@ -19,11 +19,11 @@ class TableSeeder extends Seeder
 
         foreach ($tablesPerBranch as $branchId => $tableCount) {
             for ($i = 1; $i <= $tableCount; $i++) {
-                 // Check if table already exists
+                // Check if table already exists
                 $existingTable = Table::where('branch_id', $branchId)
                     ->where('number', $i)
                     ->first();
-                    
+
                 if (!$existingTable) {
                     Table::create([
                         'branch_id' => $branchId,
@@ -46,5 +46,7 @@ class TableSeeder extends Seeder
                 'description' => 'Window seat'
             ]
         );
+
+        $this->command->info("  ✅ Tables seeded successfully!");
     }
 }
