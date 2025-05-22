@@ -7,6 +7,9 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ItemMaster;
 use App\Models\Reservation;
+use App\Models\Branch;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
@@ -52,7 +55,7 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'reservation_id' => 'required|exists:reservations,id',
-            'customer_name' => 'required_without:reservation_id|string',
+            'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required_without:reservation_id|string',
             'order_type' => 'required_without:reservation_id|string',
             'items' => 'required|array',
@@ -107,7 +110,7 @@ class OrderController extends Controller
             'total' => $total,
         ]);
 
-        return redirect()->route('orders.index', ['reservation_id' => $order->reservation_id])
+        return redirect()->route('orders.show', $order)
             ->with('success', 'Order created successfully!');
     }
 
@@ -167,7 +170,7 @@ class OrderController extends Controller
             'discount' => $discount,
             'total' => $total,
         ]);
-        return redirect()->route('orders.index', ['reservation_id' => $order->reservation_id])
+        return redirect()->route('orders.show', $order)
             ->with('success', 'Order updated successfully.');
     }
 
@@ -204,8 +207,103 @@ class OrderController extends Controller
             ])->with('success', 'Order placed. Add another item below.');
         }
     }
+
     public function payment(Order $order)
     {
         return view('orders.payment', compact('order'));
+    }
+
+    public function createTakeaway()
+    {
+        $user = auth()->user();
+        $isAdmin = $user ? $user->isAdmin() : false;
+
+        $defaultBranch = $isAdmin ? $user->branch_id : null;
+        $branches = $defaultBranch
+            ? Branch::where('id', $defaultBranch)->get()
+            : Branch::all();
+
+        return view('orders.takeaway.create', [
+            'branches' => $branches,
+            'items' => ItemMaster::where('is_menu_item', true)->get(),
+            'defaultBranch' => $defaultBranch,
+            'isAdmin' => $isAdmin,
+            'orderType' => $this->determineOrderType()
+        ]);
+    }
+
+    protected function determineOrderType()
+    {
+        if (auth()->check() && auth()->user()->isAdmin()) {
+            return request()->input('type', 'takeaway_walk_in_demand');
+        }
+        return 'takeaway_online_scheduled';
+    }
+
+    public function storeTakeaway(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user ? $user->isAdmin() : false;
+
+        $data = $request->validate([
+            'branch_id' => [
+                'required',
+                'exists:branches,id',
+                Rule::requiredIf(!$isAdmin)
+            ],
+            'order_time' => [
+                $isAdmin ? 'nullable' : 'required',
+                'date',
+                'after_or_equal:now'
+            ],
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1'
+        ]);
+
+        // Auto-set values for admins
+        $orderData = [
+            'order_type' => $isAdmin ?
+                ($request->input('order_type', 'takeaway_walk_in_demand')) :
+                'takeaway_online_scheduled',
+            'branch_id' => $isAdmin ? $user->branch_id : $data['branch_id'],
+            'order_time' => $isAdmin ?
+                ($data['order_time'] ?? now()) :
+                $data['order_time'],
+            'status' => 'active',
+            'placed_by_admin' => $isAdmin
+        ];
+
+        // Create order
+        $order = Order::create($orderData);
+
+        // Add items and calculate totals
+        $subtotal = 0;
+        foreach ($data['items'] as $item) {
+            $menuItem = ItemMaster::find($item['item_id']);
+            $total = $menuItem->selling_price * $item['quantity'];
+
+            OrderItem::create([
+                'order_id' => $order->id,
+                'menu_item_id' => $item['item_id'],
+                'inventory_item_id' => $item['item_id'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $menuItem->selling_price,
+                'total_price' => $total
+            ]);
+
+            $subtotal += $total;
+        }
+
+        // Calculate totals
+        $tax = $subtotal * 0.10;
+        $order->update([
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $subtotal + $tax
+        ]);
+
+        return redirect()->route('orders.show', $order)
+            ->with('success', 'Takeaway order created! ID: ' . $order->takeaway_id);
     }
 }
