@@ -33,6 +33,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Protected admin routes
     Route::middleware('auth:admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+        
+        // Reservation Management
         Route::resource('reservations', AdminReservationController::class);
 
         // Inventory routes
@@ -71,6 +73,32 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::resource('categories', ItemCategoryController::class);
         });
+
+        // Order Management
+        Route::get('/orders', function () {
+            return view('admin.orders.index');
+        })->name('orders.index');
+        
+        // Reports
+        Route::get('/reports', function () {
+            return view('admin.reports.index');
+        })->name('reports.index');
+        
+        // Customer Management
+        Route::get('/customers', function () {
+            return view('admin.customers.index');
+        })->name('customers.index');
+        
+        // Digital Menu
+        Route::get('/digital-menu', function () {
+            return view('admin.digital-menu.index');
+        })->name('digital-menu.index');
+        
+        // Settings
+        Route::get('/settings', function () {
+            return view('admin.settings.index');
+        })->name('settings.index');
+
     });
 });
 

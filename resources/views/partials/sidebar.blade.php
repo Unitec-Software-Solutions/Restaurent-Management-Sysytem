@@ -1,5 +1,5 @@
 <aside id="sidebar"
-    class="fixed top-0 left-0 z-20 flex flex-col w-64 h-full pt-16 bg-[#515DEF] border-r border-[#515DEF] dark:border-[#515DEF] transition-transform -translate-x-full lg:translate-x-0"
+    class="fixed top-0 left-0 z-5 flex flex-col w-64 h-full pt-16 bg-[#515DEF] border-r border-[#515DEF] dark:border-[#515DEF] transition-transform -translate-x-full lg:translate-x-0"
     aria-label="Sidebar">
 
     <div class="flex flex-col h-full text-white">
@@ -7,7 +7,7 @@
         {{-- Scrollable top section --}}
         <div class="flex-1 overflow-y-auto">
             {{-- Logo/Header --}}
-            <div class="flex items-center gap-2 px-4 py-4">
+            <div class="flex items-center gap-2 px-4 ">
                 <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#515DEF]" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor">
@@ -24,14 +24,10 @@
                     $navItems = [
                         ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard'],
                         ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package'],
-                        [
-                            'title' => 'Reservation Management',
-                            'route' => 'admin.reservations.index',
-                            'icon' => 'calendar-clock',
-                        ],
-                        ['title' => 'Order Management', 'route' => 'admin.dashboard', 'icon' => 'shopping-cart'],
-                        ['title' => 'Reports', 'route' => 'admin.dashboard', 'icon' => 'bar-chart-3'],
-                        ['title' => 'Customer Management', 'route' => 'admin.dashboard', 'icon' => 'users'],
+                        ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock',],
+                        ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart'], // replace with the correct route
+                        ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3'],
+                        ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users'],
                     ];
                 @endphp
 
@@ -63,8 +59,8 @@
             @php
                 // You can add more items here as needed  Add Bottom navigation items for the sidebar
                 $bottomNavItems = [
-                    ['title' => 'Digital Menu', 'route' => 'admin.dashboard', 'icon' => 'menu'],
-                    ['title' => 'Settings', 'route' => 'admin.dashboard', 'icon' => 'settings'],
+                    ['title' => 'Digital Menu', 'route' => 'admin.digital-menu.index', 'icon' => 'menu'],
+                    ['title' => 'Settings', 'route' => 'admin.settings.index', 'icon' => 'settings'],
                 ];
             @endphp
 
@@ -82,9 +78,9 @@
                     </li>
                 @endforeach
 
-                <li class="pt-4">
+                <li class="py-4 pt-4">
                     <button onclick="toggleLogoutModal()"
-                        class="w-full text-left flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-[#6A71F0]">
+                        class="w-full text-left flex items-center border gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-[#6A71F0]">
                         @include('partials.icons.log-out')
                         <span>Sign Out</span>
                     </button>
@@ -93,3 +89,5 @@
         </div>
     </div>
 </aside>
+
+
