@@ -26,7 +26,6 @@ return new class extends Migration
         Schema::table('orders', function (Blueprint $table) {
             $table->dropColumn('takeaway_id');
             $table->dropColumn('order_time');
-            $table->dropColumn('scheduled_time');
         });
     }
 };
