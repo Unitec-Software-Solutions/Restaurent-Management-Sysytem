@@ -2,7 +2,7 @@
 use App\Models\ItemTransaction;
 @endphp
 
-@extends('layouts.main')
+@extends('layouts.admin')
 
 @section('title', 'Inventory Dashboard')
 
