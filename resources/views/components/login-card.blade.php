@@ -61,7 +61,7 @@
             @endif
             
             @if($forgotPassword)
-            <a href="{{ route('password.request') }}" class="text-red-500 text-sm">Forgot Password?</a>
+            <a href="#" class="text-red-500 text-sm">Forgot Password?</a>
             @endif
         </div>
         @endif
