@@ -34,7 +34,7 @@
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
                         <a href="{{ route('admin.login') }}" class="px-4 py-2 text-gray-700 hover:text-[#515DEF] transition-colors font-medium">
-                            <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+                            <i class="fas fa-sign-in-alt mr-2"></i>Sign In (admin login - test )
                         </a>
                         <a href="{{ route('reservations.create') }}" class="ml-4 px-4 py-2 bg-[#515DEF]/10 text-[#515DEF] rounded-md hover:bg-[#515DEF]/20 transition-colors font-medium">
                             <i class="fas fa-user-plus mr-2"></i>Register
