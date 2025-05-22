@@ -41,7 +41,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Inventory routes
         Route::prefix('inventory')->name('inventory.')->group(function () {
             // Dashboard
-            // Route::get('/', [ItemMasterController::class, 'index'])->name('index');
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
             Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
 
@@ -61,7 +60,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
                 Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-                // Route::get('/transactions', [ItemTransactionController::class, 'transactions'])->name('transactions');
                 Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
                 Route::get('/{transaction}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
                 Route::put('/{transaction}', [ItemTransactionController::class, 'update'])->name('update');
@@ -117,12 +115,30 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
     Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
-    Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');  // conflict 
+    Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');
 });
 
-// Order routes
+// Custom routes for takeaway
+Route::get('/orders/takeaway/create', [OrderController::class, 'createTakeaway'])->name('orders.takeaway.create');
+Route::post('/orders/takeaway', [OrderController::class, 'storeTakeaway'])->name('orders.takeaway.store');
+
+// Takeaway Orders
+Route::prefix('orders')->group(function() {
+    Route::get('/takeaway', [OrderController::class, 'createTakeaway'])->name('orders.takeaway.create');
+    Route::post('/takeaway', [OrderController::class, 'storeTakeaway'])->name('orders.takeaway.store');
+});
+
+// Admin takeaway (in-house/in-call)
+Route::prefix('admin/orders')->middleware('auth:admin')->group(function() {
+    Route::get('/takeaway', [OrderController::class, 'createTakeaway'])->name('admin.orders.takeaway.create');
+    Route::post('/takeaway', [OrderController::class, 'storeTakeaway'])->name('admin.orders.takeaway.store');
+});
+
+// Resource route for orders
 Route::resource('orders', OrderController::class);
-Route::get('/orders/{order}/payment', [OrderController::class, 'payment'])
-    ->name('orders.payment');
-Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
+Route::get('/orders/{order}/payment', [OrderController::class, 'payment'])->name('orders.payment');
+Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
+Route::get('/orders/takeaway/create', [OrderController::class, 'createTakeaway'])->name('orders.takeaway.create');
+Route::post('/orders/takeaway', [OrderController::class, 'storeTakeaway'])->name('orders.takeaway.store');
+
 
