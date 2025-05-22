@@ -7,155 +7,69 @@ use App\Models\Branch;
 
 class BranchSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        $branches = [
-            // Organization 1
-            [
-                'organization_id' => 1,
-                'name' => 'Main Branch',
-                'address' => 'No. 25, Galle Road, Colombo 03, Sri Lanka',
-                'phone' => '+94 11 234 5678',
-                'email' => 'main@restaurant.lk',
-                'opening_time' => '08:00:00',
-                'closing_time' => '22:00:00',
-                'total_capacity' => 100,
-                'reservation_fee' => 10.00,
-                'cancellation_fee' => 5.00,
-                'is_active' => true,
+        $branchData = [
+            1 => [
+                ['Colombo HQ', 'No. 25, Galle Road, Colombo 03, Sri Lanka', '+94 11 234 5678', 'colombo@mainrest.lk'],
+                ['Kandy Outlet', 'No. 12, Peradeniya Road, Kandy, Sri Lanka', '+94 81 223 4567', 'kandy@mainrest.lk'],
+                ['Galle Branch', '88 Lighthouse Street, Galle Fort', '+94 91 223 1122', 'galle@mainrest.lk'],
+                ['Negombo Branch', '45 Beachside Rd, Negombo', '+94 31 567 1234', 'negombo@mainrest.lk'],
+                ['Kurunegala Branch', 'Mall Complex, Kurunegala', '+94 37 224 9988', 'kurunegala@mainrest.lk'],
             ],
-            [
-                'organization_id' => 1,
-                'name' => 'Kandy Branch',
-                'address' => 'No. 12, Peradeniya Road, Kandy, Sri Lanka',
-                'phone' => '+94 81 223 4567',
-                'email' => 'kandy@restaurant.lk',
-                'opening_time' => '09:00:00',
-                'closing_time' => '22:30:00',
-                'total_capacity' => 80,
-                'reservation_fee' => 10.00,
-                'cancellation_fee' => 5.00,
-                'is_active' => true,
+            2 => [
+                ['Oceanfront Colombo', 'Marine Drive, Colombo 04', '+94 77 456 7890', 'colombo@oceanbreeze.lk'],
+                ['Galle Sea View', 'Beach Road, Galle', '+94 77 567 4321', 'galle@oceanbreeze.lk'],
+                ['Trinco Bay Branch', 'Nilaveli Beach Rd, Trincomalee', '+94 77 987 6543', 'trinco@oceanbreeze.lk'],
+                ['Negombo Pier', 'Pier 3, Negombo Harbour', '+94 77 222 3333', 'pier@oceanbreeze.lk'],
+                ['Batticaloa Breeze', 'Passikudah Beach Rd', '+94 77 333 4444', 'batti@oceanbreeze.lk'],
             ],
-
-            // Organization 2
-            [
-                'organization_id' => 2,
-                'name' => 'Ocean Front',
-                'address' => '123 Marine Drive, Coastal City',
-                'phone' => '+94 77 123 4567',
-                'email' => 'oceanfront@seafood.lk',
-                'opening_time' => '11:00:00',
-                'closing_time' => '23:00:00',
-                'total_capacity' => 90,
-                'reservation_fee' => 15.00,
-                'cancellation_fee' => 7.50,
-                'is_active' => true,
+            3 => [
+                ['Urban Cafe HQ', 'Downtown Hub, Colombo 01', '+94 76 123 4567', 'hq@urbancafe.lk'],
+                ['Colombo Tech Cafe', 'Trace Expert City, Maradana', '+94 76 234 5678', 'tech@urbancafe.lk'],
+                ['Nugegoda Cafe', 'High-Level Rd, Nugegoda', '+94 76 345 6789', 'nugegoda@urbancafe.lk'],
+                ['Kandy Lakeview', 'Near Lake Round, Kandy', '+94 76 456 7890', 'kandy@urbancafe.lk'],
+                ['Gampaha Cafe', 'Main Street, Gampaha', '+94 76 567 8901', 'gampaha@urbancafe.lk'],
             ],
-            [
-                'organization_id' => 2,
-                'name' => 'Harbor View',
-                'address' => 'Pier 4, Harbor District',
-                'phone' => '+94 77 234 5678',
-                'email' => 'harbor@oceanbreeze.lk',
-                'opening_time' => '12:00:00',
-                'closing_time' => '22:30:00',
-                'total_capacity' => 70,
-                'reservation_fee' => 15.00,
-                'cancellation_fee' => 7.50,
-                'is_active' => true,
+            4 => [
+                ['Pizza Palace HQ', 'Main Street, Dehiwala', '+94 75 111 2222', 'hq@pizzapalace.lk'],
+                ['Mt. Lavinia Branch', 'Beach Rd, Mt. Lavinia', '+94 75 222 3333', 'mtl@pizzapalace.lk'],
+                ['Colombo South Branch', 'Havelock Town, Colombo 05', '+94 75 333 4444', 'south@pizzapalace.lk'],
+                ['Wattala Branch', 'Negombo Rd, Wattala', '+94 75 444 5555', 'wattala@pizzapalace.lk'],
+                ['Maharagama Branch', 'High-Level Rd, Maharagama', '+94 75 555 6666', 'maharagama@pizzapalace.lk'],
             ],
-
-            // Organization 3
-            [
-                'organization_id' => 3,
-                'name' => 'Urban Central',
-                'address' => 'Downtown Hub, Metro City',
-                'phone' => '+94 76 111 2222',
-                'email' => 'central@urbancafe.lk',
-                'opening_time' => '07:00:00',
-                'closing_time' => '21:00:00',
-                'total_capacity' => 60,
-                'reservation_fee' => 8.00,
-                'cancellation_fee' => 4.00,
-                'is_active' => true,
-            ],
-            [
-                'organization_id' => 3,
-                'name' => 'Tech Park Cafe',
-                'address' => 'Tech Park, Block B',
-                'phone' => '+94 76 333 4444',
-                'email' => 'tech@urbancafe.lk',
-                'opening_time' => '07:30:00',
-                'closing_time' => '20:00:00',
-                'total_capacity' => 50,
-                'reservation_fee' => 8.00,
-                'cancellation_fee' => 4.00,
-                'is_active' => true,
-            ],
-
-            // Organization 4
-            [
-                'organization_id' => 4,
-                'name' => 'Pizza Corner',
-                'address' => 'Corner of 5th and Main, Suburbia',
-                'phone' => '+94 75 111 3333',
-                'email' => 'corner@pizzapalace.lk',
-                'opening_time' => '11:00:00',
-                'closing_time' => '23:00:00',
-                'total_capacity' => 90,
-                'reservation_fee' => 12.00,
-                'cancellation_fee' => 6.00,
-                'is_active' => true,
-            ],
-            [
-                'organization_id' => 4,
-                'name' => 'Family Slice',
-                'address' => 'Suburban Mall, Food Court',
-                'phone' => '+94 75 222 4444',
-                'email' => 'family@pizzapalace.lk',
-                'opening_time' => '10:00:00',
-                'closing_time' => '22:00:00',
-                'total_capacity' => 100,
-                'reservation_fee' => 12.00,
-                'cancellation_fee' => 6.00,
-                'is_active' => true,
-            ],
-
-            // Organization 5
-            [
-                'organization_id' => 5,
-                'name' => 'Bamboo City',
-                'address' => '88 East Street, Chinatown',
-                'phone' => '+94 74 123 5678',
-                'email' => 'city@bamboogarden.lk',
-                'opening_time' => '11:30:00',
-                'closing_time' => '22:00:00',
-                'total_capacity' => 75,
-                'reservation_fee' => 13.00,
-                'cancellation_fee' => 6.50,
-                'is_active' => true,
-            ],
-            [
-                'organization_id' => 5,
-                'name' => 'Fusion Express',
-                'address' => 'Mall Kiosk 12, Lotus Centre',
-                'phone' => '+94 74 234 6789',
-                'email' => 'express@bamboogarden.lk',
-                'opening_time' => '12:00:00',
-                'closing_time' => '21:30:00',
-                'total_capacity' => 45,
-                'reservation_fee' => 13.00,
-                'cancellation_fee' => 6.50,
-                'is_active' => true,
+            5 => [
+                ['Bamboo HQ', 'Lotus Rd, Colombo 01', '+94 74 111 2233', 'hq@bamboogarden.lk'],
+                ['Colombo East', 'Rajagiriya Junction', '+94 74 222 3344', 'east@bamboogarden.lk'],
+                ['Kandy Central', 'Temple Rd, Kandy', '+94 74 333 4455', 'kandy@bamboogarden.lk'],
+                ['Jaffna Branch', 'Hospital Rd, Jaffna', '+94 74 444 5566', 'jaffna@bamboogarden.lk'],
+                ['Matara Branch', 'Beach Road, Matara', '+94 74 555 6677', 'matara@bamboogarden.lk'],
             ],
         ];
 
-        foreach ($branches as $branch) {
-            Branch::create($branch);
+        foreach ($branchData as $orgId => $branches) {
+            foreach ($branches as [$name, $address, $phone, $email]) {
+                Branch::firstOrCreate(
+                    [
+                        'organization_id' => $orgId,
+                        'name' => $name,
+                    ],
+                    [
+                        'address' => $address,
+                        'phone' => $phone,
+                        'email' => $email,
+                        'opening_time' => '08:00:00',
+                        'closing_time' => '22:00:00',
+                        'total_capacity' => 80,
+                        'reservation_fee' => 10.00,
+                        'cancellation_fee' => 5.00,
+                        'is_active' => true,
+                    ]
+                );
+            }
         }
 
-        $this->command->info("  Total Branches in the database : " . Branch::count());
-        $this->command->info("  ✅ Branches seeded successfully!");
+        $this->command->info('  ✅ 5 branches per organization (IDs 1–5) seeded successfully!');
+        $this->command->info('  🏢 Total Branches: ' . Branch::count());
     }
 }
