@@ -14,6 +14,7 @@ class Admin extends Authenticatable
         'email',
         'password',
         'branch_id',
+        'organization_id',
     ];
 
     protected $hidden = [
@@ -27,5 +28,13 @@ class Admin extends Authenticatable
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * Get the organization that the admin belongs to.
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organizations::class);
     }
 }
