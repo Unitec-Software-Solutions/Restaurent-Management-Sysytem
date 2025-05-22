@@ -25,9 +25,9 @@
                         ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard'],
                         ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package'],
                         ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock',],
-                        ['title' => 'Order Management', 'route' => 'orders.create', 'icon' => 'shopping-cart'], // replace with the correct route
-                        ['title' => 'Reports', 'route' => 'orders.create', 'icon' => 'bar-chart-3'],
-                        ['title' => 'Customer Management', 'route' => 'orders.create', 'icon' => 'users'],
+                        ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart'], // replace with the correct route
+                        ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3'],
+                        ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users'],
                     ];
                 @endphp
 
@@ -59,8 +59,8 @@
             @php
                 // You can add more items here as needed  Add Bottom navigation items for the sidebar
                 $bottomNavItems = [
-                    ['title' => 'Digital Menu', 'route' => 'reservations.create', 'icon' => 'menu'],
-                    ['title' => 'Settings', 'route' => 'orders.create', 'icon' => 'settings'],
+                    ['title' => 'Digital Menu', 'route' => 'admin.digital-menu.index', 'icon' => 'menu'],
+                    ['title' => 'Settings', 'route' => 'admin.settings.index', 'icon' => 'settings'],
                 ];
             @endphp
 
