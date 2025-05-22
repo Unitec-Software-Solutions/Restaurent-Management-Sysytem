@@ -38,4 +38,16 @@ class AdminController extends Controller
 
         return view('admin.reservations.index', compact('reservations'));
     }
+
+    public function profile()
+    {
+         $admin = Auth::user();
+
+       if (!$admin) {
+        return redirect()->route('admin.login')->with('error', 'Please log in to access your profile.');
+    }
+    return view('admin.profile.index', compact('admin'));
+    }
+
 }
+
