@@ -94,3 +94,21 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
 // Order routes
 Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
 
+
+// Custom error routes
+Route::get('/404', function () {
+    abort(404);
+})->name('error.404');
+
+Route::get('/403', function () {
+    abort(403);
+})->name('error.403');
+
+Route::get('/500', function () {
+    abort(500);
+})->name('error.500');
+
+// Fallback route for 404 errors
+Route::fallback(function () {
+    return response()->view('errors.404', [], 404);
+});
