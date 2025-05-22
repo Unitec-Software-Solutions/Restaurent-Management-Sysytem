@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('reservations', function (Blueprint $table) {
-            $table->dateTime('scheduled_time')->nullable(false);
+            // $table->dateTime('scheduled_time')->nullable(false);
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('reservations', function (Blueprint $table) {
-            $table->dropColumn('scheduled_time');
+            // $table->dropColumn('scheduled_time');
         });
     }
 };
