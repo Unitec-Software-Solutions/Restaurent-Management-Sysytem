@@ -12,6 +12,7 @@ use App\Http\Controllers\ItemDashboardController;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\ItemTransactionController;
+use App\Http\Controllers\OrderController;
 
 // Public routes
 Route::get('/', function () {
@@ -120,5 +121,8 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
 });
 
 // Order routes
+Route::resource('orders', OrderController::class);
+Route::get('/orders/{order}/payment', [OrderController::class, 'payment'])
+    ->name('orders.payment');
 Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
 

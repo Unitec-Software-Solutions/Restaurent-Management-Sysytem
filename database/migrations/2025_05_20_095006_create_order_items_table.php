@@ -14,17 +14,16 @@ return new class extends Migration
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained();
-            $table->foreignId('sub_order_id')->nullable()->constrained();
-            $table->foreignId('menu_item_id')->constrained();
-            $table->integer('quantity');
+            $table->foreignId('inventory_item_id')->constrained('item_master');
             $table->decimal('unit_price', 10, 2);
             $table->decimal('total_price', 10, 2);
             $table->text('special_instructions')->nullable();
             $table->enum('status', ['pending', 'preparing', 'completed', 'served', 'returned', 'cancelled'])->default('pending');
             $table->boolean('is_active')->default(true);
-            $table->softDeletes(); // Adds deleted_at column
+            $table->softDeletes();
             $table->timestamps();
         });
+
     }
 
     /**

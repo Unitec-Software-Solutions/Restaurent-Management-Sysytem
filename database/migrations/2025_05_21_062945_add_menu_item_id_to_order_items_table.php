@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('reservation_tables', function (Blueprint $table) {
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes(); // Adds deleted_at column
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->foreignId('menu_item_id')->constrained('item_master');
         });
     }
 
@@ -22,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('reservation_tables', function (Blueprint $table) {
+        Schema::table('order_items', function (Blueprint $table) {
             //
         });
     }
