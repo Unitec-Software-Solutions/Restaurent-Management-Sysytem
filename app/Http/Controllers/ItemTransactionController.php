@@ -7,78 +7,123 @@ use App\Models\ItemTransaction;
 use App\Models\ItemMaster;
 use App\Models\Branch;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class ItemTransactionController extends Controller
 {
+
+    /**
+     * Get stock summary statistics for dashboard
+     */
+    protected function getStockStatistics()
+    {
+        $totalItems      = ItemMaster::count();
+        $inStockCount    = 0;
+        $nearReorderCount = 0;
+        $outOfStockCount = 0;
+
+        // Loop through each item (across all branches) to compute these stats
+        $items = ItemMaster::all();
+        foreach ($items as $item) {
+            // stock across all branches
+            $stock = ItemTransaction::stockOnHand($item->id);
+
+            if ($stock <= 0) {
+                $outOfStockCount++;
+            } elseif ($stock <= $item->reorder_level) {
+                $nearReorderCount++;
+            } else {
+                $inStockCount++;
+            }
+        }
+
+        return compact('totalItems', 'inStockCount', 'nearReorderCount', 'outOfStockCount');
+    }
+
     /**
      * Display a listing of item transactions grouped by item & branch.
      */
     public function index()
     {
-        // Get search and branch filter
-        $search = request('search');
+        // Get statistics for dashboard
+        $stats    = $this->getStockStatistics();
+        $search   = request('search');
         $branchId = request('branch_id');
+        $status   = request('status');
 
-        // Start query for ItemMaster
-        $query = ItemMaster::with(['category']);
+        $query = ItemMaster::with(['category', 'transactions']);
 
-        // Apply search filter
         if ($search) {
             $query->where('name', 'like', "%{$search}%")
                 ->orWhere('item_code', 'like', "%{$search}%");
         }
 
-        // Fetch all items based on filters
         $items = $query->get();
 
-        // Prepare stock data grouped by item and optionally filtered by branch
         $stockData = [];
 
         foreach ($items as $item) {
-            // Get branches where this item has transactions
             $branchesQuery = $branchId
                 ? Branch::where('id', $branchId)
                 : Branch::active();
 
             foreach ($branchesQuery->get() as $branch) {
-                // Calculate stock on hand
                 $currentStock = ItemTransaction::stockOnHand($item->id, $branch->id);
 
-                // Skip if no stock and branch has no transactions
-                if ($currentStock <= 0 && !$item->transactions()->where('branch_id', $branch->id)->exists()) {
+                // skip if nothing at all
+                if (
+                    $currentStock <= 0
+                    && ! $item->transactions()->where('branch_id', $branch->id)->exists()
+                ) {
                     continue;
                 }
 
-                // Add to final list
+                // determine status
+                $statusValue = $currentStock <= 0
+                    ? 'out_of_stock'
+                    : ($currentStock <= $item->reorder_level ? 'low_stock' : 'in_stock');
+
+                // apply status filter
+                if ($status && $statusValue !== $status) {
+                    continue;
+                }
+
                 $stockData[] = [
-                    'item' => $item,
-                    'branch' => $branch,
+                    'item'          => $item,
+                    'branch'        => $branch,
                     'current_stock' => $currentStock,
                     'reorder_level' => $item->reorder_level,
-                    'status' => $currentStock <= $item->reorder_level ? 'low_stock' : 'in_stock',
+                    'status'        => $statusValue,
                 ];
             }
         }
 
-        // Paginate manually (since we’re building the array manually)
-        $transactions = $query->paginate(25);
-        $perPage = 25;
-        $currentPage = request()->input('page', 1);
-        $paginatedData = array_slice($stockData, ($currentPage - 1) * $perPage, $perPage);
-
-        // Create LengthAwarePaginator instance
-        $stocks = new \Illuminate\Pagination\LengthAwarePaginator(
-            $paginatedData,
+        // Paginate the resulting array
+        $perPage       = 25;
+        $currentPage   = LengthAwarePaginator::resolveCurrentPage();
+        $itemsForPage  = array_slice($stockData, ($currentPage - 1) * $perPage, $perPage);
+        $stocks        = new LengthAwarePaginator(
+            $itemsForPage,
             count($stockData),
             $perPage,
             $currentPage,
             ['path' => request()->url(), 'query' => request()->query()]
         );
 
-        // Fetch active branches for filter dropdown
+        // Fetch branches for the filter dropdown
         $branches = Branch::active()->get();
-        
-        return view('admin.inventory.stock.index', compact('stocks','transactions', 'branches'));
+
+        return view('admin.inventory.stock.index', [
+            'stocks' => $stocks,
+            'stats' => $stats,
+            'branches' => $branches,
+            'itemsCount' => $stats['totalItems'],
+            'inStockCount' => $stats['inStockCount'],
+            'nearReorderCount' => $stats['nearReorderCount'],
+            'outOfStockCount' => $stats['outOfStockCount']
+        ]);
     }
 
     public function transactions()
@@ -134,13 +179,22 @@ class ItemTransactionController extends Controller
         $validated = $request->validate([
             'inventory_item_id' => 'required|exists:item_master,id',
             'branch_id' => 'required|exists:branches,id',
-            'transaction_type' => 'required|in:in,out',
+            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out',
+
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
 
         $validated['created_by_user_id'] = auth()->id();
         $validated['is_active'] = true;
+        $validated['organization_id'] = 1;
+
+        // Adjust quantity based on transaction type
+        if ($validated['transaction_type'] === 'out') {
+            $validated['quantity'] = -abs($validated['quantity']);
+        } else {
+            $validated['quantity'] = abs($validated['quantity']);
+        }
 
         ItemTransaction::create($validated);
 
@@ -170,10 +224,18 @@ class ItemTransactionController extends Controller
         $validated = $request->validate([
             'inventory_item_id' => 'required|exists:item_master,id',
             'branch_id' => 'required|exists:branches,id',
-            'transaction_type' => 'required|in:in,out',
+            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out',
+
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
+
+        // Adjust quantity based on transaction type
+        if ($validated['transaction_type'] === 'out') {
+            $validated['quantity'] = -abs($validated['quantity']);
+        } else {
+            $validated['quantity'] = abs($validated['quantity']);
+        }
 
         $transaction->update($validated);
 
@@ -191,5 +253,11 @@ class ItemTransactionController extends Controller
         return redirect()->route('admin.inventory.stock.index')
             ->with('success', 'Transaction deleted successfully.');
     }
+
+    protected function isStockIn($type)
+{
+    $inTypes = ['purchase_order', 'return', 'adjustment', 'audit', 'transfer_in'];
+    return in_array($type, $inTypes);
+}
 
 }

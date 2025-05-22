@@ -138,5 +138,7 @@ class OrganizationSeeder extends Seeder
                 $org
             );
         }
+        $this->command->info('  Total Organizations in the database : ' . Organizations::count());
+        $this->command->info('  ✅ Organizations seeded successfully.');
     }
 }

@@ -12,7 +12,7 @@ class BranchSeeder extends Seeder
         $branches = [
             [
                 'id' => 1,
-                'organization_id' => 1, 
+                'organization_id' => 1,
                 'name' => 'Main Branch',
                 'address' => 'No. 25, Galle Road, Colombo 03, Sri Lanka',
                 'phone' => '+94 11 234 5678',
@@ -89,6 +89,7 @@ class BranchSeeder extends Seeder
             );
         }
 
-        $this->command->info('Branches seeded successfully!');
+        $this->command->info("  Total Branches in the database : " . Branch::count());
+        $this->command->info("  ✅ Branches seeded successfully! ");
     }
 }

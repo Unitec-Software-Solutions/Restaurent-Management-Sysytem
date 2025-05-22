@@ -1,3 +1,5 @@
+{{-- Not in Use - Dashboard blade file is in use for inventory Dashboard --}}
+
 @extends('layouts.admin')
 
 @section('content')

@@ -96,5 +96,7 @@ class LoginSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        $this->command->info('  ✅ Login users seeded successfully.');
     }
 }
