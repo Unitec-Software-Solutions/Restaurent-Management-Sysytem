@@ -44,9 +44,16 @@
                 <div>
                     <p class="text-gray-600">Grand Total:</p>
                     <p class="font-medium text-green-600">
-                        ₹{{ number_format($grandTotals['total'], 2) }}
+                        LKR {{ number_format($grandTotals['total'], 2) }}
                     </p>
                 </div>
+            </div>
+            {{-- Proceed to Payment Button --}}
+            <div class="mt-6">
+                <a href="{{ route('reservations.payment', ['reservation' => $reservationId]) }}"
+                   class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Proceed to Payment
+                </a>
             </div>
         </div>
         @endif
@@ -57,7 +64,6 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-4 py-2 text-left">Order #</th>
-                    <th class="px-4 py-2 text-left">Customer</th>
                     <th class="px-4 py-2 text-right">Items</th>
                     <th class="px-4 py-2 text-right">Total</th>
                     <th class="px-4 py-2 text-center">Actions</th>
@@ -67,17 +73,11 @@
                 @forelse($orders as $order)
                 <tr class="border-t hover:bg-gray-50">
                     <td class="px-4 py-3">{{ $order->id }}</td>
-                    <td class="px-4 py-3">
-                        {{ $order->customer_name }}
-                        <p class="text-sm text-gray-600">
-                            {{ $order->customer_phone }}
-                        </p>
-                    </td>
                     <td class="px-4 py-3 text-right">
                         {{ $order->orderItems->sum('quantity') }}
                     </td>
                     <td class="px-4 py-3 text-right">
-                        ₹{{ number_format($order->total, 2) }}
+                        LKR {{ number_format($order->total, 2) }}
                     </td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex justify-center space-x-2">
@@ -116,7 +116,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="px-4 py-6 text-center text-gray-500">
+                    <td colspan="4" class="px-4 py-6 text-center text-gray-500">
                         No orders found for this reservation
                     </td>
                 </tr>
