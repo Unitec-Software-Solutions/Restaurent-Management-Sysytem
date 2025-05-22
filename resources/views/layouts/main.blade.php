@@ -50,7 +50,7 @@
 
     <!-- Sidebar -->
     @auth
-        @include('partials.sidebar')
+        @include('partials.sidebar.admin-sidebar')
     @endauth
 
     <!-- Header -->

@@ -70,7 +70,7 @@
 
             <!-- Sidebar -->
             @auth
-                @include('partials.sidebar')
+                @include('partials.sidebar.customer-sidebar')
             @endauth
 
             <!-- Main Content -->
