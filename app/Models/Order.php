@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -18,18 +19,37 @@ class Order extends Model
         'service_charge',
         'discount',
         'total',
-        
+        'takeaway_id', // Make sure this is in your fillable if you want to mass assign
     ];
 
-    public function orderItems()
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($order) {
+            if (str_contains($order->order_type, 'takeaway')) {
+                $order->takeaway_id = 'TA-' . strtoupper(Str::random(8));
+            }
+
+            if (!empty($order->placed_by_admin) && empty($order->customer_phone)) {
+                $order->customer_phone = 'WALK-IN';
+            }
+        });
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function items()
     {
         return $this->hasMany(OrderItem::class);
     }
 
-    public function getAmountDueAttribute()
+    public function orderItems()
     {
-        // If you have a payments table, sum payments and subtract from total
-        return $this->total - ($this->payments()->sum('amount') ?? 0);
+        return $this->hasMany(OrderItem::class);
     }
 
     public function reservation()
@@ -39,4 +59,4 @@ class Order extends Model
             'scheduled_time' => null
         ]);
     }
-};
+}
