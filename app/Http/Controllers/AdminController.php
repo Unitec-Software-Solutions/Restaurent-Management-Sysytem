@@ -31,8 +31,9 @@ class AdminController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Incomplete admin details. Contact support.');
         }
 
-        $reservations = Reservation::with(['user', 'table']) // eager loading (adjust based on your model)
+        $reservations = Reservation::with(['user', 'table'])
             ->where('branch_id', $admin->branch_id)
+            ->where('organization_id', $admin->organization_id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -41,13 +42,12 @@ class AdminController extends Controller
 
     public function profile()
     {
-         $admin = Auth::user();
+        $admin = Auth::user();
 
-       if (!$admin) {
-        return redirect()->route('admin.login')->with('error', 'Please log in to access your profile.');
-    }
-    return view('admin.profile.index', compact('admin'));
-    }
+        if (!$admin) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to access your profile.');
+        }
 
+        return view('admin.profile.index', compact('admin'));
+    }
 }
-
