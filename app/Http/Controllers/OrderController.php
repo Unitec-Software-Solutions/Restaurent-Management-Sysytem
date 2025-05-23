@@ -16,23 +16,18 @@ class OrderController extends Controller
     // List all orders for a reservation (dine-in)
     public function index(Request $request)
     {
-        $reservationId = $request->input('reservation_id');
-        
-        $orders = Order::with(['orderItems.menuItem', 'reservation'])
-            ->when($reservationId, fn($q) => $q->where('reservation_id', $reservationId))
+        $orders = Order::with(['reservation', 'items'])
+            ->when($request->phone, function($query) use ($request) {
+                return $query->where('customer_phone', $request->phone);
+            })
+            ->with(['orderItems', 'branch'])
             ->latest()
             ->paginate(10);
 
-        // Calculate grand totals
-        $grandTotals = [
-            'subtotal' => $orders->sum('subtotal'),
-            'tax' => $orders->sum('tax'),
-            'service_charge' => $orders->sum('service_charge'),
-            'discount' => $orders->sum('discount'),
-            'total' => $orders->sum('total')
-        ];
-
-        return view('orders.index', compact('orders', 'reservationId', 'grandTotals'));
+        return view('orders.index', [
+            'orders' => $orders,
+            'phone' => $request->phone
+        ]);
     }
 
     // Show order creation form (dine-in, under reservation)
@@ -55,12 +50,12 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'reservation_id' => 'required|exists:reservations,id',
-            'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required_without:reservation_id|string',
-            'order_type' => 'required_without:reservation_id|string',
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
+            // Only require customer_name if reservation_id is not present
+            'customer_name' => 'required_without:reservation_id|nullable|string|max:255',
+            'customer_phone' => 'required_without:reservation_id|nullable|string|max:20',
         ]);
 
         $reservation = null;
@@ -74,9 +69,7 @@ class OrderController extends Controller
             'customer_name'  => $reservation ? $reservation->name : $data['customer_name'],
             'customer_phone' => $reservation ? $reservation->phone : $data['customer_phone'],
             'order_type'     => $reservation ? ($reservation->order_type ?? 'dine_in_online_scheduled') : ($data['order_type'] ?? 'dine_in_online_scheduled'),
-            'status'         => 'active',
-        
-        
+            'status'         => Order::STATUS_ACTIVE,
         ]);
 
         $subtotal = 0;
@@ -110,7 +103,7 @@ class OrderController extends Controller
             'total' => $total,
         ]);
 
-        return redirect()->route('orders.show', $order)
+        return redirect()->route('orders.index', ['phone' => $order->customer_phone])
             ->with('success', 'Order created successfully!');
     }
 
@@ -120,7 +113,7 @@ class OrderController extends Controller
         $order = Order::with(['reservation', 'orderItems.menuItem'])
                ->findOrFail($id);
 
-        return view('orders.show', compact('order'));
+        return view(('orders.summary'), compact('order'));
     }
 
     // Edit order (dine-in, under reservation)
@@ -132,9 +125,8 @@ class OrderController extends Controller
     }
 
     // Update order (dine-in, under reservation)
-    public function update(Request $request, $id)
+    public function update(Request $request, Order $order)
     {
-        $order = Order::findOrFail($id);
         $data = $request->validate([
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:item_master,id',
@@ -170,7 +162,7 @@ class OrderController extends Controller
             'discount' => $discount,
             'total' => $total,
         ]);
-        return redirect()->route('orders.show', $order)
+        return redirect()->route('orders.index', ['phone' => $order->customer_phone])
             ->with('success', 'Order updated successfully.');
     }
 
@@ -303,7 +295,70 @@ class OrderController extends Controller
             'total' => $subtotal + $tax
         ]);
 
-        return redirect()->route('orders.show', $order)
+        return redirect()->route('orders.takeaway.summary', ['order' => $order->id])
             ->with('success', 'Takeaway order created! ID: ' . $order->takeaway_id);
+    }
+
+    public function summary(Order $order)
+    {
+        return view('orders.takeaway.summary', [
+            'order' => $order->load('items.menuItem'),
+            'editable' => $order->status === 'draft'
+        ]);
+    }
+
+    public function submit(Request $request, Order $order)
+    {
+        $order->update(['status' => 'submitted']);
+        return auth()->guard('admin')->check()
+            ? redirect()->route('admin.orders.index')
+            : redirect()->route('orders.index', ['phone' => $order->customer_phone]);
+    }
+
+    // Edit takeaway order
+    public function editTakeaway($id)
+    {
+        $order = Order::with('items.menuItem')->findOrFail($id);
+        $menuItems = ItemMaster::where('is_menu_item', true)->get();
+        $branches = Branch::all();
+        $items = $order->items; // Add this line to define $items for the view
+        return view('orders.takeaway.edit', compact('order', 'menuItems', 'branches', 'items'));
+    }
+
+    // Submit takeaway order
+    public function submitOrder(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+        $order->update(['status' => 'submitted']);
+        // Redirect to index page with phone filter and show success message
+        return redirect()->route('orders.index', ['phone' => $order->customer_phone])
+            ->with('success', 'Takeaway order submitted successfully!');
+    }
+
+    // Show all orders with optional filters (customer/staff)
+    public function allOrders(Request $request)
+    {
+        $query = Order::with(['reservation', 'items', 'branch']);
+
+        // Optional filters
+        if ($request->filled('phone')) {
+            $query->where('customer_phone', $request->phone);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $orders = $query->latest()->paginate(20);
+        $branches = Branch::all();
+        return view('orders.all', compact('orders', 'branches'));
     }
 }
