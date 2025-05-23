@@ -7,7 +7,7 @@
             </div>
             <div class="flex flex-col">
                 <span class="text-sm font-medium dark:text-black">{{ auth('admin')->user()->name ?? 'Admin' }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">Admin</span>
+                {{-- <span class="text-xs text-gray-500 dark:text-gray-400">User - Role</span> --}}
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -24,7 +24,7 @@
             x-transition:leave-end="transform opacity-0 scale-95"
             class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg dark:bg-gray-700 z-50">
             <div class="py-1">
-                <a href="#"
+                <a href="{{ route('admin.profile.index') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     Your Profile
                 </a>
