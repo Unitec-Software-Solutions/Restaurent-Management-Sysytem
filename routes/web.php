@@ -73,37 +73,26 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
 
             Route::resource('categories', ItemCategoryController::class);
-        });
+         });
 
         // Order Management
-        Route::get('/orders', function () {
-            return view('admin.orders.index');
-        })->name('orders.index');
+        Route::get('/orders', function () {return view('admin.orders.index');})->name('orders.index');
         
         // Reports
-        Route::get('/reports', function () {
-            return view('admin.reports.index');
-        })->name('reports.index');
+        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
         
         // Customer Management
-        Route::get('/customers', function () {
-            return view('admin.customers.index');
-        })->name('customers.index');
+        Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
         
         // Digital Menu
-        Route::get('/digital-menu', function () {
-            return view('admin.digital-menu.index');
-        })->name('digital-menu.index');
+        Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
         
         // Settings
-        Route::get('/settings', function () {
-            return view('admin.settings.index');
-        })->name('settings.index');
+        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
 
         // User Management
-        Route::get('/profile', function () {
-            return view('admin.profile.index');
-        })->name('users.index');
+        Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+
 
 
     });
