@@ -23,6 +23,16 @@ class AdminSeeder extends Seeder
             return;
         }
 
+        /**  
+         * Creates 2 admins per organization with sequentially numbered credentials:  
+         * - Email: admin{number}@example.com (e.g., admin1@example.com, admin2@example.com, ...)  
+         * - Password: password{number} (e.g., password1, password2, ...)  
+         *  
+         * Example: The 5th admin will have:  
+         * - Email: admin5@example.com  
+         * - Password: password5  
+         */  
+
         $adminIndex = 1;
 
         foreach ($organizations as $organization) {
