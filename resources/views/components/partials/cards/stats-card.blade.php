@@ -30,6 +30,11 @@
             'bg' => 'bg-red-100',
             'text' => 'text-red-600',
         ],
+        'yellow' => [
+            'bg' => 'bg-yellow-100',
+            'text' => 'text-yellow-800',
+            'icon' => 'text-yellow-600',
+        ],
     ];
 
     $trendColor = $trendDirection === 'up' ? 'text-green-500' : 'text-red-500';
