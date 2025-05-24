@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Branch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\ItemMaster;
 
 class OrderController extends Controller
 {
@@ -42,5 +44,40 @@ class OrderController extends Controller
             'orders' => $orders,
             'branch' => $branch
         ]);
+    }
+
+    public function createTakeaway()
+    {
+        return view('orders.takeaway.create', [
+            'menu_items' => ItemMaster::where('is_menu_item', true)->get()
+        ]);
+    }
+
+    public function storeTakeaway(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            $validated = $request->validate([
+                'customer_name' => 'required',
+                'items' => 'required|array',
+                // ...other fields...
+            ]);
+            $order = Order::create([
+                'order_type' => 'takeaway',
+                'status' => 'pending',
+                // ...other fields...
+            ]);
+            foreach ($validated['items'] as $item) {
+                $order->items()->attach($item['id'], [
+                    'quantity' => $item['quantity'],
+                    'price' => ItemMaster::find($item['id'])->selling_price
+                ]);
+            }
+            DB::commit();
+            return redirect()->route('orders.summary', $order);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Order failed: ' . $e->getMessage()]);
+        }
     }
 }
