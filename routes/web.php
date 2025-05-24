@@ -199,4 +199,26 @@ Route::get('orders/{order}/edit', [OrderController::class, 'editTakeaway'])->nam
 // All Orders Index (Customer/Staff)
 Route::get('orders/all', [OrderController::class, 'allOrders'])->name('orders.all');
 
+// Customer Routes
+Route::prefix('reservations')->group(function() {
+    Route::get('/create', [ReservationController::class, 'create']);
+    Route::post('/', [ReservationController::class, 'store']);
+    Route::get('/{reservation}/summary', [ReservationController::class, 'summary']);
+    Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment']);
+});
+
+Route::prefix('orders/takeaway')->group(function() {
+    Route::get('/create', [OrderController::class, 'createTakeaway']);
+    Route::post('/', [OrderController::class, 'storeTakeaway']);
+});
+
+// Admin Routes
+Route::prefix('admin')->middleware('auth:admin')->group(function() {
+    Route::resource('reservations', AdminReservationController::class);
+    Route::prefix('orders')->group(function() {
+        Route::get('/takeaway', [AdminOrderController::class, 'takeawayIndex']);
+        Route::get('/dinein', [AdminOrderController::class, 'dineinIndex']);
+    });
+});
+
 
