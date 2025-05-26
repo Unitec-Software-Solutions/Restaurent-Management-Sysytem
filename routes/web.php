@@ -191,6 +191,7 @@ Route::prefix('reservations')->group(function() {
     Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment']);
 });
 Route::prefix('orders')->group(function() {
+    Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('orders.update-cart');
     Route::resource('orders', OrderController::class);
     Route::get('orders/{order}/summary', [OrderController::class, 'summary'])->name('orders.summary');
     Route::get('/reservations/{reservation}/add-order', [OrderController::class, 'addToReservation'])->name('orders.add_to_reservation');

@@ -47,7 +47,7 @@
                 <div>
                     <p class="text-gray-600">Grand Total:</p>
                     <p class="font-medium text-green-600">
-                        LKR {{ number_format($grandTotals['total'], 2) }}
+                        LKR  {{ number_format($grandTotals['total'], 2) }}
                     </p>
                 </div>
             </div>
@@ -80,7 +80,7 @@
                         {{ $order->items->sum('quantity') }}
                     </td>
                     <td class="px-4 py-3 text-right">
-                        LKR {{ number_format($order->total, 2) }}
+                        LKR  {{ number_format($order->total, 2) }}
                     </td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex justify-center space-x-2">

@@ -60,7 +60,7 @@
                             <tr>
                                 <td>{{ $item->menuItem->name }}</td>
                                 <td>{{ $item->quantity }}</td>
-                                <td>₹{{ number_format($item->total_price, 2) }}</td>
+                                <td>LKR {{ number_format($item->total_price, 2) }}</td>
                             </tr>
                             @endforeach
                         </tbody>

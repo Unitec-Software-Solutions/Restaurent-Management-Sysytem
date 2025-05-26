@@ -84,7 +84,7 @@
                                         <label class="form-check-label flex-grow-1" for="item_{{ $item->id }}">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <span class="fw-medium">{{ $item->name }}</span>
-                                                <span class="text-primary">₹{{ number_format($item->selling_price, 2) }}</span>
+                                                <span class="text-primary">LKR {{ number_format($item->selling_price, 2) }}</span>
                                             </div>
                                         </label>
                                         <input type="number" name="items[{{ $item->id }}][quantity]" 

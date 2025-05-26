@@ -46,23 +46,23 @@
                     <tr>
                         <td>{{ $item->menuItem->name }}</td>
                         <td>{{ $item->quantity }}</td>
-                        <td>₹{{ number_format($item->unit_price, 2) }}</td>
-                        <td>₹{{ number_format($item->total_price, 2) }}</td>
+                        <td>LKR {{ number_format($item->unit_price, 2) }}</td>
+                        <td>LKR {{ number_format($item->total_price, 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
                         <th colspan="3">Subtotal</th>
-                        <td>₹{{ number_format($order->subtotal, 2) }}</td>
+                        <td>LKR {{ number_format($order->subtotal, 2) }}</td>
                     </tr>
                     <tr>
                         <th colspan="3">Tax (10%)</th>
-                        <td>₹{{ number_format($order->tax, 2) }}</td>
+                        <td>LKR {{ number_format($order->tax, 2) }}</td>
                     </tr>
                     <tr>
                         <th colspan="3">Total</th>
-                        <td>₹{{ number_format($order->total, 2) }}</td>
+                        <td>LKR {{ number_format($order->total, 2) }}</td>
                     </tr>
                 </tfoot>
             </table>
