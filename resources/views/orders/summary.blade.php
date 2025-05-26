@@ -13,7 +13,7 @@
                 </div>
                 <div>
                     <p>Total Items: {{ $order->items->sum('quantity') }}</p>
-                    <p class="text-xl font-bold">Total: LKR {{ number_format($order->total, 2) }}</p>
+                    <p class="text-xl font-bold">Total: LKR  {{ number_format($order->total, 2) }}</p>
                 </div>
             </div>
         </div>
@@ -27,7 +27,7 @@
                         <p class="font-medium">{{ $item->menuItem->name }}</p>
                         <p class="text-sm">Qty: {{ $item->quantity }}</p>
                     </div>
-                    <p>LKR {{ number_format($item->total_price, 2) }}</p>
+                    <p>LKR  {{ number_format($item->total_price, 2) }}</p>
                 </div>
                 @endforeach
             </div>
