@@ -204,8 +204,10 @@ class OrderController extends Controller
             'total' => $total,
         ]);
 
-        return redirect()->route('orders.index', ['phone' => $order->customer_phone])
-            ->with('success', 'Order updated successfully.');
+        return redirect()->route('orders.index', [
+            'phone' => $order->customer_phone,
+            'reservation_id' => $order->reservation_id
+        ])->with('success', 'Order updated successfully.');
     }
 
     // Delete order (dine-in, under reservation)
