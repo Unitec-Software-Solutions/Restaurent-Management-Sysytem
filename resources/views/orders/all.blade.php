@@ -45,7 +45,7 @@
                         <td class="px-4 py-3">{{ $order->customer_phone }}</td>
                         <td class="px-4 py-3">{{ $order->branch->name ?? '-' }}</td>
                         <td class="px-4 py-3">{{ ucfirst($order->status) }}</td>
-                        <td class="px-4 py-3">LKR {{ number_format($order->total, 2) }}</td>
+                        <td class="px-4 py-3">LKR  {{ number_format($order->total, 2) }}</td>
                         <td class="px-4 py-3">{{ $order->created_at->format('M j, Y H:i') }}</td>
                         <td class="px-4 py-3 text-center">
                             <a href="{{ route('orders.summary', $order->id) }}" class="text-blue-500 hover:text-blue-700" title="View Order">View</a>
