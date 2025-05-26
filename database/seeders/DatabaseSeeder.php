@@ -25,18 +25,6 @@ class DatabaseSeeder extends Seeder
             ItemCategorySeeder::class,
             ItemMasterSeeder::class,
             ItemTransactionSeeder::class,
-            // InventoryItemSeeder::class,
-            // InventoryStockSeeder::class,
-            // InventoryTransactionSeeder::class,
-            // MenuCategorySeeder::class,
-            // MenuItemSeeder::class,
-            // MenuRecipeSeeder::class,
-
-            // PurchaseOrderSeeder::class,
-            // PurchaseOrderItemSeeder::class,
-            // GoodReceivedNoteSeeder::class,
-            // GoodReceivedNoteItemSeeder::class,
-
             AdminSeeder::class,
             ReservationSeeder::class,
 
