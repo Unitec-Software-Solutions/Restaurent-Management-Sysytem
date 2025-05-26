@@ -138,7 +138,7 @@ class AdminReservationController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => 'nullable|string|max:255',
                 'phone' => 'required|string|min:10|max:15',
                 'email' => 'nullable|email|max:255',
                 'date' => 'required|date|after_or_equal:today',
@@ -255,7 +255,7 @@ class AdminReservationController extends Controller
     {
         $admin = auth('admin')->user();
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'phone' => 'required|string|min:10|max:15',
             'email' => 'nullable|email|max:255',
             'date' => 'required|date|after_or_equal:today',
