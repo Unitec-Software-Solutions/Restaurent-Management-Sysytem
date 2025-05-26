@@ -10,36 +10,77 @@ use App\Models\Reservation;
 use App\Models\Branch;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderController extends Controller
 {
     // List all orders for a reservation (dine-in)
     public function index(Request $request)
-    {
-        $orders = Order::with(['reservation', 'items'])
-            ->when($request->phone, function($query) use ($request) {
-                return $query->where('customer_phone', $request->phone);
-            })
-            ->with(['orderItems', 'branch'])
-            ->latest()
-            ->paginate(10);
+{
+    $phone = $request->input('phone');
+    $reservationId = $request->input('reservation_id');
 
-        return view('orders.index', [
-            'orders' => $orders,
-            'phone' => $request->phone
-        ]);
+    // Active reservations (reservation time is in the future)
+    $activeReservations = Reservation::when($phone, function ($query) use ($phone) {
+            return $query->where('phone', $phone);
+        })
+        ->whereRaw('(date > ? OR (date = ? AND end_time >= ?))', [
+            now()->toDateString(),
+            now()->toDateString(),
+            now()->toTimeString()
+        ])
+        ->with(['orders' => function($query) {
+            $query->where('status', '!=', 'completed')->latest();
+        }])
+        ->latest()
+        ->get();
+
+    // Past reservations (reservation time is in the past)
+    $pastReservations = Reservation::when($phone, function ($query) use ($phone) {
+            return $query->where('phone', $phone);
+        })
+        ->whereRaw('(date < ? OR (date = ? AND end_time < ?))', [
+            now()->toDateString(),
+            now()->toDateString(),
+            now()->toTimeString()
+        ])
+        ->with(['orders' => function($query) {
+            $query->where('status', 'completed')->latest();
+        }])
+        ->latest()
+        ->get();
+
+    // Fetch orders for a specific reservation if reservation_id is provided
+    $orders = collect();
+    $grandTotals = ['total' => 0];
+    if ($reservationId) {
+        $orders = \App\Models\Order::where('reservation_id', $reservationId)->with('items')->latest()->paginate(10);
+        $grandTotals['total'] = $orders->sum('total');
+    } else {
+        // Return an empty paginator if no reservation_id
+        $orders = new LengthAwarePaginator([], 0, 10);
     }
+
+    return view('orders.index', [
+        'activeReservations' => $activeReservations,
+        'pastReservations' => $pastReservations,
+        'orders' => $orders,
+        'reservationId' => $reservationId,
+        'grandTotals' => $grandTotals,
+        'phone' => $phone
+    ]);
+}
 
     // Show order creation form (dine-in, under reservation)
     public function create(Request $request)
     {
         $reservationId = $request->input('reservation_id');
-        $menuItems = \App\Models\ItemMaster::where('is_menu_item', true)->get(); // <-- FIXED
-        $branches = \App\Models\Branch::all();
+        $menuItems = ItemMaster::where('is_menu_item', true)->get();
+        $branches = Branch::all();
 
         $reservation = null;
         if ($reservationId) {
-            $reservation = \App\Models\Reservation::find($reservationId);
+            $reservation = Reservation::find($reservationId);
         }
 
         return view('orders.create', compact('reservationId', 'menuItems', 'branches', 'reservation'));
@@ -53,7 +94,6 @@ class OrderController extends Controller
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
-            // Only require customer_name if reservation_id is not present
             'customer_name' => 'required_without:reservation_id|nullable|string|max:255',
             'customer_phone' => 'required_without:reservation_id|nullable|string|max:20',
         ]);
@@ -75,9 +115,8 @@ class OrderController extends Controller
         $subtotal = 0;
         foreach ($data['items'] as $item) {
             $inventoryItem = ItemMaster::find($item['item_id']);
-            if (!$inventoryItem) {
-                continue;
-            }
+            if (!$inventoryItem) continue;
+            
             $lineTotal = $inventoryItem->selling_price * $item['quantity'];
             $subtotal += $lineTotal;
 
@@ -91,7 +130,6 @@ class OrderController extends Controller
             ]);
         }
 
-        // Example: 10% tax, 0 discount
         $tax = $subtotal * 0.10;
         $discount = 0;
         $total = $subtotal + $tax - $discount;
@@ -103,8 +141,10 @@ class OrderController extends Controller
             'total' => $total,
         ]);
 
-        return redirect()->route('orders.index', ['phone' => $order->customer_phone])
-            ->with('success', 'Order created successfully!');
+        return redirect()->route('orders.index', [
+            'phone' => $order->customer_phone,
+            'reservation_id' => $order->reservation_id
+        ])->with('success', 'Order created successfully!');
     }
 
     // View order details
@@ -113,7 +153,7 @@ class OrderController extends Controller
         $order = Order::with(['reservation', 'orderItems.menuItem'])
                ->findOrFail($id);
 
-        return view(('orders.summary'), compact('order'));
+        return view('orders.summary', compact('order'));
     }
 
     // Edit order (dine-in, under reservation)
@@ -132,16 +172,17 @@ class OrderController extends Controller
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
-        // Remove old items
+
         $order->orderItems()->delete();
         $subtotal = 0;
+        
         foreach ($data['items'] as $item) {
             $inventoryItem = ItemMaster::find($item['item_id']);
-            if (!$inventoryItem) {
-                continue;
-            }
+            if (!$inventoryItem) continue;
+            
             $lineTotal = $inventoryItem->selling_price * $item['quantity'];
             $subtotal += $lineTotal;
+            
             OrderItem::create([
                 'order_id' => $order->id,
                 'menu_item_id' => $item['item_id'],
@@ -151,17 +192,18 @@ class OrderController extends Controller
                 'total_price' => $lineTotal,
             ]);
         }
+
         $tax = $subtotal * 0.1;
         $service = $subtotal * 0.05;
-        $discount = 0;
-        $total = $subtotal + $tax + $service - $discount;
+        $total = $subtotal + $tax + $service;
+        
         $order->update([
             'subtotal' => $subtotal,
             'tax' => $tax,
             'service_charge' => $service,
-            'discount' => $discount,
             'total' => $total,
         ]);
+
         return redirect()->route('orders.index', ['phone' => $order->customer_phone])
             ->with('success', 'Order updated successfully.');
     }
@@ -192,7 +234,6 @@ class OrderController extends Controller
         if ($request->action === 'payment') {
             return redirect()->route('payments.create', ['order_id' => $order_id]);
         } else {
-            // Redirect to order creation with reservation_id if exists
             $order = Order::findOrFail($order_id);
             return redirect()->route('orders.create', [
                 'reservation_id' => $order->reservation_id
@@ -205,71 +246,35 @@ class OrderController extends Controller
         return view('orders.payment', compact('order'));
     }
 
+    // Takeaway order functions
     public function createTakeaway()
     {
-        $user = auth()->user();
-        $isAdmin = $user ? $user->isAdmin() : false;
-
-        $defaultBranch = $isAdmin ? $user->branch_id : null;
-        $branches = $defaultBranch
-            ? Branch::where('id', $defaultBranch)->get()
-            : Branch::all();
-
         return view('orders.takeaway.create', [
-            'branches' => $branches,
+            'branches' => Branch::all(),
             'items' => ItemMaster::where('is_menu_item', true)->get(),
-            'defaultBranch' => $defaultBranch,
-            'isAdmin' => $isAdmin,
-            'orderType' => $this->determineOrderType()
+            'defaultBranch' => null,
+            'orderType' => 'takeaway_online_scheduled'
         ]);
-    }
-
-    protected function determineOrderType()
-    {
-        if (auth()->check() && auth()->user()->isAdmin()) {
-            return request()->input('type', 'takeaway_walk_in_demand');
-        }
-        return 'takeaway_online_scheduled';
     }
 
     public function storeTakeaway(Request $request)
     {
-        $user = auth()->user();
-        $isAdmin = $user ? $user->isAdmin() : false;
-
         $data = $request->validate([
-            'branch_id' => [
-                'required',
-                'exists:branches,id',
-                Rule::requiredIf(!$isAdmin)
-            ],
-            'order_time' => [
-                $isAdmin ? 'nullable' : 'required',
-                'date',
-                'after_or_equal:now'
-            ],
+            'branch_id' => 'required|exists:branches,id',
+            'order_time' => 'required|date|after_or_equal:now',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1'
         ]);
 
-        // Auto-set values for admins
-        $orderData = [
-            'order_type' => $isAdmin ?
-                ($request->input('order_type', 'takeaway_walk_in_demand')) :
-                'takeaway_online_scheduled',
-            'branch_id' => $isAdmin ? $user->branch_id : $data['branch_id'],
-            'order_time' => $isAdmin ?
-                ($data['order_time'] ?? now()) :
-                $data['order_time'],
+        $order = Order::create([
+            'order_type' => 'takeaway_online_scheduled',
+            'branch_id' => $data['branch_id'],
+            'order_time' => $data['order_time'],
             'status' => 'active',
-            'placed_by_admin' => $isAdmin
-        ];
+            'placed_by_admin' => false
+        ]);
 
-        // Create order
-        $order = Order::create($orderData);
-
-        // Add items and calculate totals
         $subtotal = 0;
         foreach ($data['items'] as $item) {
             $menuItem = ItemMaster::find($item['item_id']);
@@ -287,7 +292,6 @@ class OrderController extends Controller
             $subtotal += $total;
         }
 
-        // Calculate totals
         $tax = $subtotal * 0.10;
         $order->update([
             'subtotal' => $subtotal,
@@ -310,9 +314,7 @@ class OrderController extends Controller
     public function submit(Request $request, Order $order)
     {
         $order->update(['status' => 'submitted']);
-        return auth()->guard('admin')->check()
-            ? redirect()->route('admin.orders.index')
-            : redirect()->route('orders.index', ['phone' => $order->customer_phone]);
+        return redirect()->route('orders.index', ['phone' => $order->customer_phone]);
     }
 
     // Edit takeaway order
@@ -321,8 +323,7 @@ class OrderController extends Controller
         $order = Order::with('items.menuItem')->findOrFail($id);
         $menuItems = ItemMaster::where('is_menu_item', true)->get();
         $branches = Branch::all();
-        $items = $order->items; // Add this line to define $items for the view
-        return view('orders.takeaway.edit', compact('order', 'menuItems', 'branches', 'items'));
+        return view('orders.takeaway.edit', compact('order', 'menuItems', 'branches'));
     }
 
     // Submit takeaway order
@@ -330,17 +331,15 @@ class OrderController extends Controller
     {
         $order = Order::findOrFail($id);
         $order->update(['status' => 'submitted']);
-        // Redirect to index page with phone filter and show success message
         return redirect()->route('orders.index', ['phone' => $order->customer_phone])
             ->with('success', 'Takeaway order submitted successfully!');
     }
 
-    // Show all orders with optional filters (customer/staff)
+    // Show all orders with optional filters
     public function allOrders(Request $request)
     {
         $query = Order::with(['reservation', 'items', 'branch']);
 
-        // Optional filters
         if ($request->filled('phone')) {
             $query->where('customer_phone', $request->phone);
         }
