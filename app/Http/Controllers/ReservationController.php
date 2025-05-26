@@ -87,7 +87,7 @@ class ReservationController extends Controller
                 throw new \Exception('No available tables for selected time');
             }
 
-            // Create reservation
+            
             $reservation = Reservation::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -230,7 +230,7 @@ class ReservationController extends Controller
     public function review(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'required|string|min:10|max:15',
             'branch_id' => 'required|exists:branches,id',
@@ -292,7 +292,7 @@ class ReservationController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'required|string|min:10|max:15',
             'branch_id' => 'required|exists:branches,id',
