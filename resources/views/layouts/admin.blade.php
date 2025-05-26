@@ -1,95 +1,57 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ config('app.name', 'Restaurant Management System') }}</title>
-    <meta name="description" content="Restaurant Management System">
-
-    <!-- Styles -->
-    <link href="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-
-            <!-- CSRF Token -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    
-    <!-- Tailwind -->
+    <title>Amazon Seller Profit Calculator | Revenue Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: "#eff6ff",
-                            100: "#dbeafe",
-                            200: "#bfdbfe",
-                            300: "#93c5fd",
-                            400: "#60a5fa",
-                            500: "#3b82f6",
-                            600: "#2563eb",
-                            700: "#1d4ed8",
-                            800: "#1e40af",
-                            900: "#1e3a8a"
-                        }
-                    }
-                }
-            }
-        };
-    </script>
-
-
-</head>
-
-<body class="bg-gray-50 dark:bg-gray-900 h-full">
-
-    <!-- Sidebar -->
-    @auth
-        @include('partials.sidebar.admin-sidebar')
-    @endauth
-
-    <!-- Header -->
-    @include('partials.header.admin-header')
-
-    <!-- Main Content -->
-    <main class="p-4 lg:ml-64 pt-16 h-full  bg-[#F3F4FF]">
-      
-        <!-- Breadcrumbs -->
-        {{-- @include('partials.breadcrumbs') // Disabled for now --}}  
-
-        <!-- Page Content -->
-        @yield('content')
-    </main>
-
-    <!-- Logout Modal -->
-    @include('partials.modals.logout-modal')
-
-    <!-- Scripts -->
-    <script>
-        // Sidebar toggle for mobile
-        document.getElementById('toggleSidebar').addEventListener('click', function() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('hidden');
-            sidebar.classList.toggle('lg:flex');
-        });
-
-        // Logout modal toggle
-        function toggleLogoutModal() {
-            const modal = document.getElementById('logoutModal');
-            modal.classList.toggle('hidden');
-        }
-    </script>
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        .sidebar.collapsed {
+            width: 70px;
+        }
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+        .sidebar.collapsed .expand-icon {
+            transform: rotate(180deg);
+        }
+        .main-content {
+            transition: margin-left 0.3s ease;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .dashboard-card {
+            transition: all 0.3s ease;
+        }
+        .tab-active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen overflow-hidden">
+        @include('components.sidebar')
+        
+        <div class="main-content flex-1 overflow-y-auto">
+            @include('components.navbar')
+            
+            <main class="p-6">
+                @yield('content')
+            </main>
+        </div>
+    </div>
 
     @stack('scripts')
 </body>
-
 </html>

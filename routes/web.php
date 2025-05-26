@@ -41,11 +41,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Inventory routes
         Route::prefix('inventory')->name('inventory.')->group(function () {
             // Dashboard
-            // Route::get('/', [ItemMasterController::class, 'index'])->name('index');
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
             Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
 
-            // Inventory Item Routes
+            // Inventory Item Routes - Web Interface
             Route::prefix('items')->name('items.')->group(function () {
                 Route::get('/', [ItemMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
@@ -57,23 +56,47 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/create-template/{index}/', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
             });
 
+            // Inventory API Routes - JSON endpoints
+            Route::prefix('api/items')->name('api.items.')->group(function () {
+                Route::get('/', [ItemMasterController::class, 'index']);
+                Route::post('/', [ItemMasterController::class, 'store']);
+                Route::get('/{item}', [ItemMasterController::class, 'show']);
+                Route::put('/{item}', [ItemMasterController::class, 'update']);
+                Route::delete('/{item}', [ItemMasterController::class, 'destroy']);
+            });
+
+            // Stock Management Routes
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
                 Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-                // Route::get('/transactions', [ItemTransactionController::class, 'transactions'])->name('transactions');
                 Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
                 Route::get('/{transaction}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
                 Route::put('/{transaction}', [ItemTransactionController::class, 'update'])->name('update');
                 Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
+
+                // Stock API Routes
+                Route::prefix('api')->name('api.')->group(function () {
+                    Route::get('/transactions', [ItemTransactionController::class, 'transactions'])->name('transactions');
+                });
 
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
 
+            // Categories Management
             Route::resource('categories', ItemCategoryController::class);
-         });
+            
+            // Categories API Routes
+            Route::prefix('api/categories')->name('api.categories.')->group(function () {
+                Route::get('/', [ItemCategoryController::class, 'index']);
+                Route::post('/', [ItemCategoryController::class, 'store']);
+                Route::get('/{category}', [ItemCategoryController::class, 'show']);
+                Route::put('/{category}', [ItemCategoryController::class, 'update']);
+                Route::delete('/{category}', [ItemCategoryController::class, 'destroy']);
+            });
+        });
 
         // Order Management
         Route::get('/orders', function () {return view('admin.orders.index');})->name('orders.index');
@@ -92,9 +115,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // User Management
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+    });
+});
 
-
-
+// API routes outside admin prefix for external access
+Route::prefix('api')->middleware('auth:admin')->group(function () {
+    Route::prefix('inventory')->group(function () {
+        Route::get('/items', [ItemMasterController::class, 'index']);
+        Route::post('/items', [ItemMasterController::class, 'store']);
+        Route::get('/items/{item}', [ItemMasterController::class, 'show']);
+        Route::put('/items/{item}', [ItemMasterController::class, 'update']);
+        Route::delete('/items/{item}', [ItemMasterController::class, 'destroy']);
+        
+        Route::get('/categories', [ItemCategoryController::class, 'index']);
+        Route::get('/transactions', [ItemTransactionController::class, 'transactions']);
     });
 });
 
@@ -112,7 +146,7 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
     Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
-    Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');  // conflict 
+    Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');
 });
 
 // Order routes
@@ -120,4 +154,3 @@ Route::resource('orders', OrderController::class);
 Route::get('/orders/{order}/payment', [OrderController::class, 'payment'])
     ->name('orders.payment');
 Route::get('/orders/create', [App\Http\Controllers\OrderController::class, 'create'])->name('orders.create');
-
