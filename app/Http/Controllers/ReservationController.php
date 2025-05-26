@@ -6,6 +6,7 @@ use App\Models\Reservation;
 use App\Models\Branch;
 use App\Models\Payment;
 use App\Models\Waitlist;
+use App\Models\Table;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -199,7 +200,8 @@ class ReservationController extends Controller
     public function confirm(Reservation $reservation)
     {
         $reservation->update(['status' => 'confirmed']);
-        return response('Reservation confirmed successfully.');
+        return redirect()->route('reservations.summary', $reservation)
+            ->with('success', 'Reservation confirmed successfully.');
     }
 
     public function cancel(Reservation $reservation)
@@ -340,4 +342,6 @@ class ReservationController extends Controller
         // You can customize this view as needed
         return view('reservations.payment', compact('reservation'));
     }
+
+    
 }
