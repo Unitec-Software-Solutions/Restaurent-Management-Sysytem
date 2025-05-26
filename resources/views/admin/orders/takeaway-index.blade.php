@@ -48,7 +48,7 @@
                             {{ $order->order_time ? $order->order_time->format('M j, Y H:i') : '-' }}
                         </td>
                         <td class="px-4 py-3 text-right">
-                            LKR {{ number_format($order->total, 2) }}
+                            LKR  {{ number_format($order->total, 2) }}
                         </td>
                         <td class="px-4 py-3">
                             <span class="px-2 py-1 rounded text-xs font-medium 
