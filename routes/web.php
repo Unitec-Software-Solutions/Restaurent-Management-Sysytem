@@ -107,9 +107,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/create', [ReservationController::class, 'create'])->name('create');
     Route::post('/store', [ReservationController::class, 'store'])->name('store');
-    Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
     Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');
     Route::post('/{reservation}/process-payment', [ReservationController::class, 'processPayment'])->name('process-payment');
+    Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
+    Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
+    Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
+    Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
 });
 
 // =========================
@@ -185,7 +188,6 @@ Route::get('orders/all', [OrderController::class, 'allOrders'])->name('orders.al
 Route::prefix('reservations')->group(function() {
     Route::resource('reservations', ReservationController::class);
     Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('reservations.review');
-    Route::get('/{reservation}/summary', [ReservationController::class, 'summary']);
     Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment']);
 });
 
