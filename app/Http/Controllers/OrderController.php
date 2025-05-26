@@ -83,7 +83,15 @@ class OrderController extends Controller
             $reservation = Reservation::find($reservationId);
         }
 
-        return view('orders.create', compact('reservationId', 'menuItems', 'branches', 'reservation'));
+        // Initialize cart data
+        $cart = [
+            'items' => [],
+            'subtotal' => 0,
+            'tax' => 0,
+            'total' => 0
+        ];
+
+        return view('orders.create', compact('reservationId', 'menuItems', 'branches', 'reservation', 'cart'));
     }
 
     // Store new order (dine-in, under reservation)
@@ -361,5 +369,40 @@ class OrderController extends Controller
         $orders = $query->latest()->paginate(20);
         $branches = Branch::all();
         return view('orders.all', compact('orders', 'branches'));
+    }
+
+    public function updateCart(Request $request)
+    {
+        $items = $request->input('items', []);
+        $cart = [
+            'items' => [],
+            'subtotal' => 0,
+            'tax' => 0,
+            'total' => 0
+        ];
+
+        foreach ($items as $item) {
+            $menuItem = ItemMaster::find($item['item_id']);
+            if (!$menuItem) continue;
+
+            $quantity = (int)$item['quantity'];
+            $lineTotal = $menuItem->selling_price * $quantity;
+
+            $cart['items'][] = [
+                'id' => $menuItem->id,
+                'name' => $menuItem->name,
+                'price' => $menuItem->selling_price,
+                'quantity' => $quantity,
+                'total' => $lineTotal
+            ];
+
+            $cart['subtotal'] += $lineTotal;
+        }
+
+        // Calculate tax (10%) and total
+        $cart['tax'] = $cart['subtotal'] * 0.10;
+        $cart['total'] = $cart['subtotal'] + $cart['tax'];
+
+        return response()->json($cart);
     }
 }
