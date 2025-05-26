@@ -190,6 +190,10 @@ Route::prefix('reservations')->group(function() {
     Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('reservations.review');
     Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment']);
 });
+Route::prefix('orders')->group(function() {
+    Route::resource('orders', OrderController::class);
+    Route::get('orders/{order}/summary', [OrderController::class, 'summary'])->name('orders.summary');
+});
 
 
 // Admin Routes
