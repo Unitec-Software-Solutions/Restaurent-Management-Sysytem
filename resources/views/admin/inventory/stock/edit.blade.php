@@ -1,21 +1,21 @@
 @extends('layouts.admin')
 
-@section('title', 'Edit Stock Transaction')
+@section('title', 'Edit Stock ')
 
 @section('content')
     <div class="p-4 rounded-lg">
         <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-6">
             <!-- Header -->
             <div class="mb-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-1">Edit Stock Transaction</h2>
-                <p class="text-sm text-gray-500">Update transaction details for inventory tracking</p>
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">Edit Stock </h2>
+                <p class="text-sm text-gray-500">Update details for inventory tracking</p>
             </div>
 
             <form action="{{ route('admin.inventory.stock.update', $transaction) }}" method="POST" class="space-y-6">
                 @csrf
                 @method('PUT')
 
-                <!-- Item Selection (Disabled) -->
+                <!-- Item Selectio (Disabled) -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Item</label>
                     <div class="relative">
@@ -114,7 +114,7 @@
                         </button>
                         <button type="submit" 
                                 class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg flex items-center">
-                            <i class="fas fa-save mr-2"></i> Update Transaction
+                            <i class="fas fa-save mr-2"></i> Update stock
                         </button>
                     </div>
                 </div>
