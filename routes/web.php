@@ -109,16 +109,7 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::post('/store', [ReservationController::class, 'store'])->name('store');
     Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
     Route::get('/{reservation}/payment', [ReservationController::class, 'payment'])->name('payment');
-
-    // Orders under a reservation
-    Route::prefix('{reservation}/orders')->name('orders.')->group(function () {
-        Route::get('/create', [OrderController::class, 'create'])->name('create');
-        Route::post('/store', [OrderController::class, 'store'])->name('store');
-        Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
-        Route::put('/{order}/update', [OrderController::class, 'update'])->name('update');
-        Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
-        Route::post('/{order}/submit', [OrderController::class, 'submit'])->name('submit');
-    });
+    Route::post('/{reservation}/process-payment', [ReservationController::class, 'processPayment'])->name('process-payment');
 });
 
 // =========================
@@ -128,11 +119,6 @@ Route::prefix('orders/takeaway')->name('orders.takeaway.')->group(function() {
     Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
     Route::post('/store', [OrderController::class, 'storeTakeaway'])->name('store');
     Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
-    Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->name('edit');
-    Route::put('/{order}/update', [OrderController::class, 'updateTakeaway'])->name('update');
-    Route::post('/{order}/submit', [OrderController::class, 'submitOrder'])->name('submit');
-    Route::get('/{order}/show', [OrderController::class, 'showTakeaway'])->name('show');
-    Route::delete('/{order}/destroy', [OrderController::class, 'destroyTakeaway'])->name('destroy');
 });
 
 // =========================
@@ -143,7 +129,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
         Route::get('/create', [OrderController::class, 'create'])->name('create');
         Route::post('/store', [OrderController::class, 'store'])->name('store');
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
-        Route::put('/{order}/update', [OrderController::class, 'update'])->name('update');
+        Route::put('/{order}', [OrderController::class, 'update'])->name('update');
         Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
         Route::post('/{order}/submit', [OrderController::class, 'submit'])->name('submit');
         // ...admin-specific actions (cancel, status change, etc.)...
@@ -168,15 +154,15 @@ Route::prefix('admin/orders/takeaway')->name('admin.orders.takeaway.')->middlewa
 // =========================
 // ADMIN ORDER MANAGEMENT VIEWS
 // =========================
-Route::prefix('admin/orders')->name('admin.orders.')->middleware(['auth:admin'])->group(function () {
-    Route::get('/', [AdminOrderController::class, 'index'])->name('index');
-    Route::get('/branch/{branch}', [AdminOrderController::class, 'branchOrders'])->name('branch');
-    Route::get('/{order}/show', [AdminOrderController::class, 'show'])->name('show');
-    Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->name('edit');
-    Route::put('/{order}/update', [AdminOrderController::class, 'update'])->name('update');
-    Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->name('destroy');
-    // ...status change, cancel, etc...
-});
+// Route::prefix('admin/orders')->name('admin.orders.')->middleware(['auth:admin'])->group(function () {
+//     Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+//     Route::get('/branch/{branch}', [AdminOrderController::class, 'branchOrders'])->name('branch');
+//     Route::get('/{order}/show', [AdminOrderController::class, 'show'])->name('show');
+//     Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->name('edit');
+//     Route::put('/{order}/update', [AdminOrderController::class, 'update'])->name('update');
+//     Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->name('destroy');
+//     // ...status change, cancel, etc...
+// });
 
 // Add destroy route for reservation orders (dine-in)
 Route::delete('/{order}/delete', [OrderController::class, 'destroy'])->name('destroy');
@@ -187,11 +173,7 @@ Route::delete('orders/takeaway/{order}/delete', [OrderController::class, 'destro
 // Takeaway Orders Index (Customer/Staff)
 Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
 
-// Takeaway Order Create (Customer/Staff)
-Route::get('orders/create', [OrderController::class, 'createTakeaway'])->name('orders.create');
 
-// Takeaway Order Summary (Customer/Staff)
-Route::get('orders/{order}/summary', [OrderController::class, 'summary'])->name('orders.summary');
 
 // Takeaway Order Edit (Customer/Staff)
 Route::get('orders/{order}/edit', [OrderController::class, 'editTakeaway'])->name('orders.edit');
@@ -201,24 +183,17 @@ Route::get('orders/all', [OrderController::class, 'allOrders'])->name('orders.al
 
 // Customer Routes
 Route::prefix('reservations')->group(function() {
-    Route::get('/create', [ReservationController::class, 'create']);
-    Route::post('/', [ReservationController::class, 'store']);
+    Route::resource('reservations', ReservationController::class);
+    Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('reservations.review');
     Route::get('/{reservation}/summary', [ReservationController::class, 'summary']);
     Route::post('/{reservation}/payment', [ReservationController::class, 'processPayment']);
 });
 
-Route::prefix('orders/takeaway')->group(function() {
-    Route::get('/create', [OrderController::class, 'createTakeaway']);
-    Route::post('/', [OrderController::class, 'storeTakeaway']);
-});
 
 // Admin Routes
 Route::prefix('admin')->middleware('auth:admin')->group(function() {
     Route::resource('reservations', AdminReservationController::class);
-    Route::prefix('orders')->group(function() {
-        Route::get('/takeaway', [AdminOrderController::class, 'takeawayIndex']);
-        Route::get('/dinein', [AdminOrderController::class, 'dineinIndex']);
-    });
+
 });
 
 
