@@ -76,13 +76,13 @@
                                 <option value="audit" {{ old('transaction_type') == 'audit' ? 'selected' : '' }}>Audit</option>
                                 <option value="transfer_in" {{ old('transaction_type') == 'transfer_in' ? 'selected' : '' }}>Transfer In</option>
                             </optgroup>
-                            <optgroup label="Stock Out">
+                            {{-- <optgroup label="Stock Out">
                                 <option value="sales_order" {{ old('transaction_type') == 'sales_order' ? 'selected' : '' }}>Sales Order</option>
                                 <option value="write_off" {{ old('transaction_type') == 'write_off' ? 'selected' : '' }}>Write Off</option>
                                 <option value="transfer" {{ old('transaction_type') == 'transfer' ? 'selected' : '' }}>Transfer</option>
                                 <option value="usage" {{ old('transaction_type') == 'usage' ? 'selected' : '' }}>Usage</option>
                                 <option value="transfer_out" {{ old('transaction_type') == 'transfer_out' ? 'selected' : '' }}>Transfer Out</option>
-                            </optgroup>
+                            </optgroup> --}}
                         </select>
                         <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                             <i class="fas fa-exchange-alt text-gray-400"></i>
