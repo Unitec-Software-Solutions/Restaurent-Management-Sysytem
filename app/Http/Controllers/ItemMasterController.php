@@ -6,6 +6,7 @@ use App\Models\ItemCategory;
 use App\Models\ItemMaster;
 use Illuminate\Http\Request;
 use App\Models\Branch;
+use Illuminate\Support\Facades\Auth;
 
 class ItemMasterController extends Controller
 {
@@ -14,22 +15,57 @@ class ItemMasterController extends Controller
      */
     public function index()
     {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $orgId = $user->organization_id;
+
         $items = ItemMaster::with('category')
+            ->where('organization_id', $orgId)
             ->when(request('search'), function ($query) {
-                return $query->where('name', 'like', '%' . request('search') . '%')
-                    ->orWhere('item_code', 'like', '%' . request('search') . '%');
+                return $query->where(function ($q) {
+                    $q->where('name', 'like', '%' . request('search') . '%')
+                        ->orWhere('item_code', 'like', '%' . request('search') . '%');
+                });
             })
             ->when(request('category'), function ($query) {
                 return $query->where('item_category_id', request('category'));
             })
-            ->when(request()->has('status'), function ($query) {
-                return $query->where('is_active', request('status'));
+            ->when(request('status'), function ($query) {
+                $status = request('status');
+                if ($status === 'active') {
+                    $query->whereNull('deleted_at'); // Non-trashed items
+                } elseif ($status === 'inactive') {
+                    $query->onlyTrashed(); // Only soft-deleted items
+                }
             })
             ->paginate(15);
 
-        $categories = ItemCategory::active()->get();
+        $categories = ItemCategory::active()
+            ->where('organization_id', $orgId)
+            ->get();
 
-        return view('admin.inventory.items.index', compact('items', 'categories'));
+
+        $totalItems = ItemMaster::where('organization_id', $orgId)->count();
+        $activeItems = ItemMaster::where('organization_id', $orgId)->count();
+        $inactiveItems = ItemMaster::onlyTrashed()->where('organization_id', $orgId)->count();
+        $newItemsToday = ItemMaster::where('organization_id', $orgId)->whereDate('created_at', today())->count();
+        $inactiveItemsChange = ItemMaster::onlyTrashed()->where('organization_id', $orgId)->count();
+        $activeItemsChange = ItemMaster::where('organization_id', $orgId)->count();
+
+        return view('admin.inventory.items.index', compact(
+            'items',
+            'categories',
+            'totalItems',
+            'activeItems',
+            'inactiveItems',
+            'activeItemsChange',
+            'inactiveItemsChange',
+            'newItemsToday'
+        ));
     }
 
     /**
@@ -37,18 +73,23 @@ class ItemMasterController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.name' => 'required|string|max:255',
             'items.*.unicode_name' => 'nullable|string|max:255',
-            'items.*.item_category_id' => 'required|exists:item_categories,id',
+            'items.*.item_category_id' => 'required|exists:item_categories,id,organization_id,' . $user->organization_id,
             'items.*.item_code' => 'required|string|unique:item_master,item_code',
             'items.*.unit_of_measurement' => 'required|string|max:50',
             'items.*.reorder_level' => 'nullable|numeric|min:0',
             'items.*.is_perishable' => 'nullable|boolean',
             'items.*.shelf_life_in_days' => 'nullable|integer|min:0',
-            'items.*.branch_id' => 'nullable|exists:branches,id',
-            'items.*.organization_id' => 'nullable|exists:organizations,id',
+            'items.*.branch_id' => 'nullable|exists:branches,id,organization_id,' . $user->organization_id,
             'items.*.buying_price' => 'required|numeric|min:0',
             'items.*.selling_price' => 'required|numeric|min:0',
             'items.*.is_menu_item' => 'nullable|boolean',
@@ -61,7 +102,7 @@ class ItemMasterController extends Controller
         $createdItems = [];
 
         foreach ($validated['items'] as $itemData) {
-            $itemData['organization_id'] = 1; // Override organization_id with 1 for testing
+            $itemData['organization_id'] = $user->organization_id;
 
             $createdItems[] = ItemMaster::create([
                 'name' => $itemData['name'],
@@ -84,10 +125,8 @@ class ItemMasterController extends Controller
             ]);
         }
 
-        return response()->json([
-            'message' => 'Items created successfully',
-            'data' => $createdItems
-        ], 201);
+        return redirect()->route('admin.inventory.items.added-items')
+            ->with('success', 'Items created successfully');
     }
 
     /**
@@ -95,8 +134,16 @@ class ItemMasterController extends Controller
      */
     public function show($id)
     {
-        $item = ItemMaster::with(['category', 'branch', 'organization'])->findOrFail($id);
-        
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->with(['category', 'branch', 'organization']) // Add 'branch' here
+            ->findOrFail($id);
+
         if (request()->wantsJson()) {
             return response()->json($item);
         }
@@ -104,23 +151,31 @@ class ItemMasterController extends Controller
         return view('admin.inventory.items.show', compact('item'));
     }
 
+
     /**
      * Update the specified item.
      */
     public function update(Request $request, $id)
     {
-        $item = ItemMaster::findOrFail($id);
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
         $data = $request->validate([
             'name' => 'sometimes|string',
             'unicode_name' => 'nullable|string',
-            'item_category_id' => 'sometimes|exists:item_categories,id',
+            'item_category_id' => 'sometimes|exists:item_categories,id,organization_id,' . $user->organization_id,
             'item_code' => 'sometimes|string|unique:item_master,item_code,' . $id,
             'unit_of_measurement' => 'sometimes|string',
             'reorder_level' => 'nullable|integer',
             'is_perishable' => 'boolean',
             'shelf_life_in_days' => 'nullable|integer',
-            'branch_id' => 'nullable|exists:branches,id',
-            'organization_id' => 'sometimes|exists:organizations,id',
+            'branch_id' => 'nullable|exists:branches,id,organization_id,' . $user->organization_id,
             'buying_price' => 'sometimes|numeric',
             'selling_price' => 'sometimes|numeric',
             'is_menu_item' => 'boolean',
@@ -142,23 +197,104 @@ class ItemMasterController extends Controller
             ->with('success', 'Item updated successfully');
     }
 
+    /**
+     * Show recently added items
+     */
+    public function added(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        // Get the last 10 items added
+        $items = ItemMaster::with('category')
+            ->where('organization_id', $user->organization_id)
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+       
+
+        return view('admin.inventory.items.added', compact(
+            'items',
+        ));
+    }
+
     public function getItemFormPartial($index)
     {
-        return view('admin.inventory.items.partials.item-form', ['index' => $index]);
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        $categories = ItemCategory::active()
+            ->where('organization_id', $user->organization_id)
+            ->get();
+
+        return view('admin.inventory.items.partials.item-form', [
+            'index' => $index,
+            'categories' => $categories
+        ]);
     }
 
     public function create()
     {
-        $categories = ItemCategory::active()->get();
-        $branches = Branch::where('is_active', true)->get();
-        return view('admin.inventory.items.create', compact('categories', 'branches'));
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $orgId = $user->organization_id;
+
+        // Get stats for KPI cards
+        $totalItems = ItemMaster::where('organization_id', $orgId)->count();
+        $activeItems = ItemMaster::where('organization_id', $orgId)->count();
+        $inactiveItems = ItemMaster::onlyTrashed()->where('organization_id', $orgId)->count();
+        $newItemsToday = ItemMaster::where('organization_id', $orgId)
+            ->whereDate('created_at', today())
+            ->count();
+
+        $categories = ItemCategory::active()
+            ->where('organization_id', $orgId)
+            ->get();
+
+        $branches = Branch::where('is_active', true)
+            ->where('organization_id', $orgId)
+            ->get();
+
+        return view('admin.inventory.items.create', compact(
+            'categories',
+            'branches',
+            'totalItems',
+            'activeItems',
+            'inactiveItems',
+            'newItemsToday'
+        ));
     }
 
     public function edit($id)
     {
-        $item = ItemMaster::findOrFail($id);
-        $categories = ItemCategory::active()->get();
-        $branches = Branch::where('is_active', true)->get();
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
+        $categories = ItemCategory::active()
+            ->where('organization_id', $user->organization_id)
+            ->get();
+
+        $branches = Branch::where('is_active', true)
+            ->where('organization_id', $user->organization_id)
+            ->get();
+
         return view('admin.inventory.items.edit', compact('item', 'categories', 'branches'));
     }
 
@@ -167,7 +303,15 @@ class ItemMasterController extends Controller
      */
     public function destroy($id)
     {
-        $item = ItemMaster::findOrFail($id);
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
         $item->delete();
 
         if (request()->wantsJson()) {
