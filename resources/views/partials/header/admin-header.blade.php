@@ -14,6 +14,6 @@
         <h1 class="text-xl font-semibold dark:text-white">@yield('header-title', 'Dashboard')</h1>
         
         <!-- Profile dropdown -->
-        @include('partials.profile-dropdown')
+        @include('partials.header.profile-dropdown')
     </div>
 </header>

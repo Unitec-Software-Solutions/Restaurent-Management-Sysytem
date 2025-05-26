@@ -3,10 +3,10 @@
         <button @click="open = !open" class="flex items-center gap-2 focus:outline-none">
             <div class="relative h-10 w-10 overflow-hidden rounded-full">
                 <img src="{{ asset('images/avatar.jpg') }}" alt="User avatar" class="object-cover h-full w-full"
-                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth('admin')->user()->name ?? 'Admin') }}&background=random'">
+                    onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth('admin')->user()->name ?? 'Admin') }}&background=D9DCFF&color=515DEF&size=64'">
             </div>
             <div class="flex flex-col">
-                <span class="text-sm font-medium dark:text-white">{{ auth('admin')->user()->name ?? 'Admin' }}</span>
+                <span class="text-sm font-medium dark:text-black">{{ auth('admin')->user()->name ?? 'Admin' }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">Admin</span>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"

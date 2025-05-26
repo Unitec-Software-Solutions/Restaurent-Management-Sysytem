@@ -18,15 +18,13 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             OrganizationSeeder::class,
-            AdminSeeder::class,
             BranchSeeder::class,
             TableSeeder::class,
             LoginSeeder::class,
             SupplierSeeder::class,
-            ItemCategorySeeder::class,  // New Item Category Seeder
-            ItemMasterSeeder::class,        // New Item Master Seeder
-            ItemTransactionSeeder::class,   // New Item Transaction Seeder
-            // InventoryCategorySeeder::class,
+            ItemCategorySeeder::class,
+            ItemMasterSeeder::class,
+            ItemTransactionSeeder::class,
             // InventoryItemSeeder::class,
             // InventoryStockSeeder::class,
             // InventoryTransactionSeeder::class,

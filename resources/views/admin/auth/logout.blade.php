@@ -1,6 +1,6 @@
 {{-- Not in use --}}
 {{-- resources\views\partials\logout-modal.blade.php --}}
-@extends('layouts.main')
+@extends('layouts.admin')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">

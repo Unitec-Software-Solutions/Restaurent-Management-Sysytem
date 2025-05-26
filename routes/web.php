@@ -98,6 +98,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             return view('admin.settings.index');
         })->name('settings.index');
 
+        // User Management
+        Route::get('/profile', function () {
+            return view('admin.profile.index');
+        })->name('users.index');
+
+
     });
 });
 
