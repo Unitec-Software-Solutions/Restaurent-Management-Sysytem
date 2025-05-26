@@ -29,7 +29,7 @@ class ReservationController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => 'nullable|string|max:255',
                 'email' => 'nullable|email|max:255',
                 'phone' => 'required|string|min:10|max:15',
                 'branch_id' => 'required|exists:branches,id',
@@ -58,7 +58,18 @@ class ReservationController extends Controller
                 }
             }
 
-            // Find available tables
+            // Enhanced: Use checkTableAvailability for robust capacity check
+            if (!$this->checkTableAvailability(
+                $validated['date'],
+                $validated['start_time'],
+                $validated['end_time'],
+                $validated['number_of_people'],
+                $branch->id
+            )) {
+                throw new \Exception('No available tables for selected time');
+            }
+
+            // Find available tables (for assignment)
             $tables = Table::where('branch_id', $branch->id)
                 ->available($validated['date'], $validated['start_time'], $validated['end_time'])
                 ->orderBy('capacity', 'asc')
@@ -73,7 +84,7 @@ class ReservationController extends Controller
                 if ($sum >= $required) break;
             }
             if ($sum < $required) {
-                return back()->withErrors(['error' => 'No available tables'])->withInput();
+                throw new \Exception('No available tables for selected time');
             }
 
             // Create reservation
@@ -100,12 +111,13 @@ class ReservationController extends Controller
                 ->with('success', 'Your reservation has been created successfully.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Reservation creation failed: ' . $e->getMessage());
             return back()
-                ->withErrors(['error' => 'Failed to create reservation. Please try again.'])
+                ->withErrors(['error' => $e->getMessage()])
                 ->withInput();
         }
     }
