@@ -48,7 +48,7 @@ class ItemMasterController extends Controller
             'items.*.is_perishable' => 'nullable|boolean',
             'items.*.shelf_life_in_days' => 'nullable|integer|min:0',
             'items.*.branch_id' => 'nullable|exists:branches,id',
-            'items.*.organization_id' => 'nullable|exists:organizations,id', // This will always be 1 ~ test ~
+            'items.*.organization_id' => 'nullable|exists:organizations,id',
             'items.*.buying_price' => 'required|numeric|min:0',
             'items.*.selling_price' => 'required|numeric|min:0',
             'items.*.is_menu_item' => 'nullable|boolean',
@@ -60,11 +60,8 @@ class ItemMasterController extends Controller
 
         $createdItems = [];
 
-
         foreach ($validated['items'] as $itemData) {
-
-            // Override organization_id with 1 for testing
-            $itemData['organization_id'] = 1;
+            $itemData['organization_id'] = 1; // Override organization_id with 1 for testing
 
             $createdItems[] = ItemMaster::create([
                 'name' => $itemData['name'],
@@ -76,7 +73,7 @@ class ItemMasterController extends Controller
                 'is_perishable' => $itemData['is_perishable'] ?? false,
                 'shelf_life_in_days' => $itemData['shelf_life_in_days'] ?? null,
                 'branch_id' => $itemData['branch_id'] ?? null,
-                'organization_id' => $itemData['organization_id'], // This will now always be 1
+                'organization_id' => $itemData['organization_id'],
                 'buying_price' => $itemData['buying_price'],
                 'selling_price' => $itemData['selling_price'],
                 'is_menu_item' => $itemData['is_menu_item'] ?? false,
@@ -93,15 +90,18 @@ class ItemMasterController extends Controller
         ], 201);
     }
 
-
-
     /**
      * Display the specified item.
      */
     public function show($id)
     {
         $item = ItemMaster::with(['category', 'branch', 'organization'])->findOrFail($id);
-        return response()->json($item);
+        
+        if (request()->wantsJson()) {
+            return response()->json($item);
+        }
+
+        return view('admin.inventory.items.show', compact('item'));
     }
 
     /**
@@ -130,17 +130,22 @@ class ItemMasterController extends Controller
         ]);
 
         $item->update($data);
-        return redirect()->route('admin.inventory.items.index', $item->id)
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Item updated successfully',
+                'data' => $item
+            ]);
+        }
+
+        return redirect()->route('admin.inventory.items.index')
             ->with('success', 'Item updated successfully');
     }
-
 
     public function getItemFormPartial($index)
     {
         return view('admin.inventory.items.partials.item-form', ['index' => $index]);
     }
-
-
 
     public function create()
     {
@@ -153,7 +158,8 @@ class ItemMasterController extends Controller
     {
         $item = ItemMaster::findOrFail($id);
         $categories = ItemCategory::active()->get();
-        return view('admin.inventory.items.edit', compact('item', 'categories'));
+        $branches = Branch::where('is_active', true)->get();
+        return view('admin.inventory.items.edit', compact('item', 'categories', 'branches'));
     }
 
     /**
@@ -164,6 +170,11 @@ class ItemMasterController extends Controller
         $item = ItemMaster::findOrFail($id);
         $item->delete();
 
-        return response()->json(['message' => 'Item deleted successfully.']);
+        if (request()->wantsJson()) {
+            return response()->json(['message' => 'Item deleted successfully.']);
+        }
+
+        return redirect()->route('admin.inventory.items.index')
+            ->with('success', 'Item deleted successfully');
     }
 }
