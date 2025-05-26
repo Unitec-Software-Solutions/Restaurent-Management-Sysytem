@@ -67,7 +67,7 @@
                     <i class="bi bi-credit-card me-2"></i>Make Payment
                 </a>
                 
-                <a href="{{ route('orders.takeaway.create', ['reservation_id' => $reservation->id]) }}" 
+                <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" 
                    class="btn btn-success px-4">
                     <i class="bi bi-cart-plus me-2"></i>Place Order
                 </a>
