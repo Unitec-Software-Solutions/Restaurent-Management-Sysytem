@@ -1,0 +1,65 @@
+@extends('layouts.admin')
+
+@section('content')
+    <div class="p-6 space-y-10">
+        <h1 class="text-3xl font-bold text-gray-900">🧪 Web App Function Test Page</h1>
+        <p class="text-gray-600">Use this dashboard to test core application navigation and functionality.</p>
+        {{-- ✅ ADMIN FUNCTIONS --}}
+        <div class="space-y-6">
+            <h2 class="text-2xl font-semibold text-indigo-700 border-b border-indigo-200 pb-2">🛠️ Admin Functions</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                <!-- Reservations -->
+                <x-test-tile label="Reservations" route="admin.reservations.index" />
+
+                <!-- Inventory -->
+                <x-test-tile label="Inventory Dashboard" route="admin.inventory.index" />
+                <x-test-tile label="Items" route="admin.inventory.items.index" />
+                <x-test-tile label="Add Item" route="admin.inventory.items.create" />
+                <x-test-tile label="Stock Transactions" route="admin.inventory.stock.index" />
+                <x-test-tile label="New Stock Entry" route="admin.inventory.stock.create" />
+                <x-test-tile label="Categories (Json) " route="admin.inventory.categories.index" />
+
+                <!-- Suppliers -->
+                <x-test-tile label="Suppliers" route="admin.suppliers.index" />
+                <x-test-tile label="Add Supplier" route="admin.suppliers.create" />
+
+
+
+                <!-- Miscellaneous -->
+                <x-test-tile label="Profile" route="admin.profile.index" />
+
+            </div>
+
+        </div>
+
+     {{-- 🛠️ ADMIN SAMPLE PAGES --}}
+    <div class="space-y-6">
+        <h2 class="text-2xl font-semibold text-indigo-700 border-b border-indigo-200 pb-2">🛠️ Admin Sample pages</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+            <x-test-tile label="Digital Menu" route="admin.digital-menu.index" />
+            <x-test-tile label="Settings" route="admin.settings.index" />
+            <x-test-tile label="Reports" route="admin.reports.index" />
+
+            <!-- Orders -->
+                <x-test-tile label="Orders" route="admin.orders.index" />
+        </div>
+
+    </div>
+
+    {{-- 🌐 PUBLIC FUNCTIONS --}}
+    <div class="space-y-6">
+        <h2 class="text-2xl font-semibold text-green-700 border-b border-green-200 pb-2">🌐 Public Functions</h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+            <x-test-tile label="Home" route="home" />
+            <x-test-tile label="Customer Dashboard" route="customer.dashboard" />
+            <x-test-tile label="Create Reservation" route="reservations.create" />
+            <x-test-tile label="Review Reservation" route="reservations.review.get" />
+            <x-test-tile label="Review Reservation" route="reservations.review.get" />
+            <x-test-tile label="Create Order" route="orders.create" />
+
+        </div>
+    </div>
+    </div>
+@endsection
