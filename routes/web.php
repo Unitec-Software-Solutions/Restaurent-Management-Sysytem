@@ -193,6 +193,7 @@ Route::prefix('reservations')->group(function() {
 Route::prefix('orders')->group(function() {
     Route::resource('orders', OrderController::class);
     Route::get('orders/{order}/summary', [OrderController::class, 'summary'])->name('orders.summary');
+    Route::get('/reservations/{reservation}/add-order', [OrderController::class, 'addToReservation'])->name('orders.add_to_reservation');
 });
 
 
