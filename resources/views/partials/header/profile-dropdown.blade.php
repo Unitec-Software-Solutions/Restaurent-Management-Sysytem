@@ -28,18 +28,18 @@
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     Your Profile
                 </a>
-                <a href="#"
+                <a href="{{ route('admin.settings.index') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     Settings
                 </a>
                 <div class="border-t border-gray-100 dark:border-gray-600"></div>
-                <form method="POST" action="#">
-                    @csrf
-                    <button type="submit"
-                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
-                        Sign out
+                
+                   
+                    <button  onclick="toggleLogoutModal()"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#6A71F0]">
+                        <span>Sign Out</span>
                     </button>
-                </form>
+              
             </div>
         </div>
     </div>
