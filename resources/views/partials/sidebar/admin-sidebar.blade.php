@@ -28,6 +28,7 @@
                         ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart'], // replace with the correct route
                         ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3'],
                         ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users'],
+                        
                     ];
                 @endphp
 
