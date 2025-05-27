@@ -32,28 +32,28 @@ class User extends Authenticatable
         'is_registered' => 'boolean',
     ];
 
-    public function checkPhone(Request $request)
-    {
-        $request->validate(['phone' => 'required']);
-        $user = self::where('phone_number', $request->phone)->first();
+    // public function checkPhone(Request $request)
+    // {
+    //     $request->validate(['phone' => 'required']);
+    //     $user = self::where('phone_number', $request->phone)->first();
 
-        if ($user) {
-            // Show a view asking if the user wants to login
-            return view('reservations.ask_login', ['phone' => $request->phone]);
-        } else {
-            // Show a view asking if the user wants to sign up
-            return view('reservations.ask_signup', ['phone' => $request->phone]);
-        }
-    }
+    //     if ($user) {
+    //         // Show a view asking if the user wants to login
+    //         return view('reservations.ask_login', ['phone' => $request->phone]);
+    //     } else {
+    //         // Show a view asking if the user wants to sign up
+    //         return view('reservations.ask_signup', ['phone' => $request->phone]);
+    //     }
+    // }
 
-    /**
-     * Check if a user exists by phone number.
-     *
-     * @param string $phone
-     * @return User|null
-     */
-    public static function findByPhone($phone)
-    {
-        return self::where('phone_number', $phone)->first();
-    }
+    // /**
+    //  * Check if a user exists by phone number.
+    //  *
+    //  * @param string $phone
+    //  * @return User|null
+    //  */
+    // public static function findByPhone($phone)
+    // {
+    //     return self::where('phone_number', $phone)->first();
+    // }
 }

@@ -322,7 +322,7 @@ class ItemMasterSeeder extends Seeder
                     'available_to' => '23:00:00',
                     'available_days' => 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
                     'promotions' => false,
-                    'add_ons' => ['Grilled Chicken (+₹80)', 'Shrimp (+₹120)']
+                    'add_ons' => ['Grilled Chicken (+LKR 80)', 'Shrimp (+LKR 120)']
                 ],
             ],
             [
@@ -463,7 +463,7 @@ class ItemMasterSeeder extends Seeder
                     'available_to' => '23:00:00',
                     'available_days' => 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
                     'promotions' => false,
-                    'options' => ['Regular', 'Large (+₹40)']
+                    'options' => ['Regular', 'Large (+LKR 40)']
                 ],
             ],
             [

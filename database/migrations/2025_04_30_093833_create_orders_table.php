@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained(); // Can be null for unregistered users
             $table->foreignId('reservation_id')->nullable()->constrained(); // Nullable for takeaway orders
-            $table->string('customer_name');
+            $table->string('customer_name')->nullable();
             $table->string('customer_phone');
             $table->enum('order_type', [
                 'takeaway_in_call_scheduled',
