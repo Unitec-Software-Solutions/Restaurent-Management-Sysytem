@@ -90,6 +90,11 @@ class Reservation extends Model
     {
         return $this->hasMany(Order::class);
     }
+    
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
 }
 
 
