@@ -23,6 +23,9 @@ class Reservation extends Model
         'status',
         'branch_id',
         'user_id',
+        'steward_id',
+        'check_in_time',
+        'check_out_time',
     ];
 
     protected $casts = [
@@ -31,6 +34,8 @@ class Reservation extends Model
         'end_time' => 'datetime',
         'reservation_fee' => 'decimal:2',
         'cancellation_fee' => 'decimal:2',
+        'check_in_time' => 'datetime',
+        'check_out_time' => 'datetime',
     ];
 
     public function branch()
@@ -94,6 +99,11 @@ class Reservation extends Model
     public function user()
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
+
+    public function steward()
+    {
+        return $this->belongsTo(\App\Models\Employee::class, 'steward_id');
     }
 }
 

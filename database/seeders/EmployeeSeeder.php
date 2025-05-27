@@ -12,7 +12,7 @@ class EmployeeSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('employee')->insert([
+        DB::table('employees')->insert([
             ['emp_id' => 'EMP001', 'name' => 'John Doe'],
             ['emp_id' => 'EMP002', 'name' => 'Jane Smith'],
             ['emp_id' => 'EMP003', 'name' => 'Alice Johnson'],

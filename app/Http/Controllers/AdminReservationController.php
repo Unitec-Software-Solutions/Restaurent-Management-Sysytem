@@ -391,4 +391,40 @@ class AdminReservationController extends Controller
             SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
         }
     }
+    public function assignSteward(Request $request, Reservation $reservation)
+{
+    $validated = $request->validate([
+        'steward_id' => 'required|exists:users,id',
+    ]);
+
+    $reservation->update(['steward_id' => $validated['steward_id']]);
+
+    return back()->with('success', 'Steward assigned successfully.');
+}
+
+public function checkIn(Reservation $reservation)
+{
+    if ($reservation->check_in_time) {
+        return back()->with('warning', 'Reservation already checked in.');
+    }
+
+    $reservation->update(['check_in_time' => now()]);
+
+    return back()->with('success', 'Reservation checked in successfully.');
+}
+
+public function checkOut(Reservation $reservation)
+{
+    if (!$reservation->check_in_time) {
+        return back()->with('error', 'Reservation must be checked in before checkout.');
+    }
+
+    if ($reservation->check_out_time) {
+        return back()->with('warning', 'Reservation already checked out.');
+    }
+
+    $reservation->update(['check_out_time' => now()]);
+
+    return back()->with('success', 'Reservation checked out successfully.');
+}
 }
