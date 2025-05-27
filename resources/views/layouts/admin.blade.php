@@ -57,7 +57,7 @@
     @include('partials.header.admin-header')
 
     <!-- Main Content -->
-    <main class="p-4 lg:ml-64 pt-16 h-full">
+    <main class="p-4 lg:ml-64 pt-16 h-full  bg-[#F3F4FF]">
       
         <!-- Breadcrumbs -->
         {{-- @include('partials.breadcrumbs') // Disabled for now --}}  

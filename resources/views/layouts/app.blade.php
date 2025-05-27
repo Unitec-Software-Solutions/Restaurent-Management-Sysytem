@@ -45,6 +45,11 @@
                         <span class="ml-2 text-gray-600">Name</span>
                     </a>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                        <!-- 🔘 Test Page Button -->
+                        <a href="{{ route('admin.testpage') }}"
+                            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
+                            🧪 Test Page
+                        </a>
                         <a href="{{ route('admin.login') }}"
                             class="px-4 py-2 text-gray-700 hover:text-[#515DEF] transition-colors font-medium">
                             <i class="fas fa-sign-in-alt mr-2"></i>Sign In (admin login - test )

@@ -57,10 +57,10 @@
     @include('partials.header.admin-header')
 
     <!-- Main Content -->
-    <main class="p-4 lg:ml-64 pt-16 h-full">
+    <main class="p-4 lg:ml-64 pt-20 h-full">
       
         <!-- Breadcrumbs -->
-        {{-- @include('partials.breadcrumbs') // Disabled for now --}}  
+        @include('partials.breadcrumbs') 
 
         <!-- Page Content -->
         @yield('content')
@@ -70,26 +70,34 @@
     @include('partials.modals.logout-modal')
 
     <!-- Scripts -->
-    <script>
-        // Sidebar toggle for mobile
-        document.getElementById('toggleSidebar').addEventListener('click', function() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('hidden');
-            sidebar.classList.toggle('lg:flex');
+<script>
+    // Sidebar toggle for mobile
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleButton = document.getElementById('toggleSidebar');
+        const sidebar = document.getElementById('sidebar');
+        
+        toggleButton.addEventListener('click', function() {
+            sidebar.classList.toggle('-translate-x-full');
+            
+            // Update aria-expanded attribute for accessibility
+            const isExpanded = sidebar.classList.contains('-translate-x-full') ? 'false' : 'true';
+            toggleButton.setAttribute('aria-expanded', isExpanded);
         });
+    });
 
-        // Logout modal toggle
-        function toggleLogoutModal() {
-            const modal = document.getElementById('logoutModal');
-            modal.classList.toggle('hidden');
-        }
-    </script>
+    // Logout modal toggle
+    function toggleLogoutModal() {
+        const modal = document.getElementById('logoutModal');
+        modal.classList.toggle('hidden');
+    }
+</script>
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     @stack('scripts')
+    <div id="sidebarBackdrop" class="fixed inset-0 z-30 bg-gray-900/50 lg:hidden hidden"></div>
 </body>
 
 </html>
