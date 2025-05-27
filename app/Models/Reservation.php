@@ -38,11 +38,7 @@ class Reservation extends Model
         return $this->belongsTo(Branch::class);
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
+    
     public function payments()
     {
         return $this->morphMany(Payment::class, 'payable');
