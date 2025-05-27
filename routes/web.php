@@ -147,7 +147,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
 
 
-        route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
+        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
         Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
         Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
         Route::get('/web-test', function () {return view('admin.testpage');})->name('web-test.index');
