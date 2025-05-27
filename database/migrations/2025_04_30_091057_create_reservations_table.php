@@ -22,7 +22,7 @@ return new class extends Migration
             $table->decimal('cancellation_fee', 10, 2)->nullable();
             $table->enum('status', ['pending', 'confirmed', 'cancelled', 'completed'])->default('pending')->nullable();
             $table->foreignId('branch_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('set null')->nullable();
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
             $table->boolean('is_active')->default(true);
             $table->softDeletes();
