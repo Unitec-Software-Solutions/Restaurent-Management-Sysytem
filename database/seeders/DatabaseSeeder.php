@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             ItemTransactionSeeder::class,
             AdminSeeder::class,
             ReservationSeeder::class,
+            EmployeeSeeder::class,
 
         ]);
     }
