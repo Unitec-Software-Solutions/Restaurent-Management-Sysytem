@@ -61,8 +61,8 @@ class ItemController extends Controller
      */
     public function index()
     {
-        $items = InventoryItem::latest()->paginate(15);
-        return view('items.index', compact('items'));
+        $items = Item::all(); // Make sure you're only calling this once
+        return view('frontend.items.index', compact('items'));
     }
 
     /**
@@ -115,6 +115,11 @@ class ItemController extends Controller
             ->table('item_categories')
             ->select('id', 'name')
             ->get();
+
+        // Ensure the image property exists
+        if (!$item->image) {
+            $item->image = null; // or set a default image path
+        }
 
         return view('frontend.items.edit', compact('item', 'categories'));
     }

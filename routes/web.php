@@ -6,7 +6,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryDashboardController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\StockController;
-<<<<<<< HEAD
+
 
 use App\Http\Controllers\ImageUploadController;
 use App\Http\Controllers\MenuController;
@@ -27,10 +27,10 @@ use App\Http\Controllers\SettingController;
 //     return view('welcome');
 // });
 
-// Redirect root URL to /frontend
+//Redirect root URL to /frontend
 
-=======
->>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
+
+
 use App\Http\Controllers\ReservationsController;
 use App\Http\Controllers\GoodReceivedNoteController;
 use App\Http\Controllers\GoodReceivedNoteItemController;
@@ -46,29 +46,29 @@ use App\Http\Controllers\ItemTransactionController;
 use App\Http\Controllers\FrontendController;
 use App\Http\Controllers\MenuFrontendController;
 
-<<<<<<< HEAD
 
 
 
-=======
+
+
 // Public routes
->>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
+
 Route::get('/', function () {
     return redirect('/frontend');
 });
 
-<<<<<<< HEAD
+
 
 Auth::routes();
 
 Auth::routes(['register' => false, 'login' => false]);
 
-=======
+
 Route::get('/frontend', [MenuFrontendController::class, 'index']);
 Route::get('/menu', [MenuFrontendController::class, 'index']);
 
 Auth::routes();
->>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
+
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 
@@ -136,7 +136,7 @@ Route::post('/reservation/{id}/confirm', [ReservationsController::class, 'confir
 
 
 // Other routes
-<<<<<<< HEAD
+
 
 Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
 Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
@@ -274,8 +274,8 @@ Route::get('/menu/addmenucategory', [MenuController::class, 'showAddMenuCategory
 Route::post('/menu/addmenucategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storemenucategory');
 Route::post('/menu/storeCategory', [MenuController::class, 'storeMenuCategory'])->name('menu.storeCategory');
 
-=======
->>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
+
+
 // Route::get('/signup', [CustomerAuthController::class, 'showRegistrationForm'])->name('signup');
 // Route::get('/reservation/{id}/payment', [PaymentController::class, 'create'])->name('reservation.payment');
 
@@ -292,7 +292,7 @@ Route::prefix('reservations')->name('reservations.')->group(function () {
     Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary')->where('reservation', '[0-9]+');
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel')->where('reservation', '[0-9]+');
     Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show')->where('reservation', '[0-9]+');
-<<<<<<< HEAD
+
     Route::get('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
 });
 
@@ -317,7 +317,8 @@ Route::delete('/frontend/items/{id}', [ItemController::class, 'destroy'])->name(
 
 
 
-=======
+
     Route::post('/{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
-});
->>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
+            
+
+

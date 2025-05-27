@@ -18,7 +18,7 @@ class MenuController extends Controller
 
     public function create()
     {
-        return view('admin.menu.create');
+        return view('admin/menu/create');
     }
 
     public function store(Request $request)
