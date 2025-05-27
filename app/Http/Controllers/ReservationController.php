@@ -30,7 +30,7 @@ class ReservationController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'name' => 'nullable|string|max:255',
+                'name' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255',
                 'phone' => 'required|string|min:10|max:15',
                 'branch_id' => 'required|exists:branches,id',
@@ -232,7 +232,7 @@ class ReservationController extends Controller
     public function review(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'required|string|min:10|max:15',
             'branch_id' => 'required|exists:branches,id',
@@ -294,7 +294,7 @@ class ReservationController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'required|string|min:10|max:15',
             'branch_id' => 'required|exists:branches,id',
