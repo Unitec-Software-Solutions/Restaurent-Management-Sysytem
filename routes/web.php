@@ -42,6 +42,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/all', [OrderController::class, 'allOrders'])->name('all');
         Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('update-cart');
+        Route::get('/create', [OrderController::class, 'create'])->name('create');
         
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function() {
@@ -129,9 +130,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
-
-
-
             // Categories
             Route::resource('categories', ItemCategoryController::class);
         });
@@ -148,32 +146,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->name('grns');
         });
 
+
         route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
-        // Reports
-        Route::get('/reports', function () {
-            return view('admin.reports.index');
-        })->name('reports.index');
-
-        // Customer Management
-        Route::get('/customers', function () {
-            return view('admin.customers.index');
-        })->name('customers.index');
-
-        // Customer Management
-        Route::get('/web-test', function () {
-            return view('admin.customers.index');
-        })->name('web-test.index');
-
-        // Digital Menu
-        Route::get('/digital-menu', function () {
-            return view('admin.digital-menu.index');
-        })->name('digital-menu.index');
-
-        // Settings
-        Route::get('/settings', function () {return view('admin.settings.index');
-})->name('settings.index');
-
-        // User Management
+        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
+        Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
+        Route::get('/web-test', function () {return view('admin.testpage');})->name('web-test.index');
+        Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
+        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
     });
 });
