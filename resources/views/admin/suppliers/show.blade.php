@@ -12,7 +12,7 @@
                 </div>
                 <div class="flex items-center space-x-3">
                     <a href="{{ route('admin.suppliers.edit', $supplier) }}" 
-                       class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">
+                       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
                         <i class="fas fa-edit mr-2"></i> Edit
                     </a>
                     <a href="{{ route('admin.suppliers.index') }}" 
