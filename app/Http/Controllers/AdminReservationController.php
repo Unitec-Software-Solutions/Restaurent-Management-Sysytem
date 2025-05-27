@@ -360,7 +360,11 @@ class AdminReservationController extends Controller
         // Assign current date as default date
         $defaultDate = now()->toDateString();
 
-        return view('admin.reservations.create', compact('tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate'));
+        // Get next reservation ID (works for MySQL)
+        $nextId = \DB::table('reservations')->max('id') + 1;
+        $defaultName = 'customer (' . $nextId . ')';
+
+        return view('admin.reservations.create', compact('tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName'));
     }
 
     protected function sendNotification(Reservation $reservation, $method)
@@ -384,9 +388,7 @@ class AdminReservationController extends Controller
         }
 
         if (in_array($method, ['sms', 'both'])) {
-            // Send cancellation SMS
             SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
         }
     }
-
 }
