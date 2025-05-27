@@ -362,7 +362,7 @@ class AdminReservationController extends Controller
 
         // Get next reservation ID (works for MySQL)
         $nextId = \DB::table('reservations')->max('id') + 1;
-        $defaultName = 'customer (' . $nextId . ')';
+        $defaultName = 'customer ' . $nextId . '';
 
         return view('admin.reservations.create', compact('tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName'));
     }
