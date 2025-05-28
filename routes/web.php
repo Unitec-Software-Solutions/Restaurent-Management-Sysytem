@@ -13,6 +13,7 @@ use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\ItemTransactionController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierPaymentController;
 
 // Public Routes
 Route::get('/', function () {
@@ -23,7 +24,7 @@ Route::get('/', function () {
 Route::middleware(['web'])->group(function () {
     // Customer Dashboard
     Route::get('/customer-dashboard', [CustomerDashboardController::class, 'showReservationsByPhone'])
-         ->name('customer.dashboard');
+        ->name('customer.dashboard');
 
     // Reservations
     Route::prefix('reservations')->name('reservations.')->group(function () {
@@ -43,9 +44,9 @@ Route::middleware(['web'])->group(function () {
         Route::get('/all', [OrderController::class, 'allOrders'])->name('all');
         Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('update-cart');
         Route::get('/create', [OrderController::class, 'create'])->name('create');
-        
+
         // Takeaway Orders
-        Route::prefix('takeaway')->name('takeaway.')->group(function() {
+        Route::prefix('takeaway')->name('takeaway.')->group(function () {
             Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
             Route::post('/store', [OrderController::class, 'storeTakeaway'])->name('store');
             Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->name('edit');
@@ -73,7 +74,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/', [OrderController::class, 'adminIndex'])->name('index');
-            
+
             // Reservation Orders
             Route::prefix('reservations/{reservation}')->name('reservations.')->group(function () {
                 Route::get('/create', [OrderController::class, 'create'])->name('create');
@@ -144,15 +145,41 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
             Route::get('/{supplier}/purchase-orders', [SupplierController::class, 'purchaseOrders'])->name('purchase-orders');
             Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->name('grns');
+
+            
+        });
+
+        Route::prefix('payments')->name('payments.')->group(function () {
+                Route::get('/', [SupplierPaymentController::class, 'index'])->name('index');
+                Route::get('/create', [SupplierPaymentController::class, 'create'])->name('create');
+                Route::post('/', [SupplierPaymentController::class, 'store'])->name('store');
+                Route::get('/{payment}', [SupplierPaymentController::class, 'show'])->name('show');
+                Route::get('/{payment}/edit', [SupplierPaymentController::class, 'edit'])->name('edit');
+                Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
+                Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
+                Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
         });
 
 
-        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
-        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
-        Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
-        Route::get('/web-test', function () {return view('admin.testpage');})->name('web-test.index');
-        Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
-        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
+
+        Route::get('/testpage', function () {
+            return view('admin.testpage');
+        })->name('testpage');
+        Route::get('/reports', function () {
+            return view('admin.reports.index');
+        })->name('reports.index');
+        Route::get('/customers', function () {
+            return view('admin.customers.index');
+        })->name('customers.index');
+        Route::get('/web-test', function () {
+            return view('admin.testpage');
+        })->name('web-test.index');
+        Route::get('/digital-menu', function () {
+            return view('admin.digital-menu.index');
+        })->name('digital-menu.index');
+        Route::get('/settings', function () {
+            return view('admin.settings.index');
+        })->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
     });
 });
