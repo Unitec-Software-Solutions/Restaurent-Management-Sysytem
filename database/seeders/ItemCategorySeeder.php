@@ -32,6 +32,11 @@ class ItemCategorySeeder extends Seeder
                 'description' => 'Soft drinks, juices, etc.',
             ],
             [
+                'name' => 'Production Items',
+                'code' => 'PI',
+                'description' => 'Buns and etc.',
+            ],
+            [
                 'name' => 'Desserts',
                 'code' => 'DS',
                 'description' => 'Cakes, pastries, and sweets',
