@@ -24,12 +24,11 @@ return new class extends Migration
                 'bank_transfer',
                 'bank_deposit',
                 'credit_card',
-                'digital_wallet',
                 'other'
             ])->default('cash');
 
             $table->decimal('amount', 16, 2);
-            $table->string('reference_number')->nullable()->unique();
+            $table->string('reference_number')->nullable(); // Removed ->unique()
             $table->date('value_date')->nullable();
             
             // Cheque details
