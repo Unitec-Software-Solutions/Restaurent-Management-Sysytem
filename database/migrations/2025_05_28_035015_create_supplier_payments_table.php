@@ -11,15 +11,29 @@ return new class extends Migration
     {
         Schema::create('supp_payments_master', function (Blueprint $table) {
             $table->id();
-            
+
             // Relationships
             $table->foreignId('organization_id')
                 ->nullable()
                 ->constrained('organizations')
+                ->onDelete('restrict');
+                
+            $table->foreignId('po_id')
+                ->nullable()
+                ->constrained('po_master', 'po_id')
+                ->onDelete('set null');
+
+            $table->foreignId('grn_id')
+                ->nullable()
+                ->constrained('grn_master', 'grn_id')
                 ->onDelete('set null');
 
             $table->foreignId('supplier_id')
                 ->constrained('suppliers')
+                ->onDelete('cascade');
+
+            $table->foreignId('branch_id')
+                ->constrained('branches')
                 ->onDelete('cascade');
 
             // Core payment info
@@ -28,7 +42,7 @@ return new class extends Migration
             $table->decimal('total_amount', 16, 2);
             $table->decimal('allocated_amount', 16, 2)->default(0);
             $table->enum('currency', ['LKR'])->default('LKR');
-            
+
             // Status tracking
             $table->enum('payment_status', [
                 'draft',
