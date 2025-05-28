@@ -9,6 +9,7 @@
             ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
             ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
             ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
+            ['name' => 'Payments', 'link' => route('admin.payments.index')],
         ]" active="Suppliers Management" />
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         <!-- Header -->
