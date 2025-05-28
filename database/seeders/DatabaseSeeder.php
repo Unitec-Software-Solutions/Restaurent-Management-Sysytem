@@ -27,8 +27,11 @@ class DatabaseSeeder extends Seeder
             ItemTransactionSeeder::class,
             AdminSeeder::class,
             ReservationSeeder::class,
-            EmployeeSeeder::class,
-
+            PurchaseOrderSeeder::class,
+            GRNSeeder::class,
+            SupplierPaymentSeeder::class,
+            ItemTransactionSeeder::class,
+            //EmployeeSeeder::class,
         ]);
     }
 }
