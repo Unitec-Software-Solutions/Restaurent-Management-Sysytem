@@ -49,6 +49,8 @@ return new class extends Migration
                 'approved',
                 'partial',
                 'completed',
+                'pending',
+                'overdue',
                 'reversed'
             ])->default('draft');
 
