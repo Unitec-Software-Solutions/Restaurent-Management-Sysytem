@@ -20,11 +20,18 @@ class SupplierController extends Controller
         return $user->organization_id;
     }
 
-    public function index()
+    protected function checkOrganization(Supplier $supplier)
+    {
+        if ($supplier->organization_id !== $this->getOrganizationId()) {
+            abort(403, 'Unauthorized access to supplier Details');
+        }
+    }
+
+ public function index()
     {
         $orgId = $this->getOrganizationId();
         
-        $suppliers = Supplier::query()
+        $suppliers = Supplier::where('organization_id', $orgId) // Added organization filter
             ->when(request('search'), function($query) {
                 $query->where(function($q) {
                     $search = '%' . request('search') . '%';
@@ -64,6 +71,7 @@ class SupplierController extends Controller
 
         $validated['supplier_id'] = 'SUP-' . Str::upper(Str::random(6));
         $validated['is_active'] = true;
+        $validated['organization_id'] = $this->getOrganizationId(); // Add organization ID
 
         Supplier::create($validated);
 
@@ -73,6 +81,7 @@ class SupplierController extends Controller
 
     public function show(Supplier $supplier)
     {
+        $this->checkOrganization($supplier);
         $supplier->load([
             'purchaseOrders' => function($query) {
                 $query->latest()->take(5);
@@ -98,11 +107,13 @@ class SupplierController extends Controller
 
     public function edit(Supplier $supplier)
     {
+        $this->checkOrganization($supplier);
         return view('admin.suppliers.edit', compact('supplier'));
     }
 
     public function update(Request $request, Supplier $supplier)
     {
+        $this->checkOrganization($supplier);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
@@ -122,6 +133,7 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier)
     {
+        $this->checkOrganization($supplier);
         // Check if supplier has any associated orders
         if ($supplier->purchaseOrders()->exists()) {
             return back()->with('error', 'Cannot delete supplier with associated purchase orders.');
@@ -134,6 +146,7 @@ class SupplierController extends Controller
 
     public function purchaseOrders(Supplier $supplier)
     {
+        $this->checkOrganization($supplier);
         $purchaseOrders = $supplier->purchaseOrders()
             ->with(['branch', 'user'])
             ->latest()
@@ -144,6 +157,7 @@ class SupplierController extends Controller
 
     public function goodsReceived(Supplier $supplier)
     {
+        $this->checkOrganization($supplier);
         $grns = GrnMaster::where('supplier_id', $supplier->id)
             ->with(['receivedByUser', 'verifiedByUser', 'purchaseOrder'])
             ->latest()
