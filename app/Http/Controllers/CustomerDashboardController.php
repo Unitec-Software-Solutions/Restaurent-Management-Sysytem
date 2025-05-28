@@ -14,6 +14,7 @@ class CustomerDashboardController extends Controller
         if ($phone) {
             $reservations = Reservation::where('phone', $phone)->orderBy('date', 'desc')->get();
         }
+        // Always pass both variables to the view
         return view('reservations.customer-dashboard', compact('reservations', 'phone'));
     }
 }

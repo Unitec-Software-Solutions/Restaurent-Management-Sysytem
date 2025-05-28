@@ -82,8 +82,8 @@ class ItemMasterSeeder extends Seeder
                 'reorder_level' => 8,
                 'is_perishable' => true,
                 'shelf_life_in_days' => 1,
-                'branch_id' => 1,
-                'organization_id' => 1,
+                'branch_id' => 11,
+                'organization_id' => 3,
                 'buying_price' => 170.00,
                 'selling_price' => 380.00,
                 'is_menu_item' => true,
@@ -110,8 +110,8 @@ class ItemMasterSeeder extends Seeder
                 'reorder_level' => 8,
                 'is_perishable' => true,
                 'shelf_life_in_days' => 1,
-                'branch_id' => 1,
-                'organization_id' => 1,
+                'branch_id' => 11,
+                'organization_id' => 3,
                 'buying_price' => 160.00,
                 'selling_price' => 370.00,
                 'is_menu_item' => true,
@@ -322,7 +322,7 @@ class ItemMasterSeeder extends Seeder
                     'available_to' => '23:00:00',
                     'available_days' => 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
                     'promotions' => false,
-                    'add_ons' => ['Grilled Chicken (+₹80)', 'Shrimp (+₹120)']
+                    'add_ons' => ['Grilled Chicken (+LKR 80)', 'Shrimp (+LKR 120)']
                 ],
             ],
             [
@@ -463,7 +463,7 @@ class ItemMasterSeeder extends Seeder
                     'available_to' => '23:00:00',
                     'available_days' => 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
                     'promotions' => false,
-                    'options' => ['Regular', 'Large (+₹40)']
+                    'options' => ['Regular', 'Large (+LKR 40)']
                 ],
             ],
             [
@@ -830,7 +830,13 @@ class ItemMasterSeeder extends Seeder
         ];
 
         foreach ($items as $item) {
-            ItemMaster::create($item);
+            ItemMaster::firstOrCreate(
+                ['item_code' => $item['item_code']], // Check by unique item code
+                $item // Create with all data if not exists
+            );
         }
+
+        $this->command->info("  Total Items in the database : " . ItemMaster::count());
+        $this->command->info("  ✅ Item Master seeded successfully!");
     }
 }

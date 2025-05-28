@@ -1,84 +1,95 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="en" class="h-full">
+
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <title>{{ config('app.name', 'Restaurant Management System') }} - Admin</title>
-
-    <!-- Preload Fonts -->
-    <link rel="preload" href="https://fonts.bunny.net/css?family=Nunito" as="style">
-    <link rel="dns-prefetch" href="//fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ config('app.name', 'Restaurant Management System') }}</title>
+    <meta name="description" content="Restaurant Management System">
 
     <!-- Styles -->
-    @vite(['resources/sass/app.scss', 'resources/css/app.css'])
+    <link href="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 
-    <!-- Flowbite CSS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.css" rel="stylesheet" />
+            <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Scripts (deferred for performance) -->
-    @vite(['resources/js/app.js'])
+    <!-- Scripts -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: "#eff6ff",
+                            100: "#dbeafe",
+                            200: "#bfdbfe",
+                            300: "#93c5fd",
+                            400: "#60a5fa",
+                            500: "#3b82f6",
+                            600: "#2563eb",
+                            700: "#1d4ed8",
+                            800: "#1e40af",
+                            900: "#1e3a8a"
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
+
 </head>
-</head>
-<body class="font-sans antialiased bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Navigation -->
-        <nav class="bg-white border-b border-gray-100">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex">
-                        <!-- Logo -->
-                        <div class="shrink-0 flex items-center">
-                            <a href="{{ route('admin.dashboard') }}" class="text-xl font-bold text-gray-800">
-                                {{ config('app.name', 'Restaurant Management System') }}
-                            </a>
-                        </div>
 
-                        <!-- Navigation Links -->
-                        <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
-                            <a href="{{ route('admin.reservations.index') }}" 
-                               class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('admin.reservations.*') ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                                Reservations
-                            </a>
-                            <a href="{{ route('admin.inventory.index') }}" 
-                               class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('admin.inventory.*') ? 'border-blue-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                                Inventory
-                            </a>
-                        </div>
-                    </div>
+<body class="bg-gray-50 dark:bg-gray-900 h-full">
 
-                    <!-- Settings Dropdown -->
-                    <div class="hidden sm:flex sm:items-center sm:ml-6">
-                        <div class="ml-3 relative">
-                            <a href="{{ route('admin.logout.page') }}" class="text-gray-500 hover:text-gray-700">Logout</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
+    <!-- Sidebar -->
+    @auth
+        @include('partials.sidebar.admin-sidebar')
+    @endauth
+
+    <!-- Header -->
+    @include('partials.header.admin-header')
+
+    <!-- Main Content -->
+    <main class="p-4 lg:ml-64 pt-16 h-full  bg-[#F3F4FF]">
+      
+        <!-- Breadcrumbs -->
+        {{-- @include('partials.breadcrumbs') // Disabled for now --}}  
 
         <!-- Page Content -->
-        <main>
-            @if(session('success'))
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-                        <span class="block sm:inline">{{ session('success') }}</span>
-                    </div>
-                </div>
-            @endif
+        @yield('content')
+    </main>
 
-            @if(session('error'))
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                        <span class="block sm:inline">{{ session('error') }}</span>
-                    </div>
-                </div>
-            @endif
+    <!-- Logout Modal -->
+    @include('partials.modals.logout-modal')
 
-            @yield('content')
-        </main>
-    </div>
+    <!-- Scripts -->
+    <script>
+        // Sidebar toggle for mobile
+        document.getElementById('toggleSidebar').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('lg:flex');
+        });
+
+        // Logout modal toggle
+        function toggleLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            modal.classList.toggle('hidden');
+        }
+    </script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    @stack('scripts')
 </body>
+
 </html>

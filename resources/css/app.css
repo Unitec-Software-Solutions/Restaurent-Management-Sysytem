@@ -15,9 +15,23 @@ html, body {
     overflow-y: auto;
 }
 
-
-=======
 @import "flowbite/src/themes/default";
 @plugin "flowbite/plugin";
 @source "../../node_modules/flowbite";
->>>>>>> 9b0d85d46c950a4c8ad21af3b600ca06fa755550
+
+
+/* Custom modal transitions */
+.modal-enter {
+    opacity: 0;
+}
+.modal-enter-active {
+    opacity: 1;
+    transition: opacity 200ms;
+}
+.modal-exit {
+    opacity: 1;
+}
+.modal-exit-active {
+    opacity: 0;
+    transition: opacity 200ms;
+}

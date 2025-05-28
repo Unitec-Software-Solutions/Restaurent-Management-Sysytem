@@ -2,58 +2,83 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ItemCategory;
 use App\Models\ItemMaster;
 use App\Models\ItemTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class ItemDashboardController extends Controller
 {
     public function index()
     {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $orgId = $admin->organization_id;
+
         // Total Items
-        $totalItems = ItemMaster::active()->count();
+        $totalItems = ItemMaster::active()->where('organization_id', $orgId)->count();
 
         // New Items Today
-        $newItemsToday = ItemMaster::active()->whereDate('created_at', now()->format('Y-m-d'))->count();
+        $newItemsToday = ItemMaster::active()
+            ->where('organization_id', $orgId)
+            ->whereDate('created_at', now()->format('Y-m-d'))
+            ->count();
 
         // Total Stock Value
         $totalStockValue = DB::table('item_master')
             ->join('item_transactions', 'item_master.id', '=', 'item_transactions.inventory_item_id')
+            ->where('item_master.organization_id', $orgId)
             ->select(DB::raw('SUM(item_transactions.quantity * item_master.buying_price) as total_stock_value'))
             ->first()->total_stock_value ?? 0;
 
         // Stock Value Change (from yesterday)
         $yesterdayStockValue = DB::table('item_master')
             ->join('item_transactions', 'item_master.id', '=', 'item_transactions.inventory_item_id')
+            ->where('item_master.organization_id', $orgId)
             ->whereDate('item_transactions.created_at', now()->subDay())
             ->select(DB::raw('SUM(item_transactions.quantity * item_master.buying_price) as total_stock_value'))
             ->first()->total_stock_value ?? 0;
+
         $stockValueChange = $totalStockValue - $yesterdayStockValue;
 
         // Purchase Orders
-        $purchaseOrders = ItemTransaction::where('transaction_type', 'purchase_order')->get();
+        $purchaseOrders = ItemTransaction::where('organization_id', $orgId)
+            ->where('transaction_type', 'purchase_order')
+            ->get();
+
         $purchaseOrdersTotal = $purchaseOrders->sum('cost_price');
         $purchaseOrdersCount = $purchaseOrders->count();
 
         // Sales Orders
-        $salesOrders = ItemTransaction::where('transaction_type', 'sales_order')->get();
+        $salesOrders = ItemTransaction::where('organization_id', $orgId)
+            ->where('transaction_type', 'sales_order')
+            ->get();
+
         $salesOrdersTotal = $salesOrders->sum('unit_price');
         $salesOrdersCount = $salesOrders->count();
 
         // Low Stock Items
         $lowStockItems = ItemMaster::with('category')
             ->active()
+            ->where('organization_id', $orgId)
             ->whereHas('transactions', function ($query) {
-                return $query->where('quantity', '<=', DB::raw('item_master.reorder_level'));
+                $query->whereColumn('quantity', '<=', 'item_master.reorder_level');
             })
             ->get();
 
         // Top Selling Items
         $topSellingItems = ItemMaster::with('category')
             ->active()
+            ->where('item_master.organization_id', $orgId)
             ->join('item_transactions', 'item_master.id', '=', 'item_transactions.inventory_item_id')
             ->where('item_transactions.transaction_type', 'sales_order')
+            ->where('item_transactions.organization_id', $orgId)
             ->select(
                 'item_master.*',
                 DB::raw('SUM(item_transactions.quantity) as quantity_sold'),
@@ -65,14 +90,40 @@ class ItemDashboardController extends Controller
             ->get();
 
         // Purchase Order Summary
-        $purchaseOrderQuantity = ItemTransaction::where('transaction_type', 'purchase_order')->sum('quantity');
-        $purchaseOrderTotalCost = ItemTransaction::where('transaction_type', 'purchase_order')->sum('cost_price');
+        $purchaseOrderQuantity = ItemTransaction::where('organization_id', $orgId)
+            ->where('transaction_type', 'purchase_order')
+            ->sum('quantity');
+
+        $purchaseOrderTotalCost = ItemTransaction::where('organization_id', $orgId)
+            ->where('transaction_type', 'purchase_order')
+            ->sum('cost_price');
 
         // Sales Order Details
         $salesOrders = ItemTransaction::with(['item', 'branch'])
+            ->where('organization_id', $orgId)
             ->where('transaction_type', 'sales_order')
             ->latest()
             ->take(10)
+            ->get();
+
+        // Item list with filters
+        $items = ItemMaster::with('category')
+            ->where('organization_id', $orgId)
+            ->when(request('search'), function ($query) {
+                return $query->where('name', 'like', '%' . request('search') . '%')
+                    ->orWhere('item_code', 'like', '%' . request('search') . '%');
+            })
+            ->when(request('category'), function ($query) {
+                return $query->where('item_category_id', request('category'));
+            })
+            ->when(request()->has('status'), function ($query) {
+                return $query->where('is_active', request('status'));
+            })
+            ->paginate(15);
+
+        // Active Categories
+        $categories = ItemCategory::active()
+            ->where('organization_id', $orgId)
             ->get();
 
         return view('admin.inventory.dashboard', compact(
@@ -88,7 +139,9 @@ class ItemDashboardController extends Controller
             'topSellingItems',
             'purchaseOrderQuantity',
             'purchaseOrderTotalCost',
-            'salesOrders'
+            'salesOrders',
+            'items',
+            'categories'
         ));
     }
 }

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ItemCategory;
+use App\Models\Organizations;
 use Illuminate\Database\Seeder;
 
 class ItemCategorySeeder extends Seeder
@@ -12,40 +13,72 @@ class ItemCategorySeeder extends Seeder
      */
     public function run(): void
     {
-        $categories = [
+        $organizations = Organizations::where('is_active', true)->take(5)->get();
+
+        if ($organizations->isEmpty()) {
+            $this->command->error('❌ No active organizations found to seed item categories.');
+            return;
+        }
+
+        $baseCategories = [
             [
-                'name' => 'Food',
-                'code' => 'FD',
-                'description' => 'All food items',
-                'is_active' => true,
+                'name' => 'Main Course',
+                'code' => 'MC',
+                'description' => 'Entrees and primary dishes',
             ],
             [
                 'name' => 'Beverages',
                 'code' => 'BV',
-                'description' => 'Drinks and beverages',
-                'is_active' => true,
+                'description' => 'Soft drinks, juices, etc.',
             ],
             [
-                'name' => 'Cleaning Supplies',
-                'code' => 'CS',
-                'description' => 'Cleaning and sanitation products',
-                'is_active' => true,
+                'name' => 'Desserts',
+                'code' => 'DS',
+                'description' => 'Cakes, pastries, and sweets',
             ],
             [
-                'name' => 'Kitchen Equipment',
-                'code' => 'KE',
-                'description' => 'Kitchen tools and equipment',
-                'is_active' => true,
+                'name' => 'Buy & sell',
+                'code' => 'BS',
+                'description' => 'Buy and sell items',
             ],
             [
-                'name' => 'Office Supplies',
-                'code' => 'OS',
-                'description' => 'Office stationery and supplies',
-                'is_active' => true,
+                'name' => 'Ingredients',
+                'code' => 'IG',
+                'description' => 'Raw cooking ingredients',
+            ],
+            [
+                'name' => 'Utensils & Packaging',
+                'code' => 'UP',
+                'description' => 'Cutlery, napkins, takeaway boxes',
             ],
         ];
-        foreach ($categories as $category) {
-            ItemCategory::create($category);
+
+        foreach ($organizations as $org) {
+            foreach ($baseCategories as $category) {
+                // Adjust code and name to be unique per organization
+                $uniqueCode = $category['code'] . $org->id;
+                $uniqueName = $category['name'] . ' - Org ' . $org->id;
+
+                $exists = ItemCategory::where('organization_id', $org->id)
+                    ->where(function ($query) use ($category, $uniqueCode) {
+                        $query->where('name', $category['name'])
+                            ->orWhere('code', $uniqueCode);
+                    })
+                    ->exists();
+
+                if (!$exists) {
+                    ItemCategory::create([
+                        'name' => $category['name'],
+                        'code' => $uniqueCode,
+                        'description' => $category['description'],
+                        'is_active' => true,
+                        'organization_id' => $org->id,
+                    ]);
+                }
+            }
         }
+
+        $this->command->info("  ✅ Seeded item categories for {$organizations->count()} organizations.");
+        $this->command->info("  Total Item Categories in the database: " . ItemCategory::count());
     }
 }

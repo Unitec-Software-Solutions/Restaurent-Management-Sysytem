@@ -15,9 +15,11 @@ use App\Models\Reservation;
 use App\Models\Branch;
 use App\Models\Payment;
 use App\Models\Waitlist;
+use App\Models\Table;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class ReservationController extends Controller
@@ -34,6 +36,7 @@ class ReservationController extends Controller
     
     public function store(Request $request)
     {
+        DB::beginTransaction();
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
@@ -57,7 +60,44 @@ class ReservationController extends Controller
                 return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')']);
             }
 
-            // Directly create the reservation
+            // For same-day reservations, ensure start time is at least 30 minutes from now
+            if ($validated['date'] === now()->format('Y-m-d')) {
+                $minStartTime = now()->addMinutes(30)->format('H:i');
+                if ($validated['start_time'] < $minStartTime) {
+                    return back()->withErrors(['time' => 'For same-day reservations, start time must be at least 30 minutes from now.']);
+                }
+            }
+
+            // Enhanced: Use checkTableAvailability for robust capacity check
+            if (!$this->checkTableAvailability(
+                $validated['date'],
+                $validated['start_time'],
+                $validated['end_time'],
+                $validated['number_of_people'],
+                $branch->id
+            )) {
+                throw new \Exception('No available tables for selected time');
+            }
+
+            // Find available tables (for assignment)
+            $tables = Table::where('branch_id', $branch->id)
+                ->available($validated['date'], $validated['start_time'], $validated['end_time'])
+                ->orderBy('capacity', 'asc')
+                ->get();
+
+            $required = $validated['number_of_people'];
+            $selectedTables = [];
+            $sum = 0;
+            foreach ($tables as $table) {
+                $selectedTables[] = $table;
+                $sum += $table->capacity;
+                if ($sum >= $required) break;
+            }
+            if ($sum < $required) {
+                throw new \Exception('No available tables for selected time');
+            }
+
+            
             $reservation = Reservation::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -73,15 +113,21 @@ class ReservationController extends Controller
                 'branch_id' => $branch->id,
             ]);
 
+            // Assign tables
+            $reservation->tables()->sync(collect($selectedTables)->pluck('id'));
+
+            DB::commit();
             return redirect()->route('reservations.summary', $reservation)
                 ->with('success', 'Your reservation has been created successfully.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Reservation creation failed: ' . $e->getMessage());
             return back()
-                ->withErrors(['error' => 'Failed to create reservation. Please try again.'])
+                ->withErrors(['error' => $e->getMessage()])
                 ->withInput();
         }
     }
@@ -128,23 +174,30 @@ class ReservationController extends Controller
 
     public function processPayment(Request $request, Reservation $reservation)
     {
-        $request->validate([
-            'payment_method' => 'required|in:cash,cheque,bank_transfer,online_portal,qr_code,card,mobile_app'
-        ]);
-        
-        $payment = Payment::create([
-            'payable_type' => Reservation::class,
-            'payable_id' => $reservation->id,
-            'amount' => $reservation->reservation_fee,
-            'payment_method' => $request->payment_method,
-            'status' => 'completed',
-            'payment_reference' => 'RES-' . $reservation->id . '-' . time(),
-            'is_active' => true,
-            'notes' => 'Reservation payment'
-        ]);
-        
-        return redirect()->route('reservations.summary', $reservation)
-            ->with('success', 'Payment processed successfully.');
+        DB::beginTransaction();
+        try {
+            $request->validate([
+                'payment_method' => 'required|in:cash,cheque,bank_transfer,online_portal,qr_code,card,mobile_app'
+            ]);
+            
+            $payment = Payment::create([
+                'payable_type' => Reservation::class,
+                'payable_id' => $reservation->id,
+                'amount' => $reservation->reservation_fee,
+                'payment_method' => $request->payment_method,
+                'status' => 'completed',
+                'payment_reference' => 'RES-' . $reservation->id . '-' . time(),
+                'is_active' => true,
+                'notes' => 'Reservation payment'
+            ]);
+            $reservation->update(['status' => 'confirmed']);
+            DB::commit();
+            return redirect()->route('reservations.summary', $reservation)
+                ->with('success', 'Payment processed successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Payment failed']);
+        }
     }
 
     public function summary(Reservation $reservation)
@@ -156,7 +209,8 @@ class ReservationController extends Controller
     public function confirm(Reservation $reservation)
     {
         $reservation->update(['status' => 'confirmed']);
-        return response('Reservation confirmed successfully.');
+        return redirect()->route('reservations.summary', $reservation)
+            ->with('success', 'Reservation confirmed successfully.');
     }
 
     public function cancel(Reservation $reservation)
@@ -291,4 +345,12 @@ class ReservationController extends Controller
                 ->withInput();
         }
     }
+
+    public function payment(Reservation $reservation)
+    {
+        // You can customize this view as needed
+        return view('reservations.payment', compact('reservation'));
+    }
+
+    
 }

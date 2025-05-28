@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,50 +14,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        // Test User
-        /*
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-        */
+        DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
 
         $this->call([
             OrganizationSeeder::class,
-            AdminSeeder::class,
             BranchSeeder::class,
             TableSeeder::class,
             LoginSeeder::class,
             SupplierSeeder::class,
-            ItemCategorySeeder::class,  // New Item Category Seeder
-            ItemMasterSeeder::class,    // New Item Master Seeder
+            ItemCategorySeeder::class,
+            ItemMasterSeeder::class,
             ItemTransactionSeeder::class,
-            // InventoryCategorySeeder::class,
-            // InventoryItemSeeder::class,
-            // InventoryStockSeeder::class,
-            // InventoryTransactionSeeder::class,
-            // MenuCategorySeeder::class,
-            // MenuItemSeeder::class,
-            // MenuRecipeSeeder::class,
-
-            PurchaseOrderSeeder::class,
-            PurchaseOrderItemSeeder::class,
-            GoodReceivedNoteSeeder::class,
-            GoodReceivedNoteItemSeeder::class,
-            MenuItemsTableSeeder::class,
-            FoodItemsTableSeeder::class,
-
-
-            // PurchaseOrderSeeder::class,
-            // PurchaseOrderItemSeeder::class,
-            // GoodReceivedNoteSeeder::class,
-            // GoodReceivedNoteItemSeeder::class,
-
             AdminSeeder::class,
             ReservationSeeder::class,
-
+            EmployeeSeeder::class,
 
         ]);
     }

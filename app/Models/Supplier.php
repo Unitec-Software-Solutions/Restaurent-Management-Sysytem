@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 use App\Models\PurchaseOrder;
-use App\Models\InventoryTransaction; 
+use App\Models\ItemTransaction; 
 
 class Supplier extends Model
 {
@@ -55,6 +55,6 @@ class Supplier extends Model
      */
     public function transactions()
     {
-        return $this->morphMany(InventoryTransaction::class, 'source');
+        return $this->morphMany(ItemTransaction::class, 'source');
     }
 } 

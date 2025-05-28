@@ -1,72 +1,117 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-2xl mx-auto">
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
-            <div class="px-6 py-4 bg-gray-50 border-b">
-                <h1 class="text-2xl font-bold text-gray-800">Reservation Summary</h1>
-            </div>
-
-            <div class="p-6">
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                    <h5 class="font-bold">Reservation Submitted!</h5>
-                    <p>Your reservation has been submitted and is pending confirmation. We will notify you once it's confirmed.</p>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Reservation Details</h2>
+        <span class="badge bg-{{ $reservation->status === 'confirmed' ? 'success' : ($reservation->status === 'pending' ? 'warning' : 'danger') }}">
+            {{ ucfirst($reservation->status) }}
+        </span>
+    </div>
+    
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Reservation #{{ $reservation->id }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <h6 class="text-muted">Branch</h6>
+                        <p>{{ $reservation->branch->name }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Date & Time</h6>
+                        <p>
+                            {{ $reservation->date->format('l, F j, Y') }}<br>
+                            {{ \Carbon\Carbon::parse($reservation->start_time)->format('g:i A') }} - 
+                            {{ \Carbon\Carbon::parse($reservation->end_time)->format('g:i A') }}
+                        </p>
+                    </div>
                 </div>
-
-                <div class="space-y-6">
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-800 mb-3">Reservation Details</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <p><span class="font-medium">Branch:</span> {{ $reservation->branch->name }}</p>
-                                <p><span class="font-medium">Date:</span> {{ \Carbon\Carbon::parse($reservation->date)->format('F j, Y') }}</p>
-                                <p><span class="font-medium">Time:</span> {{ \Carbon\Carbon::parse($reservation->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($reservation->end_time)->format('H:i') }}</p>
-                            </div>
-                            <div>
-                                <p><span class="font-medium">Number of People:</span> {{ $reservation->number_of_people }}</p>
-                                <p><span class="font-medium">Status:</span> <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full {{ $reservation->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800' }}">{{ ucfirst($reservation->status) }}</span></p>
-                                <p><span class="font-medium">Reservation Fee:</span> ${{ number_format($reservation->reservation_fee, 2) }}</p>
-                            </div>
-                        </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <h6 class="text-muted">Guests</h6>
+                        <p>{{ $reservation->number_of_people }} person(s)</p>
                     </div>
-
-                    <div>
-                        <h2 class="text-lg font-semibold text-gray-800 mb-3">Contact Information</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <p><span class="font-medium">Name:</span> {{ $reservation->name }}</p>
-                                <p><span class="font-medium">Phone:</span> {{ $reservation->phone }}</p>
-                                @if($reservation->email)
-                                    <p><span class="font-medium">Email:</span> {{ $reservation->email }}</p>
-                                @endif
-                            </div>
-                        </div>
+                    
+                    @if($reservation->special_requests)
+                    <div class="mb-3">
+                        <h6 class="text-muted">Special Requests</h6>
+                        <p>{{ $reservation->special_requests }}</p>
                     </div>
-
-                    @if($reservation->comments)
-                        <div>
-                            <h2 class="text-lg font-semibold text-gray-800 mb-3">Additional Comments</h2>
-                            <p class="text-gray-600">{{ $reservation->comments }}</p>
-                        </div>
                     @endif
-
-                    <div class="flex justify-between items-center pt-6">
-                        <a href="{{ route('home') }}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                            Back to Home
-                        </a>
-                        
-                        @if($reservation->status === 'pending')
-                            <a href="{{ route('reservations.cancel', $reservation) }}" 
-                               class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                               onclick="return confirm('Are you sure you want to cancel this reservation?')">
-                                Cancel Reservation
-                            </a>
-                        @endif
-                    </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    @if($reservation->status === 'pending')
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Reservation Actions</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-3">
+                <a href="{{ route('reservations.payment', $reservation) }}" 
+                   class="btn btn-primary px-4">
+                    <i class="bi bi-credit-card me-2"></i>Make Payment
+                </a>
+                
+                <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" 
+                   class="btn btn-success px-4">
+                    <i class="bi bi-cart-plus me-2"></i>Place Order
+                </a>
+                
+                <form method="POST" action="{{ route('reservations.confirm', $reservation) }}" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-warning px-4">
+                        <i class="bi bi-check-circle me-2"></i>Confirm Reservation
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+    
+    <div class="d-flex justify-content-end">
+        <form method="POST" action="{{ route('reservations.cancel', $reservation) }}" class="mb-4">
+            @csrf
+            <button type="submit" class="btn btn-outline-danger px-4" 
+                    onclick="return confirm('Are you sure you want to cancel this reservation?')">
+                <i class="bi bi-x-circle me-2"></i>Cancel Reservation
+            </button>
+        </form>
+    </div>
+    
+    @if($reservation->status === 'confirmed')
+    <div class="alert alert-info mt-4">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        Your reservation is confirmed. Please arrive 10 minutes before your scheduled time.
+    </div>
+    @endif
 </div>
-@endsection 
+
+<style>
+    .card {
+        border-radius: 10px;
+        border: none;
+    }
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+    }
+    h6.text-muted {
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+</style>
+@endsection

@@ -10,6 +10,11 @@
         </div>
     </form>
 
+    <a href="{{ route('orders.takeaway.create') }}"
+       class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        Place Takeaway Order
+    </a>
+
     @if(isset($phone) && $phone)
         <h3 class="text-xl font-semibold mb-4">Reservations for <span class="text-blue-700">{{ $phone }}</span></h3>
         @if($reservations && count($reservations))

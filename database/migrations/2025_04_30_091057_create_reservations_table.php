@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('reservations', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->nullable();
             $table->string('phone');
             $table->string('email')->nullable();
             $table->date('date');
@@ -18,12 +18,14 @@ return new class extends Migration
             $table->time('end_time');
             $table->integer('number_of_people');
             $table->text('comments')->nullable();
-            $table->decimal('reservation_fee', 10, 2);
-            $table->decimal('cancellation_fee', 10, 2);
-            $table->enum('status', ['pending', 'confirmed', 'cancelled', 'completed'])->default('pending');
+            $table->decimal('reservation_fee', 10, 2)->nullable();
+            $table->decimal('cancellation_fee', 10, 2)->nullable();
+            $table->enum('status', ['pending', 'confirmed', 'cancelled', 'completed'])->default('pending')->nullable();
             $table->foreignId('branch_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
             $table->timestamps();
+            $table->boolean('is_active')->default(true);
+            $table->softDeletes();
         });
     }
 
