@@ -45,11 +45,31 @@ class GrnItem extends Model
 
     public function purchaseOrderDetail()
     {
-        return $this->belongsTo(PurchaseOrderDetail::class, 'po_detail_id');
+        return $this->belongsTo(PurchaseOrderItem::class, 'po_detail_id');
     }
 
     public function item()
     {
         return $this->belongsTo(ItemMaster::class, 'item_code', 'item_code');
+    }
+
+    public function scopeForItem($query, $itemCode)
+    {
+        return $query->where('item_code', $itemCode);
+    }
+
+    public function scopeForBatch($query, $batchNo)
+    {
+        return $query->where('batch_no', $batchNo);
+    }
+
+    public function getIsCompleteAttribute()
+    {
+        return $this->accepted_quantity >= $this->ordered_quantity;
+    }
+
+    public function getIsPartialAttribute()
+    {
+        return $this->accepted_quantity > 0 && $this->accepted_quantity < $this->ordered_quantity;
     }
 }

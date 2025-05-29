@@ -70,4 +70,69 @@ class GrnMaster extends Model
     {
         return $this->belongsTo(User::class, 'verified_by_user_id');
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'Pending');
+    }
+
+    public function scopeVerified($query)
+    {
+        return $query->where('status', 'Verified');
+    }
+
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 'Rejected');
+    }
+
+    public function scopeForBranch($query, $branchId)
+    {
+        return $query->where('branch_id', $branchId);
+    }
+
+    public function scopeForSupplier($query, $supplierId)
+    {
+        return $query->where('supplier_id', $supplierId);
+    }
+
+    public function scopeForOrganization($query, $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
+    }
+    
+    public function scopeDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('received_date', [$startDate, $endDate]);
+    }
+
+    // Status constants
+    const STATUS_PENDING = 'Pending';
+    const STATUS_VERIFIED = 'Verified';
+    const STATUS_REJECTED = 'Rejected';
+
+    public function isPending()
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function isVerified()
+    {
+        return $this->status === self::STATUS_VERIFIED;
+    }
+
+    public function markAsVerified()
+    {
+        $this->update(['status' => self::STATUS_VERIFIED]);
+    }
+
+    public function markAsRejected()
+    {
+        $this->update(['status' => self::STATUS_REJECTED]);
+    }
 }
