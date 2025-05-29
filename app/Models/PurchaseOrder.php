@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Models;
 
@@ -70,6 +70,17 @@ class PurchaseOrder extends Model
     public function grns()
     {
         return $this->hasMany(GrnMaster::class, 'po_id');
+    }
+    public function grnItems()
+    {
+        return $this->hasManyThrough(
+            GrnItem::class,
+            GrnMaster::class,
+            'po_id', // Foreign key on grn_master table
+            'grn_id', // Foreign key on grn_items table
+            'po_id', // Local key on po_master table
+            'grn_id' // Local key on grn_master table
+        );
     }
 
     // Helper methods
