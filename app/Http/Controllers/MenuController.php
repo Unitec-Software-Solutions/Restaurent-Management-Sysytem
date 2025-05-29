@@ -9,6 +9,7 @@ use App\Models\TimeSlot;
 use App\Models\MenuCategory;
 use Illuminate\Support\Facades\DB;
 use App\Models\InventoryCategory;
+use App\Models\ItemCategory;
 
 class MenuController extends Controller
 {
@@ -140,5 +141,13 @@ class MenuController extends Controller
         ]);
     }
 
+    public function showDigitalMenu()
+    {
+        // Fetch categories with their items using Eloquent relationships
+        $categories = ItemCategory::with('items')->get();
+        
+        // Correct view path to match your file structure
+        return view('admin.digital-menu.index', compact('categories'));
+    }
 
 }

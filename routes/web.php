@@ -2,39 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\InventoryDashboardController;
-use App\Http\Controllers\ItemController;
-use App\Http\Controllers\StockController;
-
-
-use App\Http\Controllers\ImageUploadController;
-use App\Http\Controllers\MenuController;
-use App\Http\Controllers\MenuCategoryController;
-use App\Http\Controllers\LogController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\CustomerDashboardController;
 use App\Http\Controllers\ReservationController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\SettingController;
-
-
-// Remove or comment out the default welcome route
-// Route::get('/', function () {
-//     return view('welcome');
-// });
-
-//Redirect root URL to /frontend
-
-
-
-use App\Http\Controllers\ReservationsController;
-use App\Http\Controllers\GoodReceivedNoteController;
-use App\Http\Controllers\GoodReceivedNoteItemController;
-use App\Http\Controllers\InventoryTransactionController;
-
 use App\Http\Controllers\AdminReservationController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminAuthController;
@@ -44,6 +13,7 @@ use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\ItemTransactionController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\DigitalMenuController;
 
 // Public Routes
 Route::get('/', function () {
@@ -96,10 +66,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Authenticated Admin Routes
     Route::middleware('auth:admin')->group(function () {
+        // Dashboard
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
         // Reservations Management
-        Route::resource('reservations', AdminReservationController::class);
+        Route::prefix('reservations')->name('reservations.')->group(function () {
+            Route::get('/', [AdminReservationController::class, 'index'])->name('index');
+            Route::get('/create', [AdminReservationController::class, 'create'])->name('create');
+            Route::post('/', [AdminReservationController::class, 'store'])->name('store');
+            Route::get('/{reservation}', [AdminReservationController::class, 'show'])->name('show');
+            Route::get('/{reservation}/edit', [AdminReservationController::class, 'edit'])->name('edit');
+            Route::put('/{reservation}', [AdminReservationController::class, 'update'])->name('update');
+            Route::delete('/{reservation}', [AdminReservationController::class, 'destroy'])->name('destroy');
+        });
 
         // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
@@ -151,7 +130,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
                 Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-                // Route::get('/transactions', [ItemTransactionController::class, 'transactions'])->name('transactions');
                 Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
                 Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
                 Route::put('/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->name('update');
@@ -161,10 +139,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
+
             // Categories
             Route::resource('categories', ItemCategoryController::class);
         });
 
+        // Suppliers Management
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
             Route::get('/', [SupplierController::class, 'index'])->name('index');
             Route::get('/create', [SupplierController::class, 'create'])->name('create');
@@ -177,13 +157,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->name('grns');
         });
 
+        // Digital Menu Management
+        Route::prefix('digital-menu')->name('digital-menu.')->group(function () {
+            Route::get('/', [DigitalMenuController::class, 'index'])->name('index');
+            Route::get('/create', [DigitalMenuController::class, 'create'])->name('create');
+            Route::post('/', [DigitalMenuController::class, 'store'])->name('store');
+            Route::get('/{digitalMenu}', [DigitalMenuController::class, 'show'])->name('show');
+            Route::get('/{digitalMenu}/edit', [DigitalMenuController::class, 'edit'])->name('edit');
+            Route::put('/{digitalMenu}', [DigitalMenuController::class, 'update'])->name('update');
+            Route::delete('/{digitalMenu}', [DigitalMenuController::class, 'destroy'])->name('destroy');
+        });
 
-        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
-        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
-        Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
-        Route::get('/web-test', function () {return view('admin.testpage');})->name('web-test.index');
-        Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
-        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
+        // Other Admin Routes
+        Route::get('/testpage', function () { return view('admin.testpage'); })->name('testpage');
+        Route::get('/reports', function () { return view('admin.reports.index'); })->name('reports.index');
+        Route::get('/customers', function () { return view('admin.customers.index'); })->name('customers.index');
+        Route::get('/web-test', function () { return view('admin.testpage'); })->name('web-test.index');
+        Route::get('/settings', function () { return view('admin.settings.index'); })->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
     });
 });

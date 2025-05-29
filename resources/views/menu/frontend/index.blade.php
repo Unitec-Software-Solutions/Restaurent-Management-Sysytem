@@ -19,7 +19,7 @@
             <a href="{{ route('reports') }}" class="bg-blue-700 py-2 px-4 rounded hover:bg-blue-600 text-white no-underline">Reports</a>
             <a href="{{ route('customers') }}" class="bg-blue-700 py-2 px-4 rounded hover:bg-blue-600 text-white no-underline">Customer Management</a>
             <div class="mt-auto">
-                <a href="{{ route('digital-menu') }}" class="bg-blue-600 w-full py-2 px-4 rounded hover:bg-blue-500 text-white no-underline">Digital Menu</a>
+                <a href="{{ route('admin.') }}" class="bg-blue-600 w-full py-2 px-4 rounded hover:bg-blue-500 text-white no-underline">Digital Menu</a>
                 <a href="{{ route('settings') }}" class="bg-blue-600 w-full py-2 px-4 rounded hover:bg-blue-500 text-white no-underline mt-2">Settings</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf

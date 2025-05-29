@@ -24,7 +24,7 @@ class ItemCategory extends Model
      */
     public function items()
     {
-        return $this->hasMany(ItemMaster::class, 'item_category_id');
+        return $this->hasMany(ItemMaster::class, 'category_id');
     }
 
     /**

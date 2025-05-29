@@ -10,13 +10,7 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        $admin = Auth::user();
-
-        if (!$admin) {
-            return redirect()->route('admin.login')->with('error', 'Please log in to access the dashboard.');
-        }
-
-        return view('admin.dashboard', compact('admin'));
+        return view('admin.dashboard');
     }
 
     public function index()

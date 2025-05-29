@@ -1,36 +1,48 @@
-@extends('layouts.admin')
+@extends('admin.layouts.app')
 
 @section('content')
-<div >
-    <div class="p-4 rounded-lg">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Digital Menu Management - Sample Page</h1>
-            <a href="#" class="bg-[#515DEF] text-white px-4 py-2 rounded-lg hover:bg-[#6A71F0] transition">
-                Add Menu Item
-            </a>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
+            <!-- Sidebar content -->
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Menu Category Cards -->
-            <div class="bg-white rounded-lg shadow overflow-hidden">
-                <div class="p-4 bg-gray-50 border-b">
-                    <h2 class="text-lg font-semibold text-gray-800">Appetizers</h2>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ml-sm-auto col-lg-10 px-md-4 py-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Digital Menu</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{{ route('admin.digital-menu.create') }}" class="btn btn-primary">Add Menu Item</a>
                 </div>
-                <ul class="divide-y divide-gray-200">
-                    <li class="p-4 hover:bg-gray-50">
-                        <div class="flex justify-between">
-                            <div>
-                                <h3 class="font-medium">Bruschetta</h3>
-                                <p class="text-sm text-gray-500">Tomato, basil, garlic on toasted bread</p>
-                            </div>
-                            <span class="font-medium">$8.99</span>
-                        </div>
-                    </li>
-                    <!-- More menu items would go here -->
-                </ul>
             </div>
-            
-            <!-- More category cards would go here -->
+
+            <!-- Display Grouped Items -->
+            @foreach($groupedItems as $categoryName => $items)
+                <div class="mb-5">
+                    <h4 class="mb-3">{{ $categoryName }}</h4>
+                    <div class="row">
+                        @foreach($items as $item)
+                            <div class="col-md-3 mb-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ $item->item_name }}</h5>
+                                        <p class="card-text">Rs. {{ number_format($item->selling_price, 2) }}</p>
+                                        <div class="d-flex justify-content-between">
+                                            <a href="{{ route('admin.digital-menu.edit', $item->id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                            <form action="{{ route('admin.digital-menu.destroy', $item->id) }}" method="POST">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
         </div>
     </div>
 </div>

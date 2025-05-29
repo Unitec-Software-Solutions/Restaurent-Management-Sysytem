@@ -85,8 +85,6 @@ class ItemMaster extends Model
         return asset('https://placehold.co/200x200/png');
     }
 
-
-
     /**
      * Scope: Active Items Only (not soft deleted)
      */

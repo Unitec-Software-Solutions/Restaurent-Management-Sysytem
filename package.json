@@ -3,8 +3,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite",
-        "start": "node server.cjs"
+        "dev": "vite"
     },
     "devDependencies": {
         "@popperjs/core": "^2.11.6",
@@ -18,38 +17,7 @@
         "vite": "^6.2.4"
     },
     "dependencies": {
-<<<<<<< HEAD
-
-        "express": "^4.18.2",
-        "flowbite": "^3.1.2",
-        "react-icons": "^5.5.0",
-        "react-router-dom": "^7.6.0"
-    },
-    "name": "restaurent-management-sysytem",
-    "version": "1.0.0",
-    "description": "Restaurant-Management-System A comprehensive restaurant management platform for seamless reservations, order processing, inventory control, and multi-branch operations. Built to streamline dine-in, takeaway, kitchen workflows, and customer engagement with real-time tracking.",
-    "main": "App.js",
-    "directories": {
-        "test": "tests"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/Unitec-Software-Solutions/Restaurent-Management-Sysytem.git"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "bugs": {
-        "url": "https://github.com/Unitec-Software-Solutions/Restaurent-Management-Sysytem/issues"
-    },
-    "homepage": "https://github.com/Unitec-Software-Solutions/Restaurent-Management-Sysytem#readme"
-
         "flatpickr": "^4.6.13",
         "flowbite": "^3.1.2"
     }
-
-=======
-        "flowbite": "^3.1.2"
-    }
->>>>>>> c02d7fb597fa15c4f8281ddcdccdaa9970142993
 }

@@ -38,6 +38,12 @@
             <a href="{{ route('admin.reports.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Reports</a>
             <a href="{{ route('admin.orders.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Orders</a> --}}
 
+        <!-- Add this where you want the Digital Menu link to appear -->
+        <a href="{{ route('admin.digital-menu.index') }}" class="nav-link">
+            <i class="nav-icon fas fa-digital-tachograph"></i>
+            <p>Digital Menu</p>
+        </a>
+
         </div>
     </div>
 </div>

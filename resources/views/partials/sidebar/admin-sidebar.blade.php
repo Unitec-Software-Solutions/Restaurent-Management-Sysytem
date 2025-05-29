@@ -28,6 +28,7 @@
                         ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart'], // replace with the correct route
                         ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3'],
                         ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users'],
+
                         
                     ];
                 @endphp
@@ -58,7 +59,7 @@
         {{-- Sticky bottom section --}}
         <div class="px-4 py-4 border-t border-[#6A71F0]">
             @php
-                // You can add more items here as needed  Add Bottom navigation items for the sidebar
+        // You can add more items here as needed  Add Bottom navigation items for the sidebar
                 $bottomNavItems = [
                     ['title' => 'Digital Menu', 'route' => 'admin.digital-menu.index', 'icon' => 'menu'],
                     ['title' => 'Settings', 'route' => 'admin.settings.index', 'icon' => 'settings'],

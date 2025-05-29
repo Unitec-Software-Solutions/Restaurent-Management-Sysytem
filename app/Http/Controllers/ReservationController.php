@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-<<<<<<< HEAD
 use Illuminate\Http\Request;
 
 class ReservationController extends Controller
@@ -10,20 +9,8 @@ class ReservationController extends Controller
     public function index()
     {
         return view('reservations.index'); // Ensure this view exists
-=======
-use App\Models\Reservation;
-use App\Models\Branch;
-use App\Models\Payment;
-use App\Models\Waitlist;
-use App\Models\Table;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+    }
 
-class ReservationController extends Controller
-{
     public function create(Request $request)
     {
         $branches = Branch::where('is_active', true)->get();
@@ -33,7 +20,6 @@ class ReservationController extends Controller
         ]);
     }
 
-    
     public function store(Request $request)
     {
         DB::beginTransaction();
@@ -351,6 +337,4 @@ class ReservationController extends Controller
         // You can customize this view as needed
         return view('reservations.payment', compact('reservation'));
     }
-
-    
 }
