@@ -118,7 +118,6 @@ class AdminReservationController extends Controller
 
 public function update(Request $request, Reservation $reservation)
 {
-    // Authorization: Only allow admins of the same branch
     if ($reservation->branch_id !== auth('admin')->user()->branch_id) {
         abort(403);
     }
@@ -135,8 +134,8 @@ public function update(Request $request, Reservation $reservation)
             'number_of_people' => 'required|integer|min:1',
             'assigned_table_ids' => 'nullable|array',
             'assigned_table_ids.*' => 'exists:tables,id',
-            'employee_id' => 'nullable|exists:employees,id','status' => 'required|in:pending,confirmed,cancelled',
-            'send_notification' => 'nullable|in:none,email,sms,both',
+            'employee_id' => 'nullable|exists:employees,id',
+            'status' => 'required|in:pending,confirmed,cancelled',
         ]);
 
         // Time validation
@@ -202,20 +201,23 @@ public function update(Request $request, Reservation $reservation)
             'number_of_people' => $validated['number_of_people'],
             'reservation_fee' => $reservationFee,
             'cancellation_fee' => $cancellationFee,
-            'employee_id' => $validated['employee_id'],
+            'employee_id' => $validated['employee_id'], // Steward assignment
             'status' => $validated['status'],
-            'send_notification' => $validated['send_notification'],
         ]);
         $reservation->tables()->sync($validated['assigned_table_ids'] ?? []);
 
-        // Send notification if status changed
+        // Comment out email notifications
+        /*
         if ($reservation->wasChanged('status')) {
-            if ($validated['status'] === 'confirmed') {
-                Mail::to($reservation->email)->send(new \App\Mail\ReservationConfirmed($reservation));
-            } elseif ($validated['status'] === 'cancelled') {
-                Mail::to($reservation->email)->send(new \App\Mail\ReservationCancellationMail($reservation));
+            if ($reservation->status === 'confirmed') {
+                Mail::to($reservation->email)->send(new ReservationConfirmed($reservation));
+            } elseif ($reservation->status === 'cancelled') {
+                Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
+            } elseif ($reservation->status === 'rejected') {
+                Mail::to($reservation->email)->send(new ReservationRejected($reservation));
             }
         }
+        */
 
         DB::commit();
         return redirect()->route('admin.reservations.index')->with('success', 'Reservation updated.');
@@ -387,63 +389,82 @@ public function update(Request $request, Reservation $reservation)
     }
     public function assignSteward(Request $request, Reservation $reservation)
 {
-    $validated = $request->validate([
-        'employee_id' => 'required|exists:employees,id',
-    ]);
+    try {
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+        ]);
 
-    $reservation->update(['employee_id' => $validated['employee_id']]);
-    $employee = Employee::find($validated['employee_id']);
+        $reservation->update(['employee_id' => $validated['employee_id']]);
+        $employee = \App\Models\Employee::find($validated['employee_id']);
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Steward assigned successfully',
-        'steward_name' => $employee->name
-    ]);
-}
-
-
-// Add checkIn method
-public function checkIn(Reservation $reservation)
-{
-    if ($reservation->check_in_time) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Steward assigned successfully',
+            'steward_name' => $employee ? $employee->name : null
+        ]);
+    } catch (\Exception $e) {
         return response()->json([
             'success' => false,
-            'message' => 'Reservation already checked in'
-        ], 400);
+            'message' => 'Failed to assign steward: ' . $e->getMessage()
+        ], 500);
     }
+}
 
-    $reservation->update(['check_in_time' => now()]);
+public function checkIn(Reservation $reservation)
+{
+    try {
+        if ($reservation->check_in_time) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reservation already checked in'
+            ], 400);
+        }
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Reservation checked in successfully',
-        'check_in_time' => $reservation->fresh()->check_in_time->format('Y-m-d H:i:s'),
-        'check_out_time' => $reservation->check_out_time
-    ]);
+        $reservation->update(['check_in_time' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reservation checked in successfully',
+            'check_in_time' => $reservation->fresh()->check_in_time->format('Y-m-d H:i:s'),
+            'check_out_time' => $reservation->check_out_time
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to check in: ' . $e->getMessage()
+        ], 500);
+    }
 }
 
 public function checkOut(Reservation $reservation)
 {
-    if (!$reservation->check_in_time) {
+    try {
+        if (!$reservation->check_in_time) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reservation must be checked in before checkout'
+            ], 400);
+        }
+
+        if ($reservation->check_out_time) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reservation already checked out'
+            ], 400);
+        }
+
+        $reservation->update(['check_out_time' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reservation checked out successfully',
+            'check_out_time' => $reservation->fresh()->check_out_time->format('Y-m-d H:i:s')
+        ]);
+    } catch (\Exception $e) {
         return response()->json([
             'success' => false,
-            'message' => 'Reservation must be checked in before checkout'
-        ], 400);
+            'message' => 'Failed to check out: ' . $e->getMessage()
+        ], 500);
     }
-
-    if ($reservation->check_out_time) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Reservation already checked out'
-        ], 400);
-    }
-
-    $reservation->update(['check_out_time' => now()]);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Reservation checked out successfully',
-        'check_out_time' => $reservation->fresh()->check_out_time->format('Y-m-d H:i:s')
-    ]);
 }
 }
