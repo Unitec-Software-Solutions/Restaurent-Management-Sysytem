@@ -82,6 +82,7 @@
         function toggleLogoutModal() {
             const modal = document.getElementById('logoutModal');
             modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
         }
     </script>
     <!-- Scripts -->
