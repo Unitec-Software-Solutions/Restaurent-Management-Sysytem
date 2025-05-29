@@ -190,10 +190,10 @@
                                             ->orWhere('role', 'waiter')
                                             ->get();
                                     @endphp
-                                    <select name="employee_id" id="employee-select" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <select name="steward_id" id="steward-select" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="">Select Steward</option>
                                         @foreach($stewards as $steward)
-                                            <option value="{{ $steward->id }}" {{ $reservation->employee_id == $steward->id ? 'selected' : '' }}>
+                                            <option value="{{ $steward->id }}" {{ $reservation->steward_id == $steward->id ? 'selected' : '' }}>
                                                 {{ $steward->name }}
                                             </option>
                                         @endforeach
@@ -282,9 +282,9 @@
 
         // Assign Steward Button
         $('#assign-steward-btn').on('click', function() {
-            const employeeId = $('#employee-select').val();
+            const stewardId = $('#steward-select').val();
             
-            if (!employeeId) {
+            if (!stewardId) {
                 showMessage('Please select a steward', 'error');
                 return;
             }
@@ -293,7 +293,7 @@
                 url: "{{ route('admin.reservations.assign-steward', $reservation) }}",
                 method: 'POST',
                 data: {
-                    employee_id: employeeId
+                    steward_id: stewardId
                 },
                 success: function(response) {
                     if (response.success) {
