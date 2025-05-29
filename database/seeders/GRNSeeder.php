@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\GrnMaster;
 use App\Models\GrnItem;
+use App\Models\ItemMaster;
 use App\Models\PurchaseOrder;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -33,13 +34,23 @@ class GRNSeeder extends Seeder
                 'invoice_number' => 'INV-' . Str::random(8),
                 'status' => $this->getGrnStatus($po->status),
                 'notes' => 'Seeded GRN record',
-                'is_active' => true
+                'is_active' => true,
+                'created_by' => 1,
+                'total_amount' => 0
             ]);
 
             $total = 0;
 
             // Create GRN items based on PO items
             foreach ($po->items as $poItem) {
+                // Find corresponding item from item_master
+                $item = ItemMaster::where('item_code', $poItem->item_code)->first();
+
+                if (!$item) {
+                    $this->command->warn("⚠️ Skipping item with code {$poItem->item_code} - Item not found in master");
+                    continue;
+                }
+
                 $receivedQty = $this->calculateReceivedQuantity($poItem->quantity);
                 $acceptedQty = $this->calculateAcceptedQuantity($receivedQty);
                 $rejectedQty = $receivedQty - $acceptedQty;
@@ -49,6 +60,7 @@ class GRNSeeder extends Seeder
                 GrnItem::create([
                     'grn_id' => $grn->grn_id,
                     'po_detail_id' => $poItem->po_detail_id,
+                    'item_id' => $item->id, // Add the item_id from item_master
                     'item_code' => $poItem->item_code,
                     'batch_no' => 'BTH-' . Str::random(6),
                     'ordered_quantity' => $poItem->quantity,
