@@ -104,7 +104,7 @@ class Reservation extends Model
 
     public function steward()
     {
-        return $this->belongsTo(\App\Models\Employee::class, 'steward_id');
+        return $this->belongsTo(Employee::class, 'steward_id');
     }
 
     public function employee()

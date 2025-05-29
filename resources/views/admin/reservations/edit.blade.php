@@ -171,8 +171,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Current Steward</label>
                             <div class="flex items-center">
                                 <span id="current-steward" class="px-3 py-2 bg-gray-100 rounded-md">
-                                    @if($reservation->employee)
-                                        {{ $reservation->employee->name }}
+                                    @if($reservation->steward)
+                                        {{ $reservation->steward->name }}
                                     @else
                                         Not assigned
                                     @endif
