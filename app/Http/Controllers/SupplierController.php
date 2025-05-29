@@ -23,26 +23,26 @@ class SupplierController extends Controller
     protected function checkOrganization(Supplier $supplier)
     {
         if ($supplier->organization_id !== $this->getOrganizationId()) {
-            abort(403, 'Unauthorized access to supplier Details');
+            abort(403, 'Unauthorized access to supplier details');
         }
     }
 
- public function index()
+    public function index()
     {
         $orgId = $this->getOrganizationId();
-        
-        $suppliers = Supplier::where('organization_id', $orgId) // Added organization filter
-            ->when(request('search'), function($query) {
-                $query->where(function($q) {
+
+        $suppliers = Supplier::forOrganization($orgId)
+            ->when(request('search'), function ($query) {
+                $query->where(function ($q) {
                     $search = '%' . request('search') . '%';
                     $q->where('name', 'like', $search)
-                      ->orWhere('supplier_id', 'like', $search)
-                      ->orWhere('contact_person', 'like', $search)
-                      ->orWhere('phone', 'like', $search)
-                      ->orWhere('email', 'like', $search);
+                        ->orWhere('supplier_id', 'like', $search)
+                        ->orWhere('contact_person', 'like', $search)
+                        ->orWhere('phone', 'like', $search)
+                        ->orWhere('email', 'like', $search);
                 });
             })
-            ->when(request('status'), function($query) {
+            ->when(request('status'), function ($query) {
                 $status = request('status') === 'active';
                 $query->where('is_active', $status);
             })
@@ -82,21 +82,33 @@ class SupplierController extends Controller
     public function show(Supplier $supplier)
     {
         $this->checkOrganization($supplier);
+        $orgId = $this->getOrganizationId();
+
         $supplier->load([
-            'purchaseOrders' => function($query) {
-                $query->latest()->take(5);
+            'purchaseOrders' => function ($query) use ($orgId) {
+                $query->where('organization_id', $orgId)
+                    ->latest()
+                    ->take(5);
             },
-            'transactions' => function($query) {
-                $query->latest()->take(5);
+            'transactions' => function ($query) use ($orgId) {
+                $query->where('organization_id', $orgId)
+                    ->latest()
+                    ->take(5);
             }
         ]);
 
-        $totalPurchases = $supplier->purchaseOrders()->sum('total_amount');
-        $totalPaid = $supplier->purchaseOrders()->sum('paid_amount');
+        $totalPurchases = $supplier->purchaseOrders()
+            ->where('organization_id', $orgId)
+            ->sum('total_amount');
+
+        $totalPaid = $supplier->purchaseOrders()
+            ->where('organization_id', $orgId)
+            ->sum('paid_amount');
+
         $pendingPayment = $totalPurchases - $totalPaid;
-        
+
         $stats = [
-            'total_orders' => $supplier->purchaseOrders()->count(),
+            'total_orders' => $supplier->purchaseOrders()->where('organization_id', $orgId)->count(),
             'total_purchases' => $totalPurchases,
             'total_paid' => $totalPaid,
             'pending_payment' => $pendingPayment
@@ -152,7 +164,30 @@ class SupplierController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('admin.suppliers.purchase-orders', compact('supplier', 'purchaseOrders'));
+        // return view('admin.suppliers.purchase-orders', compact('supplier', 'purchaseOrders'));
+    }
+    // Get pending POs for a supplier
+    public function pendingPos(Supplier $supplier)
+    {
+        $this->checkOrganization($supplier);
+
+        $pos = PurchaseOrder::where('supplier_id', $supplier->id)
+            ->where('status', '!=', 'Cancelled')
+            ->get()
+            ->map(function ($po) {
+                return [
+                    'po_id' => $po->po_id,
+                    'po_number' => $po->po_number,
+                    'order_date' => $po->order_date->format('Y-m-d'),
+                    'total_amount' => $po->total_amount,
+                    'paid_amount' => $po->paid_amount,
+                    'due_amount' => $po->getBalanceAmount(),
+                    'due_date' => $po->expected_delivery_date ? $po->expected_delivery_date->format('Y-m-d') : null,
+                    'status' => $po->status
+                ];
+            });
+
+        return response()->json($pos);
     }
 
     public function goodsReceived(Supplier $supplier)
@@ -163,6 +198,35 @@ class SupplierController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('admin.suppliers.grns', compact('supplier', 'grns'));
+        // return view('admin.suppliers.grns', compact('supplier', 'grns'));
+    }
+
+    // Get pending GRNs for a supplier
+    public function pendingGrns(Supplier $supplier)
+    {
+        $this->checkOrganization($supplier);
+
+        $grns = GrnMaster::where('supplier_id', $supplier->id)
+            ->where(function ($query) {
+                $query->where('status', GrnMaster::STATUS_VERIFIED)
+                    ->orWhere('status', GrnMaster::STATUS_PENDING);
+            })
+            ->with(['purchaseOrder'])
+            ->get()
+            ->map(function ($grn) {
+                return [
+                    'grn_id' => $grn->grn_id,
+                    'grn_number' => $grn->grn_number,
+                    'po_number' => $grn->purchaseOrder->po_number ?? null,
+                    'received_date' => $grn->received_date->format('Y-m-d'),
+                    'total_amount' => $grn->total_amount,
+                    'paid_amount' => $grn->paid_amount ?? 0,
+                    'due_amount' => $grn->total_amount - ($grn->paid_amount ?? 0),
+                    'due_date' => $grn->received_date->addDays(30)->format('Y-m-d'), // Example 30-day terms
+                    'status' => $grn->status
+                ];
+            });
+
+        return response()->json($grns);
     }
 }
