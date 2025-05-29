@@ -13,7 +13,7 @@
                 <div class="flex items-center space-x-3">
                     <a href="{{ route('admin.suppliers.edit', $supplier) }}" 
                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
-                        <i class="fas fa-edit mr-2"></i> Edit
+                        <i class="fas fa-edit mr-2"></i> Update Supplier
                     </a>
                     <a href="{{ route('admin.suppliers.index') }}" 
                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
