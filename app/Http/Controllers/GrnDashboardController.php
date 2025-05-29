@@ -25,11 +25,31 @@ class GrnDashboardController extends Controller
     {
         $orgId = $this->getOrganizationId();
         
+        // Set default dates if not provided
+        $startDate = $request->input('start_date', Carbon::now()->subMonth()->format('Y-m-d'));
+        $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
+        
         // Base query with relationships
-        $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser'])
+        $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder'])
             ->where('organization_id', $orgId);
 
         // Apply filters
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('grn_number', 'like', "%{$search}%")
+                  ->orWhere('delivery_note_number', 'like', "%{$search}%")
+                  ->orWhere('invoice_number', 'like', "%{$search}%")
+                  ->orWhereHas('supplier', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('purchaseOrder', function($q) use ($search) {
+                      $q->where('po_number', 'like', "%{$search}%");
+                  });
+            });
+        }
+
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('received_date', [
                 $request->start_date,
@@ -37,7 +57,7 @@ class GrnDashboardController extends Controller
             ]);
         }
 
-        if ($request->filled('status')) {
+        if ($request->filled('status') && $request->status != 'all') {
             $query->where('status', $request->status);
         }
 
@@ -49,20 +69,30 @@ class GrnDashboardController extends Controller
             $query->where('supplier_id', $request->supplier_id);
         }
 
-        // Get paginated results
-        $grns = $query->latest('received_date')->paginate(10);
+        // Sorting
+        $sortBy = $request->input('sort_by', 'received_date');
+        $sortDir = $request->input('sort_dir', 'desc');
+        $query->orderBy($sortBy, $sortDir);
 
-        // Get summary statistics
+        // Get paginated results
+        $grns = $query->paginate(10);
+
+        // Get summary statistics (using a fresh query to avoid pagination interference)
+        $statsQuery = GrnMaster::where('organization_id', $orgId);
+        
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $statsQuery->whereBetween('received_date', [$request->start_date, $request->end_date]);
+        }
+        
         $stats = [
-            'total_grns' => $query->count(),
-            'pending_verification' => $query->where('status', GrnMaster::STATUS_PENDING)->count(),
-            'verified_grns' => $query->where('status', GrnMaster::STATUS_VERIFIED)->count(),
-            'rejected_grns' => $query->where('status', GrnMaster::STATUS_REJECTED)->count(),
-            'total_amount' => $query->sum('total_amount'),
-            'monthly_amount' => $query->whereBetween('received_date', [
-                now()->startOfMonth(),
-                now()->endOfMonth()
-            ])->sum('total_amount'),
+            'total_grns' => $statsQuery->count(),
+            'pending_verification' => $statsQuery->clone()->where('status', GrnMaster::STATUS_PENDING)->count(),
+            'verified_grns' => $statsQuery->clone()->where('status', GrnMaster::STATUS_VERIFIED)->count(),
+            'rejected_grns' => $statsQuery->clone()->where('status', GrnMaster::STATUS_REJECTED)->count(),
+            'total_amount' => $statsQuery->clone()->sum('total_amount'),
+            'monthly_amount' => $statsQuery->clone()
+                ->whereBetween('received_date', [now()->startOfMonth(), now()->endOfMonth()])
+                ->sum('total_amount'),
         ];
 
         // Get filter options
@@ -73,7 +103,9 @@ class GrnDashboardController extends Controller
             'grns',
             'stats',
             'branches',
-            'suppliers'
+            'suppliers',
+            'startDate',
+            'endDate'
         ));
     }
 
@@ -116,14 +148,14 @@ class GrnDashboardController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'supplier_id' => 'required|exists:suppliers,id',
             'received_date' => 'required|date',
-            'delivery_note_number' => 'nullable|string',
-            'invoice_number' => 'nullable|string',
+            'delivery_note_number' => 'nullable|string|max:100',
+            'invoice_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.item_code' => 'required|exists:item_master,item_code',
             'items.*.po_detail_id' => 'nullable|exists:po_details,po_detail_id',
-            'items.*.batch_no' => 'nullable|string',
+            'items.*.batch_no' => 'nullable|string|max:50',
             'items.*.ordered_quantity' => 'required|numeric|min:0',
             'items.*.received_quantity' => 'required|numeric|min:0',
             'items.*.accepted_quantity' => 'required|numeric|min:0|lte:items.*.received_quantity',
@@ -131,7 +163,7 @@ class GrnDashboardController extends Controller
             'items.*.buying_price' => 'required|numeric|min:0',
             'items.*.manufacturing_date' => 'nullable|date',
             'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
-            'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string'
+            'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string|max:255'
         ]);
 
         DB::beginTransaction();
@@ -185,7 +217,8 @@ class GrnDashboardController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Error creating GRN: ' . $e->getMessage());
+            return back()->withInput()
+                ->with('error', 'Error creating GRN: ' . $e->getMessage());
         }
     }
 
@@ -226,15 +259,14 @@ class GrnDashboardController extends Controller
 
         DB::beginTransaction();
         try {
-            if ($validated['status'] === GrnMaster::STATUS_VERIFIED) {
-                $grn->markAsVerified();
-                
-                // Update PO status if needed
-                if ($grn->po_id) {
-                    $this->updatePurchaseOrderStatus($grn->purchaseOrder);
-                }
-            } else {
-                $grn->markAsRejected($validated['notes']);
+            $grn->verified_by_user_id = auth()->id();
+            $grn->verified_at = now();
+            $grn->status = $validated['status'];
+            $grn->notes = $validated['notes'] ?? $grn->notes;
+            $grn->save();
+            
+            if ($validated['status'] === GrnMaster::STATUS_VERIFIED && $grn->po_id) {
+                $this->updatePurchaseOrderStatus($grn->purchaseOrder);
             }
 
             DB::commit();
@@ -253,13 +285,16 @@ class GrnDashboardController extends Controller
             ->get()
             ->every(function ($item) {
                 $receivedQty = $item->grnItems()
-                    ->where('status', GrnMaster::STATUS_VERIFIED)
+                    ->whereHas('grn', function($q) {
+                        $q->where('status', GrnMaster::STATUS_VERIFIED);
+                    })
                     ->sum('accepted_quantity');
                 return $receivedQty >= $item->quantity;
             });
 
         if ($allItemsReceived) {
-            $po->markAsReceived();
+            $po->status = 'Received';
+            $po->save();
         }
     }
 }
