@@ -80,6 +80,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{reservation}', [AdminReservationController::class, 'destroy'])->name('destroy');
         });
 
+        // Steward and check-in/check-out routes
+        Route::post('reservations/{reservation}/assign-steward', [AdminReservationController::class, 'assignSteward'])
+        ->name('reservations.assign-steward');
+        Route::post('reservations/{reservation}/check-in', [AdminReservationController::class, 'checkIn'])
+        ->name('reservations.check-in');
+        Route::post('reservations/{reservation}/check-out', [AdminReservationController::class, 'checkOut'])
+        ->name('reservations.check-out');
+       
+
         // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/', [OrderController::class, 'adminIndex'])->name('index');
@@ -176,4 +185,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/settings', function () { return view('admin.settings.index'); })->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
     });
+});
+
+Route::get('/test-email', function() {
+    $reservation = \App\Models\Reservation::first();
+    Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
+    return 'Email sent!';
 });
