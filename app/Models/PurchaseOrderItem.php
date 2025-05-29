@@ -79,4 +79,8 @@ class PurchaseOrderItem extends Model
     {
         $this->update(['po_status' => self::STATUS_RECEIVED]);
     }
+    public function grnItems()
+    {
+        return $this->hasMany(GrnItem::class, 'po_detail_id');
+    }
 }
