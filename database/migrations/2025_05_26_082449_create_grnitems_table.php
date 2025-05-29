@@ -10,8 +10,9 @@ return new class extends Migration
     {
         Schema::create('grn_items', function (Blueprint $table) {
             $table->id('grn_item_id');
-            $table->foreignId('grn_id')->constrained('grn_master', 'grn_id')->onDelete('cascade');
+            $table->foreignId('grn_id')->constrained('grn_master', 'grn_id')->cascadeOnDelete();
             $table->foreignId('po_detail_id')->nullable()->constrained('po_details', 'po_detail_id');
+            $table->foreignId('item_id')->constrained('item_master', 'id')->cascadeOnDelete();
             $table->string('item_code');
             $table->string('batch_no')->nullable();
             $table->decimal('ordered_quantity', 12, 2)->default(0);
@@ -25,8 +26,8 @@ return new class extends Migration
             $table->string('rejection_reason')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-            
-            // Foreign key for item_code
+
+            // Add index for item_code 
             $table->foreign('item_code')->references('item_code')->on('item_master');
         });
     }
