@@ -61,7 +61,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // Authentication
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login']);
-    Route::get('/logout', [AdminAuthController::class, 'adminLogoutPage'])->name('logout.page');
+    // Route::get('/logout', [AdminAuthController::class, 'adminLogoutPage'])->name('logout.page'); // replaced by logout modal
     Route::post('/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
 
     // Authenticated Admin Routes
