@@ -134,8 +134,8 @@ public function update(Request $request, Reservation $reservation)
             'number_of_people' => 'required|integer|min:1',
             'assigned_table_ids' => 'nullable|array',
             'assigned_table_ids.*' => 'exists:tables,id',
-            'employee_id' => 'nullable|exists:employees,id',
             'status' => 'required|in:pending,confirmed,cancelled',
+            'steward_id' => 'nullable|exists:employees,id', // use employees table if that's where stewards are
         ]);
 
         // Time validation
@@ -201,8 +201,8 @@ public function update(Request $request, Reservation $reservation)
             'number_of_people' => $validated['number_of_people'],
             'reservation_fee' => $reservationFee,
             'cancellation_fee' => $cancellationFee,
-            'employee_id' => $validated['employee_id'], // Steward assignment
             'status' => $validated['status'],
+            'steward_id' => $validated['steward_id'], // ONLY THIS, not employee_id
         ]);
         $reservation->tables()->sync($validated['assigned_table_ids'] ?? []);
 
@@ -387,15 +387,15 @@ public function update(Request $request, Reservation $reservation)
             SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
         }
     }
-    public function assignSteward(Request $request, Reservation $reservation)
+public function assignSteward(Request $request, Reservation $reservation)
 {
     try {
         $validated = $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'steward_id' => 'required|exists:employees,id', // use employees table
         ]);
 
-        $reservation->update(['employee_id' => $validated['employee_id']]);
-        $employee = \App\Models\Employee::find($validated['employee_id']);
+        $reservation->update(['steward_id' => $validated['steward_id']]);
+        $employee = \App\Models\Employee::find($validated['steward_id']);
 
         return response()->json([
             'success' => true,
@@ -412,14 +412,14 @@ public function update(Request $request, Reservation $reservation)
 
 public function checkIn(Reservation $reservation)
 {
-    try {
-        if ($reservation->check_in_time) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Reservation already checked in'
-            ], 400);
-        }
+    if ($reservation->check_in_time) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Reservation already checked in'
+        ], 400);
+    }
 
+    try {
         $reservation->update(['check_in_time' => now()]);
 
         return response()->json([
@@ -438,21 +438,21 @@ public function checkIn(Reservation $reservation)
 
 public function checkOut(Reservation $reservation)
 {
+    if (!$reservation->check_in_time) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Reservation must be checked in before checkout'
+        ], 400);
+    }
+
+    if ($reservation->check_out_time) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Reservation already checked out'
+        ], 400);
+    }
+
     try {
-        if (!$reservation->check_in_time) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Reservation must be checked in before checkout'
-            ], 400);
-        }
-
-        if ($reservation->check_out_time) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Reservation already checked out'
-            ], 400);
-        }
-
         $reservation->update(['check_out_time' => now()]);
 
         return response()->json([
