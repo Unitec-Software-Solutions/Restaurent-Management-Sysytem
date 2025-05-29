@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
 
 class PurchaseOrderSeeder extends Seeder
 {
+    private $poCounter = []; // Track PO counts per day to ensure uniqueness
+
     public function run(): void
     {
         $startDate = Carbon::now()->subMonths(3);
@@ -31,7 +33,13 @@ class PurchaseOrderSeeder extends Seeder
             // Create POs for last 3 months
             for ($i = 0; $i < 90; $i++) {
                 $orderDate = $startDate->copy()->addDays($i);
+                $dateKey = $orderDate->format('Ymd');
                 
+                // Initialize counter for this date if not exists
+                if (!isset($this->poCounter[$dateKey])) {
+                    $this->poCounter[$dateKey] = 1;
+                }
+
                 // Create 1-3 POs per day
                 $dailyPOs = rand(1, 3);
                 
@@ -44,7 +52,7 @@ class PurchaseOrderSeeder extends Seeder
                         'organization_id' => $orgId,
                         'supplier_id' => $supplier->id,
                         'user_id' => rand(1, 5),
-                        'po_number' => 'PO-' . $orderDate->format('Ymd') . '-' . Str::padLeft(rand(1, 999), 3, '0'),
+                        'po_number' => 'PO-' . $dateKey . '-' . Str::uuid()->toString(),
                         'order_date' => $orderDate,
                         'expected_delivery_date' => $orderDate->copy()->addDays(rand(1, 5)),
                         'status' => $this->getRandomStatus($orderDate),
