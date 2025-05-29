@@ -260,6 +260,7 @@ public function update(Request $request, Reservation $reservation)
             'number_of_people' => 'required|integer|min:1',
             'assigned_table_ids' => 'nullable|array',
             'assigned_table_ids.*' => 'exists:tables,id',
+            'steward_id' => 'nullable|exists:employees,id',
         ]);
 
         // Validate branch operating hours
@@ -332,14 +333,16 @@ public function update(Request $request, Reservation $reservation)
             'branch_id' => $branch->id,
             'reservation_fee' => $reservationFee,
             'cancellation_fee' => $cancellationFee,
+            'steward_id' => $validated['steward_id'],
         ]);
 
-        // Assign tables to the reservation
         if (!empty($validated['assigned_table_ids'])) {
             $reservation->tables()->sync($validated['assigned_table_ids']);
         }
 
-        return redirect()->route('admin.reservations.index')->with('success', 'Reservation created successfully.');
+        // Redirect to the edit page for the new reservation
+        return redirect()->route('admin.reservations.edit', $reservation)
+            ->with('success', 'Reservation created successfully. You can now check in.');
     }
 
     public function create()
@@ -435,7 +438,6 @@ public function checkIn(Reservation $reservation)
         ], 500);
     }
 }
-
 public function checkOut(Reservation $reservation)
 {
     if (!$reservation->check_in_time) {
@@ -444,17 +446,14 @@ public function checkOut(Reservation $reservation)
             'message' => 'Reservation must be checked in before checkout'
         ], 400);
     }
-
     if ($reservation->check_out_time) {
         return response()->json([
             'success' => false,
             'message' => 'Reservation already checked out'
         ], 400);
     }
-
     try {
         $reservation->update(['check_out_time' => now()]);
-
         return response()->json([
             'success' => true,
             'message' => 'Reservation checked out successfully',
