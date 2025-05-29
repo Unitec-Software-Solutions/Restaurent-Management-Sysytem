@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Mail\ReservationConfirmed;
+use App\Mail\ReservationRejected;
+use App\Mail\ReservationCancellationMail;
+use Illuminate\Support\Facades\Mail;
 
 class ReservationController extends Controller
 {
@@ -30,7 +34,7 @@ class ReservationController extends Controller
         DB::beginTransaction();
         try {
             $validated = $request->validate([
-                'name' => 'nullable|string|max:255',
+                'name' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255',
                 'phone' => 'required|string|min:10|max:15',
                 'branch_id' => 'required|exists:branches,id',
@@ -232,7 +236,7 @@ class ReservationController extends Controller
     public function review(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'required|string|min:10|max:15',
             'branch_id' => 'required|exists:branches,id',
@@ -294,7 +298,7 @@ class ReservationController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
+            'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'required|string|min:10|max:15',
             'branch_id' => 'required|exists:branches,id',
@@ -327,6 +331,17 @@ class ReservationController extends Controller
                 'comments' => $validated['comments'],
                 'branch_id' => $branch->id,
             ]);
+
+            // Check if status changed and send the appropriate email
+            if ($reservation->wasChanged('status')) {
+                if ($reservation->status === 'confirmed') {
+                    Mail::to($reservation->email)->send(new ReservationConfirmed($reservation));
+                } elseif ($reservation->status === 'cancelled') {
+                    Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
+                } elseif ($reservation->status === 'rejected') {
+                    Mail::to($reservation->email)->send(new ReservationRejected($reservation));
+                }
+            }
 
             return redirect()->route('reservations.show', $reservation)
                 ->with('success', 'Reservation updated successfully.');

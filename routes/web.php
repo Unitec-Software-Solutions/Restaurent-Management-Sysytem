@@ -12,6 +12,7 @@ use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\ItemTransactionController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\SupplierController;
 
 // Public Routes
 Route::get('/', function () {
@@ -41,6 +42,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/all', [OrderController::class, 'allOrders'])->name('all');
         Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('update-cart');
+        Route::get('/create', [OrderController::class, 'create'])->name('create');
         
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function() {
@@ -67,6 +69,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Reservations Management
         Route::resource('reservations', AdminReservationController::class);
+
+        // Steward and check-in/check-out routes
+        Route::post('reservations/{reservation}/assign-steward', [AdminReservationController::class, 'assignSteward'])
+        ->name('reservations.assign-steward');
+        Route::post('reservations/{reservation}/check-in', [AdminReservationController::class, 'checkIn'])
+        ->name('reservations.check-in');
+        Route::post('reservations/{reservation}/check-out', [AdminReservationController::class, 'checkOut'])
+        ->name('reservations.check-out');
+       
 
         // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
@@ -99,29 +110,64 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Inventory Management
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
-            
-            // Items
-            Route::resource('items', ItemMasterController::class)->except(['show']);
-            Route::get('/create-template/{index}/', [ItemMasterController::class, 'getItemFormPartial'])
-                 ->name('items.form-partial');
+            Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
 
-            // Stock Transactions
+            // Inventory Item Routes
+            Route::prefix('items')->name('items.')->group(function () {
+                Route::get('/', [ItemMasterController::class, 'index'])->name('index');
+                Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
+                Route::post('/', [ItemMasterController::class, 'store'])->name('store');
+                Route::get('/{item}', [ItemMasterController::class, 'show'])->whereNumber('item')->name('show');
+                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
+                Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
+                Route::get('/create-template/{index}/', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
+                Route::get('/added-items', [ItemMasterController::class, 'added'])->name('added-items');
+            });
+
             Route::prefix('stock')->name('stock.')->group(function () {
-                Route::resource('/', ItemTransactionController::class)->parameters(['' => 'transaction']);
+                Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
+                Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
+                Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
+                // Route::get('/transactions', [ItemTransactionController::class, 'transactions'])->name('transactions');
+                Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
+                Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
+                Route::put('/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->name('update');
+                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
+
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
-
             // Categories
             Route::resource('categories', ItemCategoryController::class);
         });
 
-        // Additional Admin Sections
-        Route::view('/reports', 'admin.reports.index')->name('reports.index');
-        Route::view('/customers', 'admin.customers.index')->name('customers.index');
-        Route::view('/digital-menu', 'admin.digital-menu.index')->name('digital-menu.index');
-        Route::view('/settings', 'admin.settings.index')->name('settings.index');
-        Route::view('/profile', 'admin.profile.index')->name('users.index');
+        Route::prefix('suppliers')->name('suppliers.')->group(function () {
+            Route::get('/', [SupplierController::class, 'index'])->name('index');
+            Route::get('/create', [SupplierController::class, 'create'])->name('create');
+            Route::post('/', [SupplierController::class, 'store'])->name('store');
+            Route::get('/{supplier}', [SupplierController::class, 'show'])->name('show');
+            Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit');
+            Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
+            Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+            Route::get('/{supplier}/purchase-orders', [SupplierController::class, 'purchaseOrders'])->name('purchase-orders');
+            Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->name('grns');
+        });
+
+
+        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
+        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
+        Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
+        Route::get('/web-test', function () {return view('admin.testpage');})->name('web-test.index');
+        Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
+        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
+        Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
     });
+});
+
+Route::get('/test-email', function() {
+    $reservation = \App\Models\Reservation::first();
+    Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
+    return 'Email sent!';
 });

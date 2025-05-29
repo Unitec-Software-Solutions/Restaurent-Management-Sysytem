@@ -27,6 +27,7 @@ return new class extends Migration
             $table->string('payment_method', 50)->nullable(); // Suggest linking to payment method table in future
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->softDeletes(); // For soft delete functionality
             $table->timestamps();
         });
     }

@@ -1,99 +1,218 @@
 @extends('layouts.admin')
-
+@section('header-title', 'Items Management')
 @section('content')
-<div class="">
-    <div class="p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700">
-        <!-- Header with Add New button -->
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Item Management</h1>
-            <a href="{{ route('admin.inventory.items.create') }}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                <i class="fas fa-plus mr-2"></i> Add New Item
-            </a>
-        </div>
+    <div class="p-4 rounded-lg">
+        <!-- Navigation Buttons -->
+        <x-nav-buttons :items="[
+            ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+            ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
+            ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
+            ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
+            ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
+        ]" active="Items Management" />
 
-        <!-- Search and Filter Form -->
-        <form method="GET" action="{{ route('admin.inventory.items.index') }}" class="mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Header with KPI Cards -->
+        {{-- <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- Total Items Card -->
+            <x-partials.cards.stats-card title="Total Items" value="{{ $totalItems }}"
+                trend="{{ $newItemsToday > 0 ? '+' : '' }}{{ $newItemsToday }} today" icon="fas fa-box-open" color="indigo" />
+
+            <!-- Active Items Card -->
+            <x-partials.cards.stats-card title="Active Items" value="{{ $activeItems }}"
+                trend="{{ $activeItemsChange > 0 ? '+' : '' }}{{ $activeItemsChange }} from yesterday"
+                icon="fas fa-check-circle" color="green" />
+
+            <!-- Inactive Items Card -->
+            <x-partials.cards.stats-card title="Inactive Items" value="{{ $inactiveItems }}"
+                trend="{{ $inactiveItemsChange > 0 ? '+' : '' }}{{ $inactiveItemsChange }} from yesterday"
+                icon="fas fa-times-circle" color="red" />
+        </div> --}}
+
+
+        <!-- Main Content Card -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <!-- Card Header with Actions -->
+            <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <label for="search" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Search</label>
-                    <input type="text" id="search" name="search" placeholder="Search items..." value="{{ request('search') }}" 
-                           class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                    <h2 class="text-xl font-semibold text-gray-900">Item Management</h2>
+                    <p class="text-sm text-gray-500">Manage all inventory items in your system</p>
                 </div>
-                <div>
-                    <label for="category" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Category</label>
-                    <select id="category" name="category" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                        <option value="">All Categories</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>
-                                {{ $cat->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button type="submit" class="text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-600 dark:hover:bg-gray-700 focus:outline-none dark:focus:ring-gray-800">
-                        <i class="fas fa-filter mr-2"></i> Filter
-                    </button>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <a href="{{ route('admin.inventory.items.create') }}"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus mr-2"></i> Add New Item
+                    </a>
+                    <a href="{{ route('admin.inventory.stock.index') }}"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-warehouse mr-2"></i> View Stock
+                    </a>
                 </div>
             </div>
-        </form>
 
-        <!-- Items Table -->
-        <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                    <tr>
-                        <th scope="col" class="px-6 py-3">Item Code</th>
-                        <th scope="col" class="px-6 py-3">Name</th>
-                        <th scope="col" class="px-6 py-3">Category</th>
-                        <th scope="col" class="px-6 py-3">Price</th>
-                        <th scope="col" class="px-6 py-3">Status</th>
-                        <th scope="col" class="px-6 py-3">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($items as $item)
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                            {{ $item->item_code }}
-                        </td>
-                        <td class="px-6 py-4">{{ $item->name }}</td>
-                        <td class="px-6 py-4">{{ $item->category->name ?? '-' }}</td>
-                        <td class="px-6 py-4">{{ $item->selling_price }}</td>
-                        <td class="px-6 py-4">
-                            @if($item->deleted_at)
-                                <span class="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">Inactive</span>
-                            @else
-                                <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">Active</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 flex space-x-2">
-                            <a href="{{ route('admin.inventory.items.edit', $item->id) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                <i class="fas fa-edit mr-1"></i> Edit
-                            </a>
-                            <form action="{{ route('admin.inventory.items.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this item?');">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="font-medium text-red-600 dark:text-red-500 hover:underline">
-                                    <i class="fas fa-trash-alt mr-1"></i> Delete
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                            No items found
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+            <!-- Search and Filter Section -->
+            <div class="p-6 border-b">
+                <form method="GET" action="{{ route('admin.inventory.items.index') }}">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Search Input -->
+                        <div>
+                            <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                            <div class="relative">
+                                <input type="text" id="search" name="search" placeholder="Search items..."
+                                    value="{{ request('search') }}"
+                                    class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                        </div>
 
-        <!-- Pagination -->
-        <div class="mt-4">
-            {{ $items->withQueryString()->links() }}
+                        <!-- Category Filter -->
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select id="category" name="category"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="">All Categories</option>
+                                @foreach ($categories as $cat)
+                                    <option value="{{ $cat->id }}"
+                                        {{ request('category') == $cat->id ? 'selected' : '' }}>
+                                        {{ $cat->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div>
+                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select id="status" name="status"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="">All Statuses</option>
+                                <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active
+                                </option>
+                                <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Filter Button -->
+                        <div class="flex items-end">
+                            <button type="submit"
+                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-filter mr-2"></i> Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Items Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Category</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost
+                            </th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Price</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @forelse($items as $item)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="font-medium text-indigo-600">{{ $item->item_code }}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <div
+                                            class="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-box text-indigo-600"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">{{ $item->name }}</div>
+                                            <div class="text-sm text-gray-500">{{ $item->unit_of_measurement }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
+                                        {{ $item->category->name ?? '-' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    Rs. {{ number_format($item->buying_price, 2) }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    Rs. {{ number_format($item->selling_price, 2) }}
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    @if ($item->deleted_at)
+                                        <x-partials.badges.status-badge status="danger" text="Inactive" />
+                                    @else
+                                        <x-partials.badges.status-badge status="success" text="Active" />
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center space-x-3">
+                                        <a href="{{ route('admin.inventory.items.show', $item->id) }}"
+                                                        class="text-blue-600 hover:text-blue-800">
+                                                        <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ route('admin.inventory.items.edit', $item->id) }}"
+                                            class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        
+                                        @if ($item->deleted_at)
+                                            <form action="{{ route('admin.inventory.items.restore', $item->id) }}"
+                                                method="POST">
+                                                @csrf
+                                                @method('PUT')
+                                                <button type="submit" class="text-green-600 hover:text-green-900"
+                                                    title="Restore"
+                                                    onclick="return confirm('Are you sure you want to restore this item?')">
+                                                    <i class="fas fa-trash-restore"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form action="{{ route('admin.inventory.items.destroy', $item->id) }}"
+                                                method="POST">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-900"
+                                                    title="Delete"
+                                                    onclick="return confirm('Are you sure you want to delete this item?')">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                    No items found matching your criteria
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="px-6 py-4 border-t">
+                {{ $items->withQueryString()->links() }}
+            </div>
         </div>
     </div>
-</div>
 @endsection

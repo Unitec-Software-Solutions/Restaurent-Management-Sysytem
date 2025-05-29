@@ -26,7 +26,7 @@ class Order extends Model
     const STATUS_CANCELLED = 'cancelled';
 
     protected $attributes = [
-        'customer_name' => null,
+        'customer_name' => 'Not Provided',
         'customer_phone' => 'Not Provided',
         'status' => self::STATUS_ACTIVE,
         'order_type' => self::TYPE_TAKEAWAY_ONLINE,

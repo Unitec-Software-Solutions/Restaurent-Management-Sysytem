@@ -2,7 +2,7 @@
 @section('content')
 <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
     <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Edit Stock Transaction</h2>
-
+        
     <form action="{{ route('admin.inventory.stock.update', $transaction) }}" method="POST" class="space-y-6">
         @csrf
         @method('PUT')

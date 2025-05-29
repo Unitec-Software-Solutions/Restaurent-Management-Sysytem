@@ -14,6 +14,7 @@ use App\Mail\ReservationConfirmationMail;
 use App\Mail\ReservationCancellationMail;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
 
 class AdminReservationController extends Controller
 {
@@ -104,132 +105,125 @@ class AdminReservationController extends Controller
     public function edit(Reservation $reservation)
     {
         $admin = auth('admin')->user();
-
-        if ($reservation->branch->id !== $admin->branch->id) {
-            return redirect()->route('admin.reservations.index')->with('error', 'You are not authorized to edit this reservation.');
-        }
+        $reservation->load(['branch', 'tables', 'employee']); // Load relationships
 
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
+        $availableTableIds = $tables->pluck('id')->toArray();
 
-        // Determine available tables for the reservation's date/time
-        $reservedTableIds = Table::where('branch_id', $admin->branch->id)
-            ->whereHas('reservations', function ($query) use ($reservation) {
-                $query->where('reservations.date', $reservation->date)
-                    ->where(function ($q) use ($reservation) {
-                        $q->whereBetween('reservations.start_time', [$reservation->start_time, $reservation->end_time])
-                          ->orWhereBetween('reservations.end_time', [$reservation->start_time, $reservation->end_time])
-                          ->orWhere(function($q2) use ($reservation) {
-                              $q2->where('reservations.start_time', '<=', $reservation->start_time)
-                                 ->where('reservations.end_time', '>=', $reservation->end_time);
-                          });
-                    })
-                    ->where('reservations.id', '!=', $reservation->id); // Exclude current reservation
-            })
-            ->pluck('tables.id')
-            ->toArray();
-        $availableTableIds = $tables->pluck('id')->diff($reservedTableIds)->merge($assignedTableIds)->unique()->toArray();
-
-        return view('admin.reservations.edit', compact('reservation', 'tables', 'assignedTableIds', 'availableTableIds'));
+        return view('admin.reservations.edit', compact(
+            'reservation', 'tables', 'assignedTableIds', 'availableTableIds'
+        ));
     }
 
-    public function update(Request $request, Reservation $reservation)
-    {
-        DB::beginTransaction();
-        try {
-            $validated = $request->validate([
-                'name' => 'nullable|string|max:255',
-                'phone' => 'required|string|min:10|max:15',
-                'email' => 'nullable|email|max:255',
-                'date' => 'required|date|after_or_equal:today',
-                'start_time' => 'required|date_format:H:i',
-                'end_time' => 'required|date_format:H:i|after:start_time',
-                'number_of_people' => 'required|integer|min:1',
-                'assigned_table_ids' => 'nullable|array',
-                'assigned_table_ids.*' => 'exists:tables,id',
-            ]);
+public function update(Request $request, Reservation $reservation)
+{
+    // Authorization: Only allow admins of the same branch
+    if ($reservation->branch_id !== auth('admin')->user()->branch_id) {
+        abort(403);
+    }
 
-            // Validate branch operating hours
-            $branch = $reservation->branch;
-            $branchOpenTime = \Carbon\Carbon::parse($branch->opening_time)->format('H:i');
-            $branchCloseTime = \Carbon\Carbon::parse($branch->closing_time)->format('H:i');
-            if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
-                return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')'])->withInput();
-            }
-            // For same-day reservations, ensure start time is at least 30 minutes from now
-            if ($validated['date'] === now()->format('Y-m-d')) {
-                $minStartTime = now()->addMinutes(30)->format('H:i');
-                if ($validated['start_time'] < $minStartTime) {
-                    return back()->withErrors(['time' => 'For same-day reservations, start time must be at least 30 minutes from now.'])->withInput();
-                }
-            }
-            // Check capacity
-            $reservedCapacity = $branch->reservations()
-                ->where('date', $validated['date'])
-                ->where(function($query) use ($validated) {
-                    $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                        ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                        ->orWhere(function($q) use ($validated) {
-                            $q->where('start_time', '<=', $validated['start_time'])
-                                ->where('end_time', '>=', $validated['end_time']);
-                        });
-                })
-                ->where('reservations.id', '!=', $reservation->id)
-                ->where('reservations.status', '!=', 'cancelled')
-                ->sum('number_of_people');
-            $availableCapacity = $branch->total_capacity - $reservedCapacity;
-            if ($availableCapacity < $validated['number_of_people']) {
-                return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
-            }
+    DB::beginTransaction();
+    try {
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'phone' => 'required|string|min:10|max:15',
+            'email' => 'nullable|email|max:255',
+            'date' => 'required|date|after_or_equal:today',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'number_of_people' => 'required|integer|min:1',
+            'assigned_table_ids' => 'nullable|array',
+            'assigned_table_ids.*' => 'exists:tables,id',
+            'employee_id' => 'nullable|exists:employees,id','status' => 'required|in:pending,confirmed,cancelled',
+            'send_notification' => 'nullable|in:none,email,sms,both',
+        ]);
 
-            // Check if any selected tables are already reserved for the same date and overlapping time
-            if (!empty($validated['assigned_table_ids'])) {
-                $conflictingTables = Table::whereIn('id', $validated['assigned_table_ids'])
-                    ->whereHas('reservations', function ($query) use ($validated, $reservation) {
-                        $query->where('date', $validated['date'])
-                            ->where(function ($q) use ($validated) {
-                                $q->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                                  ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                                  ->orWhere(function($q2) use ($validated) {
-                                      $q2->where('start_time', '<=', $validated['start_time'])
-                                         ->where('end_time', '>=', $validated['end_time']);
-                                  });
-                            })
-                            ->where('reservations.id', '!=', $reservation->id ?? null)
-                            ->where('reservations.status', '!=', 'cancelled');
-                    })
-                    ->pluck('number')
-                    ->toArray();
-                if (count($conflictingTables) > 0) {
-                    return back()->withErrors(['assigned_table_ids' => 'The following tables are already reserved for the selected time: ' . implode(', ', $conflictingTables)])->withInput();
-                }
-            }
-
-            // Get branch and its fees
-            $reservationFee = $branch && $branch->reservation_fee !== null ? $branch->reservation_fee : 0;
-            $cancellationFee = $branch && $branch->cancellation_fee !== null ? $branch->cancellation_fee : 0;
-
-            $reservation->update([
-                'name' => $validated['name'],
-                'phone' => $validated['phone'],
-                'email' => $validated['email'],
-                'date' => $validated['date'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'number_of_people' => $validated['number_of_people'],
-                'reservation_fee' => $reservationFee,
-                'cancellation_fee' => $cancellationFee,
-            ]);
-
-            // Assign tables
-            $reservation->tables()->sync($validated['assigned_table_ids'] ?? []);
-            DB::commit();
-            return redirect()->route('admin.reservations.index')->with('success', 'Reservation updated successfully.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()]);
+        // Time validation
+        if (\Carbon\Carbon::parse($validated['start_time'])->gt(\Carbon\Carbon::parse($validated['end_time']))) {
+            return back()->withErrors(['end_time' => 'End time must be after start time']);
         }
+
+        // Branch and fee logic
+        $branch = $reservation->branch;
+        $reservationFee = $branch->reservation_fee ?? 0;
+        $cancellationFee = $branch->cancellation_fee ?? 0;
+
+        // Capacity calculation (exclude current reservation)
+        $reservedCapacity = $branch->reservations()
+            ->where('date', $validated['date'])
+            ->where(function($query) use ($validated) {
+                $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                    ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                    ->orWhere(function($q) use ($validated) {
+                        $q->where('start_time', '<=', $validated['start_time'])
+                            ->where('end_time', '>=', $validated['end_time']);
+                    });
+            })
+            ->where('reservations.id', '!=', $reservation->id)
+            ->where('reservations.status', '!=', 'cancelled')
+            ->sum('number_of_people');
+        $availableCapacity = $branch->total_capacity - $reservedCapacity + $reservation->number_of_people;
+        if ($availableCapacity < $validated['number_of_people']) {
+            return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
+        }
+
+        // Table conflict detection
+        if (!empty($validated['assigned_table_ids'])) {
+            $conflictingTables = Table::whereIn('id', $validated['assigned_table_ids'])
+                ->whereHas('reservations', function ($query) use ($validated, $reservation) {
+                    $query->where('date', $validated['date'])
+                        ->where(function ($q) use ($validated) {
+                            $q->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                              ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                              ->orWhere(function($q2) use ($validated) {
+                                  $q2->where('start_time', '<=', $validated['start_time'])
+                                     ->where('end_time', '>=', $validated['end_time']);
+                              });
+                        })
+                        ->where('reservations.id', '!=', $reservation->id)
+                        ->where('reservations.status', '!=', 'cancelled');
+                })
+                ->pluck('number')
+                ->toArray();
+            if (count($conflictingTables) > 0) {
+                return back()->withErrors(['assigned_table_ids' => 'The following tables are already reserved for the selected time: ' . implode(', ', $conflictingTables)])->withInput();
+            }
+        }
+
+        // Save changes
+        $reservation->update([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'email' => $validated['email'],
+            'date' => $validated['date'],
+            'start_time' => $validated['start_time'],
+            'end_time' => $validated['end_time'],
+            'number_of_people' => $validated['number_of_people'],
+            'reservation_fee' => $reservationFee,
+            'cancellation_fee' => $cancellationFee,
+            'employee_id' => $validated['employee_id'],
+            'status' => $validated['status'],
+            'send_notification' => $validated['send_notification'],
+        ]);
+        $reservation->tables()->sync($validated['assigned_table_ids'] ?? []);
+
+        // Send notification if status changed
+        if ($reservation->wasChanged('status')) {
+            if ($validated['status'] === 'confirmed') {
+                Mail::to($reservation->email)->send(new \App\Mail\ReservationConfirmed($reservation));
+            } elseif ($validated['status'] === 'cancelled') {
+                Mail::to($reservation->email)->send(new \App\Mail\ReservationCancellationMail($reservation));
+            }
+        }
+
+        DB::commit();
+        return redirect()->route('admin.reservations.index')->with('success', 'Reservation updated.');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withErrors(['error' => 'Update failed: '.$e->getMessage()]);
     }
+}
 
     public function cancel(Request $request, Reservation $reservation)
     {
@@ -360,7 +354,11 @@ class AdminReservationController extends Controller
         // Assign current date as default date
         $defaultDate = now()->toDateString();
 
-        return view('admin.reservations.create', compact('tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate'));
+        // Get next reservation ID (works for MySQL)
+        $nextId = \DB::table('reservations')->max('id') + 1;
+        $defaultName = 'customer ' . $nextId . '';
+
+        return view('admin.reservations.create', compact('tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName'));
     }
 
     protected function sendNotification(Reservation $reservation, $method)
@@ -384,9 +382,68 @@ class AdminReservationController extends Controller
         }
 
         if (in_array($method, ['sms', 'both'])) {
-            // Send cancellation SMS
             SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
         }
     }
+    public function assignSteward(Request $request, Reservation $reservation)
+{
+    $validated = $request->validate([
+        'employee_id' => 'required|exists:employees,id',
+    ]);
 
+    $reservation->update(['employee_id' => $validated['employee_id']]);
+    $employee = Employee::find($validated['employee_id']);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Steward assigned successfully',
+        'steward_name' => $employee->name
+    ]);
+}
+
+
+// Add checkIn method
+public function checkIn(Reservation $reservation)
+{
+    if ($reservation->check_in_time) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Reservation already checked in'
+        ], 400);
+    }
+
+    $reservation->update(['check_in_time' => now()]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Reservation checked in successfully',
+        'check_in_time' => $reservation->fresh()->check_in_time->format('Y-m-d H:i:s'),
+        'check_out_time' => $reservation->check_out_time
+    ]);
+}
+
+public function checkOut(Reservation $reservation)
+{
+    if (!$reservation->check_in_time) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Reservation must be checked in before checkout'
+        ], 400);
+    }
+
+    if ($reservation->check_out_time) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Reservation already checked out'
+        ], 400);
+    }
+
+    $reservation->update(['check_out_time' => now()]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Reservation checked out successfully',
+        'check_out_time' => $reservation->fresh()->check_out_time->format('Y-m-d H:i:s')
+    ]);
+}
 }
