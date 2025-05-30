@@ -35,6 +35,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
         Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
         Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
+        
     });
 
     // Orders
@@ -77,6 +78,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('reservations.check-in');
         Route::post('reservations/{reservation}/check-out', [AdminReservationController::class, 'checkOut'])
         ->name('reservations.check-out');
+        Route::get('/check-table-availability', [AdminReservationController::class, 'checkTableAvailability'])
+        ->name('check-table-availability');
        
 
         // Orders Management
@@ -163,6 +166,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
         Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+        
     });
 });
 

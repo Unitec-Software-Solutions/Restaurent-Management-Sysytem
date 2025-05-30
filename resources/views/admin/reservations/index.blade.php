@@ -54,9 +54,10 @@
                                 <span class="text-gray-400">None</span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
     <a href="{{ route('admin.reservations.show', $reservation) }}" class="text-blue-600 hover:text-blue-900 mr-3">View</a>
     <a href="{{ route('admin.reservations.edit', $reservation) }}" class="text-yellow-600 hover:text-yellow-900 mr-3">Edit</a>
+    <a href="{{ route('admin.orders.reservations.create', $reservation) }}" class="text-green-600 hover:text-green-900 mr-3">Add Order</a>
 </td>
                     </tr>
                 @empty
@@ -68,4 +69,5 @@
         </table>
     </div>
 </div>
+
 @endsection

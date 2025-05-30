@@ -77,8 +77,7 @@
                                        name="email" 
                                        id="email" 
                                        value="{{ old('email', $reservation->email) }}"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                       required>
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
                                 <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
@@ -135,11 +134,17 @@
                                            class="hidden peer"
                                            {{ $isAssigned ? 'checked' : '' }}
                                            {{ $isAvailable ? '' : 'disabled' }}>
-                                    <div class="w-20 h-20 flex flex-col items-center justify-center border rounded-md text-xs p-2
-                                        peer-checked:bg-blue-500 peer-checked:text-white
-                                        {{ $isAvailable ? 'bg-white hover:bg-blue-100 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }}">
+                                    <div data-table-id="{{ $table->id }}"
+                                         class="table-selection w-20 h-20 flex flex-col items-center justify-center border rounded-md text-xs p-2
+                                            peer-checked:bg-blue-500 peer-checked:text-white
+                                            {{ $isAvailable 
+                                                ? 'bg-white hover:bg-blue-100 cursor-pointer border-gray-300' 
+                                                : 'bg-red-200 text-red-700 border-red-500 cursor-not-allowed opacity-70' }}">
                                         <span>Table {{ $table->id }}</span>
                                         <span>Cap: {{ $table->capacity }}</span>
+                                        <span class="availability-text text-xs mt-1">
+                                            {{ $isAvailable ? '' : 'Unavailable' }}
+                                        </span>
                                     </div>
                                 </label>
                             @endforeach
@@ -370,6 +375,62 @@
 
         // Add event listener to existing check-out button
         $('#check-out-btn').on('click', checkOutHandler);
+
+        const dateInput = document.getElementById('date');
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+
+        async function updateTableAvailability() {
+            const date = dateInput.value;
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+
+            if (!date || !startTime || !endTime) return;
+
+            try {
+                const response = await fetch(`{{ route('admin.check-table-availability') }}?date=${date}&start_time=${startTime}&end_time=${endTime}`);
+                const data = await response.json();
+
+                document.querySelectorAll('.table-selection').forEach(tableDiv => {
+                    const tableId = parseInt(tableDiv.dataset.tableId);
+                    const isAvailable = data.available_table_ids.includes(tableId);
+
+                    // Remove all possible classes first
+                    tableDiv.classList.remove(
+                        'bg-red-200', 'text-red-700', 'border-red-500', 'opacity-70',
+                        'bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300', 'cursor-not-allowed'
+                    );
+
+                    // Add classes based on availability
+                    if (isAvailable) {
+                        tableDiv.classList.add('bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300');
+                    } else {
+                        tableDiv.classList.add('bg-red-200', 'text-red-700', 'border-red-500', 'cursor-not-allowed', 'opacity-70');
+                    }
+
+                    // Update checkbox state
+                    const checkbox = tableDiv.parentElement.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        // Only disable if not available and not checked (not assigned)
+                        checkbox.disabled = !(isAvailable || checkbox.checked);
+                    }
+
+                    // Update availability text
+                    const textElement = tableDiv.querySelector('.availability-text');
+                    if (textElement) {
+                        textElement.textContent = isAvailable ? '' : 'Unavailable';
+                    }
+                });
+            } catch (error) {
+                console.error('Error checking table availability:', error);
+            }
+        }
+
+        [dateInput, startTimeInput, endTimeInput].forEach(input => {
+            input.addEventListener('change', updateTableAvailability);
+        });
+
+        updateTableAvailability();
     });
 </script>
 @endsection
