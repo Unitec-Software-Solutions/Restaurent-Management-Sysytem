@@ -351,19 +351,21 @@ public function update(Request $request, Reservation $reservation)
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $branch = $admin->branch;
 
-        // For create, initially all tables are available (no reservation yet)
         $availableTableIds = $tables->pluck('id')->toArray();
-
-        // Assign branch phone as default phone for reservation
         $defaultPhone = $branch->phone ?? '';
-        // Assign current date as default date
         $defaultDate = now()->toDateString();
 
-        // Get next reservation ID (works for MySQL)
+        // Set default start time to now, end time to 2 hours later
+        $now = now();
+        $start_time = $now->format('H:i');
+        $end_time = $now->copy()->addHours(2)->format('H:i');
+
         $nextId = \DB::table('reservations')->max('id') + 1;
         $defaultName = 'customer ' . $nextId . '';
 
-        return view('admin.reservations.create', compact('tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName'));
+        return view('admin.reservations.create', compact(
+            'tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName', 'start_time', 'end_time'
+        ));
     }
 
     protected function sendNotification(Reservation $reservation, $method)
