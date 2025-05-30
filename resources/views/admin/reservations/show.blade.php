@@ -9,6 +9,9 @@
             </div>
             <div class="p-6">
                 <div class="mb-4">
+                    <span class="font-semibold">Reservation ID:</span> {{ $reservation->id }}
+                </div>
+                <div class="mb-4">
                     <span class="font-semibold">Customer Name:</span> {{ $reservation->name }}
                 </div>
                 <div class="mb-4">
@@ -21,7 +24,10 @@
                     <span class="font-semibold">Date:</span> {{ $reservation->date }}
                 </div>
                 <div class="mb-4">
-                    <span class="font-semibold">Time:</span> {{ $reservation->start_time }} - {{ $reservation->end_time }}
+                    <span class="font-semibold">Start Time:</span> {{ $reservation->start_time }}
+                </div>
+                <div class="mb-4">
+                    <span class="font-semibold">End Time:</span> {{ $reservation->end_time }}
                 </div>
                 <div class="mb-4">
                     <span class="font-semibold">Number of People:</span> {{ $reservation->number_of_people }}
@@ -43,7 +49,33 @@
                     @endif
                 </div>
                 <div class="mb-4">
+                    <span class="font-semibold">Steward:</span>
+                    {{ $reservation->steward ? $reservation->steward->name : '-' }}
+                </div>
+                <div class="mb-4">
+                    <span class="font-semibold">Check-in Time:</span>
+                    {{ $reservation->check_in_time ? $reservation->check_in_time->format('Y-m-d H:i:s') : '-' }}
+                </div>
+                <div class="mb-4">
+                    <span class="font-semibold">Check-out Time:</span>
+                    {{ $reservation->check_out_time ? $reservation->check_out_time->format('Y-m-d H:i:s') : '-' }}
+                </div>
+                <div class="mb-4">
+                    <span class="font-semibold">Reservation Fee:</span>
+                    {{ $reservation->reservation_fee ? number_format($reservation->reservation_fee, 2) : '-' }}
+                </div>
+                <div class="mb-4">
+                    <span class="font-semibold">Cancellation Fee:</span>
+                    {{ $reservation->cancellation_fee ? number_format($reservation->cancellation_fee, 2) : '-' }}
+                </div>
+                <div class="mb-4">
                     <span class="font-semibold">Comments:</span> {{ $reservation->comments ?? '-' }}
+                </div>
+                <div class="mb-4">
+                    <span class="font-semibold">Created At:</span> {{ $reservation->created_at }}
+                </div>
+                <div class="mb-4">
+                    <span class="font-semibold">Updated At:</span> {{ $reservation->updated_at }}
                 </div>
                 <a href="{{ route('admin.reservations.index') }}" class="inline-block mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Back to List</a>
             </div>

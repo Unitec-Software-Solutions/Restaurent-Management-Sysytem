@@ -77,6 +77,7 @@
                                        name="email" 
                                        id="email" 
                                        value="{{ old('email', $reservation->email) }}"
+
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        >
                             </div>
@@ -411,7 +412,10 @@
 
                     // Update checkbox state
                     const checkbox = tableDiv.parentElement.querySelector('input[type="checkbox"]');
-                    if (checkbox && !checkbox.checked) checkbox.disabled = !isAvailable;
+                    if (checkbox) {
+                        // Only disable if not available and not checked (not assigned)
+                        checkbox.disabled = !(isAvailable || checkbox.checked);
+                    }
 
                     // Update availability text
                     const textElement = tableDiv.querySelector('.availability-text');
