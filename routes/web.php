@@ -15,6 +15,8 @@ use App\Http\Controllers\ItemTransactionController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierPaymentController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\GrnPaymentController;
 
 // Public Routes
 Route::get('/', function () {
@@ -177,7 +179,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
         });
 
-
+        // purchase orders ( temporarily moved out from suppliers section due to conflict with supplier routes )
+        Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
+            Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
+            Route::get('/create', [PurchaseOrderController::class, 'create'])->name('create');
+            Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
+            Route::get('/{po}', [PurchaseOrderController::class, 'show'])->name('show');
+            Route::get('/{po}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
+    
+        });
 
 
 

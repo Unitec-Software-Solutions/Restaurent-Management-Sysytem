@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class SupplierPaymentMaster extends Model
 {
@@ -94,5 +96,31 @@ class SupplierPaymentMaster extends Model
     public function paymentDetails(): HasMany
     {
         return $this->hasMany(SupplierPaymentDetail::class, 'payment_master_id');
+    }
+
+    public function grns()
+    {
+        return $this->belongsToMany(GrnMaster::class, 'payment_allocations', 'payment_id', 'grn_id')
+            ->withPivot('amount', 'allocated_at', 'allocated_by');
+    }
+    public function allocateToGrn(GrnMaster $grn, $amount)
+    {
+        DB::beginTransaction();
+        try {
+            $this->grns()->attach($grn->id, [
+                'amount' => $amount,
+                'allocated_at' => now(),
+                'allocated_by' => Auth::id()
+            ]);
+
+            // Recalculate GRN payment status
+            $grn->calculatePaymentStatus();
+
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return false;
+        }
     }
 }

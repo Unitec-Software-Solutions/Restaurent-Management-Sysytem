@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Supplier Payments Management')
+@section('header-title', 'Purchase Orders Management')
 @section('content')
     <div class="p-4 rounded-lg">
         <x-nav-buttons :items="[
@@ -8,34 +8,48 @@
             ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
             ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
             ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
-        ]" active="Supplier Payments" />
+        ]" active="Purchase Orders" />
 
-        {{-- <!-- Stats Cards -->
+        <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <x-partials.cards.stats-card title="Total Payments" value="Rs. {{ number_format($summary['total_payments']) }}"
-                trend="+{{ $summary['increase_percentage'] }}% from last month" icon="fas fa-money-bill-wave" color="blue" />
+            <x-partials.cards.stats-card 
+                title="Total POs" 
+                value="{{ number_format($stats['total_pos']) }}" 
+                trend="{{ $stats['total_pos'] > 0 ? round(($stats['pending_pos']/$stats['total_pos'])*100, 2) : 0 }}% pending" 
+                icon="fas fa-file-invoice" 
+                color="blue" />
 
-            <x-partials.cards.stats-card title="Pending Payments"
-                value="Rs. {{ number_format($summary['pending_payments']) }}"
-                trend="{{ $summary['pending_count'] }} payments pending" icon="fas fa-clock" color="yellow" />
+            <x-partials.cards.stats-card 
+                title="Pending POs" 
+                value="{{ number_format($stats['pending_pos']) }}" 
+                trend="Rs. {{ number_format($stats['pending_amount'], 2) }}" 
+                icon="fas fa-clock" 
+                color="yellow" />
 
-            <x-partials.cards.stats-card title="Overdue Payments"
-                value="Rs. {{ number_format($summary['overdue_payments']) }}"
-                trend="{{ $summary['overdue_count'] }} overdue payments" icon="fas fa-exclamation-circle" color="red" />
+            <x-partials.cards.stats-card 
+                title="Approved POs" 
+                value="{{ number_format($stats['approved_pos']) }}" 
+                trend="{{ $stats['total_pos'] > 0 ? round(($stats['approved_pos']/$stats['total_pos'])*100, 2) : 0 }}% of total" 
+                icon="fas fa-check-circle" 
+                color="green" />
 
-            <x-partials.cards.stats-card title="Active Suppliers" value="{{ $summary['suppliers_count'] }}"
-                trend="Managing payments" icon="fas fa-truck" color="green" />
-        </div> --}}
+            <x-partials.cards.stats-card 
+                title="Received POs" 
+                value="{{ number_format($stats['received_pos']) }}" 
+                trend="{{ $stats['total_pos'] > 0 ? round(($stats['received_pos']/$stats['total_pos'])*100, 2) : 0 }}% of total" 
+                icon="fas fa-truck-loading" 
+                color="indigo" />
+        </div>
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <form method="GET" action="{{ route('admin.payments.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <form method="GET" action="{{ route('admin.purchase-orders.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <!-- Search -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
                     <div class="relative">
                         <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Payment ID, Supplier"
+                            placeholder="PO Number, Supplier"
                             class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                     </div>
@@ -47,11 +61,9 @@
                     <select name="status"
                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="">All Statuses</option>
-                        <option value="paid" {{ request('status') == 'paid' ? 'selected' : '' }}>Paid</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="overdue" {{ request('status') == 'overdue' ? 'selected' : '' }}>Overdue</option>
-                        <option value="partial" {{ request('status') == 'partial' ? 'selected' : '' }}>Partial</option>
-                        <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="Approved" {{ request('status') == 'Approved' ? 'selected' : '' }}>Approved</option>
+                        <option value="Received" {{ request('status') == 'Received' ? 'selected' : '' }}>Received</option>
                     </select>
                 </div>
 
@@ -70,14 +82,29 @@
                     </select>
                 </div>
 
+                <!-- Branch Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                    <select name="branch"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Branches</option>
+                        @foreach ($branches as $branch)
+                            <option value="{{ $branch->id }}"
+                                {{ request('branch') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <!-- Filter Buttons -->
                 <div class="flex items-end space-x-2">
                     <button type="submit"
                         class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
                         <i class="fas fa-filter mr-2"></i> Filter
                     </button>
-                    @if (request()->anyFilled(['search', 'status', 'supplier']))
-                        <a href="{{ route('admin.payments.index') }}"
+                    @if (request()->anyFilled(['search', 'status', 'supplier', 'branch']))
+                        <a href="{{ route('admin.purchase-orders.index') }}"
                             class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center justify-center">
                             Clear
                         </a>
@@ -86,17 +113,17 @@
             </form>
         </div>
 
-        <!-- Payments Table -->
+        <!-- PO Table -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900">Supplier Payments</h2>
-                    <p class="text-sm text-gray-500">Monitor and manage supplier payments</p>
+                    <h2 class="text-xl font-semibold text-gray-900">Purchase Orders</h2>
+                    <p class="text-sm text-gray-500">Manage and track all purchase orders</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    <a href="{{ route('admin.payments.create') }}"
+                    <a href="{{ route('admin.purchase-orders.create') }}"
                         class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-plus mr-2"></i> New Payment
+                        <i class="fas fa-plus mr-2"></i> New PO
                     </a>
                     <a href="#"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
@@ -106,9 +133,9 @@
             </div>
 
             <div class="p-6 border-b flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Payment Records</h2>
+                <h2 class="text-lg font-semibold">PO Records</h2>
                 <div class="flex items-center space-x-2">
-                    <span class="text-sm text-gray-500">{{ $payments->total() }} payment records</span>
+                    <span class="text-sm text-gray-500">{{ $purchaseOrders->total() }} records found</span>
                 </div>
             </div>
 
@@ -117,13 +144,16 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Payment ID
+                                PO Number
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Supplier
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Date
+                                Branch
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Dates
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Amount
@@ -131,109 +161,91 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Payment Method
-                            </th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
                             </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        @forelse($payments as $payment)
+                        @forelse($purchaseOrders as $po)
                             <tr class="hover:bg-gray-50">
-                                <!-- Payment ID -->
+                                <!-- PO Number -->
                                 <td class="px-6 py-4">
-                                    <div class="font-medium text-gray-900">{{ $payment->payment_number }}</div>
+                                    <div class="font-medium text-gray-900">{{ $po->po_number }}</div>
                                     <div class="text-sm text-gray-500">
-                                        {{ $payment->purchaseOrder->po_number ?? 'N/A' }}
+                                        {{ $po->items->count() }} items
                                     </div>
                                 </td>
 
                                 <!-- Supplier -->
                                 <td class="px-6 py-4">
-                                    <div class="text-gray-900">{{ $payment->supplier->name }}</div>
+                                    <div class="text-gray-900">{{ $po->supplier->name }}</div>
                                     <div class="text-sm text-gray-500">
-                                        {{ $payment->supplier->contact_person ?? 'No contact' }}
+                                        {{ $po->supplier->contact_person ?? 'No contact' }}
                                     </div>
                                 </td>
 
-                                <!-- Date -->
+                                <!-- Branch -->
                                 <td class="px-6 py-4">
-                                    <div class="text-gray-900">{{ $payment->payment_date->format('M d, Y') }}</div>
+                                    <div class="text-gray-900">{{ $po->branch->name }}</div>
                                     <div class="text-sm text-gray-500">
-                                        Due: {{ $payment->payment_date->addDays(30)->format('M d, Y') }}
+                                        {{ $po->branch->code }}
+                                    </div>
+                                </td>
+
+                                <!-- Dates -->
+                                <td class="px-6 py-4">
+                                    <div class="text-gray-900">{{ $po->order_date->format('M d, Y') }}</div>
+                                    <div class="text-sm text-gray-500">
+                                        Due: {{ $po->expected_delivery_date->format('M d, Y') }}
                                     </div>
                                 </td>
 
                                 <!-- Amount -->
                                 <td class="px-6 py-4">
                                     <div class="font-medium text-gray-900">
-                                        Rs. {{ number_format($payment->total_amount) }}
+                                        Rs. {{ number_format($po->total_amount, 2) }}
                                     </div>
                                     <div class="text-sm text-gray-500">
-                                        Allocated: Rs. {{ number_format($payment->allocated_amount) }}
+                                        Paid: Rs. {{ number_format($po->paid_amount, 2) }}
                                     </div>
                                 </td>
 
                                 <!-- Status -->
                                 <td class="px-6 py-4">
-                                    @if ($payment->payment_status === 'paid')
-                                        <x-partials.badges.status-badge status="success" text="Paid" />
-                                    @elseif($payment->payment_status === 'pending')
+                                    @if ($po->status === 'Pending')
                                         <x-partials.badges.status-badge status="warning" text="Pending" />
-                                    @elseif($payment->payment_status === 'overdue')
-                                        <x-partials.badges.status-badge status="danger" text="Overdue" />
-                                    @elseif($payment->payment_status === 'partial')
-                                        <x-partials.badges.status-badge status="info" text="Partial" />
+                                    @elseif($po->status === 'Approved')
+                                        <x-partials.badges.status-badge status="info" text="Approved" />
+                                    @elseif($po->status === 'Received')
+                                        <x-partials.badges.status-badge status="success" text="Received" />
                                     @else
-                                        <x-partials.badges.status-badge status="default" text="Draft" />
+                                        <x-partials.badges.status-badge status="default" text="{{ $po->status }}" />
                                     @endif
-                                </td>
-
-                                <!-- Payment Method -->
-                                <td class="px-6 py-4">
-                                    <div class="text-gray-900">
-                                        {{ $payment->paymentDetails->first()->method_type ?? 'N/A' }}
-                                    </div>
-                                    <div class="text-sm text-gray-500">
-                                        @if ($payment->paymentDetails->first())
-                                            Ref: {{ $payment->paymentDetails->first()->reference_number }}
-                                        @endif
-                                    </div>
                                 </td>
 
                                 <!-- Actions -->
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end space-x-3">
-                                        <a href="{{ route('admin.payments.show', $payment->id) }}"
+                                        <a href="{{ route('admin.purchase-orders.show', $po->po_id) }}"
                                             class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.payments.edit', $payment->id) }}"
+                                        <a href="#"
                                             class="text-blue-600 hover:text-blue-800" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="{{ route('admin.payments.print', $payment->id) }}"
+                                        <a href="#"
                                             class="text-purple-600 hover:text-purple-800" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
-                                        <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST"
-                                            class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-800" title="Delete"
-                                                onclick="return confirm('Are you sure?')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                                    No payments found matching your criteria.
+                                    No purchase orders found matching your criteria.
                                 </td>
                             </tr>
                         @endforelse
@@ -243,7 +255,7 @@
 
             <!-- Pagination -->
             <div class="p-4 border-t">
-                {{ $payments->links() }}
+                {{ $purchaseOrders->links() }}
             </div>
         </div>
     </div>

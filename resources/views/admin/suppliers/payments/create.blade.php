@@ -4,9 +4,10 @@
 @section('content')
     <div class="p-4 rounded-lg">
         <x-nav-buttons :items="[
-            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
             ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
+            ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
             ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
+            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
             ['name' => 'New Payment', 'link' => route('admin.payments.create')],
         ]" active="New Payment" />
 
@@ -103,6 +104,19 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div>
+                            <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
+                            <select id="branch_id" name="branch_id" class="w-full px-4 py-2 border rounded-lg" required>
+                                <option value="">Select Branch</option>
+                                @foreach ($branches as $branch)
+                                    <option value="{{ $branch->id }}">
+                                        {{ $branch->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
                     </div>
                 </div>
 
@@ -306,7 +320,11 @@
 
                 <!-- Hidden fields for selected documents -->
                 <div id="selectedDocumentsFields">
-                    <!-- Will be populated with hidden inputs for selected documents -->
+                    @if (old('document_ids'))
+                        @foreach (old('document_ids') as $docId)
+                            <input type="hidden" name="document_ids[]" value="{{ $docId }}">
+                        @endforeach
+                    @endif
                 </div>
             </form>
         </div>
@@ -415,28 +433,39 @@
                 // Show loading state
                 const grnsTableBody = document.getElementById('grnsTableBody');
                 grnsTableBody.innerHTML = `
-            <tr>
-                <td colspan="9" class="px-4 py-4 text-center text-gray-500">
-                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading GRNs...
-                </td>
-            </tr>
-        `;
+                    <tr>
+                        <td colspan="9" class="px-4 py-4 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin mr-2"></i> Loading GRNs...
+                        </td>
+                    </tr>
+                `;
 
                 // Show GRNs container
                 grnsContainer.classList.remove('hidden');
 
                 // AJAX call to fetch GRNs
-                fetch(`/api/suppliers/${supplierId}/pending-grns`)
-                    .then(response => response.json())
+                fetch(`/admin/suppliers/${supplierId}/pending-grns`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .getAttribute('content')
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.length === 0) {
                             grnsTableBody.innerHTML = `
-                        <tr>
-                            <td colspan="9" class="px-4 py-4 text-center text-gray-500">
-                                No pending GRNs found for this supplier
-                            </td>
-                        </tr>
-                    `;
+                            <tr>
+                                <td colspan="9" class="px-4 py-4 text-center text-gray-500">
+                                    No pending GRNs found for this supplier
+                                </td>
+                            </tr>
+                        `;
                             return;
                         }
 
@@ -446,27 +475,27 @@
                             const row = document.createElement('tr');
                             row.className = 'hover:bg-gray-50';
                             row.innerHTML = `
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <input type="checkbox" class="document-checkbox rounded" 
-                                   data-type="grn" data-id="${grn.grn_id}" 
-                                   data-number="${grn.grn_number}" data-due-amount="${grn.due_amount}">
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${grn.grn_number}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${grn.po_number || 'N/A'}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${grn.received_date}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${grn.total_amount.toFixed(2)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${grn.paid_amount.toFixed(2)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${grn.due_amount.toFixed(2)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(grn.due_date) ? 'text-red-500' : 'text-gray-500'}">
-                            ${grn.due_date}
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${getStatusBadgeClass(grn.status)}">
-                                ${grn.status.charAt(0).toUpperCase() + grn.status.slice(1)}
-                            </span>
-                        </td>
-                    `;
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <input type="checkbox" class="document-checkbox rounded" 
+                                       data-type="grn" data-id="${grn.grn_id}" 
+                                       data-number="${grn.grn_number}" data-due-amount="${grn.due_amount}">
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${grn.grn_number}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${grn.po_number || 'N/A'}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${grn.received_date}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.total_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.paid_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.due_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(grn.due_date) ? 'text-red-500' : 'text-gray-500'}">
+                                ${grn.due_date}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    ${getStatusBadgeClass(grn.status)}">
+                                    ${grn.status.charAt(0).toUpperCase() + grn.status.slice(1)}
+                                </span>
+                            </td>
+                        `;
                             grnsTableBody.appendChild(row);
                         });
 
@@ -479,12 +508,12 @@
                     .catch(error => {
                         console.error('Error loading GRNs:', error);
                         grnsTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="9" class="px-4 py-4 text-center text-gray-500">
-                            Error loading GRNs. Please try again.
-                        </td>
-                    </tr>
-                `;
+                        <tr>
+                            <td colspan="9" class="px-4 py-4 text-center text-gray-500">
+                                Error loading GRNs. Please try again.
+                            </td>
+                        </tr>
+                    `;
                     });
             });
 
@@ -500,28 +529,39 @@
                 // Show loading state
                 const posTableBody = document.getElementById('posTableBody');
                 posTableBody.innerHTML = `
-            <tr>
-                <td colspan="8" class="px-4 py-4 text-center text-gray-500">
-                    <i class="fas fa-spinner fa-spin mr-2"></i> Loading POs...
-                </td>
-            </tr>
-        `;
+                    <tr>
+                        <td colspan="8" class="px-4 py-4 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin mr-2"></i> Loading POs...
+                        </td>
+                    </tr>
+                `;
 
                 // Show POs container
                 posContainer.classList.remove('hidden');
 
                 // AJAX call to fetch POs
-                fetch(`/api/suppliers/${supplierId}/pending-pos`)
-                    .then(response => response.json())
+                fetch(`/admin/suppliers/${supplierId}/pending-pos`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .getAttribute('content')
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.length === 0) {
                             posTableBody.innerHTML = `
-                        <tr>
-                            <td colspan="8" class="px-4 py-4 text-center text-gray-500">
-                                No pending POs found for this supplier
-                            </td>
-                        </tr>
-                    `;
+                            <tr>
+                                <td colspan="8" class="px-4 py-4 text-center text-gray-500">
+                                    No pending POs found for this supplier
+                                </td>
+                            </tr>
+                        `;
                             return;
                         }
 
@@ -531,26 +571,26 @@
                             const row = document.createElement('tr');
                             row.className = 'hover:bg-gray-50';
                             row.innerHTML = `
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <input type="checkbox" class="document-checkbox rounded" 
-                                   data-type="po" data-id="${po.po_id}" 
-                                   data-number="${po.po_number}" data-due-amount="${po.due_amount}">
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${po.po_number}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${po.order_date}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${po.total_amount.toFixed(2)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${po.paid_amount.toFixed(2)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${po.due_amount.toFixed(2)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(po.due_date) ? 'text-red-500' : 'text-gray-500'}">
-                            ${po.due_date}
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${getStatusBadgeClass(po.status)}">
-                                ${po.status.charAt(0).toUpperCase() + po.status.slice(1)}
-                            </span>
-                        </td>
-                    `;
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <input type="checkbox" class="document-checkbox rounded" 
+                                       data-type="po" data-id="${po.po_id}" 
+                                       data-number="${po.po_number}" data-due-amount="${po.due_amount}">
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${po.po_number}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${po.order_date}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.total_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.paid_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.due_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(po.due_date) ? 'text-red-500' : 'text-gray-500'}">
+                                ${po.due_date}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    ${getStatusBadgeClass(po.status)}">
+                                    ${po.status.charAt(0).toUpperCase() + po.status.slice(1)}
+                                </span>
+                            </td>
+                        `;
                             posTableBody.appendChild(row);
                         });
 
@@ -563,12 +603,12 @@
                     .catch(error => {
                         console.error('Error loading POs:', error);
                         posTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="px-4 py-4 text-center text-gray-500">
-                            Error loading POs. Please try again.
-                        </td>
-                    </tr>
-                `;
+                        <tr>
+                            <td colspan="8" class="px-4 py-4 text-center text-gray-500">
+                                Error loading POs. Please try again.
+                            </td>
+                        </tr>
+                    `;
                     });
             });
 
@@ -648,9 +688,9 @@
                     const listItem = document.createElement('li');
                     listItem.className = 'flex justify-between items-center';
                     listItem.innerHTML = `
-                <span class="text-sm">${doc.type.toUpperCase()}: ${doc.number}</span>
-                <span class="text-sm font-medium">$${doc.due_amount.toFixed(2)}</span>
-            `;
+                        <span class="text-sm">${doc.type.toUpperCase()}: ${doc.number}</span>
+                        <span class="text-sm font-medium">$${doc.due_amount.toFixed(2)}</span>
+                    `;
                     list.appendChild(listItem);
 
                     // Add hidden input for form submission
