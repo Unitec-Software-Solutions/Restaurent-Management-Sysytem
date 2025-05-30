@@ -78,7 +78,7 @@
                                        id="email" 
                                        value="{{ old('email', $reservation->email) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                       required>
+                                       >
                             </div>
                             <div>
                                 <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
