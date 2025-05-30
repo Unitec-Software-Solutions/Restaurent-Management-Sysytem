@@ -173,10 +173,36 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const startTimeInput = document.getElementById('start_time');
+    const endTimeInput = document.getElementById('end_time');
+
+    function pad(n) {
+        return n.toString().padStart(2, '0');
+    }
+
+    function setEndTimeFromStart() {
+        if (startTimeInput && endTimeInput) {
+            const [h, m] = startTimeInput.value.split(':').map(Number);
+            if (!isNaN(h) && !isNaN(m)) {
+                let endHour = h + 2;
+                let endMinute = m;
+                if (endHour >= 24) endHour -= 24;
+                endTimeInput.value = pad(endHour) + ':' + pad(endMinute);
+            }
+        }
+    }
+
+    // Always set start time to local time on page load
     if (startTimeInput) {
         const now = new Date();
-        const pad = n => n.toString().padStart(2, '0');
         startTimeInput.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+
+    // Set end time to 2 hours from start time on load
+    setEndTimeFromStart();
+
+    // Update end time whenever start time changes
+    if (startTimeInput) {
+        startTimeInput.addEventListener('change', setEndTimeFromStart);
     }
 });
 </script>
