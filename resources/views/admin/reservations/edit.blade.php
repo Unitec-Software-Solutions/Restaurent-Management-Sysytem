@@ -163,20 +163,6 @@
                         </div>
                     </div>
 
-                    <!-- Email/SMS Notification -->
-                    <!-- <div class="mb-6">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Notification Options</h2>
-                        <div>
-                            <label for="send_notification" class="block text-sm font-medium text-gray-700 mb-1">Send Notification</label>
-                            <select name="send_notification" id="send_notification" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="none" {{ old('send_notification', $reservation->send_notification) == 'none' ? 'selected' : '' }}>None</option>
-                                <option value="email" {{ old('send_notification', $reservation->send_notification) == 'email' ? 'selected' : '' }}>Email</option>
-                                <option value="sms" {{ old('send_notification', $reservation->send_notification) == 'sms' ? 'selected' : '' }}>SMS</option>
-                                <option value="both" {{ old('send_notification', $reservation->send_notification) == 'both' ? 'selected' : '' }}>Both</option>
-                            </select>
-                        </div>
-                    </div> -->
-
                     <!-- Steward Assignment Section -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Steward Assignment</h2>
@@ -185,8 +171,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">Current Steward</label>
                             <div class="flex items-center">
                                 <span id="current-steward" class="px-3 py-2 bg-gray-100 rounded-md">
-                                    @if($reservation->employee)
-                                        {{ $reservation->employee->name }}
+                                    @if($reservation->steward)
+                                        {{ $reservation->steward->name }}
                                     @else
                                         Not assigned
                                     @endif
@@ -196,7 +182,7 @@
                         
                         <!-- Assign Steward Form -->
                         <div class="mb-4">
-                            <label for="employee-select" class="block text-sm font-medium text-gray-700 mb-1">Assign Steward</label>
+                            <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-1">Assign Steward</label>
                             <div class="flex items-end gap-2">
                                 <div class="flex-1">
                                     @php
@@ -204,18 +190,22 @@
                                             ->orWhere('role', 'waiter')
                                             ->get();
                                     @endphp
-                                    <select name="employee_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <select name="steward_id" id="steward-select" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select Steward</option>
                                         @foreach($stewards as $steward)
-                                            <option value="{{ $steward->id }}" {{ $reservation->employee_id == $steward->id ? 'selected' : '' }}>
+                                            <option value="{{ $steward->id }}" {{ $reservation->steward_id == $steward->id ? 'selected' : '' }}>
                                                 {{ $steward->name }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
+                                <div>
+                                    <button type="button" id="assign-steward-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        Assign
+                                    </button>
+                                </div>
                             </div>
                         </div>
-
-                        
                     </div>
 
                     <!-- Check-in/Check-out Section -->
@@ -268,6 +258,7 @@
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // AJAX setup for CSRF token
@@ -286,15 +277,14 @@
             
             setTimeout(() => {
                 messageDiv.remove();
-            }, 3000);
+            }, 5000);
         }
 
         // Assign Steward Button
-        document.getElementById('assign-steward-btn').addEventListener('click', function() {
-            const employeeId = document.getElementById('employee-select').value;
-            const reservationId = {{ $reservation->id }};
+        $('#assign-steward-btn').on('click', function() {
+            const stewardId = $('#steward-select').val();
             
-            if (!employeeId) {
+            if (!stewardId) {
                 showMessage('Please select a steward', 'error');
                 return;
             }
@@ -303,88 +293,83 @@
                 url: "{{ route('admin.reservations.assign-steward', $reservation) }}",
                 method: 'POST',
                 data: {
-                    employee_id: employeeId
+                    steward_id: stewardId
                 },
                 success: function(response) {
                     if (response.success) {
                         // Update the current steward display
-                        document.getElementById('current-steward').textContent = response.steward_name;
+                        $('#current-steward').text(response.steward_name);
                         showMessage('Steward assigned successfully', 'success');
                     } else {
-                        showMessage(response.message, 'error');
+                        showMessage(response.message || 'Failed to assign steward', 'error');
                     }
                 },
                 error: function(xhr) {
                     showMessage('An error occurred. Please try again.', 'error');
+                    console.error('Error:', xhr.responseText);
                 }
             });
         });
 
-        
         // Check-in Button
-        document.getElementById('check-in-btn').addEventListener('click', function() {
-            const reservationId = {{ $reservation->id }};
-            
+        $('#check-in-btn').on('click', function() {
             $.ajax({
                 url: "{{ route('admin.reservations.check-in', $reservation) }}",
                 method: 'POST',
                 success: function(response) {
                     if (response.success) {
                         // Update the check-in display and hide the button
-                        document.getElementById('check-in-display').value = response.check_in_time;
-                        document.getElementById('check-in-btn').remove();
+                        $('#check-in-display').val(response.check_in_time);
+                        $('#check-in-btn').remove();
                         
                         // Show the check-out button if needed
-                        if (!document.getElementById('check-out-btn') && !response.check_out_time) {
-                            const container = document.querySelector('#check-out-display').parentNode;
-                            const button = document.createElement('button');
-                            button.id = 'check-out-btn';
-                            button.className = 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500';
-                            button.textContent = 'Check Out';
-                            button.addEventListener('click', checkOutHandler);
-                            container.appendChild(button);
+                        if (!$('#check-out-btn').length && !response.check_out_time) {
+                            $('#check-out-display').parent().append(`
+                                <button type="button" id="check-out-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    Check Out
+                                </button>
+                            `);
+                            
+                            // Add event listener to the new button
+                            $('#check-out-btn').on('click', checkOutHandler);
                         }
                         
                         showMessage('Reservation checked in successfully', 'success');
                     } else {
-                        showMessage(response.message, 'error');
+                        showMessage(response.message || 'Failed to check in', 'error');
                     }
                 },
                 error: function(xhr) {
                     showMessage('An error occurred. Please try again.', 'error');
+                    console.error('Error:', xhr.responseText);
                 }
             });
         });
 
-        // Check-out Button
+        // Check-out Button Handler
         function checkOutHandler() {
-            const reservationId = {{ $reservation->id }};
-            
             $.ajax({
                 url: "{{ route('admin.reservations.check-out', $reservation) }}",
                 method: 'POST',
                 success: function(response) {
                     if (response.success) {
                         // Update the check-out display and hide the button
-                        document.getElementById('check-out-display').value = response.check_out_time;
-                        if (document.getElementById('check-out-btn')) {
-                            document.getElementById('check-out-btn').remove();
-                        }
+                        $('#check-out-display').val(response.check_out_time);
+                        $('#check-out-btn').remove();
                         showMessage('Reservation checked out successfully', 'success');
                     } else {
-                        showMessage(response.message, 'error');
+                        showMessage(response.message || 'Failed to check out', 'error');
                     }
                 },
                 error: function(xhr) {
                     showMessage('An error occurred. Please try again.', 'error');
+                    console.error('Error:', xhr.responseText);
                 }
             });
         }
 
         // Add event listener to existing check-out button
-        if (document.getElementById('check-out-btn')) {
-            document.getElementById('check-out-btn').addEventListener('click', checkOutHandler);
-        }
+        $('#check-out-btn').on('click', checkOutHandler);
     });
 </script>
 @endsection

@@ -55,7 +55,6 @@ class Supplier extends Model
      */
     public function transactions()
     {
-        return $this->morphMany(ItemTransaction::class, 'source_type');
-
+        return $this->morphMany(ItemTransaction::class, 'source');
     }
 } 
