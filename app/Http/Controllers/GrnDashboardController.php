@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use App\Models\Branch;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Models\ItemTransaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -142,7 +143,7 @@ class GrnDashboardController extends Controller
     public function store(Request $request)
     {
         $orgId = $this->getOrganizationId();
-
+    
         $validated = $request->validate([
             'po_id' => 'nullable|exists:po_master,po_id',
             'branch_id' => 'required|exists:branches,id',
@@ -165,7 +166,7 @@ class GrnDashboardController extends Controller
             'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
             'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string|max:255'
         ]);
-
+    
         DB::beginTransaction();
         try {
             // Create GRN Master
@@ -184,13 +185,13 @@ class GrnDashboardController extends Controller
                 'is_active' => true,
                 'created_by' => auth()->id()
             ]);
-
-            // Create GRN Items
+    
+            // Create GRN Items and calculate total
             $total = 0;
             foreach ($validated['items'] as $item) {
                 $lineTotal = $item['accepted_quantity'] * $item['buying_price'];
                 $total += $lineTotal;
-
+    
                 GrnItem::create([
                     'grn_id' => $grn->grn_id,
                     'po_detail_id' => $item['po_detail_id'] ?? null,
@@ -208,13 +209,13 @@ class GrnDashboardController extends Controller
                     'rejection_reason' => $item['rejection_reason'],
                 ]);
             }
-
+    
             $grn->update(['total_amount' => $total]);
-
+    
             DB::commit();
             return redirect()->route('admin.grn.show', $grn)
                 ->with('success', 'GRN created successfully.');
-
+    
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()
@@ -247,16 +248,16 @@ class GrnDashboardController extends Controller
         if ($grn->organization_id !== $this->getOrganizationId()) {
             abort(403);
         }
-
+    
         if (!$grn->isPending()) {
             return back()->with('error', 'Only pending GRNs can be verified.');
         }
-
+    
         $validated = $request->validate([
             'status' => 'required|in:' . GrnMaster::STATUS_VERIFIED . ',' . GrnMaster::STATUS_REJECTED,
             'notes' => 'nullable|string'
         ]);
-
+    
         DB::beginTransaction();
         try {
             $grn->verified_by_user_id = auth()->id();
@@ -264,20 +265,46 @@ class GrnDashboardController extends Controller
             $grn->status = $validated['status'];
             $grn->notes = $validated['notes'] ?? $grn->notes;
             $grn->save();
-            
-            if ($validated['status'] === GrnMaster::STATUS_VERIFIED && $grn->po_id) {
-                $this->updatePurchaseOrderStatus($grn->purchaseOrder);
+    
+            if ($validated['status'] === GrnMaster::STATUS_VERIFIED) {
+                // Create stock transactions for accepted items
+                $this->createStockTransactions($grn);
+    
+                if ($grn->po_id) {
+                    $this->updatePurchaseOrderStatus($grn->purchaseOrder);
+                }
             }
-
+    
             DB::commit();
             return redirect()->route('admin.grn.show', $grn)
                 ->with('success', 'GRN ' . strtolower($validated['status']) . ' successfully.');
-
+    
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error verifying GRN: ' . $e->getMessage());
         }
     }
+
+    protected function createStockTransactions(GrnMaster $grn)
+{
+    foreach ($grn->items as $grnItem) {
+        if ($grnItem->accepted_quantity > 0) {
+            ItemTransaction::create([
+                'organization_id' => $grn->organization_id,
+                'branch_id' => $grn->branch_id,
+                'inventory_item_id' => $grnItem->item_id,
+                'transaction_type' => 'purchase_order',
+                'quantity' => $grnItem->accepted_quantity,
+                'cost_price' => $grnItem->buying_price,
+                'created_by_user_id' => auth()->id(),
+                'is_active' => true,
+                'source_id' => $grn->grn_id,
+                'source_type' => GrnMaster::class,
+                'notes' => 'Stock added from GRN #' . $grn->grn_number,
+            ]);
+        }
+    }
+}
 
     protected function updatePurchaseOrderStatus(PurchaseOrder $po)
     {
