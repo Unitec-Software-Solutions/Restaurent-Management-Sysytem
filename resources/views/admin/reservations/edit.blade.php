@@ -9,6 +9,9 @@
             </div>
 
             <div class="p-6">
+                <!-- AJAX Messages Container -->
+                <div id="ajax-messages" class="fixed top-4 right-4 z-50 space-y-2"></div>
+                
                 @if ($errors->any())
                     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                         <ul>
@@ -41,7 +44,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                                <input type="text" value="{{ $reservation->branch_id }}" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100" readonly>
+                                <input type="text" value="{{ $reservation->branch->name }}" class="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100" readonly>
                             </div>
                         </div>
                     </div>
@@ -82,7 +85,7 @@
                                 <input type="date" 
                                        name="date" 
                                        id="date" 
-                                       value="{{ old('date', $reservation->date ? \Carbon\Carbon::parse($reservation->date)->format('Y-m-d') : null) }}"
+                                       value="{{ old('date', $reservation->date ? $reservation->date->format('Y-m-d') : null) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -160,22 +163,6 @@
                         </div>
                     </div>
 
-                    <!-- Email/SMS Notification -->
-                    <div class="mb-6">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Notification Options</h2>
-                        <div>
-                            <label for="send_notification" class="block text-sm font-medium text-gray-700 mb-1">Send Notification</label>
-                            <select name="send_notification" 
-                                    id="send_notification" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="none">None</option>
-                                <option value="email">Email</option>
-                                <option value="sms">SMS</option>
-                                <option value="both">Both</option>
-                            </select>
-                        </div>
-                    </div>
-
                     <!-- Steward Assignment Section -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Steward Assignment</h2>
@@ -183,33 +170,42 @@
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Current Steward</label>
                             <div class="flex items-center">
-                                @if($reservation->steward)
-                                    <span class="px-3 py-2 bg-gray-100 rounded-md">{{ $reservation->steward->name }}</span>
-                                @else
-                                    <span class="px-3 py-2 bg-gray-100 rounded-md text-gray-500">Not assigned</span>
-                                @endif
+                                <span id="current-steward" class="px-3 py-2 bg-gray-100 rounded-md">
+                                    @if($reservation->steward)
+                                        {{ $reservation->steward->name }}
+                                    @else
+                                        Not assigned
+                                    @endif
+                                </span>
                             </div>
                         </div>
+                        
                         <!-- Assign Steward Form -->
-                        <form method="POST" action="{{ route('admin.reservations.assign-steward', $reservation) }}" class="mb-4">
-                            @csrf
+                        <div class="mb-4">
+                            <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-1">Assign Steward</label>
                             <div class="flex items-end gap-2">
                                 <div class="flex-1">
-                                    <label for="steward_id" class="block text-sm font-medium text-gray-700 mb-1">Assign Steward</label>
-                                    <select name="steward_id" id="steward_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    @php
+                                        $stewards = \App\Models\Employee::where('role', 'steward')
+                                            ->orWhere('role', 'waiter')
+                                            ->get();
+                                    @endphp
+                                    <select name="steward_id" id="steward-select" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="">Select Steward</option>
-                                        @foreach(\App\Models\Employee::all() as $steward)
+                                        @foreach($stewards as $steward)
                                             <option value="{{ $steward->id }}" {{ $reservation->steward_id == $steward->id ? 'selected' : '' }}>
                                                 {{ $steward->name }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    Assign
-                                </button>
+                                <div>
+                                    <button type="button" id="assign-steward-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        Assign
+                                    </button>
+                                </div>
                             </div>
-                        </form>
+                        </div>
                     </div>
 
                     <!-- Check-in/Check-out Section -->
@@ -219,34 +215,28 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Check-in Time</label>
                                 <div class="flex items-center gap-2">
-                                    <input type="text"
+                                    <input id="check-in-display" type="text"
                                            value="{{ $reservation->check_in_time ? $reservation->check_in_time->format('Y-m-d H:i:s') : 'Not checked in' }}"
                                            class="px-3 py-2 border border-gray-200 rounded-md bg-gray-100 flex-1"
                                            readonly>
                                     @if(!$reservation->check_in_time)
-                                        <form method="POST" action="{{ route('admin.reservations.check-in', $reservation) }}">
-                                            @csrf
-                                            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
-                                                Check In
-                                            </button>
-                                        </form>
+                                        <button type="button" id="check-in-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+                                            Check In
+                                        </button>
                                     @endif
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Check-out Time</label>
                                 <div class="flex items-center gap-2">
-                                    <input type="text"
+                                    <input id="check-out-display" type="text"
                                            value="{{ $reservation->check_out_time ? $reservation->check_out_time->format('Y-m-d H:i:s') : 'Not checked out' }}"
                                            class="px-3 py-2 border border-gray-200 rounded-md bg-gray-100 flex-1"
                                            readonly>
                                     @if($reservation->check_in_time && !$reservation->check_out_time)
-                                        <form method="POST" action="{{ route('admin.reservations.check-out', $reservation) }}">
-                                            @csrf
-                                            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
-                                                Check Out
-                                            </button>
-                                        </form>
+                                        <button type="button" id="check-out-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+                                            Check Out
+                                        </button>
                                     @endif
                                 </div>
                             </div>
@@ -267,4 +257,119 @@
         </div>
     </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // AJAX setup for CSRF token
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+
+        // Function to show flash messages
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fixed top-4 right-4 px-4 py-2 rounded-md shadow-lg text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            messageDiv.textContent = message;
+            document.getElementById('ajax-messages').appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Assign Steward Button
+        $('#assign-steward-btn').on('click', function() {
+            const stewardId = $('#steward-select').val();
+            
+            if (!stewardId) {
+                showMessage('Please select a steward', 'error');
+                return;
+            }
+            
+            $.ajax({
+                url: "{{ route('admin.reservations.assign-steward', $reservation) }}",
+                method: 'POST',
+                data: {
+                    steward_id: stewardId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update the current steward display
+                        $('#current-steward').text(response.steward_name);
+                        showMessage('Steward assigned successfully', 'success');
+                    } else {
+                        showMessage(response.message || 'Failed to assign steward', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    showMessage('An error occurred. Please try again.', 'error');
+                    console.error('Error:', xhr.responseText);
+                }
+            });
+        });
+
+        // Check-in Button
+        $('#check-in-btn').on('click', function() {
+            $.ajax({
+                url: "{{ route('admin.reservations.check-in', $reservation) }}",
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        // Update the check-in display and hide the button
+                        $('#check-in-display').val(response.check_in_time);
+                        $('#check-in-btn').remove();
+                        
+                        // Show the check-out button if needed
+                        if (!$('#check-out-btn').length && !response.check_out_time) {
+                            $('#check-out-display').parent().append(`
+                                <button type="button" id="check-out-btn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    Check Out
+                                </button>
+                            `);
+                            
+                            // Add event listener to the new button
+                            $('#check-out-btn').on('click', checkOutHandler);
+                        }
+                        
+                        showMessage('Reservation checked in successfully', 'success');
+                    } else {
+                        showMessage(response.message || 'Failed to check in', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    showMessage('An error occurred. Please try again.', 'error');
+                    console.error('Error:', xhr.responseText);
+                }
+            });
+        });
+
+        // Check-out Button Handler
+        function checkOutHandler() {
+            $.ajax({
+                url: "{{ route('admin.reservations.check-out', $reservation) }}",
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        // Update the check-out display and hide the button
+                        $('#check-out-display').val(response.check_out_time);
+                        $('#check-out-btn').remove();
+                        showMessage('Reservation checked out successfully', 'success');
+                    } else {
+                        showMessage(response.message || 'Failed to check out', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    showMessage('An error occurred. Please try again.', 'error');
+                    console.error('Error:', xhr.responseText);
+                }
+            });
+        }
+
+        // Add event listener to existing check-out button
+        $('#check-out-btn').on('click', checkOutHandler);
+    });
+</script>
 @endsection

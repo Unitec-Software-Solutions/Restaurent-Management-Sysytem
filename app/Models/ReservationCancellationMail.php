@@ -5,7 +5,7 @@ namespace App\Mail;
 use App\Models\Reservation;
 use Illuminate\Mail\Mailable;
 
-class ReservationConfirmed extends Mailable
+class ReservationCancellationMail extends Mailable
 {
     public $reservation;
 
@@ -16,7 +16,7 @@ class ReservationConfirmed extends Mailable
 
     public function build()
     {
-        return $this->subject('Reservation Confirmed')
-                    ->view('emails.reservations.confirmed');
+        return $this->subject('Reservation Cancelled')
+                    ->view('emails.reservations.cancelled');
     }
 }
