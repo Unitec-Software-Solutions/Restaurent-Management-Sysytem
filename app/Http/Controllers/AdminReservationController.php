@@ -468,4 +468,36 @@ public function checkOut(Reservation $reservation)
         ], 500);
     }
 }
+public function checkTableAvailability(Request $request)
+{
+    $request->validate([
+        'date' => 'required|date',
+        'start_time' => 'required|date_format:H:i',
+        'end_time' => 'required|date_format:H:i|after:start_time',
+    ]);
+
+    $branchId = auth('admin')->user()->branch->id;
+
+    $conflictingReservations = Reservation::where('branch_id', $branchId)
+        ->where('date', $request->date)
+        ->where('status', '!=', 'cancelled')
+        ->where(function($query) use ($request) {
+            $query->whereBetween('start_time', [$request->start_time, $request->end_time])
+                ->orWhereBetween('end_time', [$request->start_time, $request->end_time])
+                ->orWhere(function($q) use ($request) {
+                    $q->where('start_time', '<=', $request->start_time)
+                        ->where('end_time', '>=', $request->end_time);
+                });
+        })
+        ->with('tables')
+        ->get();
+
+    $allTableIds = \App\Models\Table::where('branch_id', $branchId)->pluck('id');
+    $reservedTableIds = $conflictingReservations->flatMap->tables->pluck('id')->unique();
+    $availableTableIds = $allTableIds->diff($reservedTableIds)->values();
+
+    return response()->json([
+        'available_table_ids' => $availableTableIds
+    ]);
+}
 }
