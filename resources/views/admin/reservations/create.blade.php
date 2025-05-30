@@ -2,6 +2,10 @@
 
 @php
     use App\Models\Employee;
+    // Calculate default times
+    $now = now();
+    $start_time = $now->format('H:i');
+    $end_time = $now->copy()->addHours(2)->format('H:i');
 @endphp
 
 @section('content')
@@ -76,6 +80,8 @@
                                 <input type="time" 
                                        name="start_time" 
                                        id="start_time" 
+                                       value="{{ old('start_time', $start_time) }}"
+                                       step="900"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -84,6 +90,8 @@
                                 <input type="time" 
                                        name="end_time" 
                                        id="end_time" 
+                                       value="{{ old('end_time', $end_time) }}"
+                                       step="900"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -131,7 +139,7 @@
                             <label for="steward_id" class="block text-sm font-medium text-gray-700 mb-1">Assign Steward</label>
                             <select name="steward_id" id="steward_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select Steward</option>
-                                @foreach(Employee::all() as $steward)
+                                @foreach(App\Models\Employee::all() as $steward)
                                     <option value="{{ $steward->id }}" {{ old('steward_id') == $steward->id ? 'selected' : '' }}>
                                         {{ $steward->name }}
                                     </option>
@@ -143,41 +151,8 @@
                     <!-- Check-in/Check-out Section -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Check-in/Check-out</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Check-in Time</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="text"
-                                           value="{{ $reservation->check_in_time ? $reservation->check_in_time->format('Y-m-d H:i:s') : 'Not checked in' }}"
-                                           class="px-3 py-2 border border-gray-200 rounded-md bg-gray-100 flex-1"
-                                           readonly>
-                                    @if(!$reservation->check_in_time)
-                                        <form method="POST" action="{{ route('admin.reservations.check-in', $reservation) }}">
-                                            @csrf
-                                            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
-                                                Check In
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Check-out Time</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="text"
-                                           value="{{ $reservation->check_out_time ? $reservation->check_out_time->format('Y-m-d H:i:s') : 'Not checked out' }}"
-                                           class="px-3 py-2 border border-gray-200 rounded-md bg-gray-100 flex-1"
-                                           readonly>
-                                    @if($reservation->check_in_time && !$reservation->check_out_time)
-                                        <form method="POST" action="{{ route('admin.reservations.check-out', $reservation) }}">
-                                            @csrf
-                                            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
-                                                Check Out
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </div>
+                        <div class="text-gray-500">
+                            Check-in and check-out will be available after the reservation is created.
                         </div>
                     </div>
 
@@ -195,4 +170,14 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startTimeInput = document.getElementById('start_time');
+    if (startTimeInput) {
+        const now = new Date();
+        const pad = n => n.toString().padStart(2, '0');
+        startTimeInput.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+});
+</script>
 @endsection
