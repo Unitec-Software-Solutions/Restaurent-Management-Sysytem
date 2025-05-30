@@ -25,6 +25,8 @@ class GrnMaster extends Model
         'delivery_note_number',
         'invoice_number',
         'total_amount',
+        'paid_amount',
+        'payment_status',
         'status',
         'notes',
         'is_active',
@@ -40,6 +42,10 @@ class GrnMaster extends Model
         'deleted_at' => 'datetime'
     ];
 
+    // Payment status constants
+    const PAYMENT_STATUS_PENDING = 'Pending';
+    const PAYMENT_STATUS_PARTIAL = 'Partial';
+    const PAYMENT_STATUS_PAID = 'Paid';
     // Status constants
     const STATUS_PENDING = 'Pending';
     const STATUS_VERIFIED = 'Verified';
@@ -47,6 +53,24 @@ class GrnMaster extends Model
     const STATUS_PARTIAL = 'Partially Verified';
 
     // Relationships
+
+
+
+    public function isPaymentPending()
+    {
+        return $this->payment_status === self::PAYMENT_STATUS_PENDING;
+    }
+
+    public function isPaymentPartial()
+    {
+        return $this->payment_status === self::PAYMENT_STATUS_PARTIAL;
+    }
+
+    public function isPaymentPaid()
+    {
+        return $this->payment_status === self::PAYMENT_STATUS_PAID;
+    }
+
     public function items()
     {
         return $this->hasMany(GrnItem::class, 'grn_id');
@@ -127,7 +151,7 @@ class GrnMaster extends Model
     {
         return $query->where('organization_id', $organizationId);
     }
-    
+
     public function scopeDateRange($query, $startDate, $endDate)
     {
         return $query->whereBetween('received_date', [$startDate, $endDate]);
@@ -206,5 +230,17 @@ class GrnMaster extends Model
             return 'Partially Verified';
         }
         return 'Pending Verification';
+    }
+
+    public function calculatePaymentStatus()
+    {
+        if ($this->paid_amount >= $this->total_amount) {
+            $this->payment_status = self::PAYMENT_STATUS_PAID;
+        } elseif ($this->paid_amount > 0) {
+            $this->payment_status = self::PAYMENT_STATUS_PARTIAL;
+        } else {
+            $this->payment_status = self::PAYMENT_STATUS_PENDING;
+        }
+        $this->save();
     }
 }

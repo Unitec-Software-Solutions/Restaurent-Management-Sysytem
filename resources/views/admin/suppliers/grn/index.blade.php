@@ -6,9 +6,10 @@
         <!-- Header with buttons -->
         <div class="sticky top-0 z-10 mb-6">
             <x-nav-buttons :items="[
-                ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
-                ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
-                ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
+            ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
+            ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
+            ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
+            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
             ]" active="Supplier GRNs" />
         </div>
 
