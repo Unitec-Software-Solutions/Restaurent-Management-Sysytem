@@ -111,20 +111,23 @@
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Assign Tables</h2>
                         <div class="flex flex-wrap gap-2">
                             @foreach ($tables as $table)
-                                @php
-                                    $isAvailable = in_array($table->id, $availableTableIds ?? []);
-                                @endphp
                                 <label class="cursor-pointer">
                                     <input type="checkbox"
                                            name="assigned_table_ids[]"
                                            value="{{ $table->id }}"
                                            class="hidden peer"
-                                           {{ $isAvailable ? '' : 'disabled' }}>
-                                    <div class="w-20 h-20 flex flex-col items-center justify-center border rounded-md text-xs p-2
-                                        peer-checked:bg-blue-500 peer-checked:text-white
-                                        {{ $isAvailable ? 'bg-white hover:bg-blue-100 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }}">
+                                           {{ in_array($table->id, $availableTableIds ?? []) ? '' : 'disabled' }}>
+                                    <div data-table-id="{{ $table->id }}"
+                                         class="table-selection w-20 h-20 flex flex-col items-center justify-center border rounded-md text-xs p-2
+                                            peer-checked:bg-blue-500 peer-checked:text-white
+                                            {{ in_array($table->id, $availableTableIds ?? []) 
+                                                ? 'bg-white hover:bg-blue-100 cursor-pointer border-gray-300' 
+                                                : 'bg-red-200 text-red-700 border-red-500 cursor-not-allowed opacity-70' }}">
                                         <span>Table {{ $table->id }}</span>
                                         <span>Cap: {{ $table->capacity }}</span>
+                                        <span class="availability-text text-xs mt-1">
+                                            {{ in_array($table->id, $availableTableIds ?? []) ? '' : 'Unavailable' }}
+                                        </span>
                                     </div>
                                 </label>
                             @endforeach
@@ -172,8 +175,10 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Time logic ---
     const startTimeInput = document.getElementById('start_time');
     const endTimeInput = document.getElementById('end_time');
+    const dateInput = document.getElementById('date');
 
     function pad(n) {
         return n.toString().padStart(2, '0');
@@ -196,14 +201,126 @@ document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
         startTimeInput.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
     }
-
-    // Set end time to 2 hours from start time on load
     setEndTimeFromStart();
 
-    // Update end time whenever start time changes
     if (startTimeInput) {
-        startTimeInput.addEventListener('change', setEndTimeFromStart);
+        startTimeInput.addEventListener('change', function() {
+            setEndTimeFromStart();
+            updateTableAvailability();
+        });
     }
+    if (dateInput) {
+        dateInput.addEventListener('change', updateTableAvailability);
+    }
+    if (endTimeInput) {
+        endTimeInput.addEventListener('change', updateTableAvailability);
+    }
+
+    // --- Table availability logic ---
+    async function updateTableAvailability() {
+        const date = dateInput.value;
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+
+        if (!date || !startTime || !endTime) return;
+
+        try {
+            const response = await fetch(`{{ route('admin.check-table-availability') }}?date=${date}&start_time=${startTime}&end_time=${endTime}`);
+            const data = await response.json();
+
+            document.querySelectorAll('.table-selection').forEach(tableDiv => {
+                const tableId = parseInt(tableDiv.dataset.tableId);
+                const isAvailable = data.available_table_ids.includes(tableId);
+
+                // Remove all possible classes first
+                tableDiv.classList.remove(
+                    'bg-red-200', 'text-red-700', 'border-red-500', 'opacity-70',
+                    'bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300', 'cursor-not-allowed'
+                );
+
+                // Add classes based on availability
+                if (isAvailable) {
+                    tableDiv.classList.add('bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300');
+                } else {
+                    tableDiv.classList.add('bg-red-200', 'text-red-700', 'border-red-500', 'cursor-not-allowed', 'opacity-70');
+                }
+
+                // Update checkbox state
+                const checkbox = tableDiv.parentElement.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.disabled = !isAvailable;
+
+                // Update availability text
+                const textElement = tableDiv.querySelector('.availability-text');
+                if (textElement) {
+                    textElement.textContent = isAvailable ? '' : 'Unavailable';
+                }
+            });
+        } catch (error) {
+            console.error('Error checking table availability:', error);
+        }
+    }
+
+    // Initial check on page load (after times are set)
+    updateTableAvailability();
+});
+</script>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('date');
+    const startTimeInput = document.getElementById('start_time');
+    const endTimeInput = document.getElementById('end_time');
+
+    async function updateTableAvailability() {
+        const date = dateInput.value;
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+
+        if (!date || !startTime || !endTime) return;
+
+        try {
+            const response = await fetch(`{{ route('admin.check-table-availability') }}?date=${date}&start_time=${startTime}&end_time=${endTime}`);
+            const data = await response.json();
+
+            document.querySelectorAll('.table-selection').forEach(tableDiv => {
+                const tableId = parseInt(tableDiv.dataset.tableId);
+                const isAvailable = data.available_table_ids.includes(tableId);
+
+                // Remove all possible classes first
+                tableDiv.classList.remove(
+                    'bg-red-200', 'text-red-700', 'border-red-500', 'opacity-70',
+                    'bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300', 'cursor-not-allowed'
+                );
+
+                // Add classes based on availability
+                if (isAvailable) {
+                    tableDiv.classList.add('bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300');
+                } else {
+                    tableDiv.classList.add('bg-red-200', 'text-red-700', 'border-red-500', 'cursor-not-allowed', 'opacity-70');
+                }
+
+                // Update checkbox state
+                const checkbox = tableDiv.parentElement.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.disabled = !isAvailable;
+
+                // Update availability text
+                const textElement = tableDiv.querySelector('.availability-text');
+                if (textElement) {
+                    textElement.textContent = isAvailable ? '' : 'Unavailable';
+                }
+            });
+        } catch (error) {
+            console.error('Error checking table availability:', error);
+        }
+    }
+
+    [dateInput, startTimeInput, endTimeInput].forEach(input => {
+        input.addEventListener('change', updateTableAvailability);
+    });
+
+    updateTableAvailability();
 });
 </script>
 @endsection
