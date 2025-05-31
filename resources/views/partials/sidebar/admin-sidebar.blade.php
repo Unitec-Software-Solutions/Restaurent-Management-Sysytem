@@ -25,7 +25,7 @@
                         ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard'],
                         ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package'],
                         ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock',],
-                        ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart'], // replace with the correct route
+                        ['title' => 'Order Management', 'route' => 'admin.orders.dashboard', 'icon' => 'shopping-cart'], // replace with the correct route
                         ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3'],
                         ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users'],
                         
