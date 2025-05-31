@@ -1,5 +1,5 @@
 <!-- resources/views/orders/takeaway/show.blade.php -->
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 <div class="container py-4">
