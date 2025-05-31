@@ -303,7 +303,8 @@
                                         </td>
                                         <td>LKR {{ number_format($order->total, 2) }}</td>
                                         <td>
-                                            <a href="{{ route('admin.orders.edit', $order) }}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
+                                            <a href="{{ route('admin.orders.reservations.edit', ['reservation' => $reservation->id, 'order' => $order->id]) }}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
+                                            <a href="{{ route('admin.orders.reservations.index', ['reservation_id' => $reservation->id]) }}" class="text-green-600 hover:text-green-900">Reservation Orders</a>
                                         </td>
                                     </tr>
                                     @endforeach
