@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 class AdminOrderController extends Controller
 {
-    // List all submitted orders (admin index)
+    // List all submitted orders (admin)
     public function index()
     {
         $orders = Order::with(['branch', 'items'])
@@ -155,23 +155,34 @@ class AdminOrderController extends Controller
      */
     public function createTakeaway()
     {
-        return view('admin.orders.create-takeaway', [
-            'branches' => Branch::all(),
-            'items' => ItemMaster::where('is_menu_item', true)->get(),
-        ]);
+        $branches = \App\Models\Branch::all();
+        $items = \App\Models\ItemMaster::where('is_menu_item', true)->get();
+        $defaultBranch = $branches->first()->id ?? null;
+        return view('admin.orders.takeaway.create', compact('branches', 'items', 'defaultBranch'));
     }
 
     /**
      * Store takeaway order (admin)
      */
-    public function storeAdminTakeaway(\App\Http\Requests\StoreOrderRequest $request)
+    public function storeTakeaway(Request $request)
     {
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'order_type' => 'required|string',
+            'branch_id' => 'required|exists:branches,id',
+            'order_time' => 'required|date',
+            'customer_name' => 'nullable|string', // allow blank
+            'customer_phone' => 'required|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
         $validated['reservation_id'] = null;
-
+        // Set default if blank
+        if (empty($validated['customer_name']) || trim($validated['customer_name']) === '') {
+            $validated['customer_name'] = 'Not Provided';
+        }
         $order = Order::create($validated);
         $this->createOrderItems($order, $validated['items']);
-
         return redirect()->route('admin.orders.takeaway.summary', $order->id);
     }
 
@@ -202,15 +213,216 @@ class AdminOrderController extends Controller
     }
 
     /**
-     * Display the summary of an order for a reservation
+     * Display the summary of an order for a reservation (admin)
      */
     public function summary(Reservation $reservation, Order $order)
     {
+        // Validate order belongs to this reservation
+        if ($order->reservation_id !== $reservation->id) {
+            abort(404, 'Order does not belong to this reservation');
+        }
+
         return view('admin.orders.summary', [
             'reservation' => $reservation,
             'order' => $order,
             'orderItems' => $order->items()->with('menuItem')->get(),
             'editable' => false,
+        ]);
+    }
+
+    public function dashboard()
+    {
+        return view('admin.orders.dashboard');
+    }
+
+    public function reservationIndex(Request $request)
+    {
+        $query = \App\Models\Order::with(['reservation', 'branch'])
+            ->where('order_type', 'dine_in_admin');
+
+        // Filter by reservation_id if provided
+        if ($request->filled('reservation_id')) {
+            $query->where('reservation_id', $request->input('reservation_id'));
+        }
+
+        $orders = $query->latest()->paginate(10);
+        $branches = \App\Models\Branch::all();
+        return view('admin.orders.index', compact('orders', 'branches'));
+    }
+
+    public function takeawayIndex()
+    {
+        $orders = \App\Models\Order::with(['branch'])
+            ->where('order_type', 'like', 'takeaway%')
+            ->latest()
+            ->paginate(10);
+
+        return view('admin.orders.takeaway.index', compact('orders'));
+    }
+
+    /**
+     * AJAX: Update cart for admin order creation/edit
+     */
+    public function updateCart(Request $request)
+    {
+        $items = $request->input('items', []);
+        $cart = [
+            'items' => [],
+            'subtotal' => 0,
+            'tax' => 0,
+            'total' => 0
+        ];
+
+        foreach ($items as $item) {
+            $menuItem = ItemMaster::find($item['item_id']);
+            if (!$menuItem) continue;
+
+            $quantity = (int)$item['quantity'];
+            $lineTotal = $menuItem->selling_price * $quantity;
+
+            $cart['items'][] = [
+                'id' => $menuItem->id,
+                'name' => $menuItem->name,
+                'price' => $menuItem->selling_price,
+                'quantity' => $quantity,
+                'total' => $lineTotal
+            ];
+
+            $cart['subtotal'] += $lineTotal;
+        }
+
+        // Calculate tax (10%) and total
+        $cart['tax'] = $cart['subtotal'] * 0.10;
+        $cart['total'] = $cart['subtotal'] + $cart['tax'];
+
+        return response()->json($cart);
+    }
+
+    /**
+     * Edit a reservation order (admin)
+     */
+    public function editReservationOrder(Reservation $reservation, Order $order)
+    {
+        $branches = Branch::all();
+        $menuItems = ItemMaster::where('is_menu_item', true)->get();
+        $statusOptions = [
+            Order::STATUS_SUBMITTED => 'Submitted',
+            Order::STATUS_PREPARING => 'Preparing',
+            Order::STATUS_READY => 'Ready',
+            Order::STATUS_COMPLETED => 'Completed',
+            Order::STATUS_CANCELLED => 'Cancelled'
+        ];
+        return view('admin.orders.edit', compact('order', 'reservation', 'branches', 'menuItems', 'statusOptions'));
+    }
+
+    /**
+     * Update a reservation order (admin)
+     */
+    public function updateReservationOrder(Request $request, Reservation $reservation, Order $order)
+    {
+        $data = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'status' => 'required|in:submitted,preparing,ready,completed,cancelled'
+        ]);
+        // Remove old items
+        $order->orderItems()->delete();
+        $subtotal = 0;
+        foreach ($data['items'] as $item) {
+            $menuItem = ItemMaster::find($item['item_id']);
+            $lineTotal = $menuItem->selling_price * $item['quantity'];
+            $subtotal += $lineTotal;
+            OrderItem::create([
+                'order_id' => $order->id,
+                'menu_item_id' => $item['item_id'],
+                'inventory_item_id' => $item['item_id'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $menuItem->selling_price,
+                'total_price' => $lineTotal,
+            ]);
+        }
+        $tax = $subtotal * 0.10;
+        $order->update([
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $subtotal + $tax,
+            'status' => $data['status'],
+        ]);
+        return redirect()->route('admin.orders.reservations.summary', ['reservation' => $reservation->id, 'order' => $order->id])
+            ->with('success', 'Order updated successfully.');
+    }
+
+    /**
+     * Show the form for editing a takeaway order (admin)
+     */
+    public function editTakeaway(Order $order)
+    {
+        $branches = Branch::all();
+        $menuItems = ItemMaster::where('is_menu_item', true)->get();
+        return view('admin.orders.takeaway.edit', compact('order', 'branches', 'menuItems'));
+    }
+
+    /**
+     * Update a takeaway order (admin)
+     */
+    public function updateTakeaway(Request $request, Order $order)
+    {
+        $data = $request->validate([
+            'order_type' => 'required|string',
+            'branch_id' => 'required|exists:branches,id',
+            'order_time' => 'required|date',
+            'customer_name' => 'nullable|string', // allow blank
+            'customer_phone' => 'required|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'status' => 'required|in:active,submitted,preparing,ready,completed,cancelled'
+        ]);
+        // Set default if blank
+        if (empty($data['customer_name']) || trim($data['customer_name']) === '') {
+            $data['customer_name'] = 'Not Provided';
+        }
+        // Remove old items
+        $order->orderItems()->delete();
+        $subtotal = 0;
+        foreach ($data['items'] as $item) {
+            $menuItem = ItemMaster::find($item['item_id']);
+            $lineTotal = $menuItem->selling_price * $item['quantity'];
+            $subtotal += $lineTotal;
+            OrderItem::create([
+                'order_id' => $order->id,
+                'menu_item_id' => $item['item_id'],
+                'inventory_item_id' => $item['item_id'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $menuItem->selling_price,
+                'total_price' => $lineTotal,
+            ]);
+        }
+        $tax = $subtotal * 0.10;
+        $order->update([
+            'order_type' => $data['order_type'],
+            'branch_id' => $data['branch_id'],
+            'order_time' => $data['order_time'],
+            'customer_name' => $data['customer_name'],
+            'customer_phone' => $data['customer_phone'],
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $subtotal + $tax,
+            'status' => $data['status'],
+        ]);
+        return redirect()->route('admin.orders.takeaway.index')->with('success', 'Takeaway order updated successfully.');
+    }
+
+    /**
+     * Display the summary of a takeaway order (admin)
+     */
+    public function takeawaySummary(Order $order)
+    {
+        // Load related items and menu items
+        $order->load(['items.menuItem', 'branch']);
+        return view('admin.orders.takeaway.summary', [
+            'order' => $order,
         ]);
     }
 }
