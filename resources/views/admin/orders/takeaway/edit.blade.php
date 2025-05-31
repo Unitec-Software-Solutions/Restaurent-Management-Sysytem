@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @php
     use App\Models\OrderStatusStateMachine;
@@ -12,7 +12,7 @@
         </div>
         
         <div class="card-body">
-            <form method="POST" action="{{ route('orders.takeaway.update', $order) }}">
+            <form method="POST" action="{{ route('admin.orders.takeaway.update', $order) }}">
                 @csrf
                 @method('PUT')
 
