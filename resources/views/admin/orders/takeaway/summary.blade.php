@@ -1,5 +1,5 @@
 <!-- resources/views/orders/takeaway/summary.blade.php -->
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 <div class="container py-4">
@@ -76,13 +76,6 @@
                 <a href="{{ route('orders.takeaway.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i> Add Another Order
                 </a>
-                <!-- Submit Order -->
-                <form action="{{ route('orders.takeaway.submit', $order->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check me-2"></i> Submit Order
-                    </button>
-                </form>
                 <!-- Delete Order -->
                 <form action="{{ route('orders.takeaway.destroy', $order->id) }}" method="POST" class="d-inline ms-2">
                     @csrf
@@ -91,6 +84,11 @@
                         <i class="fas fa-trash me-2"></i> Delete Order
                     </button>
                 </form>
+            </div>
+            <div class="mt-4">
+                <a href="{{ route('admin.orders.takeaway.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Takeaway Orders
+                </a>
             </div>
         </div>
     </div>
