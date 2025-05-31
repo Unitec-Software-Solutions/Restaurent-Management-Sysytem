@@ -23,6 +23,7 @@ return new class extends Migration
            // $table->decimal('total_amount', 15, 2)->default(0.00);
             $table->decimal('total_amount', 12, 2)->default(0.00);
             $table->string('status', 50)->default('Pending'); // Pending, Verified, Rejected
+            $table->string('payment_status', 50)->default('Pending')->comment('Payment status: Pending, Partial, Paid'); // Pending, Verified, Rejected
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true);
             $table->foreignId('created_by')->constrained('users')->nullable(); // User who created the GRN (Staff)

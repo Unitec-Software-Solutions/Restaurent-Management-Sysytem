@@ -5,8 +5,10 @@
         <!-- Header with buttons -->
         <x-nav-buttons :items="[
             ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
-            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
+            ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
             ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
+            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
+            
         ]" active="Suppliers Management" />
 
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
