@@ -1,5 +1,5 @@
 {{-- resources/views/orders/create.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-6xl mx-auto flex flex-row gap-8">
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        fetch('{{ route("admin.orders.update-cart") }}', {
+        fetch('{{ route('admin.orders.update-cart') }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
