@@ -500,4 +500,15 @@ public function checkTableAvailability(Request $request)
         'available_table_ids' => $availableTableIds
     ]);
 }
+
+/**
+ * Show the order creation form for a reservation (admin).
+ */
+public function createOrder(Reservation $reservation)
+{
+    // You may want to pass reservation, branch, and any other needed data
+    // For now, just redirect to the admin order creation view for this reservation
+    // (You can customize this as needed for your order creation flow)
+    return redirect()->route('admin.orders.reservations.create', ['reservation' => $reservation->id]);
+}
 }
