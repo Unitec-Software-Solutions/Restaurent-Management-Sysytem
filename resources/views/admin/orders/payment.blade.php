@@ -1,5 +1,5 @@
 {{-- filepath: resources/views/orders/payment.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('content')
 <h2>Payment for Order #{{ $order->id }}</h2>
 <p>Total Amount: {{ $order->total }}</p>
