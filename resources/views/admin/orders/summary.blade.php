@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white shadow-md rounded-lg p-6">
@@ -55,6 +55,25 @@
                 <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" onclick="return confirm('Delete this order?')">Delete Order</button>
             </form>
         </div>
+    </div>
+    <div class="mt-6 flex gap-4">
+        <!-- Back to Reservation (shows all orders for this reservation) -->
+        @if(isset($reservation) && $reservation)
+        <a href="{{ route('admin.reservations.show', $reservation->id) }}"
+           class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition">
+            Back to Reservation
+        </a>
+        @endif
+        <!-- Back to Reservation Index -->
+        <a href="{{ route('admin.reservations.index') }}"
+           class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded transition">
+            Back to Reservation List
+        </a>
+    </div>
+    <div class="mt-6">
+        <a href="{{ route('admin.orders.takeaway.index') }}" class="btn btn-secondary">
+            Back to Orders
+        </a>
     </div>
 </div>
 @endsection
