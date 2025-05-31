@@ -35,7 +35,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
         Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
         Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
-        
+        Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show');
     });
 
     // Orders
@@ -110,6 +110,36 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
         });
 
+        // Admin Order Routes
+        Route::prefix('admin/orders')->name('admin.orders.')->group(function () {
+            // List all orders
+            Route::get('/', [App\Http\Controllers\AdminOrderController::class, 'index'])->name('index');
+            // Edit order status
+            Route::get('{order}/edit', [App\Http\Controllers\AdminOrderController::class, 'edit'])->name('edit');
+            Route::put('{order}', [App\Http\Controllers\AdminOrderController::class, 'update'])->name('update');
+            // Branch orders
+            Route::get('branch/{branch}', [App\Http\Controllers\AdminOrderController::class, 'branchOrders'])->name('branch');
+            // Reservation Orders
+            Route::prefix('reservations/{reservation}')->name('reservations.')->group(function () {
+                Route::get('/create', [App\Http\Controllers\AdminOrderController::class, 'createForReservation'])->name('create');
+                Route::post('/store', [App\Http\Controllers\AdminOrderController::class, 'storeForReservation'])->name('store');
+                Route::get('/{order}/edit', [App\Http\Controllers\AdminOrderController::class, 'edit'])->name('edit');
+                Route::put('/{order}', [App\Http\Controllers\AdminOrderController::class, 'update'])->name('update');
+                Route::get('/{order}/summary', [App\Http\Controllers\AdminOrderController::class, 'summary'])->name('summary');
+                Route::delete('/{order}/destroy', [App\Http\Controllers\AdminOrderController::class, 'destroy'])->name('destroy');
+            });
+
+            // Takeaway Orders
+            Route::prefix('takeaway')->name('takeaway.')->group(function () {
+                Route::get('/create', [App\Http\Controllers\AdminOrderController::class, 'createTakeaway'])->name('create');
+                Route::post('/store', [App\Http\Controllers\AdminOrderController::class, 'storeTakeaway'])->name('store');
+                Route::get('/{order}/edit', [App\Http\Controllers\AdminOrderController::class, 'edit'])->name('edit');
+                Route::put('/{order}/update', [App\Http\Controllers\AdminOrderController::class, 'update'])->name('update');
+                Route::get('/{order}/summary', [App\Http\Controllers\AdminOrderController::class, 'summary'])->name('summary');
+                Route::delete('/{order}/destroy', [App\Http\Controllers\AdminOrderController::class, 'destroy'])->name('destroy');
+            });
+        });
+
         // Inventory Management
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
@@ -175,3 +205,30 @@ Route::get('/test-email', function() {
     Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
     return 'Email sent!';
 });
+Route::post('admin/orders/update-cart', [App\Http\Controllers\AdminOrderController::class, 'updateCart'])
+    ->name('admin.orders.update-cart');
+
+// Customer order store route (for /orders/create form)
+Route::prefix('orders')->name('orders.')->group(function () {
+    // ... existing routes ...
+    Route::post('/store', [OrderController::class, 'store'])->name('store');
+    Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
+    Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
+    Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
+    Route::put('/{order}', [OrderController::class, 'update'])->name('update');
+});
+
+// Admin Reservation Orders
+Route::prefix('admin/orders/reservations/{reservation}')->name('admin.orders.reservations.')->group(function () {
+    Route::get('/create', [\App\Http\Controllers\AdminOrderController::class, 'createForReservation'])->name('create');
+    Route::post('/store', [\App\Http\Controllers\AdminOrderController::class, 'storeForReservation'])->name('store');
+    Route::get('/{order}/summary', [\App\Http\Controllers\AdminOrderController::class, 'summary'])->name('summary');
+});
+
+// Admin Takeaway Orders
+Route::prefix('admin/orders/takeaway')->name('admin.orders.takeaway.')->group(function () {
+    Route::post('/store', [\App\Http\Controllers\Admin\OrderController::class, 'storeAdminTakeaway'])
+        ->name('store');
+});
+
+
