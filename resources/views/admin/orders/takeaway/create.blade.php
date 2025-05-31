@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 <div class="container py-4">
@@ -18,7 +18,7 @@
                         <div class="order-details-section mb-4">
                             <h4 class="section-title border-bottom pb-2 mb-3">Order Information</h4>
                             
-                            @if(auth()->check() && auth()->user()->isAdmin())
+                            @if(auth('admin')->check())
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Order Type</label>
                                 <select name="order_type" class="form-select">
@@ -28,7 +28,7 @@
                             </div>
                             @endif
 
-                            <div class="form-group mb-3" @if(auth()->check() && auth()->user()->isAdmin()) style="display:none" @endif>
+                            <div class="form-group mb-3" @if(auth('admin')->check()) style="display:none" @endif>
                                 <label class="form-label fw-bold">Select Outlet</label>
                                 <select name="branch_id" class="form-select" required>
                                     @foreach($branches as $branch)
@@ -42,7 +42,7 @@
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Pickup Time</label>
                                 <input type="datetime-local" name="order_time" 
-                                    value="{{ auth()->check() && auth()->user()->isAdmin() ? now()->format('Y-m-d\TH:i') : '' }}"
+                                    value="{{ old('order_time', now()->format('Y-m-d\TH:i')) }}"
                                     min="{{ now()->format('Y-m-d\TH:i') }}"
                                     class="form-control"
                                     required>
@@ -54,14 +54,15 @@
                             
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
-                                <input type="text" name="customer_name" class="form-control" required>
+                                <input type="text" name="customer_name" class="form-control" required value="{{ old('customer_name', 'Not Provided') }}">
                             </div>
 
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
                                 <input type="tel" name="customer_phone" class="form-control" required
                                     pattern="[0-9]{10,15}" 
-                                    title="Please enter a valid 10-15 digit phone number">
+                                    title="Please enter a valid 10-15 digit phone number"
+                                    value="{{ old('customer_phone', $defaultBranchPhone ?? '') }}">
                                 <small class="form-text text-muted">We'll notify you about your order status</small>
                             </div>
                         </div>
@@ -125,23 +126,35 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth()->check() && auth()->user()->isAdmin());
+    const isAdmin = @json(auth('admin')->check());
+
+    // Set order_time to current PC time in 24hr format on page load
+    const orderTimeInput = document.querySelector('input[name="order_time"]');
+    if (orderTimeInput) {
+        const now = new Date();
+        const pad = n => n.toString().padStart(2, '0');
+        const formatted = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        orderTimeInput.value = formatted;
+        orderTimeInput.min = formatted;
+    }
 
     // Admin-specific time handling
     if (isAdmin) {
         const setDefaultTime = (minutesToAdd) => {
             const time = new Date();
             time.setMinutes(time.getMinutes() + minutesToAdd);
-            document.querySelector('input[name="order_time"]').value = time.toISOString().slice(0, 16);
+            const pad = n => n.toString().padStart(2, '0');
+            const formatted = `${time.getFullYear()}-${pad(time.getMonth()+1)}-${pad(time.getDate())}T${pad(time.getHours())}:${pad(time.getMinutes())}`;
+            orderTimeInput.value = formatted;
+            orderTimeInput.min = formatted;
         };
-
-        // Initial time setting
-        setDefaultTime(15);
-
         // Handle order type changes
-        document.querySelector('select[name="order_type"]').addEventListener('change', function() {
-            setDefaultTime(this.value === 'takeaway_in_call_scheduled' ? 30 : 15);
-        });
+        const orderTypeSelect = document.querySelector('select[name="order_type"]');
+        if (orderTypeSelect) {
+            orderTypeSelect.addEventListener('change', function() {
+                setDefaultTime(this.value === 'takeaway_in_call_scheduled' ? 30 : 15);
+            });
+        }
     }
 
     // Item selection handling
