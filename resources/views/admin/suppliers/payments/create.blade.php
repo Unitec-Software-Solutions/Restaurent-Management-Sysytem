@@ -8,8 +8,7 @@
             ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
             ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
             ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
-            ['name' => 'New Payment', 'link' => route('admin.payments.create')],
-        ]" active="New Payment" />
+        ]" active="Supplier Payments" />
 
         <div class="bg-white rounded-xl shadow-sm p-6">
             <form id="paymentForm" action="{{ route('admin.payments.store') }}" method="POST">
