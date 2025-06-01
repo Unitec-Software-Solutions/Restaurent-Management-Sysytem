@@ -10,7 +10,7 @@ return new class extends Migration
         Schema::create('payment_allocations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('payment_id')->constrained('supp_payments_master');
-            $table->foreignId('grn_id')->constrained('grn_master');
+            $table->foreignId('grn_id')->constrained('grn_master', 'grn_id');
             $table->decimal('amount', 12, 2);
             $table->timestamp('allocated_at');
             $table->foreignId('allocated_by')->constrained('users');
@@ -23,3 +23,4 @@ return new class extends Migration
         Schema::dropIfExists('payment_allocations');
     }
 };
+ 

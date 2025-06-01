@@ -6,6 +6,8 @@
     pkgs.postgresql
     pkgs.php83
     pkgs.sudo
+    pkgs.python312Packages.pip
+    pkgs.haskellPackages.snap-templates
   ];
   idx.extensions = [
     "svelte.svelte-vscode"
