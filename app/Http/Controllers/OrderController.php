@@ -331,9 +331,9 @@ class OrderController extends Controller
     public function editTakeaway($id)
     {
         $order = Order::with('items.menuItem')->findOrFail($id);
-        $menuItems = ItemMaster::where('is_menu_item', true)->get();
+        $items = ItemMaster::where('is_menu_item', true)->get();
         $branches = Branch::all();
-        return view('orders.takeaway.edit', compact('order', 'menuItems', 'branches'));
+        return view('orders.takeaway.edit', compact('order', 'items', 'branches'));
     }
 
     // Submit takeaway order
@@ -404,5 +404,62 @@ class OrderController extends Controller
         $cart['total'] = $cart['subtotal'] + $cart['tax'];
 
         return response()->json($cart);
+    }
+
+    // Update takeaway order (customer)
+    public function updateTakeaway(Request $request, Order $order)
+    {
+        $data = $request->validate([
+            'branch_id' => 'required|exists:branches,id',
+            'order_time' => 'required|date|after_or_equal:now',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|max:20',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        // Remove old items
+        $order->items()->delete();
+        $subtotal = 0;
+        foreach ($data['items'] as $item) {
+            $menuItem = ItemMaster::find($item['item_id']);
+            $lineTotal = $menuItem->selling_price * $item['quantity'];
+            $subtotal += $lineTotal;
+            OrderItem::create([
+                'order_id' => $order->id,
+                'menu_item_id' => $item['item_id'],
+                'inventory_item_id' => $item['item_id'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $menuItem->selling_price,
+                'total_price' => $lineTotal,
+            ]);
+        }
+        $tax = $subtotal * 0.10;
+        $order->update([
+            'branch_id' => $data['branch_id'],
+            'order_time' => $data['order_time'],
+            'customer_name' => $data['customer_name'],
+            'customer_phone' => $data['customer_phone'],
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $subtotal + $tax,
+        ]);
+        return redirect()->route('orders.takeaway.summary', $order->id)
+            ->with('success', 'Takeaway order updated successfully!');
+    }
+
+    // Submit takeaway order (customer)
+    public function submitTakeaway(Request $request, Order $order)
+    {
+        $order->update(['status' => 'submitted']);
+        return redirect()->route('orders.takeaway.show', $order->id)
+            ->with('success', 'Takeaway order submitted successfully!');
+    }
+
+    // Show a single takeaway order (customer)
+    public function showTakeaway(Order $order)
+    {
+        return view('orders.takeaway.show', compact('order'));
     }
 }
