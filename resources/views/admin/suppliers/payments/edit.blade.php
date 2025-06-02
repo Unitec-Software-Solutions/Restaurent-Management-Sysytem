@@ -15,7 +15,7 @@
 
     <!-- Payments Table -->
     <div class="bg-white shadow rounded-lg overflow-hidden">
-    edit payemt 
+    edit payment 
     </div>
 
 

@@ -212,9 +212,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/customers', function () {
             return view('admin.customers.index');
         })->name('customers.index');
-        Route::get('/web-test', function () {
-            return view('admin.testpage');
-        })->name('web-test.index');
+
         Route::get('/digital-menu', function () {
             return view('admin.digital-menu.index');
         })->name('digital-menu.index');
