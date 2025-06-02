@@ -58,6 +58,9 @@ Route::middleware(['web'])->group(function () {
             Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->name('edit');
             Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
             Route::delete('/{order}/delete', [OrderController::class, 'destroyTakeaway'])->name('destroy');
+            // Add missing update and submit routes for customer takeaway orders
+            Route::put('/{order}', [OrderController::class, 'updateTakeaway'])->name('update');
+            Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->name('submit');
         });
     });
 });
