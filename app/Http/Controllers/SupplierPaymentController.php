@@ -133,7 +133,7 @@ public function store(Request $request)
             'total_amount' => $validated['total_amount'],
             'allocated_amount' => 0, // Will be updated as we process documents
             'payment_status' => $validated['payment_status'],
-            'processed_by' => auth()->id()
+            'processed_by' => Auth::id()
         ]);
 
         // Create payment details
@@ -172,7 +172,7 @@ public function store(Request $request)
                         $payment->grns()->attach($grn->grn_id, [
                             'amount' => $amountToAllocate,
                             'allocated_at' => now(),
-                            'allocated_by' => auth()->id()
+                            'allocated_by' => Auth::id()
                         ]);
 
                         $allocatedTotal += $amountToAllocate;
