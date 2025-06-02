@@ -39,6 +39,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
         Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
         Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
+        
     });
 
     // Orders
@@ -73,6 +74,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Reservations Management
         Route::resource('reservations', AdminReservationController::class);
+
+        // Steward and check-in/check-out routes
+        Route::post('reservations/{reservation}/assign-steward', [AdminReservationController::class, 'assignSteward'])
+        ->name('reservations.assign-steward');
+        Route::post('reservations/{reservation}/check-in', [AdminReservationController::class, 'checkIn'])
+        ->name('reservations.check-in');
+        Route::post('reservations/{reservation}/check-out', [AdminReservationController::class, 'checkOut'])
+        ->name('reservations.check-out');
+        Route::get('/check-table-availability', [AdminReservationController::class, 'checkTableAvailability'])
+        ->name('check-table-availability');
+       
 
         // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
@@ -210,5 +222,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             return view('admin.settings.index');
         })->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+        
     });
+});
+
+Route::get('/test-email', function() {
+    $reservation = \App\Models\Reservation::first();
+    Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
+    return 'Email sent!';
 });

@@ -26,6 +26,7 @@ class Reservation extends Model
         'steward_id',
         'check_in_time',
         'check_out_time',
+        'send_notification',
     ];
 
     protected $casts = [
@@ -103,7 +104,12 @@ class Reservation extends Model
 
     public function steward()
     {
-        return $this->belongsTo(\App\Models\Employee::class, 'steward_id');
+        return $this->belongsTo(Employee::class, 'steward_id');
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(\App\Models\Employee::class, 'employee_id');
     }
 }
 
