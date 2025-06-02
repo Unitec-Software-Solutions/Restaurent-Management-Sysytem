@@ -225,9 +225,3 @@ Route::prefix('admin')->name('admin.')->group(function () {
         
     });
 });
-
-Route::get('/test-email', function() {
-    $reservation = \App\Models\Reservation::first();
-    Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
-    return 'Email sent!';
-});
