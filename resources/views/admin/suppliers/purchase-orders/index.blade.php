@@ -10,37 +10,6 @@
             ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
         ]" active="Purchase Orders" />
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <x-partials.cards.stats-card 
-                title="Total POs" 
-                value="{{ number_format($stats['total_pos']) }}" 
-                trend="{{ $stats['total_pos'] > 0 ? round(($stats['pending_pos']/$stats['total_pos'])*100, 2) : 0 }}% pending" 
-                icon="fas fa-file-invoice" 
-                color="blue" />
-
-            <x-partials.cards.stats-card 
-                title="Pending POs" 
-                value="{{ number_format($stats['pending_pos']) }}" 
-                trend="Rs. {{ number_format($stats['pending_amount'], 2) }}" 
-                icon="fas fa-clock" 
-                color="yellow" />
-
-            <x-partials.cards.stats-card 
-                title="Approved POs" 
-                value="{{ number_format($stats['approved_pos']) }}" 
-                trend="{{ $stats['total_pos'] > 0 ? round(($stats['approved_pos']/$stats['total_pos'])*100, 2) : 0 }}% of total" 
-                icon="fas fa-check-circle" 
-                color="green" />
-
-            <x-partials.cards.stats-card 
-                title="Received POs" 
-                value="{{ number_format($stats['received_pos']) }}" 
-                trend="{{ $stats['total_pos'] > 0 ? round(($stats['received_pos']/$stats['total_pos'])*100, 2) : 0 }}% of total" 
-                icon="fas fa-truck-loading" 
-                color="indigo" />
-        </div>
-
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <form method="GET" action="{{ route('admin.purchase-orders.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
