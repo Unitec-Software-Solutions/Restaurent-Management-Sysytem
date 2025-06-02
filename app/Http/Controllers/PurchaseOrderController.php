@@ -100,9 +100,16 @@ class PurchaseOrderController extends Controller
             ->where('is_active', true)
             ->get();
 
+
+
+            
+        $items = ItemMaster::where('organization_id', $orgId)->active()->get();
+
+
         return view('admin.suppliers.purchase-orders.create', compact(
             'suppliers',
-            'branches'
+            'branches',
+            'items'
         ));
     }
     public function store(Request $request)
@@ -113,47 +120,51 @@ class PurchaseOrderController extends Controller
             'order_date' => 'required|date',
             'expected_delivery_date' => 'required|date|after_or_equal:order_date',
             'items' => 'required|array|min:1',
-            'items.*.item_code' => 'required',
+            'items.*.item_code' => 'required|exists:item_master,item_code',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.buying_price' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:500'
         ]);
 
-        // Calculate total amount
-        $totalAmount = collect($request->items)->sum(function ($item) {
+        $total = collect($request->items)->sum(function ($item) {
             return $item['quantity'] * $item['buying_price'];
         });
 
-        // Create PO
-        $po = PurchaseOrder::create([
-            'branch_id' => $validated['branch_id'],
-            'organization_id' => $this->getOrganizationId(),
-            'supplier_id' => $validated['supplier_id'],
-            'user_id' => Auth::id(),
-            'po_number' => 'PO-' . strtoupper(uniqid()),
-            'order_date' => $validated['order_date'],
-            'expected_delivery_date' => $validated['expected_delivery_date'],
-            'status' => 'Pending',
-            'total_amount' => $totalAmount,
-            'paid_amount' => 0,
-            'notes' => $validated['notes'] ?? null,
-            'is_active' => true
-        ]);
-
-        // Add PO items
-        foreach ($validated['items'] as $item) {
-            $po->items()->create([
-                'item_code' => $item['item_code'],
-                'batch_no' => $item['batch_no'] ?? null,
-                'buying_price' => $item['buying_price'],
-                'quantity' => $item['quantity'],
-                'line_total' => $item['quantity'] * $item['buying_price'],
-                'po_status' => 'Pending'
+        DB::beginTransaction();
+        try {
+            $po = PurchaseOrder::create([
+                'branch_id' => $validated['branch_id'],
+                'organization_id' => Auth::user()->organization_id,
+                'supplier_id' => $validated['supplier_id'],
+                'user_id' => Auth::id(),
+                'po_number' => 'PO-' . strtoupper(uniqid()),
+                'order_date' => $validated['order_date'],
+                'expected_delivery_date' => $validated['expected_delivery_date'],
+                'status' => 'Pending',
+                'total_amount' => $total,
+                'paid_amount' => 0,
+                'notes' => $validated['notes'] ?? null,
+                'is_active' => true
             ]);
-        }
 
-        return redirect()->route('admin.purchase-orders.show', $po->po_id)
-            ->with('success', 'Purchase order created successfully!');
+            foreach ($validated['items'] as $item) {
+                $po->items()->create([
+                    'item_code' => $item['item_code'],
+                    'buying_price' => $item['buying_price'],
+                    'quantity' => $item['quantity'],
+                    'line_total' => $item['quantity'] * $item['buying_price'],
+                    'po_status' => 'Pending'
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('admin.purchase-orders.show', $po->po_id)
+                ->with('success', 'Purchase order created successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()
+                ->with('error', 'Failed to create purchase order: ' . $e->getMessage());
+        }
     }
 
     public function show($id)

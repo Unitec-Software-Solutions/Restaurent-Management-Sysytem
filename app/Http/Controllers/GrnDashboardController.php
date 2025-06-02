@@ -270,7 +270,10 @@ public function update(Request $request, GrnMaster $grn)
     public function store(Request $request)
     {
         $orgId = $this->getOrganizationId();
-    
+
+        // Debug incoming request data
+        dd($request->all());
+
         $validated = $request->validate([
             'po_id' => 'nullable|exists:po_master,po_id',
             'branch_id' => 'required|exists:branches,id',
@@ -293,7 +296,10 @@ public function update(Request $request, GrnMaster $grn)
             'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
             'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string|max:255'
         ]);
-    
+
+        // Debug validated data
+        dd($validated);
+
         DB::beginTransaction();
         try {
             // Create GRN Master
@@ -303,22 +309,25 @@ public function update(Request $request, GrnMaster $grn)
                 'branch_id' => $validated['branch_id'],
                 'organization_id' => $orgId,
                 'supplier_id' => $validated['supplier_id'],
-                'received_by_user_id' => auth()->id(),
+                'received_by_user_id' => optional(Auth::user())->id,
                 'received_date' => $validated['received_date'],
                 'delivery_note_number' => $validated['delivery_note_number'],
                 'invoice_number' => $validated['invoice_number'],
                 'notes' => $validated['notes'],
                 'status' => GrnMaster::STATUS_PENDING,
                 'is_active' => true,
-                'created_by' => auth()->id()
+                'created_by' => optional(Auth::user())->id
             ]);
-    
+
+            // Debug GRN Master creation
+            dd($grn);
+
             // Create GRN Items and calculate total
             $total = 0;
             foreach ($validated['items'] as $item) {
                 $lineTotal = $item['accepted_quantity'] * $item['buying_price'];
                 $total += $lineTotal;
-    
+
                 GrnItem::create([
                     'grn_id' => $grn->grn_id,
                     'po_detail_id' => $item['po_detail_id'] ?? null,
@@ -336,15 +345,16 @@ public function update(Request $request, GrnMaster $grn)
                     'rejection_reason' => $item['rejection_reason'],
                 ]);
             }
-    
+
             $grn->update(['total_amount' => $total]);
-    
+
             DB::commit();
             return redirect()->route('admin.grn.show', $grn)
                 ->with('success', 'GRN created successfully.');
-    
+
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Error creating GRN: ' . $e->getMessage());
             return back()->withInput()
                 ->with('error', 'Error creating GRN: ' . $e->getMessage());
         }
@@ -388,7 +398,7 @@ public function update(Request $request, GrnMaster $grn)
     
         DB::beginTransaction();
         try {
-            $grn->verified_by_user_id = auth()->id();
+            $grn->verified_by_user_id = Auth::id();
             $grn->verified_at = now();
             $grn->status = $validated['status'];
             $grn->notes = $validated['notes'] ?? $grn->notes;
@@ -424,7 +434,7 @@ public function update(Request $request, GrnMaster $grn)
                 'transaction_type' => 'purchase_order',
                 'quantity' => $grnItem->accepted_quantity,
                 'cost_price' => $grnItem->buying_price,
-                'created_by_user_id' => auth()->id(),
+                'created_by_user_id' => optional(Auth::user())->id,
                 'is_active' => true,
                 'source_id' => $grn->grn_id,
                 'source_type' => GrnMaster::class,

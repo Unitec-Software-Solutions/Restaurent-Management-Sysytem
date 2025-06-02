@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Models\Branch;
 use App\Models\Organizations;
-use App\Models\Supplier; // Added missing import
+use App\Models\Supplier; 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
