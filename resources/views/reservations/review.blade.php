@@ -133,10 +133,20 @@
                     </button>
                 </form>
                 
-                <a href="{{ route('reservations.create', $request->all()) }}" class="w-full sm:w-auto text-gray-600 hover:text-gray-800 font-medium py-2 px-4 rounded-lg border border-gray-300 bg-white flex items-center justify-center">
-                    <i class="fas fa-edit mr-2"></i>
-                    Edit Reservation
-                </a>
+                <a href="{{ route('reservations.create', [
+                            'name' => $request->name,
+                            'email' => $request->email,
+                            'branch_id' => $request->branch_id,
+                            'phone' => $request->phone,
+                            'date' => $request->date,
+                            'start_time' => $request->start_time,
+                            'end_time' => $request->end_time,
+                            'number_of_people' => $request->number_of_people,
+                            'comments' => $request->comments ?: '',
+                            'edit_mode' => true
+                        ]) }}" class="text-gray-600 hover:text-gray-800">
+                            Edit Details
+                        </a>
             </div>
         </div>
     </div>
