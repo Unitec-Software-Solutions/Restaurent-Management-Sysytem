@@ -175,21 +175,6 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <div id="timeSuggestions" class="mt-2">
-                            <p class="text-sm text-gray-600 mb-1">Popular time slots:</p>
-                            <div class="flex flex-wrap gap-2">
-                                <button type="button" class="time-suggestion bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium px-3 py-1 rounded-full border border-gray-300" data-start="12:00" data-end="13:30">
-                                    <i class="fas fa-utensils mr-1"></i> Lunch (12:00-13:30)
-                                </button>
-                                <button type="button" class="time-suggestion bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium px-3 py-1 rounded-full border border-gray-300" data-start="18:00" data-end="20:00">
-                                    <i class="fas fa-moon mr-1"></i> Dinner (18:00-20:00)
-                                </button>
-                                <button type="button" class="time-suggestion bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium px-3 py-1 rounded-full border border-gray-300" data-start="14:00" data-end="16:00">
-                                    <i class="fas fa-coffee mr-1"></i> Afternoon (14:00-16:00)
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 
