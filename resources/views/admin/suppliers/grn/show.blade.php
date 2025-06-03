@@ -73,7 +73,7 @@
                         @foreach ($grn->items as $item)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-4 py-2 border">{{ $item->item_code }}</td>
-                                <td class="px-4 py-2 border">{{ $item->item->item_name ?? '-' }}</td>
+                                <td class="px-4 py-2 border">{{ $item->item->name ?? '-' }}</td>
                                 <td class="px-4 py-2 border">{{ $item->batch_no }}</td>
                                 <td class="px-4 py-2 border text-right">{{ number_format($item->ordered_quantity, 2) }}
                                 </td>

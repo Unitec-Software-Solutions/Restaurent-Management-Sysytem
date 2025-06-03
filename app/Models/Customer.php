@@ -20,6 +20,7 @@ class User extends Authenticatable
         'phone_number',
         'user_type',
         'is_registered'
+        
     ];
 
     protected $hidden = [

@@ -14,9 +14,9 @@ class GrnItem extends Model
 
     protected $fillable = [
         'grn_id',
-        'po_detail_id',
         'item_id',
         'item_code',
+        'item_name',
         'batch_no',
         'ordered_quantity',
         'received_quantity',
@@ -27,7 +27,6 @@ class GrnItem extends Model
         'manufacturing_date',
         'expiry_date',
         'rejection_reason',
-        'notes'
     ];
 
     protected $casts = [
@@ -74,6 +73,7 @@ class GrnItem extends Model
     {
         return $query->where('item_id', $itemId);
     }
+    
 
     public function scopeForItemCode($query, $itemCode)
     {
