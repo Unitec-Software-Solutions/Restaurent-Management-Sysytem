@@ -2,6 +2,9 @@ import './bootstrap';
 
 function toggleLogoutModal() {
     document.getElementById('logoutModal').classList.toggle('hidden');
+    document.getElementById('logoutModal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
 }
 
 document.addEventListener('DOMContentLoaded', function() {

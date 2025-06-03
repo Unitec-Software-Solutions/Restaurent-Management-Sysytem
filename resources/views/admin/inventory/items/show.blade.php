@@ -136,11 +136,45 @@
                     <p class="text-gray-700 dark:text-gray-300">{{ $item->additional_notes ?? 'No additional notes' }}</p>
                 </div>
             </div>
+            
         </div>
+                <!-- Additional Attributes Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden md:col-span-2 lg:col-span-1">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                    <i class="fas fa-list text-indigo-600 mr-2"></i>
+                    Additional Attributes
+                </h3>
+            </div>
+            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                @if (is_array($item->attributes) || is_object($item->attributes))
+                    @foreach ($item->attributes as $key => $value)
+                        @if (!in_array($key, ['img', 'discount', 'prep_time', 'portion_size', 'ingredients', 'available_from', 'available_to', 'available_days']))
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 capitalize">
+                                    {{ str_replace('_', ' ', $key) }}
+                                </p>
+                                @if (is_array($value))
+                                    <p class="text-gray-900 dark:text-white">{{ implode(', ', $value) }}</p>
+                                @else
+                                    <p class="text-gray-900 dark:text-white">{{ $value }}</p>
+                                @endif
+                            </div>
+                        @endif
+                    @endforeach
+                @else
+                    <div class="col-span-full text-center py-4">
+                        <p class="text-gray-500 dark:text-gray-400">No additional attributes available</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+
 
         <!-- Menu Item Attributes -->
         @if($item->is_menu_item)
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden md:col-span-2">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden md:col-span-3">
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
                     <i class="fas fa-utensils text-indigo-600 mr-2"></i>
@@ -189,38 +223,6 @@
             </div>
         </div>
         @endif
-
-        <!-- Additional Attributes -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden md:col-span-3">
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                    <i class="fas fa-list text-indigo-600 mr-2"></i>
-                    Additional Attributes
-                </h3>
-            </div>
-            <div class="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                @if (is_array($item->attributes) || is_object($item->attributes))
-                    @foreach ($item->attributes as $key => $value)
-                        @if (!in_array($key, ['img', 'discount', 'prep_time', 'portion_size', 'ingredients', 'available_from', 'available_to', 'available_days']))
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 capitalize">
-                                    {{ str_replace('_', ' ', $key) }}
-                                </p>
-                                @if (is_array($value))
-                                    <p class="text-gray-900 dark:text-white">{{ implode(', ', $value) }}</p>
-                                @else
-                                    <p class="text-gray-900 dark:text-white">{{ $value }}</p>
-                                @endif
-                            </div>
-                        @endif
-                    @endforeach
-                @else
-                    <div class="col-span-full text-center py-4">
-                        <p class="text-gray-500 dark:text-gray-400">No additional attributes available</p>
-                    </div>
-                @endif
-            </div>
-        </div>
     </div>
 
     <!-- Action Buttons -->

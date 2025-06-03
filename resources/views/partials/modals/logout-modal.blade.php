@@ -1,4 +1,4 @@
-<div id="logoutModal" class="fixed inset-0 flex z-50 hidden items-center justify-center bg-black/50">
+<div id="logoutModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50">
     <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
         <div class="flex items-center mb-4">
         <div class="bg-red-100 p-3 rounded-xl mr-3">

@@ -68,7 +68,7 @@
         <x-test-tile label="Digital Menu" route="admin.digital-menu.index" />
         <x-test-tile label="Settings" route="admin.settings.index" />
         <x-test-tile label="Reports" route="admin.reports.index" />
-        <x-test-tile label="Web Test Page" route="admin.web-test.index" />
+        <x-test-tile label="Web Test Page" route="admin.testpage" />
     </div>
 </div>
 </div>
