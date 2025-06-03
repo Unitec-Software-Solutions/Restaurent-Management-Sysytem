@@ -118,7 +118,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [AdminOrderController::class, 'takeawayIndex'])->name('index');
                 Route::get('/create', [AdminOrderController::class, 'createTakeaway'])->name('create');
                 Route::post('/store', [AdminOrderController::class, 'storeTakeaway'])->name('store');
-                Route::get('/{order}/show', [OrderController::class, 'showAdminTakeaway'])->name('show');
+                Route::get('/{order}/show', [OrderController::class, 'showTakeaway'])->name('takeaway.show');
                 // Added missing edit and update routes for takeaway orders
                 Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('edit');
                 Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('update');
