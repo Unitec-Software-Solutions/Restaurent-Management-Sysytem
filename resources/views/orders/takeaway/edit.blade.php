@@ -22,7 +22,7 @@
                         <div class="order-details-section mb-4">
                             <h4 class="section-title border-bottom pb-2 mb-3">Order Information</h4>
                             
-                            @if(auth()->check() && auth()->user()->isAdmin())
+                            @if(auth()->check() && auth()->user()->role === 'admin')
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Order Type</label>
                                 <select name="order_type" class="form-select">
@@ -32,7 +32,7 @@
                             </div>
                             @endif
 
-                            <div class="form-group mb-3" @if(auth()->check() && auth()->user()->isAdmin()) style="display:none" @endif>
+                            <div class="form-group mb-3" @if(auth()->check() && auth()->user()->role === 'admin') style="display:none" @endif>
                                 <label class="form-label fw-bold">Select Outlet</label>
                                 <select name="branch_id" class="form-select" required>
                                     @foreach($branches as $branch)
@@ -83,7 +83,7 @@
                             <div class="menu-items-container" style="max-height: 400px; overflow-y: auto;">
                                 @foreach($items as $item)
                                 @php
-                                    $orderItem = $order->items->firstWhere('menu_item_id', $item->id);
+                                    $orderItem = $order->items->firstWhere('item_id', $item->id);
                                 @endphp
                                 <div class="card mb-2 menu-item-card">
                                     <div class="card-body d-flex align-items-center">
@@ -125,7 +125,7 @@
                 </div>
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                    <a href="{{ route('orders.takeaway.show', $order) }}" class="btn btn-secondary px-4">
+                    <a href="{{ route('orders.takeaway.summary', $order) }}" class="btn btn-secondary px-4">
                         <i class="fas fa-times-circle me-2"></i> Cancel
                     </a>
                     <button type="submit" class="btn btn-primary px-4">
@@ -153,7 +153,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth()->check() && auth()->user()->isAdmin());
+    const isAdmin = @json(auth()->check() && auth()->user()->role === 'admin');
 
     // Initialize enabled quantity inputs for checked items
     document.querySelectorAll('.item-check:checked').forEach(checkbox => {
