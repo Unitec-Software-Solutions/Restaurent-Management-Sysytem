@@ -7,7 +7,7 @@ use App\Models\Order;
 use App\Models\Branch;
 use Illuminate\Http\Request;
 
-class OrderController extends Controller
+class AdminOrderController extends Controller
 {
     public function index()
     {
