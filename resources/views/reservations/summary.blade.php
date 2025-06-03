@@ -64,12 +64,16 @@
 
         <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="/dashboard" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg flex-1 sm:flex-none text-center">
+            <a href="/customer-dashboard" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg flex-1 sm:flex-none text-center">
                 <i class="fas fa-home mr-2"></i> Return to Dashboard
             </a>
             <button onclick="window.print()" class="bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg flex-1 sm:flex-none hover:bg-gray-50 transition-colors duration-200">
                 <i class="fas fa-print mr-2"></i> Print Confirmation
             </button>
+            <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" 
+               class="btn btn-success px-4 flex-1 sm:flex-none text-center">
+                <i class="bi bi-cart-plus me-2"></i> Place Order
+            </a>
         </div>
 
        
