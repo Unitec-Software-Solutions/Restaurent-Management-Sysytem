@@ -60,6 +60,7 @@ Route::middleware(['web'])->group(function () {
     });
 });
 
+Route::get('/login', function () { return redirect()->route('admin.login'); })->name('login');  // fix for redirecting to admin login Login not Found issue
 // Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
     // Authentication
