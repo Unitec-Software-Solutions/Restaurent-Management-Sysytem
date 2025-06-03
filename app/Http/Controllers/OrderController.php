@@ -333,7 +333,23 @@ class OrderController extends Controller
         $order = Order::with('items.menuItem')->findOrFail($id);
         $items = ItemMaster::where('is_menu_item', true)->get();
         $branches = Branch::all();
-        return view('orders.takeaway.edit', compact('order', 'items', 'branches'));
+
+        // Prepare cart data for pre-filling
+        $cart = [
+            'items' => [],
+            'subtotal' => $order->subtotal,
+            'tax' => $order->tax,
+            'total' => $order->total
+        ];
+
+        foreach ($order->items as $item) {
+            $cart['items'][] = [
+                'item_id' => $item->menu_item_id,
+                'quantity' => $item->quantity
+            ];
+        }
+
+        return view('orders.takeaway.edit', compact('order', 'items', 'branches', 'cart'));
     }
 
     // Submit takeaway order
