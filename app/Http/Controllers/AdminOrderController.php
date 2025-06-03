@@ -356,11 +356,12 @@ class AdminOrderController extends Controller
     /**
      * Show the form for editing a takeaway order (admin)
      */
-    public function editTakeaway(Order $order)
+    public function editTakeaway($id)
     {
+        $order = Order::with('items.menuItem')->findOrFail($id);
+        $items = ItemMaster::where('is_menu_item', true)->get();
         $branches = Branch::all();
-        $menuItems = ItemMaster::where('is_menu_item', true)->get();
-        return view('admin.orders.takeaway.edit', compact('order', 'branches', 'menuItems'));
+        return view('orders.takeaway.edit', compact('order', 'items', 'branches'));
     }
 
     /**
@@ -424,5 +425,15 @@ class AdminOrderController extends Controller
         return view('admin.orders.takeaway.summary', [
             'order' => $order,
         ]);
+    }
+
+    // Delete takeaway order (admin)
+    public function destroyTakeaway(Order $order)
+    {
+        $order->orderItems()->delete();
+        $order->delete();
+
+        return redirect()->route('admin.orders.takeaway.index')
+            ->with('success', 'Takeaway order deleted successfully.');
     }
 }
