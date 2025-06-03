@@ -41,6 +41,18 @@
                 <ul id="errorList"></ul>
             </div>
 
+            @php
+                $name = old('name', $input['name'] ?? '');
+                $email = old('email', $input['email'] ?? '');
+                $phone = old('phone', $input['phone'] ?? '');
+                $branch_id = old('branch_id', $input['branch_id'] ?? '');
+                $date = old('date', $input['date'] ?? '');
+                $start_time = old('start_time', $input['start_time'] ?? '');
+                $end_time = old('end_time', $input['end_time'] ?? '');
+                $number_of_people = old('number_of_people', $input['number_of_people'] ?? '');
+                $comments = old('comments', $input['comments'] ?? '');
+            @endphp
+
             <form id="reservationForm" method="POST" action="{{ route('reservations.review') }}" class="space-y-6">
                 @csrf
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -55,7 +67,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-user text-gray-400"></i>
                                 </div>
-                                <input id="name" name="name" type="text" value="{{ old('name') }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="John Doe" required>
+                                <input id="name" name="name" type="text" value="{{ $name }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="John Doe" required>
                             </div>
                         </div>
                         
@@ -65,7 +77,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-envelope text-gray-400"></i>
                                 </div>
-                                <input id="email" name="email" type="email" value="{{ old('email') }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="john@example.com">
+                                <input id="email" name="email" type="email" value="{{ $email }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="john@example.com">
                             </div>
                         </div>
                         
@@ -78,7 +90,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-phone text-gray-400"></i>
                                 </div>
-                                <input id="phone" name="phone" type="tel" value="{{ old('phone') }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="+1 (555) 123-4567" required>
+                                <input id="phone" name="phone" type="tel" value="{{ $phone }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="+1 (555) 123-4567" required>
                             </div>
                         </div>
                         
@@ -94,11 +106,11 @@
                                 <select id="number_of_people" name="number_of_people" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none appearance-none bg-white" required>
                                     <option value="" disabled selected>Select</option>
                                     @for($i = 1; $i <= 10; $i++)
-                                        <option value="{{ $i }}" {{ old('number_of_people') == $i ? 'selected' : '' }}>
+                                        <option value="{{ $i }}" {{ $number_of_people == $i ? 'selected' : '' }}>
                                             {{ $i }} {{ $i == 1 ? 'person' : 'people' }}
                                         </option>
                                     @endfor
-                                    <option value="11" {{ old('number_of_people') == 11 ? 'selected' : '' }}>11+ people</option>
+                                    <option value="11" {{ $number_of_people == 11 ? 'selected' : '' }}>11+ people</option>
                                 </select>
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                     <i class="fas fa-chevron-down text-gray-400"></i>
@@ -124,7 +136,7 @@
                                         <option value="{{ $branch->id }}" 
                                                 data-opening="{{ \Carbon\Carbon::parse($branch->opening_time)->format('H:i') }}" 
                                                 data-closing="{{ \Carbon\Carbon::parse($branch->closing_time)->format('H:i') }}"
-                                                {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                                {{ $branch_id == $branch->id ? 'selected' : '' }}>
                                             {{ $branch->name }}
                                         </option>
                                     @endforeach
@@ -144,7 +156,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-calendar-day text-gray-400"></i>
                                 </div>
-                                <input id="date" name="date" type="date" min="{{ now()->format('Y-m-d') }}" value="{{ old('date', now()->format('Y-m-d')) }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" required>
+                                <input id="date" name="date" type="date" min="{{ now()->format('Y-m-d') }}" value="{{ $date }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" required>
                             </div>
                         </div>
                         
@@ -158,7 +170,7 @@
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fas fa-clock text-gray-400"></i>
                                     </div>
-                                    <input id="start_time" name="start_time" type="time" value="{{ old('start_time') }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" required>
+                                    <input id="start_time" name="start_time" type="time" value="{{ $start_time }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" required>
                                 </div>
                             </div>
                             
@@ -171,7 +183,7 @@
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fas fa-clock text-gray-400"></i>
                                     </div>
-                                    <input id="end_time" name="end_time" type="time" value="{{ old('end_time') }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" required>
+                                    <input id="end_time" name="end_time" type="time" value="{{ $end_time }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" required>
                                 </div>
                             </div>
                         </div>
@@ -184,7 +196,7 @@
                         <div class="absolute top-3 left-3">
                             <i class="fas fa-comment-dots text-gray-400"></i>
                         </div>
-                        <textarea id="comments" name="comments" rows="3" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="Any special requests, dietary restrictions, or occasion details...">{{ old('comments') }}</textarea>
+                        <textarea id="comments" name="comments" rows="3" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" placeholder="Any special requests, dietary restrictions, or occasion details...">{{ $comments }}</textarea>
                         <p class="text-xs text-gray-500 mt-1">We'll do our best to accommodate your requests</p>
                     </div>
                 </div>
