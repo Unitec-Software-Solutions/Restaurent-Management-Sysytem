@@ -14,22 +14,27 @@ use App\Models\ItemTransaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class GrnDashboardController extends Controller
 {
     protected function getOrganizationId()
     {
-        return Auth::user()->organization_id ?? abort(403, 'Unauthorized access');
+        $user = Auth::user();
+        if (!$user || !$user->organization_id) {
+            abort(403, 'Unauthorized access');
+        }
+        return $user->organization_id;
     }
 
     public function index(Request $request)
     {
         $orgId = $this->getOrganizationId();
-        
+
         // Set default dates if not provided
         $startDate = $request->input('start_date', Carbon::now()->subMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
-        
+
         // Base query with relationships
         $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder'])
             ->where('organization_id', $orgId);
@@ -37,17 +42,17 @@ class GrnDashboardController extends Controller
         // Apply filters
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('grn_number', 'like', "%{$search}%")
-                  ->orWhere('delivery_note_number', 'like', "%{$search}%")
-                  ->orWhere('invoice_number', 'like', "%{$search}%")
-                  ->orWhereHas('supplier', function($q) use ($search) {
-                      $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('purchaseOrder', function($q) use ($search) {
-                      $q->where('po_number', 'like', "%{$search}%");
-                  });
+                    ->orWhere('delivery_note_number', 'like', "%{$search}%")
+                    ->orWhere('invoice_number', 'like', "%{$search}%")
+                    ->orWhereHas('supplier', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('purchaseOrder', function ($q) use ($search) {
+                        $q->where('po_number', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -80,11 +85,11 @@ class GrnDashboardController extends Controller
 
         // Get summary statistics (using a fresh query to avoid pagination interference)
         $statsQuery = GrnMaster::where('organization_id', $orgId);
-        
+
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $statsQuery->whereBetween('received_date', [$request->start_date, $request->end_date]);
         }
-        
+
         $stats = [
             'total_grns' => $statsQuery->count(),
             'pending_verification' => $statsQuery->clone()->where('status', GrnMaster::STATUS_PENDING)->count(),
@@ -111,131 +116,139 @@ class GrnDashboardController extends Controller
     }
 
     public function edit(GrnMaster $grn)
-{
-    $orgId = $this->getOrganizationId();
-    if ($grn->organization_id !== $orgId) {
-        abort(403);
-    }
-
-    // Only allow editing of pending GRNs
-    if (!$grn->isPending()) {
-        return redirect()->route('admin.grn.show', $grn)
-            ->with('error', 'Only pending GRNs can be edited');
-    }
-
-    $grn->load([
-        'items.item',
-        'purchaseOrder.items'
-    ]);
-
-    $suppliers = Supplier::where('organization_id', $orgId)
-        ->active()
-        ->get();
-
-    $branches = Branch::where('organization_id', $orgId)
-        ->active()
-        ->get();
-
-    $purchaseOrders = PurchaseOrder::where('organization_id', $orgId)
-        ->where('supplier_id', $grn->supplier_id)
-        ->where('status', 'Approved')
-        ->with(['items'])
-        ->get();
-
-    return view('admin.suppliers.grn.edit', compact(
-        'grn',
-        'suppliers',
-        'branches',
-        'purchaseOrders'
-    ));
-}
-
-public function update(Request $request, GrnMaster $grn)
-{
-    $orgId = $this->getOrganizationId();
-    if ($grn->organization_id !== $orgId) {
-        abort(403);
-    }
-
-    // Only allow updating of pending GRNs
-    if (!$grn->isPending()) {
-        return back()->with('error', 'Only pending GRNs can be updated');
-    }
-
-    $validated = $request->validate([
-        'branch_id' => 'required|exists:branches,id',
-        'supplier_id' => 'required|exists:suppliers,id',
-        'received_date' => 'required|date',
-        'delivery_note_number' => 'nullable|string|max:100',
-        'invoice_number' => 'nullable|string|max:100',
-        'notes' => 'nullable|string',
-        'items' => 'required|array|min:1',
-        'items.*.item_id' => 'required|exists:item_master,id',
-        'items.*.item_code' => 'required|exists:item_master,item_code',
-        'items.*.po_detail_id' => 'nullable|exists:po_details,po_detail_id',
-        'items.*.batch_no' => 'nullable|string|max:50',
-        'items.*.ordered_quantity' => 'required|numeric|min:0',
-        'items.*.received_quantity' => 'required|numeric|min:0',
-        'items.*.accepted_quantity' => 'required|numeric|min:0|lte:items.*.received_quantity',
-        'items.*.rejected_quantity' => 'required|numeric|min:0',
-        'items.*.buying_price' => 'required|numeric|min:0',
-        'items.*.manufacturing_date' => 'nullable|date',
-        'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
-        'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string|max:255'
-    ]);
-
-    DB::beginTransaction();
-    try {
-        // Update GRN Master
-        $grn->update([
-            'branch_id' => $validated['branch_id'],
-            'supplier_id' => $validated['supplier_id'],
-            'received_date' => $validated['received_date'],
-            'delivery_note_number' => $validated['delivery_note_number'],
-            'invoice_number' => $validated['invoice_number'],
-            'notes' => $validated['notes'],
-        ]);
-
-        // Remove existing items
-        $grn->items()->delete();
-
-        // Create new items
-        $total = 0;
-        foreach ($validated['items'] as $item) {
-            $lineTotal = $item['accepted_quantity'] * $item['buying_price'];
-            $total += $lineTotal;
-
-            GrnItem::create([
-                'grn_id' => $grn->grn_id,
-                'po_detail_id' => $item['po_detail_id'] ?? null,
-                'item_id' => $item['item_id'],
-                'item_code' => $item['item_code'],
-                'batch_no' => $item['batch_no'],
-                'ordered_quantity' => $item['ordered_quantity'],
-                'received_quantity' => $item['received_quantity'],
-                'accepted_quantity' => $item['accepted_quantity'],
-                'rejected_quantity' => $item['rejected_quantity'],
-                'buying_price' => $item['buying_price'],
-                'line_total' => $lineTotal,
-                'manufacturing_date' => $item['manufacturing_date'],
-                'expiry_date' => $item['expiry_date'],
-                'rejection_reason' => $item['rejection_reason'],
-            ]);
+    {
+        $orgId = $this->getOrganizationId();
+        if ($grn->organization_id !== $orgId) {
+            abort(403);
         }
 
-        $grn->update(['total_amount' => $total]);
+        // Only allow editing of pending GRNs
+        if (!$grn->isPending()) {
+            return redirect()->route('admin.grn.show', $grn)
+                ->with('error', 'Only pending GRNs can be edited');
+        }
 
-        DB::commit();
-        return redirect()->route('admin.grn.show', $grn)
-            ->with('success', 'GRN updated successfully.');
+        $grn->load([
+            'items.item',
+            'purchaseOrder.items'
+        ]);
 
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return back()->withInput()
-            ->with('error', 'Error updating GRN: ' . $e->getMessage());
+        $suppliers = Supplier::where('organization_id', $orgId)
+            ->active()
+            ->get();
+
+        $branches = Branch::where('organization_id', $orgId)
+            ->active()
+            ->get();
+
+        $purchaseOrders = PurchaseOrder::where('organization_id', $orgId)
+            ->where('supplier_id', $grn->supplier_id)
+            ->where('status', 'Approved')
+            ->with(['items'])
+            ->get();
+
+        // Backfill item names from ItemMaster
+        foreach ($grn->items as $item) {
+            if ($item->item) {
+                $item->item_name = $item->item->name;
+            }
+        }
+
+        return view('admin.suppliers.grn.edit', compact(
+            'grn',
+            'suppliers',
+            'branches',
+            'purchaseOrders'
+        ));
     }
-}
 
+    public function update(Request $request, GrnMaster $grn)
+    {
+        $orgId = $this->getOrganizationId();
+        if ($grn->organization_id !== $orgId) {
+            abort(403);
+        }
+
+        // Only allow updating of pending GRNs
+        if (!$grn->isPending()) {
+            return back()->with('error', 'Only pending GRNs can be updated');
+        }
+
+        $validated = $request->validate([
+            'branch_id' => 'required|exists:branches,id',
+            'supplier_id' => 'required|exists:suppliers,id',
+            'received_date' => 'required|date',
+            'delivery_note_number' => 'nullable|string|max:100',
+            'invoice_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_code' => 'required|exists:item_master,item_code',
+            'items.*.po_detail_id' => 'nullable|exists:po_details,po_detail_id',
+            'items.*.batch_no' => 'nullable|string|max:50',
+            'items.*.ordered_quantity' => 'required|numeric|min:0',
+            'items.*.received_quantity' => 'required|numeric|min:0',
+            'items.*.accepted_quantity' => 'required|numeric|min:0|lte:items.*.received_quantity',
+            'items.*.rejected_quantity' => 'required|numeric|min:0',
+            'items.*.buying_price' => 'required|numeric|min:0',
+            'items.*.manufacturing_date' => 'nullable|date',
+            'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
+            'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string|max:255'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Update GRN Master
+            $grn->update([
+                'branch_id' => $validated['branch_id'],
+                'supplier_id' => $validated['supplier_id'],
+                'received_date' => $validated['received_date'],
+                'delivery_note_number' => $validated['delivery_note_number'],
+                'invoice_number' => $validated['invoice_number'],
+                'notes' => $validated['notes'],
+            ]);
+
+            // Remove existing items
+            $grn->items()->delete();
+
+            // Create new items
+            $total = 0;
+            foreach ($validated['items'] as $item) {
+                $itemMaster = ItemMaster::findOrFail($item['item_id']);
+
+                $lineTotal = $item['accepted_quantity'] * $item['buying_price'];
+                $total += $lineTotal;
+
+                GrnItem::create([
+                    'grn_id' => $grn->grn_id,
+                    'po_detail_id' => $item['po_detail_id'] ?? null,
+                    'item_id' => $item['item_id'],
+                    'item_code' => $itemMaster->item_code,
+                    'item_name' => $itemMaster->name, // Fetch and save item_name
+                    'batch_no' => $item['batch_no'],
+                    'ordered_quantity' => $item['ordered_quantity'],
+                    'received_quantity' => $item['received_quantity'],
+                    'accepted_quantity' => $item['accepted_quantity'],
+                    'rejected_quantity' => $item['rejected_quantity'],
+                    'buying_price' => $item['buying_price'],
+                    'line_total' => $lineTotal,
+                    'manufacturing_date' => $item['manufacturing_date'],
+                    'expiry_date' => $item['expiry_date'],
+                    'rejection_reason' => $item['rejection_reason'],
+                ]);
+            }
+
+            $grn->update(['total_amount' => $total]);
+
+            DB::commit();
+            return redirect()->route('admin.grn.show', $grn)
+                ->with('success', 'GRN updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()
+                ->with('error', 'Error updating GRN: ' . $e->getMessage());
+        }
+    }
 
     public function create()
     {
@@ -271,11 +284,7 @@ public function update(Request $request, GrnMaster $grn)
     {
         $orgId = $this->getOrganizationId();
 
-        // Debug incoming request data
-        dd($request->all());
-
         $validated = $request->validate([
-            'po_id' => 'nullable|exists:po_master,po_id',
             'branch_id' => 'required|exists:branches,id',
             'supplier_id' => 'required|exists:suppliers,id',
             'received_date' => 'required|date',
@@ -284,28 +293,17 @@ public function update(Request $request, GrnMaster $grn)
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.item_code' => 'required|exists:item_master,item_code',
-            'items.*.po_detail_id' => 'nullable|exists:po_details,po_detail_id',
             'items.*.batch_no' => 'nullable|string|max:50',
             'items.*.ordered_quantity' => 'required|numeric|min:0',
             'items.*.received_quantity' => 'required|numeric|min:0',
-            'items.*.accepted_quantity' => 'required|numeric|min:0|lte:items.*.received_quantity',
-            'items.*.rejected_quantity' => 'required|numeric|min:0',
             'items.*.buying_price' => 'required|numeric|min:0',
-            'items.*.manufacturing_date' => 'nullable|date',
-            'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
-            'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string|max:255'
         ]);
-
-        // Debug validated data
-        dd($validated);
 
         DB::beginTransaction();
         try {
             // Create GRN Master
             $grn = GrnMaster::create([
                 'grn_number' => 'GRN-' . date('Ymd') . '-' . Str::random(4),
-                'po_id' => $validated['po_id'],
                 'branch_id' => $validated['branch_id'],
                 'organization_id' => $orgId,
                 'supplier_id' => $validated['supplier_id'],
@@ -319,30 +317,26 @@ public function update(Request $request, GrnMaster $grn)
                 'created_by' => optional(Auth::user())->id
             ]);
 
-            // Debug GRN Master creation
-            dd($grn);
-
-            // Create GRN Items and calculate total
+            // Create GRN Items
             $total = 0;
             foreach ($validated['items'] as $item) {
-                $lineTotal = $item['accepted_quantity'] * $item['buying_price'];
+                $itemMaster = ItemMaster::findOrFail($item['item_id']);
+
+                $lineTotal = $item['received_quantity'] * $item['buying_price'];
                 $total += $lineTotal;
 
                 GrnItem::create([
                     'grn_id' => $grn->grn_id,
-                    'po_detail_id' => $item['po_detail_id'] ?? null,
                     'item_id' => $item['item_id'],
-                    'item_code' => $item['item_code'],
-                    'batch_no' => $item['batch_no'],
+                    'item_code' => $itemMaster->item_code,
+                    'item_name' => $itemMaster->name, // Fetch and save item_name
+                    'batch_no' => $item['batch_no'] ?? null,
                     'ordered_quantity' => $item['ordered_quantity'],
                     'received_quantity' => $item['received_quantity'],
-                    'accepted_quantity' => $item['accepted_quantity'],
-                    'rejected_quantity' => $item['rejected_quantity'],
+                    'accepted_quantity' => $item['received_quantity'], // Default to all received
+                    'rejected_quantity' => 0,
                     'buying_price' => $item['buying_price'],
                     'line_total' => $lineTotal,
-                    'manufacturing_date' => $item['manufacturing_date'],
-                    'expiry_date' => $item['expiry_date'],
-                    'rejection_reason' => $item['rejection_reason'],
                 ]);
             }
 
@@ -351,15 +345,17 @@ public function update(Request $request, GrnMaster $grn)
             DB::commit();
             return redirect()->route('admin.grn.show', $grn)
                 ->with('success', 'GRN created successfully.');
-
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Error creating GRN: ' . $e->getMessage());
+            \Log::error('GRN Creation Error:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'input' => $request->all()
+            ]);
             return back()->withInput()
                 ->with('error', 'Error creating GRN: ' . $e->getMessage());
         }
     }
-
 
     public function show(GrnMaster $grn)
     {
@@ -386,16 +382,16 @@ public function update(Request $request, GrnMaster $grn)
         if ($grn->organization_id !== $this->getOrganizationId()) {
             abort(403);
         }
-    
+
         if (!$grn->isPending()) {
             return back()->with('error', 'Only pending GRNs can be verified.');
         }
-    
+
         $validated = $request->validate([
             'status' => 'required|in:' . GrnMaster::STATUS_VERIFIED . ',' . GrnMaster::STATUS_REJECTED,
             'notes' => 'nullable|string'
         ]);
-    
+
         DB::beginTransaction();
         try {
             $grn->verified_by_user_id = Auth::id();
@@ -403,20 +399,19 @@ public function update(Request $request, GrnMaster $grn)
             $grn->status = $validated['status'];
             $grn->notes = $validated['notes'] ?? $grn->notes;
             $grn->save();
-    
+
             if ($validated['status'] === GrnMaster::STATUS_VERIFIED) {
                 // Create stock transactions for accepted items
                 $this->createStockTransactions($grn);
-    
+
                 if ($grn->po_id) {
                     $this->updatePurchaseOrderStatus($grn->purchaseOrder);
                 }
             }
-    
+
             DB::commit();
             return redirect()->route('admin.grn.show', $grn)
                 ->with('success', 'GRN ' . strtolower($validated['status']) . ' successfully.');
-    
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error verifying GRN: ' . $e->getMessage());
@@ -424,25 +419,25 @@ public function update(Request $request, GrnMaster $grn)
     }
 
     protected function createStockTransactions(GrnMaster $grn)
-{
-    foreach ($grn->items as $grnItem) {
-        if ($grnItem->accepted_quantity > 0) {
-            ItemTransaction::create([
-                'organization_id' => $grn->organization_id,
-                'branch_id' => $grn->branch_id,
-                'inventory_item_id' => $grnItem->item_id,
-                'transaction_type' => 'purchase_order',
-                'quantity' => $grnItem->accepted_quantity,
-                'cost_price' => $grnItem->buying_price,
-                'created_by_user_id' => optional(Auth::user())->id,
-                'is_active' => true,
-                'source_id' => $grn->grn_id,
-                'source_type' => GrnMaster::class,
-                'notes' => 'Stock added from GRN #' . $grn->grn_number,
-            ]);
+    {
+        foreach ($grn->items as $grnItem) {
+            if ($grnItem->accepted_quantity > 0) {
+                ItemTransaction::create([
+                    'organization_id' => $grn->organization_id,
+                    'branch_id' => $grn->branch_id,
+                    'inventory_item_id' => $grnItem->item_id,
+                    'transaction_type' => 'purchase_order',
+                    'quantity' => $grnItem->accepted_quantity,
+                    'cost_price' => $grnItem->buying_price,
+                    'created_by_user_id' => optional(Auth::user())->id,
+                    'is_active' => true,
+                    'source_id' => $grn->grn_id,
+                    'source_type' => GrnMaster::class,
+                    'notes' => 'Stock added from GRN #' . $grn->grn_number,
+                ]);
+            }
         }
     }
-}
 
     protected function updatePurchaseOrderStatus(PurchaseOrder $po)
     {
@@ -450,7 +445,7 @@ public function update(Request $request, GrnMaster $grn)
             ->get()
             ->every(function ($item) {
                 $receivedQty = $item->grnItems()
-                    ->whereHas('grn', function($q) {
+                    ->whereHas('grn', function ($q) {
                         $q->where('status', GrnMaster::STATUS_VERIFIED);
                     })
                     ->sum('accepted_quantity');
