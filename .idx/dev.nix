@@ -1,0 +1,33 @@
+{pkgs}: {
+  channel = "stable-24.05";
+  packages = [
+    pkgs.nodejs_20
+    pkgs.php83Packages.composer
+    pkgs.postgresql
+    pkgs.php83
+    pkgs.sudo
+    pkgs.python312Packages.pip
+    pkgs.haskellPackages.snap-templates
+  ];
+  idx.extensions = [
+    "svelte.svelte-vscode"
+    "vue.volar"
+  ];
+  idx.previews = {
+    previews = {
+      web = {
+        command = [
+          "npm"
+          "run"
+          "dev"
+          "--"
+          "--port"
+          "$PORT"
+          "--host"
+          "0.0.0.0"
+        ];
+        manager = "web";
+      };
+    };
+  };
+}

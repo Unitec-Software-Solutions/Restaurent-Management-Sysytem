@@ -22,6 +22,7 @@
             <div class="px-4 py-4">
                 @php
                     $navItems = [
+
                         ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard'],
                         ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package'],
                         ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock',],
@@ -29,24 +30,33 @@
                         ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3'],
                         ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users'],
                         
+
+                        ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'icon_type' => 'svg'],
+                        ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package', 'icon_type' => 'svg'],
+                        ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock', 'icon_type' => 'svg'],
+                        ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart', 'icon_type' => 'svg'],
+                        ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3', 'icon_type' => 'svg'],
+                        ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users', 'icon_type' => 'svg'],
+                        ['title' => 'Suppliers', 'route' => 'admin.suppliers.index', 'icon' => 'fas fa-truck', 'icon_type' => 'fa'],
+                        // ['title' => 'Purchase Orders', 'route' => 'admin.purchase-orders.index', 'icon' => 'fas fa-file-invoice-dollar', 'icon_type' => 'fa'],
+                        // ['title' => 'GRN Management', 'route' => 'admin.grn.index', 'icon' => 'fas fa-clipboard-check', 'icon_type' => 'fa'],
+
                     ];
                 @endphp
 
                 <ul class="space-y-2">
                     @foreach ($navItems as $item)
                         <li>
-                            {{-- Button style -V.01 --}}
-                            {{-- <a href="{{ route($item['route']) }}"
-                                class="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-[#6A71F0] {{ request()->routeIs($item['route']) ? 'bg-[#6A71F0]' : '' }}">
-                                @include('partials.icons.' . $item['icon'])
-                                <span>{{ $item['title'] }}</span>
-                            </a> --}}
                             <a href="{{ route($item['route']) }}"
                                 class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors
                                 {{ request()->routeIs($item['route'])
                                     ? 'bg-white text-gray-700 border-white'
                                     : 'bg-transparent text-white border-white hover:bg-white/10' }}">
-                                @include('partials.icons.' . $item['icon'])
+                                @if($item['icon_type'] === 'svg')
+                                    @include('partials.icons.' . $item['icon'])
+                                @else
+                                    <i class="{{ $item['icon'] }} w-5 text-center"></i>
+                                @endif
                                 <span class="font-medium">{{ $item['title'] }}</span>
                             </a>
                         </li>
@@ -58,10 +68,9 @@
         {{-- Sticky bottom section --}}
         <div class="px-4 py-4 border-t border-[#6A71F0]">
             @php
-                // You can add more items here as needed  Add Bottom navigation items for the sidebar
                 $bottomNavItems = [
-                    ['title' => 'Digital Menu', 'route' => 'admin.digital-menu.index', 'icon' => 'menu'],
-                    ['title' => 'Settings', 'route' => 'admin.settings.index', 'icon' => 'settings'],
+                    ['title' => 'Digital Menu', 'route' => 'admin.digital-menu.index', 'icon' => 'menu', 'icon_type' => 'svg'],
+                    ['title' => 'Settings', 'route' => 'admin.settings.index', 'icon' => 'settings', 'icon_type' => 'svg'],
                 ];
             @endphp
 
@@ -73,7 +82,11 @@
                             {{ request()->routeIs($item['route'])
                                 ? 'bg-white text-gray-700 border-white'
                                 : 'bg-transparent text-white border-white hover:bg-white/10' }}">
-                            @include('partials.icons.' . $item['icon'])
+                            @if($item['icon_type'] === 'svg')
+                                @include('partials.icons.' . $item['icon'])
+                            @else
+                                <i class="{{ $item['icon'] }} w-5 text-center"></i>
+                            @endif
                             <span class="font-medium">{{ $item['title'] }}</span>
                         </a>
                     </li>
@@ -90,5 +103,3 @@
         </div>
     </div>
 </aside>
-
-

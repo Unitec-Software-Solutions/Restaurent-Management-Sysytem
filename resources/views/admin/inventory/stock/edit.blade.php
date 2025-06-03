@@ -11,7 +11,7 @@
                 <p class="text-sm text-gray-500">Update details for inventory tracking</p>
             </div>
 
-            <form action="{{ route('admin.inventory.stock.update', $transaction) }}" method="POST" class="space-y-6">
+<form action="{{ route('admin.inventory.stock.update', ['item_id' => $transaction->inventory_item_id, 'branch_id' => $transaction->branch_id]) }}" method="POST" class="space-y-6">
                 @csrf
                 @method('PUT')
 

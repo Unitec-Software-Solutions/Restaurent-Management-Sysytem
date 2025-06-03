@@ -81,4 +81,10 @@ class Branch extends Model
             ->withCapacity($requiredCapacity)
             ->get();
     }
+
+    public function scopeForOrganization($query, $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
+    }
+    
 } 
