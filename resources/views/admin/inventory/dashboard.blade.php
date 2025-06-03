@@ -17,7 +17,6 @@
                     ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
                     ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
                     ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
-                    
                 ]" active="Dashboard" />
 
 
@@ -290,5 +289,5 @@
                             </table>
                         </div>
                     </div>
-                </div>
-            @endsection
+    </div>
+@endsection

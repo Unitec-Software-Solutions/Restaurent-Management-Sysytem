@@ -85,9 +85,6 @@ class ItemTransaction extends Model
      */
     public static function stockOnHand($itemId, $branchId = null)
     {
-        $inTypes = ['purchase_order', 'return', 'adjustment', 'audit', 'transfer_in'];
-        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'transfer_out'];
-
         $query = self::where('inventory_item_id', $itemId)->where('is_active', true);
 
         if ($branchId) {
@@ -96,9 +93,7 @@ class ItemTransaction extends Model
 
         $transactions = $query->get();
 
-        $stockIn = $transactions->whereIn('transaction_type', $inTypes)->sum('quantity');
-        $stockOut = $transactions->whereIn('transaction_type', $outTypes)->sum('quantity');
-
-        return $stockIn - $stockOut;
+        // Sum all quantities directly, positive for stock in, negative for stock out
+        return $transactions->sum('quantity');
     }
 }

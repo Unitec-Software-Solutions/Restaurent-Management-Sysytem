@@ -41,10 +41,10 @@ class AdminAuthController extends Controller
         return redirect()->route('admin.login');
     }
 
-    public function adminLogoutPage()
-    {
-        return view('admin.auth.logout');
-    }
+    // public function adminLogoutPage()
+    // {
+    //     return view('admin.auth.logout');
+    // }
 
     public function adminLogout(Request $request)
     {
