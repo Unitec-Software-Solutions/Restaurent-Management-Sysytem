@@ -20,17 +20,14 @@ class GrnMaster extends Model
         'organization_id',
         'supplier_id',
         'received_by_user_id',
-        'verified_by_user_id',
         'received_date',
         'delivery_note_number',
         'invoice_number',
-        'total_amount',
-        'paid_amount',
-        'payment_status',
-        'status',
         'notes',
+        'status',
         'is_active',
-        'created_by'
+        'created_by',
+        'total_amount'
     ];
 
     protected $casts = [
@@ -178,34 +175,7 @@ class GrnMaster extends Model
         return $this->status === self::STATUS_PARTIAL;
     }
 
-    // Status transition methods
-    public function markAsVerified()
-    {
-        $this->update([
-            'status' => self::STATUS_VERIFIED,
-            'verified_by_user_id' => auth()->id(),
-            'verified_at' => now()
-        ]);
-    }
 
-    public function markAsRejected($reason = null)
-    {
-        $this->update([
-            'status' => self::STATUS_REJECTED,
-            'verified_by_user_id' => auth()->id(),
-            'verified_at' => now(),
-            'notes' => $reason ? ($this->notes ? $this->notes . "\nRejection Reason: " . $reason : "Rejection Reason: " . $reason) : $this->notes
-        ]);
-    }
-
-    public function markAsPartial()
-    {
-        $this->update([
-            'status' => self::STATUS_PARTIAL,
-            'verified_by_user_id' => auth()->id(),
-            'verified_at' => now()
-        ]);
-    }
 
     // Helper methods
     public function recalculateTotal()
