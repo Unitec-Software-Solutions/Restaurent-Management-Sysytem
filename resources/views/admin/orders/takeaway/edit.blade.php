@@ -83,7 +83,7 @@
                             <div class="menu-items-container" style="max-height: 400px; overflow-y: auto;">
                                 @foreach($items as $item)
                                 @php
-                                    $orderItem = $order->items->firstWhere('menu_item_id', $item->id);
+                                    $orderItem = $order->items->firstWhere('item_id', $item->id);
                                 @endphp
                                 <div class="card mb-2 menu-item-card">
                                     <div class="card-body d-flex align-items-center">
@@ -125,7 +125,7 @@
                 </div>
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                    <a href="{{ route('orders.takeaway.show', $order) }}" class="btn btn-secondary px-4">
+                    <a href="{{ route('orders.takeaway.summary', $order) }}" class="btn btn-secondary px-4">
                         <i class="fas fa-times-circle me-2"></i> Cancel
                     </a>
                     <button type="submit" class="btn btn-primary px-4">
