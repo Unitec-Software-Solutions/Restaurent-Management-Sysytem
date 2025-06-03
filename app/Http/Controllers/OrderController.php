@@ -462,4 +462,15 @@ class OrderController extends Controller
     {
         return view('orders.takeaway.show', compact('order'));
     }
+
+    // Delete takeaway order
+    public function destroyTakeaway($id)
+    {
+        $order = Order::findOrFail($id);
+        $order->orderItems()->delete();
+        $order->delete();
+
+        return redirect()->route('orders.index')
+            ->with('success', 'Takeaway order deleted successfully.');
+    }
 }
