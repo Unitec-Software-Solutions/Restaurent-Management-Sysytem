@@ -116,12 +116,12 @@
                                         <td class="px-4 py-3 whitespace-nowrap">
                                             <select name="items[{{ $loop->index }}][item_id]" class="w-full border rounded item-select" required>
                                                 <option value="">Select Item</option>
-                                                @foreach ($purchaseOrders->flatMap->items as $poItem)
-                                                    <option value="{{ $poItem->item_id }}" 
-                                                        data-code="{{ $poItem->item_code }}"
-                                                        data-price="{{ $poItem->buying_price }}"
-                                                        {{ $item->item_id == $poItem->item_id ? 'selected' : '' }}>
-                                                        {{ $poItem->item->name }} ({{ $poItem->item_code }})
+                                                @foreach ($grn->items as $grnItem)
+                                                    <option value="{{ $grnItem->item_id }}" 
+                                                        data-code="{{ $grnItem->item_code }}"
+                                                        data-price="{{ $grnItem->buying_price }}"
+                                                        {{ $item->item_id == $grnItem->item_id ? 'selected' : '' }}>
+                                                        {{ $grnItem->item_name }} ({{ $grnItem->item_code }})
                                                     </option>
                                                 @endforeach
                                             </select>
