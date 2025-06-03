@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignId('po_detail_id')->nullable()->constrained('po_details', 'po_detail_id');
             $table->foreignId('item_id')->constrained('item_master', 'id')->cascadeOnDelete();
             $table->string('item_code');
+            $table->string('item_name');
             $table->string('batch_no')->nullable();
             $table->decimal('ordered_quantity', 12, 2)->default(0);
             $table->decimal('received_quantity', 12, 2);
