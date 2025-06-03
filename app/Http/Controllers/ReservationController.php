@@ -22,9 +22,20 @@ class ReservationController extends Controller
     public function create(Request $request)
     {
         $branches = Branch::where('is_active', true)->get();
+        
+        // Check if we're in edit mode and populate from request
+        $input = [];
+        if ($request->has('edit_mode')) {
+            $input = $request->only([
+                'name', 'email', 'phone', 'branch_id', 
+                'date', 'start_time', 'end_time', 
+                'number_of_people', 'comments'
+            ]);
+        }
+        
         return view('reservations.create', [
             'branches' => $branches,
-            'request' => $request
+            'input' => $input  // Pass input data to pre-fill form
         ]);
     }
 

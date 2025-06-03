@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @php
     use App\Models\OrderStatusStateMachine;
@@ -12,7 +12,7 @@
         </div>
         
         <div class="card-body">
-            <form method="POST" action="{{ route('orders.takeaway.update', $order) }}">
+            <form method="POST" action="{{ route('admin.orders.takeaway.update', $order) }}">
                 @csrf
                 @method('PUT')
 
@@ -22,7 +22,7 @@
                         <div class="order-details-section mb-4">
                             <h4 class="section-title border-bottom pb-2 mb-3">Order Information</h4>
                             
-                            @if(auth()->check() && auth()->user()->role === 'admin')
+                            @if(auth()->check() && auth()->user()->isAdmin())
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Order Type</label>
                                 <select name="order_type" class="form-select">
@@ -32,7 +32,7 @@
                             </div>
                             @endif
 
-                            <div class="form-group mb-3" @if(auth()->check() && auth()->user()->role === 'admin') style="display:none" @endif>
+                            <div class="form-group mb-3" @if(auth()->check() && auth()->user()->isAdmin()) style="display:none" @endif>
                                 <label class="form-label fw-bold">Select Outlet</label>
                                 <select name="branch_id" class="form-select" required>
                                     @foreach($branches as $branch)
@@ -153,7 +153,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth()->check() && auth()->user()->role === 'admin');
+    const isAdmin = @json(auth()->check() && auth()->user()->isAdmin());
 
     // Initialize enabled quantity inputs for checked items
     document.querySelectorAll('.item-check:checked').forEach(checkbox => {

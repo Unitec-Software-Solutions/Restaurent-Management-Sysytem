@@ -5,6 +5,13 @@
     <div class="max-w-4xl mx-auto">
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
             <div class="px-6 py-4 bg-gray-50 border-b">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Edit Reservation #{{ $reservation->id }}</h2>
+                    <a href="{{ route('admin.orders.reservations.create', ['reservation' => $reservation->id]) }}"
+                       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        + Add Order
+                    </a>
+                </div>
                 <h1 class="text-2xl font-bold text-gray-800">Edit Reservation (Admin)</h1>
             </div>
 
@@ -259,6 +266,53 @@
                         </a>
                     </div>
                 </form>
+
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Orders for This Reservation</h3>
+                    @if($reservation->orders->isEmpty())
+                        <p class="text-gray-600">No orders found for this reservation.</p>
+                    @else
+                        <div class="bg-white shadow rounded-lg overflow-hidden">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Status</th>
+                                        <th>Items</th>
+                                        <th>Total</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($reservation->orders as $order)
+                                    <tr>
+                                        <td>#{{ $order->id }}</td>
+                                        <td>
+                                            <span class="px-2 py-1 text-xs rounded-full 
+                                                {{ $order->status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                                   ($order->status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800') }}">
+                                                {{ ucfirst($order->status) }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <ul class="list-disc pl-5">
+                                                @foreach($order->orderItems as $item)
+                                                    <li>{{ $item->menuItem->name }} (x{{ $item->quantity }})</li>
+                                                @endforeach
+                                            </ul>
+                                        </td>
+                                        <td>LKR {{ number_format($order->total, 2) }}</td>
+                                        <td>
+                                            <a href="{{ route('admin.orders.reservations.edit', ['reservation' => $reservation->id, 'order' => $order->id]) }}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
+                                            <a href="{{ route('admin.orders.reservations.index', ['reservation_id' => $reservation->id]) }}" class="text-green-600 hover:text-green-900">Reservation Orders</a>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
