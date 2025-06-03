@@ -55,7 +55,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 @foreach($menuItems as $item)
                                 @php
-                                    $existingItem = $order->orderItems->where('menu_item_id', $item->id)->first();
+                                    $existingItem = $order->orderItems->where('item_id', $item->id)->first();
                                 @endphp
                                 <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                                     <div class="flex items-start justify-between">
@@ -78,12 +78,11 @@
                                             </div>
                                         </div>
                                         <div class="ml-4">
-                                            <input type="number"
-                                                min="1"
-                                                value="{{ $existingItem ? $existingItem->quantity : 1 }}"
-                                                class="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 item-qty"
-                                                data-item-id="{{ $item->id }}"
-                                                name="items[{{ $item->id }}][quantity]"
+                                            <input type="number" name="items[{{ $item->id }}][quantity]" 
+                                                min="1" 
+                                                value="{{ $existingItem ? $existingItem->quantity : 1 }}" 
+                                                class="form-control quantity-input ms-2" 
+                                                style="width: 70px;" 
                                                 {{ $existingItem ? '' : 'disabled' }}>
                                         </div>
                                     </div>
