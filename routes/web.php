@@ -114,7 +114,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->name('summary');
             Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->name('destroy');
 
-            Route::get('/', [OrderController::class, 'adminIndex'])->name('index');>>>>>>> main1
+            Route::get('/', [OrderController::class, 'adminIndex'])->name('index');
 
             // Reservation Orders
             Route::prefix('reservations/{reservation}')->name('reservations.')->group(function () {
