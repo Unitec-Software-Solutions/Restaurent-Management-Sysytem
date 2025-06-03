@@ -154,6 +154,11 @@ class GrnMaster extends Model
         return $query->whereBetween('received_date', [$startDate, $endDate]);
     }
 
+    public function grnItems()
+    {
+        return $this->hasMany(GrnItem::class, 'grn_id', 'id'); // Adjust foreign keys as needed
+    }
+
     // Status methods
     public function isPending()
     {
