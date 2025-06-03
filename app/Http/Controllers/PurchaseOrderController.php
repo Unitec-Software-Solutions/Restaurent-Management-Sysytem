@@ -170,7 +170,7 @@ class PurchaseOrderController extends Controller
     public function show($id)
     {
         $purchaseOrder = $this->baseQuery()
-            ->with(['items.item', 'grns.grnItems'])
+            ->with(['items.item', 'grns'])
             ->findOrFail($id);
 
         // Calculate received quantities for each item
@@ -183,7 +183,7 @@ class PurchaseOrderController extends Controller
 
         return view('admin.suppliers.purchase-orders.show', [
             'po' => $purchaseOrder,
-            'items' => $itemsWithReceived
+            'items' => $itemsWithReceived, // Pass $itemsWithReceived to the view
         ]);
     }
 
