@@ -273,8 +273,8 @@ public function update(Request $request, Reservation $reservation)
         // For same-day reservations, ensure start time is at least 30 minutes from now
         if ($validated['date'] === now()->format('Y-m-d')) {
             $minStartTime = now()->addMinutes(30)->format('H:i');
-            if ($validated['start_time'] < $minStartTime) {
-                return back()->withErrors(['time' => 'For same-day reservations, start time must be at least 30 minutes from now.'])->withInput();
+            if (\Carbon\Carbon::parse($validated['start_time'])->lt(\Carbon\Carbon::parse($minStartTime))) {
+                return back()->withErrors(['start_time' => 'Start time must be at least 30 minutes from now.']);
             }
         }
         // Check capacity
@@ -368,30 +368,30 @@ public function update(Request $request, Reservation $reservation)
         ));
     }
 
-    protected function sendNotification(Reservation $reservation, $method)
-    {
-        if (in_array($method, ['email', 'both'])) {
-            // Send email
-            Mail::to($reservation->email)->send(new ReservationConfirmationMail($reservation));
-        }
+    // protected function sendNotification(Reservation $reservation, $method)
+    // {
+    //     if (in_array($method, ['email', 'both'])) {
+    //         // Send email
+    //         Mail::to($reservation->email)->send(new ReservationConfirmationMail($reservation));
+    //     }
 
-        if (in_array($method, ['sms', 'both'])) {
-            // Send SMS (use a service like Twilio)
-            SmsService::send($reservation->phone, "Your reservation has been confirmed.");
-        }
-    }
+    //     if (in_array($method, ['sms', 'both'])) {
+    //         // Send SMS (use a service like Twilio)
+    //         SmsService::send($reservation->phone, "Your reservation has been confirmed.");
+    //     }
+    // }
 
-    protected function sendCancellationNotification(Reservation $reservation, $method)
-    {
-        if (in_array($method, ['email', 'both'])) {
-            // Send cancellation email
-            Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
-        }
+    // protected function sendCancellationNotification(Reservation $reservation, $method)
+    // {
+    //     if (in_array($method, ['email', 'both'])) {
+    //         // Send cancellation email
+    //         Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
+    //     }
 
-        if (in_array($method, ['sms', 'both'])) {
-            SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
-        }
-    }
+    //     if (in_array($method, ['sms', 'both'])) {
+    //         SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
+    //     }
+    // }
 public function assignSteward(Request $request, Reservation $reservation)
 {
     try {
