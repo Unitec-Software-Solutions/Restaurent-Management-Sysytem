@@ -128,8 +128,8 @@
                                     Item</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Branch</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Type</th>
+                                {{-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Type</th> --}}
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Quantity</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -163,11 +163,11 @@
                                         $isIn = !$controller->isStockOut($tx->transaction_type);
                                     @endphp
 
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    {{-- <td class="px-6 py-4 whitespace-nowrap">
                                         <x-partials.badges.status-badge 
                                             :color="$isIn ? 'green' : 'red'" 
                                             :text="ucwords(str_replace('_', ' ', $tx->transaction_type))" />
-                                    </td>
+                                    </td> --}}
 
                                     <td class="px-6 py-4 whitespace-nowrap text-right">
                                         <div class="{{ $isIn ? 'text-green-600' : 'text-red-600' }}">
