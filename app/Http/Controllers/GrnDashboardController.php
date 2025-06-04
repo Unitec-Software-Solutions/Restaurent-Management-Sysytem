@@ -347,11 +347,6 @@ class GrnDashboardController extends Controller
                 ->with('success', 'GRN created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('GRN Creation Error:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'input' => $request->all()
-            ]);
             return back()->withInput()
                 ->with('error', 'Error creating GRN: ' . $e->getMessage());
         }
