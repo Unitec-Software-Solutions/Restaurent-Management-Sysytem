@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('branch_id')->constrained('branches');
             $table->foreignId('organization_id')->constrained('organizations');
             $table->foreignId('supplier_id')->nullable()->constrained('suppliers');
-            $table->string('manual_supplier_name')->nullable(); // Optional manual supplier entry
+            
             $table->foreignId('user_id')->constrained('users');
             $table->string('po_number')->unique();
             $table->date('order_date');

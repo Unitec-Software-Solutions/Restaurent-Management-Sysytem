@@ -30,6 +30,7 @@ return new class extends Migration
             $table->text('additional_notes')->nullable();
             $table->text('description')->nullable();
             $table->jsonb('attributes')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->softDeletes();
             $table->timestamps();
         });
