@@ -44,6 +44,7 @@ Route::middleware(['web'])->group(function () {
         Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
         Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
         Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show');
+        Route::get('/cancellation-success', [ReservationController::class, 'cancellationSuccess'])->name('cancellation-success');
     });
 
     // Orders
