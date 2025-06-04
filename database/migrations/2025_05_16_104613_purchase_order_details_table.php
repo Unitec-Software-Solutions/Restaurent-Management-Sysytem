@@ -13,6 +13,7 @@ return new class extends Migration {
             $table->foreignId('item_id')->constrained('item_master'); // Changed from item_code to item_id
             $table->string('batch_no')->nullable();
             $table->decimal('buying_price', 12, 4); // Current buying price at time of PO
+            $table->decimal('previous_buying_price', 10, 2)->nullable()->default(0); // <-- Added line
             $table->decimal('quantity', 12, 2);
             $table->decimal('line_total', 15, 2);
             $table->string('po_status', 50)->default('Pending');
