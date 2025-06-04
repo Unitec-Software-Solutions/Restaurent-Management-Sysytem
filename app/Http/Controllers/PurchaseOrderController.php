@@ -115,22 +115,24 @@ class PurchaseOrderController extends Controller
 
     public function store(Request $request)
     {
-        // Add required validation rules for branch_id and supplier_id
+        Log::info('Store method called with data:', $request->all());
+
         $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id', // Make branch_id required
-            'supplier_id' => 'required|exists:suppliers,id', // Make supplier_id required  
+            'branch_id' => 'required|exists:branches,id',
+            'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
             'expected_delivery_date' => 'required|date|after_or_equal:order_date',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.quantity' => 'required|numeric|min:0.01', 
+            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.buying_price' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:500'
         ]);
 
         DB::beginTransaction();
         try {
-            // Create PO with organization_id from authenticated user
+            Log::info('Validation passed:', $validated);
+
             $po = PurchaseOrder::create([
                 'branch_id' => $validated['branch_id'],
                 'organization_id' => Auth::user()->organization_id,
@@ -139,36 +141,37 @@ class PurchaseOrderController extends Controller
                 'order_date' => $validated['order_date'],
                 'expected_delivery_date' => $validated['expected_delivery_date'],
                 'status' => PurchaseOrder::STATUS_PENDING,
-                'total_amount' => 0, // Will be updated after items
+                'total_amount' => 0,
                 'paid_amount' => 0,
                 'notes' => $validated['notes'] ?? null,
                 'is_active' => true
             ]);
 
-            $total = 0;
+            Log::info('Purchase order created:', $po->toArray());
 
-            // Create PO items
+            $total = 0;
             foreach ($validated['items'] as $item) {
-                $itemMaster = ItemMaster::findOrFail($item['item_id']);
                 $lineTotal = $item['quantity'] * $item['buying_price'];
                 $total += $lineTotal;
 
                 $po->items()->create([
                     'item_id' => $item['item_id'],
-                    'buying_price' => $item['buying_price'], 
+                    'buying_price' => $item['buying_price'],
                     'quantity' => $item['quantity'],
                     'line_total' => $lineTotal,
                     'po_status' => PurchaseOrderItem::STATUS_PENDING
                 ]);
             }
 
-            // Update PO total
             $po->update(['total_amount' => $total]);
 
             DB::commit();
+            Log::info('Transaction committed successfully.');
+
             return redirect()->route('admin.purchase-orders.show', $po->po_id)
                 ->with('success', 'Purchase order created successfully!');
         } catch (\Exception $e) {
+            Log::error('Error creating purchase order: ' . $e->getMessage());
             DB::rollBack();
             return back()->withInput()
                 ->with('error', 'Error creating purchase order: ' . $e->getMessage());
