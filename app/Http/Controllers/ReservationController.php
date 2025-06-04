@@ -276,8 +276,21 @@ class ReservationController extends Controller
             }
         }
 
+        // Construct a reservation object and pass it to the view.
+        $reservation = (object) [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'branch_id' => $validated['branch_id'],
+            'date' => $validated['date'],
+            'start_time' => $validated['start_time'],
+            'end_time' => $validated['end_time'],
+            'number_of_people' => $validated['number_of_people'],
+            'comments' => $validated['comments'],
+        ];
+
         return view('reservations.review', [
-            'request' => $request,
+            'reservation' => $reservation,
             'branch' => $branch
         ]);
     }
