@@ -106,6 +106,10 @@ class PurchaseOrder extends Model
     {
         return $this->status === 'Pending';
     }
+    public function approvedBy()
+{
+    return $this->belongsTo(User::class, 'approved_by');
+}
 
 public function isApproved(): bool
 {
