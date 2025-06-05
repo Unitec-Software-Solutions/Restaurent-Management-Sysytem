@@ -90,13 +90,13 @@
                     <p class="text-sm text-gray-500">Manage and track all purchase orders</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    <a href="{{ route('admin.purchase-orders.create') }}"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-plus mr-2"></i> New PO
-                    </a>
-                    <a href="#"
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <a href="#" 
+                        class="bg-indigo-600 hover:bg-indigo-700 opacity-50 cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center pointer-events-none">
                         <i class="fas fa-file-export mr-2"></i> Export
+                    </a>
+                                        <a href="{{ route('admin.purchase-orders.create') }}"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus mr-2"></i> New PO
                     </a>
                 </div>
             </div>
@@ -204,7 +204,7 @@
                                             class="text-blue-600 hover:text-blue-800" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <a href="#"
+                                        <a href="{{ route('admin.purchase-orders.print', $po->po_id) }}"
                                             class="text-purple-600 hover:text-purple-800" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
