@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('organization_id')->constrained()->onDelete('cascade');
             $table->string('name');
+            $table->string('code')->nullable();
             $table->string('address');
             $table->string('phone');
             $table->string('email')->nullable();
