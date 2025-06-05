@@ -137,10 +137,10 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($purchaseOrders as $po)
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{{ route('admin.purchase-orders.show', $po->po_id) }}'">
                                 <!-- PO Number -->
                                 <td class="px-6 py-4">
-                                    <div class="font-medium text-gray-900">{{ $po->po_number }}</div>
+                                    <div class="font-medium text-indigo-600">{{ $po->po_number }}</div>
                                     <div class="text-sm text-gray-500">
                                         {{ $po->items->count() }} items
                                     </div>
