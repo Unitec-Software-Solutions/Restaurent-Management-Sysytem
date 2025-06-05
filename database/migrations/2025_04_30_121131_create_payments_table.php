@@ -13,16 +13,13 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->morphs('payable'); // Can be for order, reservation, etc.
-            $table->foreignId('user_id')->nullable()->constrained(); // Can be null for anonymous payments
+            $table->morphs('payable');
             $table->decimal('amount', 10, 2);
-            $table->enum('payment_method', ['cash', 'cheque', 'bank_transfer', 'online_portal', 'qr_code', 'card', 'mobile_app']);
-            $table->string('transaction_id')->nullable();
-            $table->enum('status', ['pending', 'completed', 'failed', 'refunded'])->default('pending');
+            $table->string('payment_method');
+            $table->string('status');
             $table->string('payment_reference')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes(); // Adds deleted_at column
-            $table->text('notes')->nullable();$table->timestamps();
+            $table->text('notes')->nullable();
+            $table->timestamps();
         });
     }
 

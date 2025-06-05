@@ -44,6 +44,7 @@ Route::middleware(['web'])->group(function () {
         Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
         Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
         Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show');
+        Route::get('/cancellation-success', [ReservationController::class, 'cancellationSuccess'])->name('cancellation-success');
     });
 
     // Orders
@@ -271,3 +272,7 @@ Route::get('/test-email', function() {
     return 'Email sent!';
 
 });
+
+// Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
+Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
+Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show')->where('reservation', '[0-9]+');

@@ -363,8 +363,10 @@ public function update(Request $request, Reservation $reservation)
         $nextId = \DB::table('reservations')->max('id') + 1;
         $defaultName = 'customer ' . $nextId . '';
 
+        $stewards = Employee::where('branch_id', $admin->branch->id)->get();
+
         return view('admin.reservations.create', compact(
-            'tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName', 'start_time', 'end_time'
+            'tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName', 'start_time', 'end_time', 'stewards'
         ));
     }
 
