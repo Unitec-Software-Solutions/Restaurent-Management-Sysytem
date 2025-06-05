@@ -69,10 +69,14 @@
 
                 <div class="d-flex justify-content-between mt-4">
                     <!-- Update Order -->
-                    <a href="{{ route('admin.orders.takeaway.edit', $order->id) }}" class="btn btn-warning">
+                    <a href="{{ route('orders.takeaway.edit', $order->id) }}" class="btn btn-warning">
                         <i class="fas fa-edit me-2"></i> Update Order
                     </a>
 
+                    <!-- Edit Order -->
+                    <a href="{{ route('orders.takeaway.edit', $order->id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i> Edit Order
+                    </a>
 
                     <!-- Submit Order -->
                     <form action="{{ route('orders.takeaway.submit', $order->id) }}" method="POST" class="d-inline">
