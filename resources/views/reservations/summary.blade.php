@@ -1,117 +1,248 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Reservation Details</h2>
-        <span class="badge bg-{{ $reservation->status === 'confirmed' ? 'success' : ($reservation->status === 'pending' ? 'warning' : 'danger') }}">
-            {{ ucfirst($reservation->status) }}
-        </span>
-    </div>
-    
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+    <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 w-full max-w-2xl animate-fadeIn">
+
+
+        <div class="flex justify-center my-6 relative">
+            <div class="w-20 h-20 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center z-10 relative">
+                <svg class="w-10 h-10 text-white absolute animate-scaleCheck" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <div class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 w-24 h-24 rounded-full bg-green-500/20 animate-pulse"></div>
         </div>
-    @endif
-    
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h5 class="card-title mb-0">Reservation #{{ $reservation->id }}</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <h6 class="text-muted">Branch</h6>
-                        <p>{{ $reservation->branch->name }}</p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6 class="text-muted">Date & Time</h6>
-                        <p>
-                            {{ $reservation->date->format('l, F j, Y') }}<br>
-                            {{ \Carbon\Carbon::parse($reservation->start_time)->format('g:i A') }} - 
-                            {{ \Carbon\Carbon::parse($reservation->end_time)->format('g:i A') }}
-                        </p>
-                    </div>
+
+        <h2 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-2">Reservation Confirmed!</h2>
+        <p class="text-gray-500 text-center mb-8">Your reservation has been successfully updated</p>
+
+        <div class="bg-blue-50 rounded-lg p-5 mb-8 border border-blue-100">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm font-medium text-blue-600 flex items-center">
+                        <i class="fas fa-store mr-2"></i> Branch
+                    </p>
+                    <p class="font-semibold text-gray-800 mt-1">{{ $reservation->branch->name }}</p>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <h6 class="text-muted">Guests</h6>
-                        <p>{{ $reservation->number_of_people }} person(s)</p>
-                    </div>
-                    
-                    @if($reservation->special_requests)
-                    <div class="mb-3">
-                        <h6 class="text-muted">Special Requests</h6>
-                        <p>{{ $reservation->special_requests }}</p>
-                    </div>
-                    @endif
+                <div>
+                    <p class="text-sm font-medium text-blue-600 flex items-center">
+                        <i class="fas fa-calendar-alt mr-2"></i> Date & Time
+                    </p>
+                    <p class="font-semibold text-gray-800 mt-1">
+                        {{ \Carbon\Carbon::parse($reservation->date)->format('l, F j, Y') }}<br>
+                        {{ \Carbon\Carbon::parse($reservation->start_time)->format('g:i A') }} - {{ \Carbon\Carbon::parse($reservation->end_time)->format('g:i A') }}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-blue-600 flex items-center">
+                        <i class="fas fa-user-friends mr-2"></i> Guests
+                    </p>
+                    <p class="font-semibold text-gray-800 mt-1">{{ $reservation->guest_count }} person(s)</p>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-blue-600 flex items-center">
+                        <i class="fas fa-hashtag mr-2"></i> Reservation ID
+                    </p>
+                    <p class="font-semibold text-gray-800 mt-1">#{{ $reservation->code }}</p>
                 </div>
             </div>
+
+            @if($reservation->special_requests)
+            <div class="mt-5 pt-4 border-t border-blue-100">
+                <p class="text-sm font-medium text-blue-600 flex items-center">
+                    <i class="fas fa-edit mr-2"></i> Special Requests
+                </p>
+                <p class="font-semibold text-gray-800 mt-1">
+                    {{ $reservation->special_requests }}
+                </p>
+            </div>
+            @endif
         </div>
-    </div>
-    
-    @if($reservation->status === 'pending')
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h5 class="card-title mb-0">Reservation Actions</h5>
-        </div>
-        <div class="card-body">
-            <div class="d-flex flex-wrap gap-3">
-                <a href="{{ route('reservations.payment', $reservation) }}" 
-                   class="btn btn-primary px-4">
-                    <i class="bi bi-credit-card me-2"></i>Make Payment
-                </a>
-                
-                <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" 
-                   class="btn btn-success px-4">
-                    <i class="bi bi-cart-plus me-2"></i>Place Order
-                </a>
-                
-                <form method="POST" action="{{ route('reservations.confirm', $reservation) }}" class="m-0">
-                    @csrf
-                    <button type="submit" class="btn btn-warning px-4">
-                        <i class="bi bi-check-circle me-2"></i>Confirm Reservation
-                    </button>
-                </form>
+
+        <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded mb-8 flex items-start">
+            <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
+            <div>
+                Your reservation is confirmed. Please arrive 10 minutes before your scheduled time.
             </div>
         </div>
-    </div>
-    @endif
-    
-    <div class="d-flex justify-content-end">
-        <form method="POST" action="{{ route('reservations.cancel', $reservation) }}" class="mb-4">
-            @csrf
-            <button type="submit" class="btn btn-outline-danger px-4" 
-                    onclick="return confirm('Are you sure you want to cancel this reservation?')">
-                <i class="bi bi-x-circle me-2"></i>Cancel Reservation
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <a href="{{ route('customer.dashboard') }}" class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <i class="fas fa-home mr-2"></i> Dashboard
+
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/customer-dashboard" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg flex-1 sm:flex-none text-center">
+                <i class="fas fa-home mr-2"></i> Return to Dashboard
+
+
+            </a>
+            <a href="{{ route('reservations.payment', $reservation) }}" class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <i class="fas fa-credit-card mr-2"></i> Payment
+            </a>
+            <button id="printBtn" class="bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-colors duration-200 hover:bg-gray-50 hover:border-blue-300 hover:text-blue-600">
+                <i class="fas fa-print mr-2"></i> Print
             </button>
-        </form>
+
+            <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" class="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <i class="fas fa-shopping-cart mr-2"></i> Place Order
+
+
+            <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" class="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <i class="fas fa-shopping-cart mr-2"></i> Place Order
+
+            <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" 
+               class="btn btn-success px-4 flex-1 sm:flex-none text-center">
+                <i class="bi bi-cart-plus me-2"></i> Place Order
+
+
+            </a>
+        </div>
+
+        <div class="flex justify-end mt-4">
+            <button id="cancelBtn" class="text-red-600 hover:text-red-800 font-medium flex items-center transition-colors duration-200">
+                <i class="fas fa-times-circle mr-2"></i> Cancel Reservation
+            </button>
+        </div>
     </div>
-    
-    @if($reservation->status === 'confirmed')
-    <div class="alert alert-info mt-4">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        Your reservation is confirmed. Please arrive 10 minutes before your scheduled time.
-    </div>
-    @endif
 </div>
 
+<!-- Cancel Modal -->
+<div id="cancelModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Confirm Cancellation</h3>
+            <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mb-6">
+            <p class="text-gray-700 mb-4">Are you sure you want to cancel this reservation?</p>
+            <p class="text-red-600 font-medium"><i class="fas fa-exclamation-circle mr-2"></i> This action cannot be undone.</p>
+        </div>
+        <div class="flex justify-end gap-3">
+            <button id="cancelNo" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">No, Keep It</button>
+            <form method="POST" action="{{ route('reservations.cancel', $reservation) }}">
+                @csrf
+                <button id="cancelYes" type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Yes, Cancel</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const printBtn = document.getElementById('printBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const cancelModal = document.getElementById('cancelModal');
+        const closeModal = document.getElementById('closeModal');
+        const cancelNo = document.getElementById('cancelNo');
+
+        if (printBtn) {
+            printBtn.addEventListener('click', function () {
+                const printBtn = this;
+                printBtn.innerHTML = '<i class="fas fa-spinner animate-spin mr-2"></i> Loading...';
+                setTimeout(() => {
+                    window.print();
+                    printBtn.innerHTML = '<i class="fas fa-print mr-2"></i> Print';
+                }, 800);
+            });
+        }
+
+        if (cancelBtn && cancelModal && closeModal && cancelNo) {
+            cancelBtn.addEventListener('click', () => cancelModal.classList.remove('hidden'));
+            closeModal.addEventListener('click', () => cancelModal.classList.add('hidden'));
+            cancelNo.addEventListener('click', () => cancelModal.classList.add('hidden'));
+        }
+    });
+</script>
+@endpush
+@endsection
+
 <style>
-    .card {
-        border-radius: 10px;
-        border: none;
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-    .card-header {
-        border-radius: 10px 10px 0 0 !important;
+
+    @keyframes scaleCheck {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        70% {
+            transform: scale(1.15);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
     }
-    h6.text-muted {
-        font-size: 0.85rem;
-        letter-spacing: 0.5px;
+
+    .confirmation-card {
+        animation: fadeIn 0.5s ease-out forwards;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-primary {
+        background-image: linear-gradient(to right, #3b82f6, #6366f1);
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+    }
+
+    .bg-green-500 svg {
+        animation: scaleCheck 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+    }
+
+    /* Custom animations */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .animate-fadeIn {
+        animation: fadeIn 0.7s ease-out forwards;
+    }
+
+    .animate-pulse {
+        animation: pulse 2s infinite;
     }
 </style>
-@endsection

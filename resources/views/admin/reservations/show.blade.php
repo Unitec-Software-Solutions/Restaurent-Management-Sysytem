@@ -48,6 +48,48 @@
                 <a href="{{ route('admin.reservations.index') }}" class="inline-block mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Back to List</a>
             </div>
         </div>
+
+        <div class="mt-8">
+            <h2 class="text-xl font-bold mb-4">Associated Orders</h2>
+            @if($reservation->orders->count() > 0)
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($reservation->orders as $order)
+                        <tr>
+                            <td>{{ $order->id }}</td>
+                            <td>{{ $order->created_at->format('M d, Y H:i') }}</td>
+                            <td>LKR {{ number_format($order->total, 2) }}</td>
+                            <td>{{ ucfirst($order->status) }}</td>
+                            <td>
+                                <a href="{{ route('admin.orders.reservations.edit', [
+                                    'reservation' => $reservation, 
+                                    'order' => $order
+                                ]) }}" class="text-blue-500">Edit</a>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <p>No orders associated with this reservation</p>
+            @endif
+
+            <div class="mt-4">
+                <a href="{{ route('admin.orders.reservations.create', $reservation) }}" 
+                   class="bg-blue-500 text-white px-4 py-2 rounded">
+                    + Create Order
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
