@@ -15,7 +15,7 @@ class AdminOrderController extends Controller
     // List all submitted orders (admin)
     public function index()
     {
-        $orders = Order::with(['branch', 'items'])
+        $orders = Order::with(['branch', 'items', 'reservation'])
             ->where('status', 'submitted')
             ->latest()
             ->paginate(10);
@@ -361,7 +361,26 @@ class AdminOrderController extends Controller
         $order = Order::with('items.menuItem')->findOrFail($id);
         $items = ItemMaster::where('is_menu_item', true)->get();
         $branches = Branch::all();
-        return view('orders.takeaway.edit', compact('order', 'items', 'branches'));
+
+        $subtotal = $order->items->sum(function ($item) {
+            return $item->menuItem->selling_price * $item->quantity;
+        });
+        $tax = $subtotal * 0.10;
+        $total = $subtotal + $tax;
+
+        $cart = [
+            'items' => $order->items->map(function ($item) {
+                return [
+                    'item_id' => $item->menuItem->id,
+                    'quantity' => $item->quantity,
+                ];
+            })->toArray(),
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $total,
+        ];
+
+        return view('orders.takeaway.edit', compact('order', 'items', 'branches', 'cart'));
     }
 
     /**
