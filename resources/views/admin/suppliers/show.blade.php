@@ -117,22 +117,6 @@
 
             <!-- Recent Activities -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-2">
-                <!-- Tabs -->
-                <div class="border-b border-gray-200">
-                    <nav class="flex -mb-px">
-                        <button @click="activeTab = 'purchaseOrders'" 
-                                :class="activeTab === 'purchaseOrders' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" 
-                                class="whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm">
-                            Purchase Orders
-                        </button>
-                        <button @click="activeTab = 'transactions'" 
-                                :class="activeTab === 'transactions' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" 
-                                class="whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm">
-                            Transactions
-                        </button>
-                    </nav>
-                </div>
-
                 <!-- Purchase Orders Tab -->
                 <div x-show="activeTab === 'purchaseOrders'">
                     <div class="p-6 border-b flex justify-between items-center">
@@ -142,7 +126,7 @@
                     </div>
                     <div class="divide-y divide-gray-200">
                         @forelse($supplier->purchaseOrders as $po)
-                            <div class="p-4 hover:bg-gray-50">
+                            <div class="p-4 hover:bg-gray-50 cursor-pointer " onclick="window.location='{{ route('admin.purchase-orders.show', $po->po_id) }}'">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <div class="text-sm font-medium">PO #{{ $po->po_number }}</div>

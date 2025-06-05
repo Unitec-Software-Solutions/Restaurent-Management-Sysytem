@@ -200,10 +200,10 @@
                                             class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="#"
+                                        {{-- <a href="#"
                                             class="text-blue-600 hover:text-blue-800" title="Edit">
                                             <i class="fas fa-edit"></i>
-                                        </a>
+                                        </a> --}}
                                         <a href="{{ route('admin.purchase-orders.print', $po->po_id) }}"
                                             class="text-purple-600 hover:text-purple-800" title="Print">
                                             <i class="fas fa-print"></i>

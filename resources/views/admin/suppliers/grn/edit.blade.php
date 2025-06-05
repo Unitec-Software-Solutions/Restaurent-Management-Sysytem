@@ -124,6 +124,7 @@
                                                     </option>
                                                 @endforeach
                                             </select>
+                                            <input type="hidden" name="items[{{ $loop->index }}][item_code]" value="{{ $item->item_code }}">
                                             {{-- FIXED: Add po_detail_id --}}
                                             <input type="hidden" name="items[{{ $loop->index }}][po_detail_id]" value="{{ $item->po_detail_id }}">
                                         </td>
