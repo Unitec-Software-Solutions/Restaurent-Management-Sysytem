@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Branch extends Model
 {
@@ -87,4 +88,8 @@ class Branch extends Model
         return $query->where('organization_id', $organizationId);
     }
     
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organizations::class);
+    }
 } 
