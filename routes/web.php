@@ -276,3 +276,4 @@ Route::get('/test-email', function() {
 // Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
 Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
 Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show')->where('reservation', '[0-9]+');
+Route::get('/admin/orders', [AdminOrderController::class, 'adminIndex'])->name('admin.orders.index');
