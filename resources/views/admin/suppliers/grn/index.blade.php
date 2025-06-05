@@ -225,7 +225,8 @@
                                             class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="#" class="text-blue-600 hover:text-blue-800" title="Print">
+                                        <a href="{{ route('admin.grn.print', $grn->grn_id) }}"
+                                            class="text-blue-600 hover:text-blue-800" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
                                         @if ($grn->status == 'Pending')
