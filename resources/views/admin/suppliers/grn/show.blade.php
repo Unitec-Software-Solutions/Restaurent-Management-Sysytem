@@ -1,106 +1,323 @@
 @extends('layouts.admin')
 
+@section('header-title', 'GRN Details')
 @section('content')
-    <div class="p-6">
-        <div class="mb-6">
-            <x-nav-buttons :items="[['name' => 'Back to GRNs', 'link' => route('admin.grn.index')]]" active="GRN Details" />
-        </div>
-
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">GRN Details</h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                <div><strong>GRN Number:</strong> {{ $grn->grn_number }}</div>
-                <div><strong>Received Date:</strong> {{ $grn->received_date->format('Y-m-d') }}</div>
-                <div><strong>Supplier:</strong> {{ $grn->supplier->name ?? '-' }}</div>
-                <div><strong>Branch:</strong> {{ $grn->branch->name ?? '-' }}</div>
-                <div><strong>Received By:</strong> {{ $grn->receivedByUser->name ?? '-' }}</div>
-                <div><strong>Verified By:</strong> {{ $grn->verifiedByUser->name ?? '-' }}</div>
-                <div><strong>Status:</strong>
-                    <span
-                        class="px-2 py-1 rounded-full text-white text-xs {{ $grn->status === 'Verified'
-                            ? 'bg-green-600'
-                            : ($grn->status === 'Rejected'
-                                ? 'bg-red-600'
-                                : 'bg-yellow-500') }}">
-                        {{ $grn->status }}
-                    </span>
-                </div>
-                <div class="flex items-center mt-2">
-                    <span class="text-sm font-medium mr-2">Payment Status:</span>
-                    @if ($grn->isPaymentPaid())
-                        <x-partials.badges.status-badge status="success" text="Fully Paid" />
-                    @elseif($grn->isPaymentPartial())
-                        <x-partials.badges.status-badge status="info" text="Partially Paid" />
-                    @else
-                        <x-partials.badges.status-badge status="warning" text="Pending Payment" />
-                    @endif
-                </div>
-
-
-                <div><strong>Invoice No:</strong> {{ $grn->invoice_number ?? '-' }}</div>
-                <div><strong>Delivery Note No:</strong> {{ $grn->delivery_note_number ?? '-' }}</div>
-                <div><strong>Total Amount:</strong> Rs. {{ number_format($grn->total_amount, 2) }}</div>
-                <div><strong>Organization:</strong> {{ $grn->organization->name ?? '-' }}</div>
-                <div class="md:col-span-2"><strong>Notes:</strong> {{ $grn->notes ?? '-' }}</div>
-                
+    <div class="p-4 rounded-lg">
+        <!-- Back and Action Buttons -->
+        <div class="flex justify-between items-center mb-6">
+            <a href="{{ route('admin.grn.index') }}" class="flex items-center text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i> Back to GRNs
+            </a>
+            <div class="flex space-x-2">
+                <a href="{{ route('admin.grn.print', $grn->grn_id) }}" 
+                   class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-print mr-2"></i> Print
+                </a>
             </div>
         </div>
 
-        <!-- GRN Items Table -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">GRN Items</h2>
+        <!-- GRN Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">GRN #{{ $grn->grn_number }}</h1>
+                    <div class="flex items-center mt-2 space-x-2">
+                        <span class="text-sm font-medium">Status:</span>
+                        @if($grn->status === 'Pending')
+                            <x-partials.badges.status-badge status="warning" text="Pending" />
+                        @elseif($grn->status === 'Verified')
+                            <x-partials.badges.status-badge status="success" text="Verified" />
+                        @elseif($grn->status === 'Rejected')
+                            <x-partials.badges.status-badge status="danger" text="Rejected" />
+                        @else
+                            <x-partials.badges.status-badge status="default" text="{{ $grn->status }}" />
+                        @endif
+                        
+                        <span class="text-sm font-medium ml-4">Payment:</span>
+                        @if ($grn->isPaymentPaid())
+                            <x-partials.badges.status-badge status="success" text="Fully Paid" />
+                        @elseif($grn->isPaymentPartial())
+                            <x-partials.badges.status-badge status="info" text="Partially Paid" />
+                        @else
+                            <x-partials.badges.status-badge status="warning" text="Pending Payment" />
+                        @endif
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-gray-500 text-sm">Received Date</div>
+                    <div class="text-lg font-semibold">{{ $grn->received_date->format('M d, Y') }}</div>
+                    <div class="text-gray-500 text-sm mt-1">Invoice No</div>
+                    <div class="text-lg font-semibold">{{ $grn->invoice_number ?? 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
 
+        <!-- GRN Details -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Supplier Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Supplier Information</h2>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Supplier Name</p>
+                        <p class="font-medium">{{ $grn->supplier->name ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact Person</p>
+                        <p class="font-medium">{{ $grn->supplier->contact_person ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Phone</p>
+                        <p class="font-medium">{{ $grn->supplier->phone ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Email</p>
+                        <p class="font-medium">{{ $grn->supplier->email ?? 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Branch Information</h2>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Name</p>
+                        <p class="font-medium">{{ $grn->branch->name ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Code</p>
+                        <p class="font-medium">{{ $grn->branch->code ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p class="font-medium">{{ $grn->branch->address ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact</p>
+                        <p class="font-medium">{{ $grn->branch->phone ?? 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRN Summary -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">GRN Summary</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Amount:</span>
+                        <span class="font-bold">Rs. {{ number_format($grn->total_amount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Paid Amount:</span>
+                        <span class="font-bold">Rs. {{ number_format($grn->paid_amount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Balance:</span>
+                        <span class="font-bold">Rs. {{ number_format($grn->total_amount - $grn->paid_amount, 2) }}</span>
+                    </div>
+                    <div class="pt-2 border-t">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Received By:</span>
+                            <span class="font-medium">
+                                {{ $grn->receivedByUser->name ?? 'N/A' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-gray-600">Verified By:</span>
+                            <span class="font-medium">
+                                {{ $grn->verifiedByUser->name ?? 'N/A' }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-gray-600">Created At:</span>
+                            <span class="font-medium">
+                                {{ $grn->created_at->format('M d, Y H:i') }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRN Items -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-6 border-b">
+                <h2 class="text-lg font-semibold">Received Items</h2>
+                <p class="text-sm text-gray-500">Items included in this goods received note</p>
+            </div>
+            
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm text-left border border-gray-200">
-                    <thead class="bg-gray-50 text-gray-700 uppercase tracking-wider text-xs">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-2 border">Item Code</th>
-                            <th class="px-4 py-2 border">Item Name</th>
-                            <th class="px-4 py-2 border">Batch No</th>
-                            <th class="px-4 py-2 border">Ordered Qty</th>
-                            <th class="px-4 py-2 border">Received Qty</th>
-                            <th class="px-4 py-2 border">Accepted Qty</th>
-                            <th class="px-4 py-2 border">Rejected Qty</th>
-                            <th class="px-4 py-2 border">Buying Price</th>
-                            <th class="px-4 py-2 border">Line Total</th>
-                            <th class="px-4 py-2 border">MFG Date</th>
-                            <th class="px-4 py-2 border">EXP Date</th>
-                            <th class="px-4 py-2 border">Rejection Reason</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ordered Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Received Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accepted Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rejected Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line Total</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EXP Date</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white">
-                        @foreach ($grn->items as $item)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-2 border">{{ $item->item_code }}</td>
-                                <td class="px-4 py-2 border">{{ $item->item->name ?? '-' }}</td>
-                                <td class="px-4 py-2 border">{{ $item->batch_no }}</td>
-                                <td class="px-4 py-2 border text-right">{{ number_format($item->ordered_quantity, 2) }}
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($grn->items as $item)
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium">{{ $item->item->name ?? $item->item_code }}</div>
+                                    <div class="text-sm text-gray-500">{{ $item->item_code }}</div>
                                 </td>
-                                <td class="px-4 py-2 border text-right">{{ number_format($item->received_quantity, 2) }}
+                                <td class="px-6 py-4">
+                                    {{ $item->batch_no ?? 'N/A' }}
                                 </td>
-                                <td class="px-4 py-2 border text-right text-green-600">
-                                    {{ number_format($item->accepted_quantity, 2) }}</td>
-                                <td class="px-4 py-2 border text-right text-red-600">
-                                    {{ number_format($item->rejected_quantity, 2) }}</td>
-                                <td class="px-4 py-2 border text-right">Rs. {{ number_format($item->buying_price, 4) }}
+                                <td class="px-6 py-4 text-right">
+                                    {{ number_format($item->ordered_quantity, 2) }}
                                 </td>
-                                <td class="px-4 py-2 border text-right">Rs. {{ number_format($item->line_total, 2) }}</td>
-                                <td class="px-4 py-2 border">{{ optional($item->manufacturing_date)->format('Y-m-d') }}
+                                <td class="px-6 py-4 text-right">
+                                    {{ number_format($item->received_quantity, 2) }}
                                 </td>
-                                <td class="px-4 py-2 border">{{ optional($item->expiry_date)->format('Y-m-d') }}</td>
-                                <td class="px-4 py-2 border">{{ $item->rejection_reason ?? '-' }}</td>
+                                <td class="px-6 py-4 text-right text-green-600">
+                                    {{ number_format($item->accepted_quantity, 2) }}
+                                </td>
+                                <td class="px-6 py-4 text-right text-red-600">
+                                    {{ number_format($item->rejected_quantity, 2) }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    Rs. {{ number_format($item->buying_price, 4) }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    Rs. {{ number_format($item->line_total, 2) }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ optional($item->expiry_date)->format('M d, Y') ?? 'N/A' }}
+                                </td>
                             </tr>
                         @endforeach
-
-                        @if ($grn->items->isEmpty())
-                            <tr>
-                                <td colspan="12" class="px-4 py-3 text-center text-gray-500">No GRN items found.</td>
-                            </tr>
-                        @endif
                     </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <td colspan="7" class="px-6 py-3 text-right font-medium">Total:</td>
+                            <td class="px-6 py-3 font-bold">Rs. {{ number_format($grn->total_amount, 2) }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
+
+        <!-- Related Purchase Order -->
+        @if($grn->purchaseOrder)
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                <div class="p-6 border-b">
+                    <h2 class="text-lg font-semibold">Related Purchase Order</h2>
+                    <p class="text-sm text-gray-500">Purchase order associated with this GRN</p>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expected Delivery</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <a href="{{ route('admin.purchase-orders.show', $grn->purchaseOrder->po_id) }}" 
+                                       class="text-indigo-600 hover:text-indigo-800">
+                                        {{ $grn->purchaseOrder->po_number }}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ $grn->purchaseOrder->order_date->format('M d, Y') }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ $grn->purchaseOrder->expected_delivery_date->format('M d, Y') }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ $grn->purchaseOrder->user->name }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    @if($grn->purchaseOrder->status === 'Pending')
+                                        <x-partials.badges.status-badge status="warning" text="Pending" />
+                                    @elseif($grn->purchaseOrder->status === 'Approved')
+                                        <x-partials.badges.status-badge status="info" text="Approved" />
+                                    @elseif($grn->purchaseOrder->status === 'Received')
+                                        <x-partials.badges.status-badge status="success" text="Received" />
+                                    @else
+                                        <x-partials.badges.status-badge status="default" text="{{ $grn->purchaseOrder->status }}" />
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4">
+                                    Rs. {{ number_format($grn->purchaseOrder->total_amount, 2) }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <a href="{{ route('admin.purchase-orders.show', $grn->purchaseOrder->po_id) }}"
+                                       class="text-indigo-600 hover:text-indigo-800" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+
+        <!-- Notes Section -->
+        @if($grn->notes)
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-2">GRN Notes</h2>
+                <div class="prose max-w-none">
+                    {!! nl2br(e($grn->notes)) !!}
+                </div>
+            </div>
+        @endif
     </div>
 @endsection
+
+@push('styles')
+    <style>
+        .prose {
+            color: #374151;
+            line-height: 1.6;
+        }
+        .prose a {
+            color: #4f46e5;
+            text-decoration: underline;
+        }
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+        th, td {
+            padding: 0.75rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        thead th {
+            background-color: #f9fafb;
+            color: #6b7280;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.75rem;
+        }
+        tbody tr:hover {
+            background-color: #f9fafb;
+        }
+        tfoot td {
+            font-weight: 600;
+            background-color: #f9fafb;
+        }
+    </style>
+@endpush
