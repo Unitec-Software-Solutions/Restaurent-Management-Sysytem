@@ -29,7 +29,7 @@
                             <option value="">Select Supplier</option>
                             @foreach($suppliers as $supplier)
                                 <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}>
-                                    {{ $supplier->name }} ({{ $supplier->code }})
+                                    {{ $supplier->name }} ({{ $supplier->supplier_id }})
                                 </option>
                             @endforeach
                         </select>
@@ -160,7 +160,7 @@
                 <option value="">Select Item</option>
                 @foreach($items as $item)
                     <option value="{{ $item->id }}" data-price="{{ $item->buying_price }}">
-                        {{ $item->name }} ({{ $item->code }})
+                        {{ $item->name }} ({{ $item->item_code }})
                     </option>
                 @endforeach
             </select>
