@@ -63,7 +63,7 @@ class EmployeeSeeder extends Seeder
                 'name' => 'Bob Williams',
                 'email' => 'bob.williams@restaurant.com',
                 'phone' => '5550404004',
-                'role' => 'waiter',
+                'role' => 'steward',
                 'branch_id' => 1,
                 'is_active' => true,
                 'joined_date' => $now->subMonths(3),
