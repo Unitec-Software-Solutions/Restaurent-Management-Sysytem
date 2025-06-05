@@ -15,7 +15,7 @@ class AdminOrderController extends Controller
     // List all submitted orders (admin)
     public function index()
     {
-        $orders = Order::with(['branch', 'items'])
+        $orders = Order::with(['branch', 'items', 'reservation'])
             ->where('status', 'submitted')
             ->latest()
             ->paginate(10);

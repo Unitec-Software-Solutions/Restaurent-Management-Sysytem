@@ -70,6 +70,7 @@ Route::middleware(['web'])->group(function () {
             // Add missing update and submit routes for customer takeaway orders
             Route::put('/{order}', [OrderController::class, 'updateTakeaway'])->name('update');
             Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->name('submit');
+            Route::get('/{order}', [OrderController::class, 'showTakeaway'])->name('show');
         });
     });
 });

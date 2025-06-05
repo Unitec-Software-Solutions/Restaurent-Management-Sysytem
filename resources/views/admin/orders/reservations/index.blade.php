@@ -57,7 +57,7 @@
                                     </td>
                                     <td class="px-4 py-2 border-b">{{ $order->created_at->diffForHumans() }}</td>
                                     <td class="px-4 py-2 border-b">
-                                        @if(optional($order->reservation)->exists)
+                                        @if($order->reservation)
                                             <a href="{{ route('admin.reservations.show', ['reservation' => $order->reservation->id]) }}" 
                                                class="inline-block text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 transition">
                                                 View

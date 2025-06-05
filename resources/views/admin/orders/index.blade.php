@@ -31,7 +31,7 @@
                                     #{{ $order->reservation->id }}
                                 </a>
                             @else
-                                -
+                                <span class="text-gray-500">Order ID: #{{ $order->id }}</span>
                             @endif
                         </td>
                         <td class="px-4 py-3">{{ $order->customer_name }}</td>

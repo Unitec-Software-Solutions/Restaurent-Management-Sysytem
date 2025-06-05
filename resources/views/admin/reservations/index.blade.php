@@ -55,11 +55,15 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium flex flex-col gap-1">
-    <a href="{{ route('admin.reservations.show', $reservation) }}" class="text-blue-600 hover:text-blue-900">View</a>
-    <a href="{{ route('admin.reservations.edit', $reservation) }}" class="text-yellow-600 hover:text-yellow-900">Edit</a>
-    <a href="{{ route('admin.orders.reservations.index', ['reservation_id' => $reservation->id]) }}" class="text-green-600 hover:text-green-900">Reservation Orders</a>
-    <a href="{{ route('admin.orders.reservations.create', ['reservation' => $reservation->id]) }}" class="text-purple-600 hover:text-purple-900">Add Order</a>
-</td>
+                            @if($reservation)
+                                <a href="{{ route('admin.reservations.show', $reservation) }}" class="text-blue-600 hover:text-blue-900">View</a>
+                            @else
+                                <span class="text-gray-400">No Reservation</span>
+                            @endif
+                            <a href="{{ route('admin.reservations.edit', $reservation) }}" class="text-yellow-600 hover:text-yellow-900">Edit</a>
+                            <a href="{{ route('admin.orders.reservations.index', ['reservation_id' => $reservation->id]) }}" class="text-green-600 hover:text-green-900">Reservation Orders</a>
+                            <a href="{{ route('admin.orders.reservations.create', ['reservation' => $reservation->id]) }}" class="text-purple-600 hover:text-purple-900">Add Order</a>
+                        </td>
                     </tr>
                 @empty
                     <tr>
