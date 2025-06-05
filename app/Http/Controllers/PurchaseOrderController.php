@@ -7,6 +7,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\ItemMaster;
 use App\Models\Branch;
+use App\Models\organizations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -348,4 +349,21 @@ class PurchaseOrderController extends Controller
         
         return back()->with('success', 'Purchase Order approved successfully.');
     }
+
+    public function print($id)
+    {
+        $purchaseOrder = $this->baseQuery()
+            ->with(['supplier', 'branch.organization', 'user', 'items.item'])
+            ->findOrFail($id);
+
+        $organization = $purchaseOrder->branch->organization;
+
+        return view('admin.suppliers.purchase-orders.print', [
+            'po' => $purchaseOrder,
+            'items' => $purchaseOrder->items,
+            'organization' => $organization,
+            'printedDate' => now()->format('M d, Y H:i')
+        ]);
+    }
+
 }
