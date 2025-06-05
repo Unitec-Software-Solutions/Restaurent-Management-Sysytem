@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Models\Organizations;
 
 class GrnDashboardController extends Controller
 {
@@ -376,6 +377,35 @@ class GrnDashboardController extends Controller
         ]);
 
         return view('admin.suppliers.grn.show', compact('grn'));
+    }
+
+    public function print(GrnMaster $grn)
+    {
+        $orgId = $this->getOrganizationId();
+        if ($grn->organization_id !== $orgId) {
+            abort(403);
+        }
+
+        $grn->load([
+            'items.item',
+            'items.purchaseOrderDetail',
+            'purchaseOrder',
+            'supplier',
+            'branch',
+            'receivedByUser',
+            'verifiedByUser',
+            'createdByUser'
+        ]);
+
+
+        $organization = Organizations::find($orgId);
+        $printedDate = now()->format('M d, Y h:i A');
+
+        return view('admin.suppliers.grn.print', compact(
+            'grn',
+            'organization',
+            'printedDate'
+        ));
     }
 
     public function verify(Request $request, GrnMaster $grn)
