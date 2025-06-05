@@ -29,7 +29,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Add index for item_code 
-            $table->foreign('item_code')->references('item_code')->on('item_master');
+            // $table->foreign('item_code')->references('item_code')->on('item_master');
         });
     }
 

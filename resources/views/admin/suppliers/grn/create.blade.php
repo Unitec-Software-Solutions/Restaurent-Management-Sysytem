@@ -5,29 +5,7 @@
     <!-- Header with breadcrumb -->
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center">
-            <h2 class="text-xl font-semibold text-gray-900">Create New GRN</h2>
-            <nav class="ml-4 flex" aria-label="Breadcrumb">
-                <ol class="inline-flex items-center space-x-1 md:space-x-3">
-                    <li class="inline-flex items-center">
-                        <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-indigo-600">
-                            <i class="fas fa-home mr-2"></i>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <div class="flex items-center">
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                            <a href="{{ route('admin.grn.index') }}" class="ml-1 text-sm font-medium text-gray-700 hover:text-indigo-600 md:ml-2">GRNs</a>
-                        </div>
-                    </li>
-                    <li aria-current="page">
-                        <div class="flex items-center">
-                            <i class="fas fa-chevron-right text-gray-400"></i>
-                            <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">Create</span>
-                        </div>
-                    </li>
-                </ol>
-            </nav>
+    
         </div>
         <a href="{{ route('admin.grn.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg">
             <i class="fas fa-arrow-left mr-2"></i> Back to GRNs
@@ -51,7 +29,7 @@
                             <option value="">Select Supplier</option>
                             @foreach($suppliers as $supplier)
                                 <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}>
-                                    {{ $supplier->name }} ({{ $supplier->code }})
+                                    {{ $supplier->name }} ({{ $supplier->supplier_id }})
                                 </option>
                             @endforeach
                         </select>
@@ -182,7 +160,7 @@
                 <option value="">Select Item</option>
                 @foreach($items as $item)
                     <option value="{{ $item->id }}" data-price="{{ $item->buying_price }}">
-                        {{ $item->name }} ({{ $item->code }})
+                        {{ $item->name }} ({{ $item->item_code }})
                     </option>
                 @endforeach
             </select>

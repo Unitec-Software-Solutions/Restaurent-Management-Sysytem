@@ -39,7 +39,7 @@ class ItemMaster extends Model
         'buying_price'    => 'decimal:2',
         'selling_price'   => 'decimal:2',
     ];
-
+    
     /**
      * Relationships
      */
@@ -82,9 +82,8 @@ class ItemMaster extends Model
         if (isset($this->attributes['attributes']['img'])) {
             return asset('storage/'.$this->attributes['attributes']['img']);
         }
-        return asset('https://placehold.co/200x200/png');
+        return asset('resources\\assets\\image.png'); // Default image if not set
     }
-
 
 
     /**
@@ -106,5 +105,17 @@ class ItemMaster extends Model
     {
         return $query->where('is_perishable', true);
     }
+
+    // In ItemMaster model
+public function purchaseOrderItems()
+{
+    return $this->hasMany(PurchaseOrderItem::class, 'item_id');
+}
+
+public function latestPurchaseOrderItem()
+{
+    return $this->hasOne(PurchaseOrderItem::class, 'item_id')
+        ->latest();
+}
 
 }

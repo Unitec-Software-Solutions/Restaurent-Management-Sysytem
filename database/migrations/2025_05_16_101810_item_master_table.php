@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('unicode_name')->nullable();
             $table->foreignId('item_category_id')->constrained('item_categories');
-            $table->string('item_code')->unique();
+            $table->string('item_code')->default('Item-code-not-set')->nullable();
+            $table->string('barcode')->nullable();
             $table->string('unit_of_measurement');
             $table->integer('reorder_level')->default(0);
             $table->boolean('is_perishable')->default(false);
@@ -30,6 +31,7 @@ return new class extends Migration
             $table->text('additional_notes')->nullable();
             $table->text('description')->nullable();
             $table->jsonb('attributes')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->softDeletes();
             $table->timestamps();
         });

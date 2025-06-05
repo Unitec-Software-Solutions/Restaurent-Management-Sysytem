@@ -16,7 +16,7 @@ class SupplierSeeder extends Seeder
         // Create suppliers for each organization
         for ($orgId = 1; $orgId <= 5; $orgId++) {
             // Create suppliers by category
-            $this->createSuppliersByCategory($faker, $orgId, 'Food Supplier', 3);
+            $this->createSuppliersByCategory($faker, $orgId, ' ', 3);
             $this->createSuppliersByCategory($faker, $orgId, 'Beverage Supplier', 2);
             $this->createSuppliersByCategory($faker, $orgId, 'Equipment Supplier', 2);
             $this->createSuppliersByCategory($faker, $orgId, 'Packaging Supplier', 1);

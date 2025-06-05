@@ -8,7 +8,6 @@
             ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
             ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
             ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
-            ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
         ]" active="Items Management" />
 
         <!-- Header with KPI Cards -->
@@ -82,15 +81,15 @@
 
                         <!-- Status Filter -->
                         <div>
-                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select id="status" name="status"
+                            {{-- <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                             <select id="status" name="status"
                                 class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 <option value="">All Statuses</option>
                                 <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active
                                 </option>
                                 <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive
                                 </option>
-                            </select>
+                            </select> --}}
                         </div>
 
                         <!-- Filter Button -->
@@ -115,12 +114,12 @@
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Category</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost / Buying price
                             </th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Price</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status</th>
+                            {{-- <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status</th> --}}
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions</th>
                         </tr>
@@ -154,13 +153,13 @@
                                 <td class="px-6 py-4 text-right">
                                     Rs. {{ number_format($item->selling_price, 2) }}
                                 </td>
-                                <td class="px-6 py-4 text-center">
+                                {{-- <td class="px-6 py-4 text-center">
                                     @if ($item->deleted_at)
                                         <x-partials.badges.status-badge status="danger" text="Inactive" />
                                     @else
                                         <x-partials.badges.status-badge status="success" text="Active" />
                                     @endif
-                                </td>
+                                </td> --}}
                                 <td class="px-6 py-4 text-center">
                                     <div class="flex justify-center space-x-3">
                                         <a href="{{ route('admin.inventory.items.show', $item->id) }}"
@@ -172,7 +171,7 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         
-                                        @if ($item->deleted_at)
+                                        {{-- @if ($item->deleted_at)
                                             <form action="{{ route('admin.inventory.items.restore', $item->id) }}"
                                                 method="POST">
                                                 @csrf
@@ -194,7 +193,7 @@
                                                     <i class="fas fa-trash-alt"></i>
                                                 </button>
                                             </form>
-                                        @endif
+                                        @endif --}}
                                     </div>
                                 </td>
                             </tr>

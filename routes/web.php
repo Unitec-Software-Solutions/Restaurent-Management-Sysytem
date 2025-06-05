@@ -237,7 +237,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{po}', [PurchaseOrderController::class, 'show'])->name('show');
             Route::get('/{po}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
             Route::post('/{po}/approve', [PurchaseOrderController::class, 'approve'])->name('approve');
-            Route::get('/{po}/print', [PurchaseOrderController::class, 'print'])->name('print');
+            Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
 
         });
 

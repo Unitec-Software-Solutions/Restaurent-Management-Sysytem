@@ -10,7 +10,6 @@
         ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
         ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
         ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
-        ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
     ]" active="Supplier Payments" />
 
     <!-- Payments Table -->

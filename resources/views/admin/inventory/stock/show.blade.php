@@ -9,10 +9,9 @@
         <div class="mb-6 border-b pb-4">
             <h2 class="text-2xl font-bold text-gray-900 mb-1">Transaction Details</h2>
             <div class="flex items-center space-x-4">
-                <x-partials.badges.status-badge 
-                    :status="$transaction->is_active ? 'success' : 'danger'" 
+                {{-- <x-partials.badges.status-badge :status="$transaction->is_active ? 'success' : 'danger'" 
                     :text="$transaction->is_active ? 'Active' : 'Inactive'" 
-                />
+                /> --}}
                 <span class="text-sm text-gray-500">
                     {{ $transaction->created_at->format('M d, Y H:i') }}
                 </span>

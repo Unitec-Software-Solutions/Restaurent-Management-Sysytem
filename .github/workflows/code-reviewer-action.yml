@@ -21,3 +21,4 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           AI_MODEL: 'gemini-2.5-flash-preview-05-20' 
           FILES_EXCLUDE: ['**/node_modules/**', '**/dist/**', '**/build/**']
+

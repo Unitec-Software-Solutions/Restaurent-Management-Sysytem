@@ -1,4 +1,3 @@
-{{-- resources/views/admin/suppliers/grn/edit.blade.php --}}
 
 @extends('layouts.admin')
 
@@ -32,12 +31,12 @@
                     <!-- GRN Number -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">GRN Number</label>
-                        <input type="text" value="{{ $grn->grn_number }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100" readonly>
+                        <input type="text" value="{{ $grn->grn_number }}" disabled class="w-full px-4 py-2 border rounded-lg bg-gray-100" readonly>
                     </div>
 
                     <!-- Branch -->
                     <div>
-                        <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
+                        <label for="branch_id"  class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
                         <select id="branch_id" name="branch_id" class="w-full px-4 py-2 border rounded-lg" required>
                             <option value="">Select Branch</option>
                             @foreach ($branches as $branch)
@@ -116,16 +115,17 @@
                                         <td class="px-4 py-3 whitespace-nowrap">
                                             <select name="items[{{ $loop->index }}][item_id]" class="w-full border rounded item-select" required>
                                                 <option value="">Select Item</option>
-                                                @foreach ($grn->items as $grnItem)
-                                                    <option value="{{ $grnItem->item_id }}" 
-                                                        data-code="{{ $grnItem->item_code }}"
-                                                        data-price="{{ $grnItem->buying_price }}"
-                                                        {{ $item->item_id == $grnItem->item_id ? 'selected' : '' }}>
-                                                        {{ $grnItem->item_name }} ({{ $grnItem->item_code }})
+                                                @foreach ($items as $itemOption) {{-- FIXED: Use $items instead of $grn->items --}}
+                                                    <option value="{{ $itemOption->id }}" 
+                                                        data-code="{{ $itemOption->item_code }}"
+                                                        data-price="{{ $itemOption->buying_price }}"
+                                                        {{ $item->item_id == $itemOption->id ? 'selected' : '' }}>
+                                                        {{ $itemOption->name }} ({{ $itemOption->item_code }})
                                                     </option>
                                                 @endforeach
                                             </select>
-                                            <input type="hidden" name="items[{{ $loop->index }}][item_code]" value="{{ $item->item_code }}">
+                                            {{-- FIXED: Add po_detail_id --}}
+                                            <input type="hidden" name="items[{{ $loop->index }}][po_detail_id]" value="{{ $item->po_detail_id }}">
                                         </td>
                                         <td class="px-4 py-3 whitespace-nowrap">
                                             <input type="text" name="items[{{ $loop->index }}][batch_no]" value="{{ $item->batch_no }}" class="w-full border rounded">
@@ -192,15 +192,16 @@
                     <td class="px-4 py-3 whitespace-nowrap">
                         <select name="items[${itemCounter}][item_id]" class="w-full border rounded item-select" required>
                             <option value="">Select Item</option>
-                            @foreach ($purchaseOrders->flatMap->items as $poItem)
-                                <option value="{{ $poItem->item_id }}" 
-                                    data-code="{{ $poItem->item_code }}"
-                                    data-price="{{ $poItem->buying_price }}">
-                                    {{ $poItem->item->name }} ({{ $poItem->item_code }})
+                            @foreach ($items as $itemOption)
+                                <option value="{{ $itemOption->id }}" 
+                                    data-code="{{ $itemOption->item_code }}"
+                                    data-price="{{ $itemOption->buying_price }}">
+                                    {{ $itemOption->name }} ({{ $itemOption->item_code }})
                                 </option>
                             @endforeach
                         </select>
-                        <input type="hidden" name="items[${itemCounter}][item_code]" value="">
+                        {{-- FIXED: Add po_detail_id --}}
+                        <input type="hidden" name="items[${itemCounter}][po_detail_id]" value="">
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
                         <input type="text" name="items[${itemCounter}][batch_no]" class="w-full border rounded">
@@ -270,7 +271,7 @@
                 }
             });
 
-            // Quantity/price change handler
+            // Quantity/price change handler - FIXED: Add accepted_quantity
             document.addEventListener('input', function(e) {
                 if (e.target.classList.contains('accepted-qty') || 
                     e.target.classList.contains('price') ||
@@ -281,7 +282,7 @@
                 }
             });
 
-            // Calculate line total
+            // Calculate line total - FIXED: Use accepted_quantity
             function calculateLineTotal(row) {
                 const qtyInput = row.querySelector('.accepted-qty');
                 const priceInput = row.querySelector('.price');

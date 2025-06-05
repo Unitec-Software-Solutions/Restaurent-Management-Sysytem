@@ -16,7 +16,6 @@
                     ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
                     ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
                     ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
-                    ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
                 ]" active="Dashboard" />
 
 

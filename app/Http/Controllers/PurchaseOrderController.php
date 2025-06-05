@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\ItemMaster;
 use App\Models\Branch;
+use App\Models\organizations;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PurchaseOrderController extends Controller
 {
@@ -92,18 +95,16 @@ class PurchaseOrderController extends Controller
     {
         $orgId = $this->getOrganizationId();
 
-        $suppliers = Supplier::where('organization_id', $orgId)
-            ->where('is_active', true)
-            ->get();
-
+        $items = ItemMaster::where('organization_id', $orgId)->get();
+        
         $branches = Branch::where('organization_id', $orgId)
             ->where('is_active', true)
             ->get();
+        
 
-
-
-            
-        $items = ItemMaster::where('organization_id', $orgId)->active()->get();
+        $suppliers = Supplier::where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->get();
 
 
         return view('admin.suppliers.purchase-orders.create', compact(
@@ -112,58 +113,69 @@ class PurchaseOrderController extends Controller
             'items'
         ));
     }
+
     public function store(Request $request)
     {
+        Log::info('Store method called with data:', $request->all());
+
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'supplier_id' => 'required|exists:suppliers,id',
             'order_date' => 'required|date',
             'expected_delivery_date' => 'required|date|after_or_equal:order_date',
             'items' => 'required|array|min:1',
-            'items.*.item_code' => 'required|exists:item_master,item_code',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.buying_price' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:500'
         ]);
 
-        $total = collect($request->items)->sum(function ($item) {
-            return $item['quantity'] * $item['buying_price'];
-        });
-
         DB::beginTransaction();
         try {
+            Log::info('Validation passed:', $validated);
+
             $po = PurchaseOrder::create([
                 'branch_id' => $validated['branch_id'],
                 'organization_id' => Auth::user()->organization_id,
                 'supplier_id' => $validated['supplier_id'],
                 'user_id' => Auth::id(),
-                'po_number' => 'PO-' . strtoupper(uniqid()),
                 'order_date' => $validated['order_date'],
                 'expected_delivery_date' => $validated['expected_delivery_date'],
-                'status' => 'Pending',
-                'total_amount' => $total,
+                'status' => PurchaseOrder::STATUS_PENDING,
+                'total_amount' => 0,
                 'paid_amount' => 0,
                 'notes' => $validated['notes'] ?? null,
                 'is_active' => true
             ]);
 
+            Log::info('Purchase order created:', $po->toArray());
+
+            $total = 0;
             foreach ($validated['items'] as $item) {
+                $lineTotal = $item['quantity'] * $item['buying_price'];
+                $total += $lineTotal;
+
                 $po->items()->create([
-                    'item_code' => $item['item_code'],
+                    'item_id' => $item['item_id'],
                     'buying_price' => $item['buying_price'],
                     'quantity' => $item['quantity'],
-                    'line_total' => $item['quantity'] * $item['buying_price'],
-                    'po_status' => 'Pending'
+                    'line_total' => $lineTotal,
+                    'po_status' => PurchaseOrderItem::STATUS_PENDING
                 ]);
             }
 
+            $po->update(['total_amount' => $total]);
+
             DB::commit();
+            Log::info('Transaction committed successfully.');
+
             return redirect()->route('admin.purchase-orders.show', $po->po_id)
                 ->with('success', 'Purchase order created successfully!');
         } catch (\Exception $e) {
+            Log::error('Error creating purchase order: ' . $e->getMessage());
             DB::rollBack();
             return back()->withInput()
-                ->with('error', 'Failed to create purchase order: ' . $e->getMessage());
+                ->with('error', 'Error creating purchase order: ' . $e->getMessage());
         }
     }
 
@@ -183,7 +195,7 @@ class PurchaseOrderController extends Controller
 
         return view('admin.suppliers.purchase-orders.show', [
             'po' => $purchaseOrder,
-            'items' => $itemsWithReceived, // Pass $itemsWithReceived to the view
+            'items' => $itemsWithReceived,
         ]);
     }
 
@@ -201,7 +213,14 @@ class PurchaseOrderController extends Controller
         $suppliers = Supplier::where('organization_id', $orgId)->active()->get();
         $items = ItemMaster::where('organization_id', $orgId)->active()->get();
 
-        return view('admin.suppliers.purchase-orders.edit', compact('purchaseOrder', 'suppliers', 'items'));
+        // Load existing items with item relationship
+        $purchaseOrder->load('items.item');
+
+        return view('admin.suppliers.purchase-orders.edit', compact(
+            'purchaseOrder',
+            'suppliers',
+            'items'
+        ));
     }
 
     public function update(Request $request, PurchaseOrder $purchaseOrder)
@@ -216,10 +235,9 @@ class PurchaseOrderController extends Controller
 
         $validated = $request->validate([
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'manual_supplier_name' => 'required_without:supplier_id|string|nullable',
             'expected_delivery_date' => 'nullable|date|after_or_equal:order_date',
             'items' => 'required|array|min:1',
-            'items.*.item_code' => 'required|exists:item_master,item_code',
+            'items.*.item_id' => 'required|exists:item_master,id', // Changed to item_id
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.buying_price' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
@@ -228,26 +246,61 @@ class PurchaseOrderController extends Controller
         DB::beginTransaction();
         try {
             $purchaseOrder->update([
-                'supplier_id' => $validated['supplier_id'],
-                'manual_supplier_name' => $validated['manual_supplier_name'],
+                'supplier_id' => $validated['supplier_id'] ?? null,                
                 'expected_delivery_date' => $validated['expected_delivery_date'],
-                'notes' => $validated['notes'],
+                'notes' => $validated['notes'] ?? null,
             ]);
 
-            // Delete existing items
-            $purchaseOrder->items()->delete();
-
+            // Keep track of existing items to preserve received quantities
+            $existingItems = $purchaseOrder->items->keyBy('po_detail_id');
+            
             $total = 0;
-            foreach ($validated['items'] as $item) {
-                $lineTotal = $item['quantity'] * $item['buying_price'];
+            $newItems = [];
+
+            foreach ($validated['items'] as $itemData) {
+                $itemMaster = ItemMaster::find($itemData['item_id']);
+                $lineTotal = $itemData['quantity'] * $itemData['buying_price'];
                 $total += $lineTotal;
 
-                $purchaseOrder->items()->create([
-                    'item_code' => $item['item_code'],
-                    'quantity' => $item['quantity'],
-                    'buying_price' => $item['buying_price'],
-                    'line_total' => $lineTotal,
-                ]);
+                // Create new item or update existing
+                if (isset($itemData['po_detail_id'])) {
+                    $item = PurchaseOrderItem::find($itemData['po_detail_id']);
+                    $item->update([
+                        'item_id' => $itemData['item_id'],
+                        'buying_price' => $itemData['buying_price'],
+                        'previous_buying_price' => $itemMaster->buying_price,
+                        'quantity' => $itemData['quantity'],
+                        'line_total' => $lineTotal,
+                    ]);
+                } else {
+                    $newItems[] = new PurchaseOrderItem([
+                        'item_id' => $itemData['item_id'],
+                        'buying_price' => $itemData['buying_price'],
+                        'previous_buying_price' => $itemMaster->buying_price,
+                        'quantity' => $itemData['quantity'],
+                        'line_total' => $lineTotal,
+                        'po_status' => PurchaseOrderItem::STATUS_PENDING
+                    ]);
+                }
+
+                // Update item master price
+                $itemMaster->update(['buying_price' => $itemData['buying_price']]);
+            }
+
+            // Save new items
+            if (!empty($newItems)) {
+                $purchaseOrder->items()->saveMany($newItems);
+            }
+
+            // Remove deleted items
+            $requestItemIds = collect($validated['items'])
+                ->pluck('po_detail_id')
+                ->filter()
+                ->toArray();
+                
+            $itemsToDelete = $existingItems->keys()->diff($requestItemIds);
+            if ($itemsToDelete->isNotEmpty()) {
+                PurchaseOrderItem::whereIn('po_detail_id', $itemsToDelete)->delete();
             }
 
             $purchaseOrder->update(['total_amount' => $total]);
@@ -273,7 +326,10 @@ class PurchaseOrderController extends Controller
             return back()->with('error', 'Only pending purchase orders can be deleted.');
         }
 
-        $purchaseOrder->delete();
+        DB::transaction(function () use ($purchaseOrder) {
+            $purchaseOrder->items()->delete();
+            $purchaseOrder->delete();
+        });
         
         return redirect()->route('admin.purchase-orders.index')
             ->with('success', 'Purchase Order deleted successfully.');
@@ -293,4 +349,21 @@ class PurchaseOrderController extends Controller
         
         return back()->with('success', 'Purchase Order approved successfully.');
     }
+
+    public function print($id)
+    {
+        $purchaseOrder = $this->baseQuery()
+            ->with(['supplier', 'branch.organization', 'user', 'items.item'])
+            ->findOrFail($id);
+
+        $organization = $purchaseOrder->branch->organization;
+
+        return view('admin.suppliers.purchase-orders.print', [
+            'po' => $purchaseOrder,
+            'items' => $purchaseOrder->items,
+            'organization' => $organization,
+            'printedDate' => now()->format('M d, Y H:i')
+        ]);
+    }
+
 }
