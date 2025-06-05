@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Payment;
 
 class Reservation extends Model
 {
@@ -42,12 +43,6 @@ class Reservation extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
-    }
-
-    
-    public function payments()
-    {
-        return $this->morphMany(Payment::class, 'payable');
     }
 
     public function tables()
@@ -110,6 +105,11 @@ class Reservation extends Model
     public function employee()
     {
         return $this->belongsTo(\App\Models\Employee::class, 'employee_id');
+    }
+    
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'payable');
     }
 }
 

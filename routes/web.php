@@ -14,9 +14,13 @@ use App\Http\Controllers\ItemMasterController;
 use App\Http\Controllers\ItemTransactionController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SupplierController;
+
+use App\Http\Controllers\AdminOrderController;
+
 use App\Http\Controllers\SupplierPaymentController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\GrnPaymentController;
+
 
 // Public Routes
 Route::get('/', function () {
@@ -39,7 +43,8 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
         Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
         Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
-        
+        Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show');
+        Route::get('/cancellation-success', [ReservationController::class, 'cancellationSuccess'])->name('cancellation-success');
     });
 
     // Orders
@@ -49,6 +54,12 @@ Route::middleware(['web'])->group(function () {
         Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('update-cart');
         Route::get('/create', [OrderController::class, 'create'])->name('create');
 
+        Route::post('/store', [OrderController::class, 'store'])->name('store');
+        Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
+        Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
+        Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
+        Route::put('/{order}', [OrderController::class, 'update'])->name('update');
+        
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function () {
             Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
@@ -56,6 +67,9 @@ Route::middleware(['web'])->group(function () {
             Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->name('edit');
             Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
             Route::delete('/{order}/delete', [OrderController::class, 'destroyTakeaway'])->name('destroy');
+            // Add missing update and submit routes for customer takeaway orders
+            Route::put('/{order}', [OrderController::class, 'updateTakeaway'])->name('update');
+            Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->name('submit');
         });
     });
 });
@@ -75,43 +89,54 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Reservations Management
         Route::resource('reservations', AdminReservationController::class);
-
-        // Steward and check-in/check-out routes
         Route::post('reservations/{reservation}/assign-steward', [AdminReservationController::class, 'assignSteward'])
-        ->name('reservations.assign-steward');
+            ->name('reservations.assign-steward');
         Route::post('reservations/{reservation}/check-in', [AdminReservationController::class, 'checkIn'])
-        ->name('reservations.check-in');
+            ->name('reservations.check-in');
         Route::post('reservations/{reservation}/check-out', [AdminReservationController::class, 'checkOut'])
-        ->name('reservations.check-out');
+            ->name('reservations.check-out');
         Route::get('/check-table-availability', [AdminReservationController::class, 'checkTableAvailability'])
-        ->name('check-table-availability');
-       
+            ->name('check-table-availability');
 
-        // Orders Management
+        // Consolidated Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
+
+            // Order Dashboard and Index
+            Route::get('/dashboard', [AdminOrderController::class, 'dashboard'])->name('dashboard');
+            Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+            Route::get('reservations', [AdminOrderController::class, 'reservationIndex'])->name('reservations.index');
+            Route::get('branch/{branch}', [AdminOrderController::class, 'branchOrders'])->name('branch');
+            Route::post('/update-cart', [AdminOrderController::class, 'updateCart'])->name('update-cart');
+
+            // Order CRUD Operations
+            Route::get('{order}/edit', [AdminOrderController::class, 'edit'])->name('edit');
+            Route::put('{order}', [AdminOrderController::class, 'update'])->name('update');
+            // Reservation Order Summary (fix binding order)
+            Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->name('summary');
+            Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->name('destroy');
+
             Route::get('/', [OrderController::class, 'adminIndex'])->name('index');
 
             // Reservation Orders
             Route::prefix('reservations/{reservation}')->name('reservations.')->group(function () {
-                Route::get('/create', [OrderController::class, 'create'])->name('create');
-                Route::post('/store', [OrderController::class, 'store'])->name('store');
-                Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
-                Route::put('/{order}', [OrderController::class, 'update'])->name('update');
-                Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
-                Route::post('/{order}/submit', [OrderController::class, 'submit'])->name('submit');
-                Route::delete('/{order}/destroy', [OrderController::class, 'destroy'])->name('destroy');
+                Route::get('/create', [AdminOrderController::class, 'createForReservation'])->name('create');
+                Route::post('/store', [AdminOrderController::class, 'storeForReservation'])->name('store');
+                Route::get('/edit', [AdminOrderController::class, 'editReservationOrder'])->name('edit');
+                Route::put('/update', [AdminOrderController::class, 'updateReservationOrder'])->name('update');
+                Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->name('summary');
             });
 
             // Takeaway Orders
             Route::prefix('takeaway')->name('takeaway.')->group(function () {
-                Route::get('/create', [OrderController::class, 'createAdminTakeaway'])->name('create');
-                Route::post('/store', [OrderController::class, 'storeAdminTakeaway'])->name('store');
-                Route::get('/{order}/edit', [OrderController::class, 'editAdminTakeaway'])->name('edit');
-                Route::put('/{order}/update', [OrderController::class, 'updateAdminTakeaway'])->name('update');
-                Route::get('/{order}/summary', [OrderController::class, 'summaryAdminTakeaway'])->name('summary');
-                Route::post('/{order}/submit', [OrderController::class, 'submitAdminTakeaway'])->name('submit');
-                Route::get('/{order}/show', [OrderController::class, 'showAdminTakeaway'])->name('show');
-                Route::delete('/{order}/destroy', [OrderController::class, 'destroyAdminTakeaway'])->name('destroy');
+                Route::get('/', [AdminOrderController::class, 'takeawayIndex'])->name('index');
+                Route::get('/create', [AdminOrderController::class, 'createTakeaway'])->name('create');
+                Route::post('/store', [AdminOrderController::class, 'storeTakeaway'])->name('store');
+                Route::get('/{order}/show', [OrderController::class, 'showTakeaway'])->name('takeaway.show');
+                // Added missing edit and update routes for takeaway orders
+                Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('edit');
+                Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('update');
+                // Add missing summary route for admin takeaway orders
+                Route::get('/{order}/summary', [AdminOrderController::class, 'takeawaySummary'])->name('summary');
             });
         });
 
@@ -120,7 +145,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
             Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
 
-            // Inventory Item Routes
+            // Inventory Items
             Route::prefix('items')->name('items.')->group(function () {
                 Route::get('/', [ItemMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
@@ -133,24 +158,27 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/added-items', [ItemMasterController::class, 'added'])->name('added-items');
             });
 
+            // Stock Management
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
                 Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-                // Route::get('/transactions', [ItemTransactionController::class, 'transactions'])->name('transactions');
                 Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
                 Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
                 Route::put('/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->name('update');
                 Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
 
+                // Stock Transactions
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
+            
             // Categories
             Route::resource('categories', ItemCategoryController::class);
         });
 
+        // Suppliers Management
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
             // Supplier Routes
             Route::get('/', [SupplierController::class, 'index'])->name('index');
@@ -192,6 +220,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
         });
 
+
+        // Miscellaneous Admin Routes
+        Route::get('/testpage', function () { return view('admin.testpage'); })->name('testpage');
+        Route::get('/reports', function () { return view('admin.reports.index'); })->name('reports.index');
+        Route::get('/customers', function () { return view('admin.customers.index'); })->name('customers.index');
+        Route::get('/web-test', function () { return view('admin.testpage'); })->name('web-test.index');
+        Route::get('/digital-menu', function () { return view('admin.digital-menu.index'); })->name('digital-menu.index');
+        Route::get('/settings', function () { return view('admin.settings.index'); })->name('settings.index');
+
         // purchase orders ( temporarily moved out from suppliers section due to conflict with supplier routes )
         Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
             Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
@@ -222,7 +259,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/settings', function () {
             return view('admin.settings.index');
         })->name('settings.index');
+
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
-        
     });
+
 });
+
+// Test Email Route
+Route::get('/test-email', function() {
+    $reservation = \App\Models\Reservation::first();
+    Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
+    return 'Email sent!';
+
+});
+
+// Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
+Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
+Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show')->where('reservation', '[0-9]+');
+Route::get('/admin/orders', [AdminOrderController::class, 'adminIndex'])->name('admin.orders.index');
