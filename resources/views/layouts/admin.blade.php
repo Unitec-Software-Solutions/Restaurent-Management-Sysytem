@@ -37,11 +37,42 @@
                             800: "#1e40af",
                             900: "#1e3a8a"
                         }
+
                     }
                 }
             }
         };
     </script>
+        <style>
+        .table-scroll {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .item-row:hover {
+            background-color: #f1f5f9;
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 
 
 </head>
