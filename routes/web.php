@@ -178,6 +178,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{grn}', [GrnDashboardController::class, 'update'])->name('update');
             Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->name('verify');
             Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
+            Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
+    
         });
 
         // Supplier Payments ( temporarily moved out from suppliers section due to conflict with supplier routes )
