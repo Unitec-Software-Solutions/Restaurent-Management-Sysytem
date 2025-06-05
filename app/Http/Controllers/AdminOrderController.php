@@ -434,6 +434,13 @@ class AdminOrderController extends Controller
         $order->delete();
 
         return redirect()->route('admin.orders.takeaway.index')
-            ->with('success', 'Takeaway order deleted successfully.');
+     
+        ->with('success', 'Takeaway order deleted successfully.');
+    }
+
+       public function adminIndex()
+    {
+        $orders = Order::with('reservation')->latest()->paginate(10); // Eager load reservations with pagination
+        return view('admin.orders.index', compact('orders'));
     }
 }
