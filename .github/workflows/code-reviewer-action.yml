@@ -19,5 +19,6 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          AI_MODEL: 'gemini-2.5-flash-preview-05-20' # Optional
-          FILES_EXCLUDE: ['**/node_modules/**', '**/dist/**', '**/build/**'] # Optional
+          AI_MODEL: 'gemini-2.5-flash-preview-05-20' 
+          FILES_EXCLUDE: ['**/node_modules/**', '**/dist/**', '**/build/**']
+
