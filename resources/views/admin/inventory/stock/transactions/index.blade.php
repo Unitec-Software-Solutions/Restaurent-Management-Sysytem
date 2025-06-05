@@ -12,7 +12,6 @@
             ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
             ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
             ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
-            ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
         ]" active="Transactions Management" />
 
         <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-sm p-6">
@@ -140,7 +139,7 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @forelse ($transactions as $tx)
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{{ route('admin.inventory.stock.show', $tx->id) }}'" >
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">{{ $tx->created_at->format('M d, Y') }}</div>
                                         <div class="text-xs text-gray-500">{{ $tx->created_at->format('h:i A') }}</div>
@@ -165,7 +164,7 @@
 
                                     {{-- <td class="px-6 py-4 whitespace-nowrap">
                                         <x-partials.badges.status-badge 
-                                            :color="$isIn ? 'green' : 'red'" 
+                                            :status="$isIn ? 'success' : 'danger'" 
                                             :text="ucwords(str_replace('_', ' ', $tx->transaction_type))" />
                                     </td> --}}
 

@@ -8,7 +8,7 @@
             <!-- Header -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-900 mb-1">Record Stock Transaction</h2>
-                <p class="text-sm text-gray-500">Add new stock in/out transaction for an item at a branch</p>
+                <p class="text-sm text-gray-500">Add new stock transaction for an item at a branch</p>
             </div>
 
             @if ($errors->any())
