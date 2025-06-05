@@ -3,7 +3,8 @@
 @section('content')
 <div class="container py-4">
     <div class="card shadow">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header bg-primary text-white d-flex align-items-center">
+            <i class="fas fa-utensils me-2"></i>
             <h2 class="mb-0">Create Takeaway Order</h2>
         </div>
         
@@ -13,10 +14,12 @@
                 <input type="hidden" name="order_type" value="{{ request('type', 'takeaway_walk_in_demand') }}">
 
                 <div class="row">
-                    <!-- Left Column - Order Details -->
-                    <div class="col-md-6">
-                        <div class="order-details-section mb-4">
-                            <h4 class="section-title border-bottom pb-2 mb-3">Order Information</h4>
+                    <!-- Left Column -->
+                    <div class="col-md-6 mb-4">
+                        <div class="mb-4">
+                            <h4 class="section-title border-bottom pb-2 mb-3">
+                                <i class="fas fa-info-circle me-2 text-primary"></i>Order Information
+                            </h4>
                             
                             @if(auth('admin')->check())
                             <div class="form-group mb-3">
@@ -49,8 +52,10 @@
                             </div>
                         </div>
 
-                        <div class="customer-info-section">
-                            <h4 class="section-title border-bottom pb-2 mb-3">Customer Information</h4>
+                        <div>
+                            <h4 class="section-title border-bottom pb-2 mb-3">
+                                <i class="fas fa-user me-2 text-primary"></i>Customer Information
+                            </h4>
                             
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
@@ -59,19 +64,24 @@
 
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
-                                <input type="tel" name="customer_phone" class="form-control" required
-                                    pattern="[0-9]{10,15}" 
-                                    title="Please enter a valid 10-15 digit phone number"
-                                    value="{{ old('customer_phone', $defaultBranchPhone ?? '') }}">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                    <input type="tel" name="customer_phone" class="form-control" required
+                                        pattern="[0-9]{10,15}" 
+                                        title="Please enter a valid 10-15 digit phone number"
+                                        value="{{ old('customer_phone', $defaultBranchPhone ?? '') }}">
+                                </div>
                                 <small class="form-text text-muted">We'll notify you about your order status</small>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right Column - Menu Items -->
-                    <div class="col-md-6">
-                        <div class="menu-items-section">
-                            <h4 class="section-title border-bottom pb-2 mb-3">Menu Items</h4>
+                    <!-- Right Column -->
+                    <div class="col-md-6 mb-4">
+                        <div class="mb-4">
+                            <h4 class="section-title border-bottom pb-2 mb-3">
+                                <i class="fas fa-list-ul me-2 text-primary"></i>Menu Items
+                            </h4>
                             
                             <div class="menu-items-container" style="max-height: 400px; overflow-y: auto;">
                                 @foreach($items as $item)
@@ -85,7 +95,12 @@
                                         </div>
                                         <label class="form-check-label flex-grow-1" for="item_{{ $item->id }}">
                                             <div class="d-flex justify-content-between align-items-center">
-                                                <span class="fw-medium">{{ $item->name }}</span>
+                                                <div>
+                                                    <div class="fw-medium">{{ $item->name }}</div>
+                                                    @if($item->description)
+                                                    <small class="text-muted">{{ $item->description }}</small>
+                                                    @endif
+                                                </div>
                                                 <span class="text-primary">LKR {{ number_format($item->selling_price, 2) }}</span>
                                             </div>
                                         </label>
@@ -96,6 +111,14 @@
                                 </div>
                                 @endforeach
                             </div>
+                        </div>
+
+                        <div id="order-summary" class="mt-4 p-3 border rounded bg-light">
+                            <h5 class="mb-3"><i class="fas fa-receipt me-2 text-secondary"></i>Order Summary</h5>
+                            <ul class="list-unstyled" id="summary-list">
+                                <li>No items selected</li>
+                            </ul>
+                            <div class="fw-bold mt-2">Total: LKR <span id="summary-total">0.00</span></div>
                         </div>
                     </div>
                 </div>
@@ -115,8 +138,12 @@
         color: #2c3e50;
         font-weight: 600;
     }
+    .menu-item-card {
+        transition: all 0.2s ease-in-out;
+    }
     .menu-item-card:hover {
         background-color: #f8f9fa;
+        transform: scale(1.01);
     }
     .quantity-input:disabled {
         background-color: #e9ecef;
@@ -128,7 +155,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const isAdmin = @json(auth('admin')->check());
 
-    // Set order_time to current PC time in 24hr format on page load
     const orderTimeInput = document.querySelector('input[name="order_time"]');
     if (orderTimeInput) {
         const now = new Date();
@@ -138,7 +164,6 @@ document.addEventListener('DOMContentLoaded', function() {
         orderTimeInput.min = formatted;
     }
 
-    // Admin-specific time handling
     if (isAdmin) {
         const setDefaultTime = (minutesToAdd) => {
             const time = new Date();
@@ -148,7 +173,6 @@ document.addEventListener('DOMContentLoaded', function() {
             orderTimeInput.value = formatted;
             orderTimeInput.min = formatted;
         };
-        // Handle order type changes
         const orderTypeSelect = document.querySelector('select[name="order_type"]');
         if (orderTypeSelect) {
             orderTypeSelect.addEventListener('change', function() {
@@ -157,16 +181,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Item selection handling
+    function updateSummary() {
+        const summaryList = document.getElementById('summary-list');
+        const summaryTotal = document.getElementById('summary-total');
+        let total = 0;
+        let listItems = '';
+
+        document.querySelectorAll('.item-check:checked').forEach(checkbox => {
+            const card = checkbox.closest('.menu-item-card');
+            const name = card.querySelector('.form-check-label .fw-medium').innerText;
+            const price = parseFloat(card.querySelector('.text-primary').innerText.replace('LKR', '').trim());
+            const qtyInput = card.querySelector('.quantity-input');
+            const quantity = parseInt(qtyInput.value || 1);
+            total += price * quantity;
+            listItems += `<li>${name} x ${quantity} - LKR ${(price * quantity).toFixed(2)}</li>`;
+        });
+
+        summaryList.innerHTML = listItems || '<li>No items selected</li>';
+        summaryTotal.innerText = total.toFixed(2);
+    }
+
     document.querySelectorAll('.item-check').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             const quantityInput = this.closest('.menu-item-card').querySelector('.quantity-input');
             quantityInput.disabled = !this.checked;
             if (!this.checked) quantityInput.value = 1;
+            updateSummary();
         });
     });
 
-    // Form validation
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('change', updateSummary);
+        input.addEventListener('input', updateSummary);
+    });
+
     document.querySelector('form').addEventListener('submit', function(e) {
         const phoneInput = document.querySelector('input[name="customer_phone"]');
         if (!phoneInput.value.trim()) {
@@ -175,6 +223,8 @@ document.addEventListener('DOMContentLoaded', function() {
             phoneInput.focus();
         }
     });
+
+    updateSummary(); // Initial call
 });
 </script>
 @endsection
