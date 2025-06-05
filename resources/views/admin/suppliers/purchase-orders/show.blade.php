@@ -23,7 +23,7 @@
                     <i class="fas fa-edit mr-2"></i> Edit
                 </a>
                 <a href="{{ route('admin.purchase-orders.print', $po->po_id) }}" 
-                   class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-print mr-2"></i> Print
                 </a>
             </div>
@@ -154,9 +154,6 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Received</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pending</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -177,23 +174,6 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     Rs. {{ number_format($item->line_total, 2) }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ number_format($item->received_quantity, 2) }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ number_format($item->pending_quantity, 2) }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    @if($item->po_status === 'Pending' && $item->pending_quantity > 0)
-                                        <x-partials.badges.status-badge status="warning" text="Pending" />
-                                    @elseif($item->po_status === 'Pending' && $item->pending_quantity == 0)
-                                        <x-partials.badges.status-badge status="success" text="Received" />
-                                    @elseif($item->po_status === 'Received')
-                                        <x-partials.badges.status-badge status="success" text="Received" />
-                                    @else
-                                        <x-partials.badges.status-badge status="default" text="{{ $item->po_status }}" />
-                                    @endif
                                 </td>
                             </tr>
                         @endforeach
