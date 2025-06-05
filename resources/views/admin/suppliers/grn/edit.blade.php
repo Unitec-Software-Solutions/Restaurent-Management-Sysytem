@@ -1,4 +1,4 @@
-{{-- resources/views/admin/suppliers/grn/edit.blade.php --}}
+
 @extends('layouts.admin')
 
 @section('header-title', 'Edit GRN')

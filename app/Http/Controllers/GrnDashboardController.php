@@ -128,6 +128,10 @@ class GrnDashboardController extends Controller
                 ->with('error', 'Only pending GRNs can be edited');
         }
 
+        $items = ItemMaster::where('organization_id', $orgId)
+            ->active()
+            ->get();
+
         $grn->load([
             'items.item',
             'purchaseOrder.items'
@@ -158,7 +162,9 @@ class GrnDashboardController extends Controller
             'grn',
             'suppliers',
             'branches',
-            'purchaseOrders'
+            'purchaseOrders',
+            'items'
+
         ));
     }
 
