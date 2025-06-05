@@ -16,7 +16,13 @@ class AdminController extends Controller
             return redirect()->route('admin.login')->with('error', 'Please log in to access the dashboard.');
         }
 
-        return view('admin.dashboard', compact('admin'));
+        // Fetch GRN payment status counts
+        $grnPaymentStatusCounts = \App\Models\GrnMaster::selectRaw('payment_status, COUNT(*) as count')
+            ->groupBy('payment_status')
+            ->pluck('count', 'payment_status')
+            ->toArray();
+
+        return view('admin.dashboard', compact('admin', 'grnPaymentStatusCounts'));
     }
 
     public function index()

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'user_type',
         'is_registered',
+        
     ];
 
     /**
@@ -54,4 +55,10 @@ class User extends Authenticatable
     {
         return $this->user_type === 'admin';
     }
+
+    public function organization()
+    {
+        return $this->belongsTo(Organizations::class, 'organization_id');
+    }
+
 }

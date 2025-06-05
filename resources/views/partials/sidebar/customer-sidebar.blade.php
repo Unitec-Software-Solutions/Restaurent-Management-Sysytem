@@ -55,14 +55,14 @@
                     </a>
                 </li>
                 <li class="pt-4">
-
-                    @csrf
-                    <button type="submit"
-                        class="w-full text-left flex items-center border gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-[#6A71F0]">
-                        @include('partials.icons.log-out')
-                        <span>Sign Out</span>
-                    </button>
-
+                    <form method="POST" action="{{ route('admin.logout.action') }}">
+                        @csrf
+                        <button type="submit"
+                            class="w-full text-left flex items-center border gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-[#6A71F0] text-white border-white">
+                            @include('partials.icons.log-out')
+                            <span>Sign Out</span>
+                        </button>
+                    </form>
                 </li>
             </ul>
         </div>
