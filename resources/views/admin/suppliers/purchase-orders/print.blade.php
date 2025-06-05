@@ -97,15 +97,20 @@
 </head>
 
 <body class="bg-gray-100 p-4 md:p-8">
+    <!-- Back and Action Buttons -->
     <div class="no-print mb-6">
-        <button onclick="window.print()"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-            <i class="fas fa-print mr-2"></i> Print
-        </button>
-        <a href="{{ route('admin.purchase-orders.show', $po->po_id) }}"
-            class="mt-4 inline-block text-indigo-600 hover:text-indigo-800">
-            <i class="fas fa-arrow-left mr-2"></i> Back to PO
-        </a>
+        <div class="flex justify-between items-center mb-6">
+            <a href="{{ route('admin.purchase-orders.show', $po->po_id) }}"
+                class="flex items-center text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i> Back to GRN
+            </a>
+            <div class="flex space-x-2">
+                <button onclick="window.print()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-print mr-2"></i> Print
+                </button>
+            </div>
+        </div>
     </div>
 
     <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm print-container">
