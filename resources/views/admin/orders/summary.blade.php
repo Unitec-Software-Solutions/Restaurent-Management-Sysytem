@@ -156,7 +156,7 @@
                 <i class="fas fa-list mr-1"></i> Reservation List
             </a>
             
-            <a href="{{ route('admin.orders.takeaway.index') }}" class="btn bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg">
+            <a href="{{ route('admin.orders.index') }}" class="btn bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg">
                 <i class="fas fa-utensils mr-1"></i> All Orders
             </a>
         </div>
