@@ -74,7 +74,7 @@
         @endif
 
     </div>
-    @yield('content')
+
     @stack('scripts')
 </body>
 
