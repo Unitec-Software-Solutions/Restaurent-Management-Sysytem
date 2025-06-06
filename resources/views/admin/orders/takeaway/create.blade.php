@@ -90,9 +90,9 @@
                                             <input type="tel" name="customer_phone" 
                                                 class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                                                 required
-                                                pattern="[0-9]{10,15}" 
-                                                title="Please enter a valid 10-15 digit phone number"
-                                                value="{{ old('customer_phone', $defaultBranchPhone ?? 'Not Provided') }}">
+                                                pattern="^\+?[0-9 ]{10,15}$" 
+                                                title="Please enter a valid phone number (e.g., +94 11 234 5678 or 0112345678)"
+                                                value="{{ old('customer_phone', preg_match('/^\+?[0-9 ]{10,15}$/', preg_replace('/[^\+0-9 ]/', '', optional(auth('admin')->user()->branch)->phone ?? '')) ? preg_replace('/[^\+0-9 ]/', '', optional(auth('admin')->user()->branch)->phone) : '') }}">
                                         </div>
                                         <p class="mt-1 text-xs text-gray-500">We'll notify you about your order status</p>
                                     </div>
@@ -179,11 +179,14 @@
                         </div>
 
                         <!-- Submit Button -->
-                        <div class="flex justify-end mt-8">
-                            <button type="submit" class="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg flex items-center">
-                                <i class="fas fa-check-circle mr-2"></i> Place Order
-                            </button>
-                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                                <button type="submit" 
+                                        class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                    Place Order
+                                </button>
+                                
+                            </div>
                     </form>
                 </div>
             </div>
