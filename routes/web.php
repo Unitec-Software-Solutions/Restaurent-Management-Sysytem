@@ -70,6 +70,7 @@ Route::middleware(['web'])->group(function () {
             // Add missing update and submit routes for customer takeaway orders
             Route::put('/{order}', [OrderController::class, 'updateTakeaway'])->name('update');
             Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->name('submit');
+            Route::get('/{order}', [OrderController::class, 'showTakeaway'])->name('show');
         });
     });
 });
@@ -114,8 +115,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Reservation Order Summary (fix binding order)
             Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->name('summary');
             Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->name('destroy');
-
-            Route::get('/', [OrderController::class, 'adminIndex'])->name('index');
 
             // Reservation Orders
             Route::prefix('reservations/{reservation}')->name('reservations.')->group(function () {
@@ -276,5 +275,15 @@ Route::get('/test-email', function() {
 
 // Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
 Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
-Route::get('/reservations/{reservation}', [ReservationController::class, 'show'])->name('reservations.show')->where('reservation', '[0-9]+');
-Route::get('/admin/orders', [AdminOrderController::class, 'adminIndex'])->name('admin.orders.index');
+
+// Takeaway routes
+Route::get('admin/orders/takeaway/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('admin.orders.takeaway.edit');
+Route::put('admin/orders/takeaway/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('admin.orders.takeaway.update');
+
+// Reservation routes
+Route::get('admin/orders/reservations/{reservation}/orders/{order}/edit', [AdminOrderController::class, 'editReservationOrder'])->name('admin.orders.reservations.edit');
+Route::put('admin/orders/reservations/{reservation}/orders/{order}', [AdminOrderController::class, 'updateReservationOrder'])->name('admin.orders.reservations.update');
+
+// Additional Order Routes
+Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');

@@ -36,18 +36,6 @@
                     </div>
                 </a>
             </div>
-            <div class="mt-8 bg-gray-50 p-6 rounded-lg">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
-                <div class="flex flex-wrap gap-4">
-                    <!-- Reservation order creation requires a reservation context, so provide instructions instead of a direct link -->
-                    <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded cursor-not-allowed" title="Select a reservation to create an order">
-                        Create Reservation Order (select a reservation first)
-                    </span>
-                    <a href="{{ route('admin.orders.takeaway.create') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                        Create Takeaway Order
-                    </a>
-                </div>
-            </div>
         </div>
     </div>
 </div>

@@ -75,10 +75,12 @@ class Order extends Model
 
     public function reservation()
     {
-        return $this->belongsTo(Reservation::class)->withDefault([
-            'name' => 'Deleted Reservation',
-            'scheduled_time' => null
-        ]);
+        return $this->belongsTo(Reservation::class);
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     public function markAsPreparing()
@@ -103,9 +105,13 @@ class Order extends Model
         ]);
     }
 
-    public function orderItems()
+    /**
+     * Check if the order is submitted.
+     *
+     * @return bool
+     */
+    public function isSubmitted(): bool
     {
-        // For backward compatibility, alias to items()
-        return $this->items();
+        return $this->status === self::STATUS_SUBMITTED;
     }
 }

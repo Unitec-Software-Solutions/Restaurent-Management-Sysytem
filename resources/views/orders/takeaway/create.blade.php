@@ -1,35 +1,38 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container py-4">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h2 class="mb-0">Create Takeaway Order</h2>
+<div class="container mx-auto px-4 py-6">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <!-- Card Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
+            <h2 class="text-2xl font-bold text-white">Create Takeaway Order</h2>
         </div>
         
-        <div class="card-body">
-            <form method="POST" action="{{ route('orders.takeaway.store') }}">
+        <!-- Card Body -->
+        <div class="p-6">
+            <form method="POST" action="{{ route('orders.takeaway.store') }}" class="space-y-6">
                 @csrf
 
-                <div class="row">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Left Column - Order Details -->
-                    <div class="col-md-6">
-                        <div class="order-details-section mb-4">
-                            <h4 class="section-title border-bottom pb-2 mb-3">Order Information</h4>
+                    <div class="space-y-6">
+                        <!-- Order Information Section -->
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Order Information</h3>
                             
                             @if(auth()->check() && auth()->user()->isAdmin())
-                            <div class="form-group mb-3">
-                                <label class="form-label fw-bold">Order Type</label>
-                                <select name="order_type" class="form-select">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
+                                <select name="order_type" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border">
                                     <option value="takeaway_walk_in_demand" selected>In-House</option>
                                     <option value="takeaway_in_call_scheduled">In-Call</option>
                                 </select>
                             </div>
                             @endif
 
-                            <div class="form-group mb-3" @if(auth()->check() && auth()->user()->isAdmin()) style="display:none" @endif>
-                                <label class="form-label fw-bold">Select Outlet</label>
-                                <select name="branch_id" class="form-select" required>
+                            <div class="mb-4" @if(auth()->check() && auth()->user()->isAdmin()) style="display:none" @endif>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Select Outlet</label>
+                                <select name="branch_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" required>
                                     @foreach($branches as $branch)
                                         <option value="{{ $branch->id }}" {{ $defaultBranch == $branch->id ? 'selected' : '' }}>
                                             {{ $branch->name }}
@@ -38,89 +41,85 @@
                                 </select>
                             </div>
 
-                            <div class="form-group mb-3">
-                                <label class="form-label fw-bold">Pickup Time</label>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
                                 <input type="datetime-local" name="order_time" 
                                     value="{{ auth()->check() && auth()->user()->isAdmin() ? now()->format('Y-m-d\TH:i') : '' }}"
                                     min="{{ now()->format('Y-m-d\TH:i') }}"
-                                    class="form-control"
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                     required>
                             </div>
                         </div>
 
-                        <div class="customer-info-section">
-                            <h4 class="section-title border-bottom pb-2 mb-3">Customer Information</h4>
+                        <!-- Customer Information Section -->
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Customer Information</h3>
                             
-                            <div class="form-group mb-3">
-                                <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
-                                <input type="text" name="customer_name" class="form-control" required>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+                                <input type="text" name="customer_name" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    required>
                             </div>
 
-                            <div class="form-group mb-3">
-                                <label class="form-label fw-bold">Phone Number <span class="text-danger">*</span></label>
-                                <input type="tel" name="customer_phone" class="form-control" required
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
+                                <input type="tel" name="customer_phone" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    required
                                     pattern="[0-9]{10,15}" 
                                     title="Please enter a valid 10-15 digit phone number">
-                                <small class="form-text text-muted">We'll notify you about your order status</small>
+                                <p class="mt-1 text-sm text-gray-500">We'll notify you about your order status</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Right Column - Menu Items -->
-                    <div class="col-md-6">
-                        <div class="menu-items-section">
-                            <h4 class="section-title border-bottom pb-2 mb-3">Menu Items</h4>
-                            
-                            <div class="menu-items-container" style="max-height: 400px; overflow-y: auto;">
-                                @foreach($items as $item)
-                                <div class="card mb-2 menu-item-card">
-                                    <div class="card-body d-flex align-items-center">
-                                        <div class="form-check me-3">
-                                            <input class="form-check-input item-check" type="checkbox" 
-                                                name="items[{{ $item->id }}][item_id]" 
-                                                value="{{ $item->id }}" 
-                                                id="item_{{ $item->id }}">
+                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 h-fit">
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Menu Items</h3>
+                        
+                        <div class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                            @foreach($items as $item)
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150">
+                                <div class="flex items-center">
+                                    <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300" 
+                                        type="checkbox" 
+                                        name="items[{{ $item->id }}][item_id]" 
+                                        value="{{ $item->id }}" 
+                                        id="item_{{ $item->id }}">
+                                    
+                                    <label for="item_{{ $item->id }}" class="ml-3 flex-1">
+                                        <div class="flex justify-between items-center">
+                                            <span class="font-medium text-gray-800">{{ $item->name }}</span>
+                                            <span class="text-blue-600 font-semibold">LKR {{ number_format($item->selling_price, 2) }}</span>
                                         </div>
-                                        <label class="form-check-label flex-grow-1" for="item_{{ $item->id }}">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="fw-medium">{{ $item->name }}</span>
-                                                <span class="text-primary">LKR {{ number_format($item->selling_price, 2) }}</span>
-                                            </div>
-                                        </label>
-                                        <input type="number" name="items[{{ $item->id }}][quantity]" 
-                                            min="1" value="1" class="form-control quantity-input ms-2" 
-                                            style="width: 70px;" disabled>
-                                    </div>
+                                    </label>
+                                    
+                                    <input type="number" 
+                                        name="items[{{ $item->id }}][quantity]" 
+                                        min="1" 
+                                        value="1" 
+                                        class="ml-3 w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1 px-2 border bg-gray-100" 
+                                        disabled>
                                 </div>
-                                @endforeach
                             </div>
+                            @endforeach
                         </div>
                     </div>
                 </div>
 
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-                    <button type="submit" class="btn btn-primary px-4">
-                        <i class="fas fa-check-circle me-2"></i> Place Order
+                <div class="flex justify-end mt-6">
+                    <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 border border-transparent rounded-md font-semibold text-white hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                        Place Order
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<style>
-    .section-title {
-        color: #2c3e50;
-        font-weight: 600;
-    }
-    .menu-item-card:hover {
-        background-color: #f8f9fa;
-    }
-    .quantity-input:disabled {
-        background-color: #e9ecef;
-        opacity: 1;
-    }
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -144,11 +143,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Item selection handling
-    document.querySelectorAll('.item-check').forEach(checkbox => {
+    document.querySelectorAll('[type="checkbox"]').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const quantityInput = this.closest('.menu-item-card').querySelector('.quantity-input');
+            const quantityInput = this.closest('.bg-white').querySelector('[type="number"]');
             quantityInput.disabled = !this.checked;
-            if (!this.checked) quantityInput.value = 1;
+            if (!this.checked) {
+                quantityInput.value = 1;
+                quantityInput.classList.add('bg-gray-100');
+            } else {
+                quantityInput.classList.remove('bg-gray-100');
+            }
         });
     });
 

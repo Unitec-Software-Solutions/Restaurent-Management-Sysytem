@@ -67,9 +67,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <a href="{{ route('customer.dashboard') }}" class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <i class="fas fa-home mr-2"></i> Dashboard
+        
 
 
         <!-- Actions -->
@@ -86,20 +84,8 @@
                 <i class="fas fa-print mr-2"></i> Print
             </button>
 
-            <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" class="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <i class="fas fa-shopping-cart mr-2"></i> Place Order
+            
 
-
-            <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" class="bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                <i class="fas fa-shopping-cart mr-2"></i> Place Order
-
-            <a href="{{ route('orders.create', ['reservation_id' => $reservation->id]) }}" 
-               class="btn btn-success px-4 flex-1 sm:flex-none text-center">
-                <i class="bi bi-cart-plus me-2"></i> Place Order
-
-
-            </a>
-        </div>
 
         <div class="flex justify-end mt-4">
             <button id="cancelBtn" class="text-red-600 hover:text-red-800 font-medium flex items-center transition-colors duration-200">
