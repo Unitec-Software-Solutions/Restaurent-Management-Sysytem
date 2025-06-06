@@ -29,12 +29,23 @@
                     </div>
                 </div>
 
+                <!-- Error Messages -->
+                @if ($errors->any())
+                    <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
+                        <h3 class="font-medium mb-2">Validation Errors</h3>
+                        <ul class="list-disc pl-5">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <!-- Basic Information Section -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <!-- Payment Number -->
                     <div>
-                        <label for="payment_number" class="block text-sm font-medium text-gray-700 mb-1">Payment
-                            Number</label>
+                        <label for="payment_number" class="block text-sm font-medium text-gray-700 mb-1">Payment Number</label>
                         <input type="text" id="payment_number" name="payment_number"
                             value="PAY-{{ strtoupper(uniqid()) }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100"
                             readonly>
@@ -115,7 +126,6 @@
                                 @endforeach
                             </select>
                         </div>
-
                     </div>
                 </div>
 
@@ -171,6 +181,9 @@
                                                 Due Amount</th>
                                             <th
                                                 class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Allocate Amount</th>
+                                            <th
+                                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Due Date</th>
                                             <th
                                                 class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -224,6 +237,9 @@
                                             <th
                                                 class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Due Amount</th>
+                                            <th
+                                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Allocate Amount</th>
                                             <th
                                                 class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Due Date</th>
@@ -286,7 +302,6 @@
                                     Method *</label>
                                 <select id="method_type" name="method_type" class="w-full px-4 py-2 border rounded-lg"
                                     required>
-                                    <option value="">Select Method</option>
                                     <option value="cash">Cash</option>
                                     <option value="bank_transfer">Bank Transfer</option>
                                     <option value="check">Check</option>
@@ -317,14 +332,9 @@
                     <textarea id="notes" name="notes" rows="3" class="w-full px-4 py-2 border rounded-lg"></textarea>
                 </div>
 
-                <!-- Hidden fields for selected documents -->
-                <div id="selectedDocumentsFields">
-                    @if (old('document_ids'))
-                        @foreach (old('document_ids') as $docId)
-                            <input type="hidden" name="document_ids[]" value="{{ $docId }}">
-                        @endforeach
-                    @endif
-                </div>
+                <!-- Hidden fields for selected documents and allocations -->
+                <div id="selectedDocumentsFields"></div>
+                <div id="allocationsFields"></div>
             </form>
         </div>
     </div>
@@ -349,10 +359,17 @@
             const paymentAllocationSection = document.getElementById('paymentAllocationSection');
             const selectedDocumentsList = document.getElementById('selectedDocumentsList');
             const selectedDocumentsFields = document.getElementById('selectedDocumentsFields');
+            const allocationsFields = document.getElementById('allocationsFields');
             const totalAmountInput = document.getElementById('total_amount');
             const allocatedAmountInput = document.getElementById('allocated_amount');
             const selectAllGrns = document.getElementById('selectAllGrns');
             const selectAllPos = document.getElementById('selectAllPos');
+            const paymentForm = document.getElementById('paymentForm');
+            const saveDraftBtn = document.getElementById('saveDraftBtn');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Store selected documents
+            let selectedDocuments = [];
 
             // Tab switching
             grnTab.addEventListener('click', () => {
@@ -373,23 +390,16 @@
                 grnTabContent.classList.add('hidden');
             });
 
-            // Store selected documents
-            let selectedDocuments = [];
-
             // Supplier selection handler
             supplierSelect.addEventListener('change', function() {
                 const selectedOption = this.options[this.selectedIndex];
 
                 if (this.value) {
                     // Show supplier details
-                    document.getElementById('supplierContact').textContent = selectedOption.getAttribute(
-                        'data-contact') || '-';
-                    document.getElementById('supplierPhone').textContent = selectedOption.getAttribute(
-                        'data-phone') || '-';
-                    document.getElementById('supplierEmail').textContent = selectedOption.getAttribute(
-                        'data-email') || '-';
-                    document.getElementById('supplierTotalDue').textContent = '$' + parseFloat(
-                        selectedOption.getAttribute('data-due')).toFixed(2);
+                    document.getElementById('supplierContact').textContent = selectedOption.getAttribute('data-contact') || '-';
+                    document.getElementById('supplierPhone').textContent = selectedOption.getAttribute('data-phone') || '-';
+                    document.getElementById('supplierEmail').textContent = selectedOption.getAttribute('data-email') || '-';
+                    document.getElementById('supplierTotalDue').textContent = '$' + parseFloat(selectedOption.getAttribute('data-due')).toFixed(2);
                     supplierDetails.classList.remove('hidden');
 
                     // Show load buttons
@@ -400,30 +410,24 @@
                     noGrnsMessage.classList.add('hidden');
                     noPosMessage.classList.add('hidden');
                 } else {
-                    // Hide supplier details
+                    // Reset state
                     supplierDetails.classList.add('hidden');
-
-                    // Hide load buttons
                     loadGrnsBtn.classList.add('hidden');
                     loadPosBtn.classList.add('hidden');
-
-                    // Show no documents messages
                     noGrnsMessage.classList.remove('hidden');
                     noPosMessage.classList.remove('hidden');
-
-                    // Hide containers
                     grnsContainer.classList.add('hidden');
                     posContainer.classList.add('hidden');
-
-                    // Hide payment allocation section
                     paymentAllocationSection.classList.add('hidden');
+                    selectedDocuments = [];
+                    updateSelectedDocumentsList();
+                    updatePaymentAllocation();
                 }
             });
 
             // Load GRNs button handler
             loadGrnsBtn.addEventListener('click', function() {
                 const supplierId = supplierSelect.value;
-
                 if (!supplierId) {
                     alert('Please select a supplier first');
                     return;
@@ -433,47 +437,44 @@
                 const grnsTableBody = document.getElementById('grnsTableBody');
                 grnsTableBody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="px-4 py-4 text-center text-gray-500">
+                        <td colspan="10" class="px-4 py-4 text-center text-gray-500">
                             <i class="fas fa-spinner fa-spin mr-2"></i> Loading GRNs...
                         </td>
                     </tr>
                 `;
-
-                // Show GRNs container
                 grnsContainer.classList.remove('hidden');
 
                 // AJAX call to fetch GRNs
                 fetch(`/admin/suppliers/${supplierId}/pending-grns`, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                .getAttribute('content')
-                        }
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.length === 0) {
-                            grnsTableBody.innerHTML = `
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    grnsTableBody.innerHTML = '';
+                    if (data.length === 0) {
+                        grnsTableBody.innerHTML = `
                             <tr>
-                                <td colspan="9" class="px-4 py-4 text-center text-gray-500">
+                                <td colspan="10" class="px-4 py-4 text-center text-gray-500">
                                     No pending GRNs found for this supplier
                                 </td>
                             </tr>
                         `;
-                            return;
-                        }
+                        return;
+                    }
 
-                        // Populate GRNs table
-                        grnsTableBody.innerHTML = '';
-                        data.forEach(grn => {
-                            const row = document.createElement('tr');
-                            row.className = 'hover:bg-gray-50';
-                            row.innerHTML = `
+                    // Populate GRNs table
+                    data.forEach(grn => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50';
+                        row.innerHTML = `
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <input type="checkbox" class="document-checkbox rounded" 
                                        data-type="grn" data-id="${grn.grn_id}" 
@@ -485,41 +486,41 @@
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.total_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.paid_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.due_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <input type="number" step="0.01" class="allocate-amount w-24 px-2 py-1 border rounded-lg" 
+                                       data-type="grn" data-id="${grn.grn_id}" 
+                                       value="${parseFloat(grn.due_amount).toFixed(2)}" min="0" max="${grn.due_amount}">
+                            </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(grn.due_date) ? 'text-red-500' : 'text-gray-500'}">
                                 ${grn.due_date}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    ${getStatusBadgeClass(grn.status)}">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(grn.status)}">
                                     ${grn.status.charAt(0).toUpperCase() + grn.status.slice(1)}
                                 </span>
                             </td>
                         `;
-                            grnsTableBody.appendChild(row);
-                        });
+                        grnsTableBody.appendChild(row);
+                    });
 
-                        // Add event listeners to checkboxes
-                        addDocumentCheckboxListeners();
-
-                        // Show payment allocation section
-                        paymentAllocationSection.classList.remove('hidden');
-                    })
-                    .catch(error => {
-                        console.error('Error loading GRNs:', error);
-                        grnsTableBody.innerHTML = `
+                    addDocumentCheckboxListeners();
+                    paymentAllocationSection.classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Error loading GRNs:', error);
+                    grnsTableBody.innerHTML = `
                         <tr>
-                            <td colspan="9" class="px-4 py-4 text-center text-gray-500">
-                                Error loading GRNs. Please try again.
-                            </td>
+                            <td colspan="10" class="px-4 py-4 text-center text-red-500">
+                            Error loading GRNs: ${error.message}. Please try again.
+                        </td>
                         </tr>
                     `;
-                    });
+                });
             });
 
             // Load POs button handler
             loadPosBtn.addEventListener('click', function() {
                 const supplierId = supplierSelect.value;
-
                 if (!supplierId) {
                     alert('Please select a supplier first');
                     return;
@@ -529,47 +530,44 @@
                 const posTableBody = document.getElementById('posTableBody');
                 posTableBody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="px-4 py-4 text-center text-gray-500">
+                        <td colspan="9" class="px-4 py-4 text-center text-gray-500">
                             <i class="fas fa-spinner fa-spin mr-2"></i> Loading POs...
                         </td>
                     </tr>
                 `;
-
-                // Show POs container
                 posContainer.classList.remove('hidden');
 
                 // AJAX call to fetch POs
                 fetch(`/admin/suppliers/${supplierId}/pending-pos`, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                .getAttribute('content')
-                        }
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.length === 0) {
-                            posTableBody.innerHTML = `
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    posTableBody.innerHTML = '';
+                    if (data.length === 0) {
+                        posTableBody.innerHTML = `
                             <tr>
-                                <td colspan="8" class="px-4 py-4 text-center text-gray-500">
+                                <td colspan="9" class="px-4 py-4 text-center text-gray-500">
                                     No pending POs found for this supplier
                                 </td>
                             </tr>
                         `;
-                            return;
-                        }
+                        return;
+                    }
 
-                        // Populate POs table
-                        posTableBody.innerHTML = '';
-                        data.forEach(po => {
-                            const row = document.createElement('tr');
-                            row.className = 'hover:bg-gray-50';
-                            row.innerHTML = `
+                    // Populate POs table
+                    data.forEach(po => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50';
+                        row.innerHTML = `
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <input type="checkbox" class="document-checkbox rounded" 
                                        data-type="po" data-id="${po.po_id}" 
@@ -580,35 +578,36 @@
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.total_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.paid_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.due_amount).toFixed(2)}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <input type="number" step="0.01" class="allocate-amount w-24 px-2 py-1 border rounded-lg" 
+                                       data-type="po" data-id="${po.po_id}" 
+                                       value="${parseFloat(po.due_amount).toFixed(2)}" min="0" max="${po.due_amount}">
+                            </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(po.due_date) ? 'text-red-500' : 'text-gray-500'}">
                                 ${po.due_date}
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                    ${getStatusBadgeClass(po.status)}">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(po.status)}">
                                     ${po.status.charAt(0).toUpperCase() + po.status.slice(1)}
                                 </span>
                             </td>
                         `;
-                            posTableBody.appendChild(row);
-                        });
+                        posTableBody.appendChild(row);
+                    });
 
-                        // Add event listeners to checkboxes
-                        addDocumentCheckboxListeners();
-
-                        // Show payment allocation section
-                        paymentAllocationSection.classList.remove('hidden');
-                    })
-                    .catch(error => {
-                        console.error('Error loading POs:', error);
-                        posTableBody.innerHTML = `
+                    addDocumentCheckboxListeners();
+                    paymentAllocationSection.classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Error loading POs:', error);
+                    posTableBody.innerHTML = `
                         <tr>
-                            <td colspan="8" class="px-4 py-4 text-center text-gray-500">
-                                Error loading POs. Please try again.
+                            <td colspan="9" class="px-4 py-4 text-center text-red-500">
+                                Error loading POs: ${error.message}. Please try again.
                             </td>
                         </tr>
                     `;
-                    });
+                });
             });
 
             // Add event listeners to document checkboxes
@@ -619,24 +618,50 @@
                         const id = this.getAttribute('data-id');
                         const number = this.getAttribute('data-number');
                         const dueAmount = parseFloat(this.getAttribute('data-due-amount'));
+                        const allocateInput = this.closest('tr').querySelector('.allocate-amount');
+                        const allocatedAmount = parseFloat(allocateInput.value) || dueAmount;
 
                         if (this.checked) {
-                            // Add to selected documents
                             selectedDocuments.push({
                                 type: type,
                                 id: id,
                                 number: number,
                                 due_amount: dueAmount,
-                                allocated_amount: dueAmount // Default to full due amount
+                                allocated_amount: allocatedAmount
                             });
+                            allocateInput.disabled = false;
                         } else {
-                            // Remove from selected documents
-                            selectedDocuments = selectedDocuments.filter(doc => !(doc.type ===
-                                type && doc.id === id));
+                            selectedDocuments = selectedDocuments.filter(doc => !(doc.type === type && doc.id === id));
+                            allocateInput.disabled = true;
+                            allocateInput.value = dueAmount.toFixed(2);
                         }
 
                         updateSelectedDocumentsList();
                         updatePaymentAllocation();
+                    });
+                });
+
+                // Add event listeners to allocation inputs
+                document.querySelectorAll('.allocate-amount').forEach(input => {
+                    input.addEventListener('input', function() {
+                        const type = this.getAttribute('data-type');
+                        const id = this.getAttribute('data-id');
+                        const max = parseFloat(this.getAttribute('max'));
+                        let value = parseFloat(this.value) || 0;
+
+                        // Cap the allocated amount at the due amount
+                        if (value > max) {
+                            value = max;
+                            this.value = value.toFixed(2);
+                        }
+
+                        // Update selected document
+                        const doc = selectedDocuments.find(doc => doc.type === type && doc.id === id);
+                        if (doc) {
+                            doc.allocated_amount = value;
+                            updateSelectedDocumentsList();
+                            updatePaymentAllocation();
+                        }
                     });
                 });
             }
@@ -674,6 +699,7 @@
             function updateSelectedDocumentsList() {
                 selectedDocumentsList.innerHTML = '';
                 selectedDocumentsFields.innerHTML = '';
+                allocationsFields.innerHTML = '';
 
                 if (selectedDocuments.length === 0) {
                     selectedDocumentsList.innerHTML = '<p class="text-gray-500 text-sm">No documents selected</p>';
@@ -683,21 +709,34 @@
                 const list = document.createElement('ul');
                 list.className = 'space-y-2';
 
-                selectedDocuments.forEach(doc => {
+                selectedDocuments.forEach((doc, index) => {
                     const listItem = document.createElement('li');
                     listItem.className = 'flex justify-between items-center';
                     listItem.innerHTML = `
-                        <span class="text-sm">${doc.type.toUpperCase()}: ${doc.number}</span>
-                        <span class="text-sm font-medium">$${doc.due_amount.toFixed(2)}</span>
+                        <span class="text-sm text-blue-600">${doc.type.toUpperCase()}: ${doc.number}</span>
+                        <span class="text-sm font-medium text-gray-700">$${doc.allocated_amount.toFixed(2)} / $${doc.due_amount.toFixed(2)}</span>
                     `;
                     list.appendChild(listItem);
 
-                    // Add hidden input for form submission
-                    const hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.name = `document_ids[]`;
-                    hiddenInput.value = `${doc.type}_${doc.id}`;
-                    selectedDocumentsFields.appendChild(hiddenInput);
+                    // Add hidden inputs for document IDs
+                    const hiddenDocInput = document.createElement('input');
+                    hiddenDocInput.type = 'hidden';
+                    hiddenDocInput.name = `document_ids[${index}]`;
+                    hiddenDocInput.value = `${doc.type}_${doc.id}`;
+                    selectedDocumentsFields.appendChild(hiddenDocInput);
+
+                    // Add hidden inputs for allocations
+                    const hiddenAllocIdInput = document.createElement('input');
+                    hiddenAllocIdInput.type = 'hidden';
+                    hiddenAllocIdInput.name = `allocations[${index}][document_id]`;
+                    hiddenAllocIdInput.value = `${doc.type}_${doc.id}`; // Correct format: grn_123 or po_123
+                    allocationsFields.appendChild(hiddenAllocIdInput);
+
+                    const hiddenAllocAmountInput = document.createElement('input');
+                    hiddenAllocAmountInput.type = 'hidden';
+                    hiddenAllocAmountInput.name = `allocations[${index}][amount]`;
+                    hiddenAllocAmountInput.value = doc.allocated_amount.toFixed(2);
+                    allocationsFields.appendChild(hiddenAllocAmountInput);
                 });
 
                 selectedDocumentsList.appendChild(list);
@@ -705,7 +744,7 @@
 
             // Update payment allocation summary
             function updatePaymentAllocation() {
-                const totalAllocated = selectedDocuments.reduce((sum, doc) => sum + doc.due_amount, 0);
+                const totalAllocated = selectedDocuments.reduce((sum, doc) => sum + doc.allocated_amount, 0);
                 allocatedAmountInput.value = totalAllocated.toFixed(2);
                 totalAmountInput.value = totalAllocated.toFixed(2);
             }
@@ -715,7 +754,6 @@
                 const checkboxes = document.querySelectorAll('#grnsTableBody .document-checkbox');
                 checkboxes.forEach(checkbox => {
                     checkbox.checked = this.checked;
-                    // Trigger change event manually
                     checkbox.dispatchEvent(new Event('change'));
                 });
             });
@@ -725,15 +763,31 @@
                 const checkboxes = document.querySelectorAll('#posTableBody .document-checkbox');
                 checkboxes.forEach(checkbox => {
                     checkbox.checked = this.checked;
-                    // Trigger change event manually
                     checkbox.dispatchEvent(new Event('change'));
                 });
             });
 
             // Save as draft button
-            document.getElementById('saveDraftBtn').addEventListener('click', function() {
+            saveDraftBtn.addEventListener('click', function(e) {
+                e.preventDefault();
                 document.getElementById('payment_status').value = 'draft';
-                document.getElementById('paymentForm').submit();
+                // Remove document_ids and allocations validation for drafts
+                selectedDocumentsFields.innerHTML = '';
+                allocationsFields.innerHTML = '';
+                totalAmountInput.value = totalAmountInput.value || '0';
+                paymentForm.submit();
+            });
+
+            // Form submission validation
+            paymentForm.addEventListener('submit', function(e) {
+                const status = document.getElementById('payment_status').value;
+                if (status !== 'draft' && selectedDocuments.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one document to allocate payment.');
+                } else if (status !== 'draft' && parseFloat(totalAmountInput.value) <= 0) {
+                    e.preventDefault();
+                    alert('Payment amount must be greater than zero.');
+                }
             });
         });
     </script>

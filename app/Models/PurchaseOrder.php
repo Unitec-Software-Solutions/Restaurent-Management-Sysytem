@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Models\Branch;
 use App\Models\Organizations;
-use App\Models\Supplier; 
+use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -47,11 +47,12 @@ class PurchaseOrder extends Model
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'is_active' => 'boolean'
+
     ];
 
     protected $dates = [
-    'created_at',
-    'updated_at'
+        'created_at',
+        'updated_at'
     ];
 
     // Relationships
@@ -59,6 +60,11 @@ class PurchaseOrder extends Model
     {
         return $this->belongsTo(Supplier::class, 'supplier_id');
     }
+
+    // public function supplier()
+    // {
+    //     return $this->belongsTo(Supplier::class);
+    // }
 
     public function branch(): BelongsTo
     {
@@ -107,14 +113,14 @@ class PurchaseOrder extends Model
         return $this->status === 'Pending';
     }
     public function approvedBy()
-{
-    return $this->belongsTo(User::class, 'approved_by');
-}
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
 
-public function isApproved(): bool
-{
-    return $this->status === self::STATUS_APPROVED;
-}
+    public function isApproved(): bool
+    {
+        return $this->status === self::STATUS_APPROVED;
+    }
 
     public function markAsApproved(): void
     {
@@ -127,20 +133,32 @@ public function isApproved(): bool
     }
 
     // Add this to automatically set PO number
-protected static function boot()
-{
-    parent::boot();
+    protected static function boot()
+    {
+        parent::boot();
 
-    static::creating(function ($model) {
-        $model->po_number = static::generatePONumber();
-    });
-}
+        static::creating(function ($model) {
+            $model->po_number = static::generatePONumber();
+        });
+    }
 
-public static function generatePONumber()
-{
-    // Example: PO-2023-0001
-    $latest = static::latest('po_id')->first();
-    $nextId = $latest ? $latest->po_id + 1 : 1;
-    return 'PO-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
-}
+    public static function generatePONumber()
+    {
+        // Example: PO-2023-0001
+        $latest = static::latest('po_id')->first();
+        $nextId = $latest ? $latest->po_id + 1 : 1;
+        return 'PO-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function calculatePaymentStatus()
+    {
+        $dueAmount = $this->total_amount - ($this->paid_amount ?? 0);
+        if ($dueAmount <= 0) {
+            $this->payment_status = 'paid';
+        } elseif ($this->paid_amount > 0) {
+            $this->payment_status = 'partial';
+        } else {
+            $this->payment_status = 'pending';
+        }
+    }
 }

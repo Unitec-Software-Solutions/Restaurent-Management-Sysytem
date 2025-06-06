@@ -9,7 +9,7 @@
                 <i class="fas fa-arrow-left mr-2"></i> Back to POs
             </a>
             <div class="flex space-x-2">
-                @if($po->status === 'Pending')
+                {{-- @if($po->status === 'Pending')
                     <form action="{{ route('admin.purchase-orders.approve', $po->po_id) }}" method="POST" class="inline">
                         @csrf
                         <button type="submit" 
@@ -21,7 +21,7 @@
                 <a href="{{ route('admin.purchase-orders.edit', $po->po_id) }}" 
                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-edit mr-2"></i> Edit
-                </a>
+                </a> --}}
                 <a href="{{ route('admin.purchase-orders.print', $po->po_id) }}" 
                 class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-print mr-2"></i> Print
