@@ -282,3 +282,7 @@ Route::put('admin/orders/takeaway/{order}', [AdminOrderController::class, 'updat
 // Reservation routes
 Route::get('admin/orders/reservations/{reservation}/orders/{order}/edit', [AdminOrderController::class, 'editReservationOrder'])->name('admin.orders.reservations.edit');
 Route::put('admin/orders/reservations/{reservation}/orders/{order}', [AdminOrderController::class, 'updateReservationOrder'])->name('admin.orders.reservations.update');
+
+// Additional Order Routes
+Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
