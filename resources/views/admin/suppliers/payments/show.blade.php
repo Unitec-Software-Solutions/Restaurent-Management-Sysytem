@@ -1,202 +1,284 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Create Purchase Order')
+@section('header-title', 'Supplier Payment Details')
+
 @section('content')
     <div class="p-4 rounded-lg">
+        <!-- Back and Action Buttons -->
         <div class="flex justify-between items-center mb-6">
-            <a href="{{ route('admin.purchase-orders.index') }}" class="flex items-center text-indigo-600 hover:text-indigo-800">
-                <i class="fas fa-arrow-left mr-2"></i> Back to POs
+            <a href="{{ route('admin.payments.index') }}" class="flex items-center text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Payments
             </a>
+            <div class="flex space-x-2">
+                <a href="{{ route('admin.payments.edit', $payment->id) }}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-edit mr-2"></i> Edit
+                </a>
+                <a href="{{ route('admin.payments.print', $payment->id) }}"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-print mr-2"></i> Print
+                </a>
+            </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h1 class="text-2xl font-bold text-gray-900 mb-6">Create New Purchase Order</h1>
-
-            <form method="POST" action="{{ route('admin.purchase-orders.store') }}">
-                @csrf
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <!-- Branch Selection -->
-                    <div>
-                        <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
-                        <select id="branch_id" name="branch_id" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select Branch</option>
-                            @foreach($branches as $branch)
-                                <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
-                                    {{ $branch->name }} ({{ $branch->code }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('branch_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Supplier Selection -->
-                    <div>
-                        <label for="supplier_id" class="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
-                        <select id="supplier_id" name="supplier_id" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select Supplier</option>
-                            @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}>
-                                    {{ $supplier->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('supplier_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Order Date -->
-                    <div>
-                        <label for="order_date" class="block text-sm font-medium text-gray-700 mb-1">Order Date *</label>
-                        <input type="date" id="order_date" name="order_date" required
-                            value="{{ old('order_date', date('Y-m-d')) }}"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @error('order_date')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Expected Delivery Date -->
-                    <div>
-                        <label for="expected_delivery_date" class="block text-sm font-medium text-gray-700 mb-1">Expected Delivery *</label>
-                        <input type="date" id="expected_delivery_date" name="expected_delivery_date" required
-                            value="{{ old('expected_delivery_date', date('Y-m-d', strtotime('+7 days'))) }}"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @error('expected_delivery_date')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+        <!-- Payment Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Payment #{{ $payment->payment_number }}</h1>
+                    <div class="flex items-center mt-2">
+                        <span class="text-sm font-medium mr-2">Status:</span>
+                        @if ($payment->payment_status === 'draft')
+                            <x-partials.badges.status-badge status="default" text="Draft" />
+                        @elseif($payment->payment_status === 'pending')
+                            <x-partials.badges.status-badge status="warning" text="Pending" />
+                        @elseif($payment->payment_status === 'partial')
+                            <x-partials.badges.status-badge status="info" text="Partial" />
+                        @elseif($payment->payment_status === 'paid')
+                            <x-partials.badges.status-badge status="success" text="Paid" />
+                        @else
+                            <x-partials.badges.status-badge status="default" text="{{ $payment->payment_status }}" />
+                        @endif
                     </div>
                 </div>
+                <div class="text-right">
+                    <div class="text-gray-500 text-sm">Payment Date</div>
+                    <div class="text-lg font-semibold">{{ $payment->payment_date->format('M d, Y') }}</div>
+                </div>
+            </div>
+        </div>
 
-                <!-- PO Items -->
-                <div class="mb-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-lg font-semibold">Order Items</h2>
-                        <button type="button" id="add-item-btn"
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg flex items-center">
-                            <i class="fas fa-plus mr-1"></i> Add Item
-                        </button>
+        <!-- Payment Details -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Supplier Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Supplier Information</h2>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Supplier Name</p>
+                        <p class="font-medium">{{ $payment->supplier->name }}</p>
                     </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact Person</p>
+                        <p class="font-medium">{{ $payment->supplier->contact_person ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Phone</p>
+                        <p class="font-medium">{{ $payment->supplier->phone }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Email</p>
+                        <p class="font-medium">{{ $payment->supplier->email ?? 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
 
-                    <div id="items-container">
-                        <!-- Items will be added here dynamically -->
-                        <div class="grid grid-cols-12 gap-4 mb-4 items-center border-b pb-4">
-                            <div class="col-span-5">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Item *</label>
-                                <select name="items[0][item_code]" required
-                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 item-select">
-                                    <option value="">Select Item</option>
-                                    <!-- Items will be loaded via AJAX based on supplier -->
-                                </select>
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Batch No</label>
-                                <input type="text" name="items[0][batch_no]"
-                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
-                                <input type="number" step="0.01" min="0.01" name="items[0][quantity]" required
-                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 quantity">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Price *</label>
-                                <input type="number" step="0.01" min="0" name="items[0][buying_price]" required
-                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 price">
-                            </div>
-                            <div class="col-span-1 flex items-end">
-                                <button type="button" class="remove-item-btn text-red-600 hover:text-red-800">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
+            <!-- Branch Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Branch Information</h2>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Name</p>
+                        <p class="font-medium">{{ $payment->branch->name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Code</p>
+                        <p class="font-medium">{{ $payment->branch->code }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p class="font-medium">{{ $payment->branch->address }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact</p>
+                        <p class="font-medium">{{ $payment->branch->phone }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Summary -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Payment Summary</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Amount:</span>
+                        <span class="font-bold">Rs. {{ number_format($payment->total_amount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Allocated Amount:</span>
+                        <span class="font-bold">Rs. {{ number_format($payment->allocated_amount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Balance:</span>
+                        <span class="font-bold">Rs.
+                            {{ number_format($payment->total_amount - $payment->allocated_amount, 2) }}</span>
+                    </div>
+                    <div class="pt-2 border-t">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Processed By:</span>
+                            <span class="font-medium">{{ $payment->processedBy->name ?? 'N/A' }}</span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-gray-600">Created At:</span>
+                            <span class="font-medium">{{ $payment->created_at->format('M d, Y H:i') }}</span>
                         </div>
                     </div>
                 </div>
-
-                <!-- Notes -->
-                <div class="mb-6">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea id="notes" name="notes" rows="3"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('notes') }}</textarea>
-                </div>
-
-                <!-- Submit Button -->
-                <div class="flex justify-end">
-                    <button type="submit"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-save mr-2"></i> Create Purchase Order
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
+
+        <!-- Payment Details Section -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-6 border-b">
+                <h2 class="text-lg font-semibold">Payment Details</h2>
+                <p class="text-sm text-gray-500">Details of the payment transaction</p>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-sm text-gray-500">Method Type</p>
+                        <p class="font-medium">{{ ucfirst(str_replace('_', ' ', $payment->paymentDetails->method_type)) }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Amount</p>
+                        <p class="font-medium">Rs. {{ number_format($payment->paymentDetails->amount, 2) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Reference Number</p>
+                        <p class="font-medium">{{ $payment->paymentDetails->reference_number ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Value Date</p>
+                        <p class="font-medium">
+                            {{ $payment->paymentDetails->value_date ? \Carbon\Carbon::parse($payment->paymentDetails->value_date)->format('M d, Y') : 'N/A' }}
+                        </p>
+                    </div>
+                    @if ($payment->paymentDetails->cheque_number)
+                        <div>
+                            <p class="text-sm text-gray-500">Cheque Number</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->cheque_number }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->bank_name)
+                        <div>
+                            <p class="text-sm text-gray-500">Bank Name</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->bank_name }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->cheque_date)
+                        <p class="font-medium">
+                            {{ \Carbon\Carbon::parse($payment->paymentDetails->cheque_date)->format('M d, Y') }}
+                        </p>
+                    @endif
+                    @if ($payment->paymentDetails->transaction_id)
+                        <div>
+                            <p class="text-sm text-gray-500">Transaction ID</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->transaction_id }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->bank_reference)
+                        <div>
+                            <p class="text-sm text-gray-500">Bank Reference</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->bank_reference }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->installment_number)
+                        <div>
+                            <p class="text-sm text-gray-500">Installment Number</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->installment_number }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->due_date)
+                        <p class="font-medium">
+                            {{ \Carbon\Carbon::parse($payment->paymentDetails->due_date)->format('M d, Y') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <!-- Allocations -->
+        @if ($payment->allocations->count() > 0)
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                <div class="p-6 border-b">
+                    <h2 class="text-lg font-semibold">Payment Allocations</h2>
+                    <p class="text-sm text-gray-500">Documents this payment is allocated to</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Document Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Document Number</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount Allocated</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Allocated At</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Allocated By</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @foreach ($payment->allocations as $allocation)
+                                <tr>
+                                    <td class="px-6 py-4">
+                                        {{ $allocation->grn_id ? 'GRN' : 'PO' }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @if ($allocation->grn_id)
+                                            <a href="{{ route('admin.grn.show', $allocation->grn->grn_id) }}"
+                                                class="text-indigo-600 hover:text-indigo-800">
+                                                {{ $allocation->grn->grn_number }}
+                                            </a>
+                                        @else
+                                            <a href="{{ route('admin.purchase-orders.show', $allocation->po->po_id) }}"
+                                                class="text-indigo-600 hover:text-indigo-800">
+                                                {{ $allocation->po->po_number }}
+                                            </a>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        Rs. {{ number_format($allocation->amount, 2) }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        {{ $allocation->allocated_at->format('M d, Y H:i') }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        {{ $allocation->allocatedBy->name ?? 'N/A' }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+
+        <!-- Notes Section -->
+        @if ($payment->notes)
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-2">Payment Notes</h2>
+                <div class="prose max-w-none">
+                    {!! nl2br(e($payment->notes)) !!}
+                </div>
+            </div>
+        @endif
     </div>
 @endsection
 
-@push('scripts')
-<script>
-    $(document).ready(function() {
-        let itemCounter = 1;
+@push('styles')
+    <style>
+        .prose {
+            color: #374151;
+            line-height: 1.6;
+        }
 
-        // Add new item row
-        $('#add-item-btn').click(function() {
-            const newItem = `
-                <div class="grid grid-cols-12 gap-4 mb-4 items-center border-b pb-4">
-                    <div class="col-span-5">
-                        <select name="items[${itemCounter}][item_code]" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 item-select">
-                            <option value="">Select Item</option>
-                        </select>
-                    </div>
-                    <div class="col-span-2">
-                        <input type="text" name="items[${itemCounter}][batch_no]"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div class="col-span-2">
-                        <input type="number" step="0.01" min="0.01" name="items[${itemCounter}][quantity]" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 quantity">
-                    </div>
-                    <div class="col-span-2">
-                        <input type="number" step="0.01" min="0" name="items[${itemCounter}][buying_price]" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 price">
-                    </div>
-                    <div class="col-span-1 flex items-end">
-                        <button type="button" class="remove-item-btn text-red-600 hover:text-red-800">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            $('#items-container').append(newItem);
-            itemCounter++;
-        });
-
-        // Remove item row
-        $(document).on('click', '.remove-item-btn', function() {
-            if($('#items-container').children().length > 1) {
-                $(this).closest('.grid').remove();
-            } else {
-                alert('At least one item is required');
-            }
-        });
-
-        // Load items when supplier changes
-        $('#supplier_id').change(function() {
-            const supplierId = $(this).val();
-            if(supplierId) {
-                // AJAX call to get supplier items
-                $.get(`/admin/suppliers/${supplierId}/items`, function(data) {
-                    $('.item-select').empty().append('<option value="">Select Item</option>');
-                    data.forEach(item => {
-                        $('.item-select').append(`<option value="${item.item_code}">${item.name}</option>`);
-                    });
-                });
-            }
-        });
-    });
-</script>
+        .prose a {
+            color: #4f46e5;
+            text-decoration: underline;
+        }
+    </style>
 @endpush

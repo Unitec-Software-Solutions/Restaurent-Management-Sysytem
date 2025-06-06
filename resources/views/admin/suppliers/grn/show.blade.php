@@ -9,6 +9,12 @@
                 <i class="fas fa-arrow-left mr-2"></i> Back to GRNs
             </a>
             <div class="flex space-x-2">
+                @if($grn->status === 'Pending')
+                    <a href="{{ route('admin.grn.edit', $grn->grn_id) }}" 
+                       class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-edit mr-2"></i> Edit GRN
+                    </a>
+                @endif
                 <a href="{{ route('admin.grn.print', $grn->grn_id) }}" 
                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-print mr-2"></i> Print
@@ -17,7 +23,7 @@
         </div>
 
         <!-- GRN Header -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        {{-- <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">GRN #{{ $grn->grn_number }}</h1>
@@ -48,6 +54,60 @@
                     <div class="text-lg font-semibold">{{ $grn->received_date->format('M d, Y') }}</div>
                     <div class="text-gray-500 text-sm mt-1">Invoice No</div>
                     <div class="text-lg font-semibold">{{ $grn->invoice_number ?? 'N/A' }}</div>
+                </div>
+            </div>
+        </div> --}}
+
+         <!-- GRN Header Card -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border-l-4 {{ $grn->status === 'Pending' ? 'border-yellow-500' : ($grn->status === 'Verified' ? 'border-green-500' : 'border-red-500') }}">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <div class="flex items-center flex-wrap gap-4 mb-2">
+                        <h1 class="text-2xl font-bold text-gray-900">GRN #{{ $grn->grn_number }}</h1>
+                        <div class="flex items-center space-x-2">
+                            <p class="text-sm text-gray-500">GRN Status :</p>
+                                @if($grn->status === 'Pending')
+                                    <x-partials.badges.status-badge status="warning" text="Pending" />
+                                @elseif($grn->status === 'Verified')
+                                    <x-partials.badges.status-badge status="success" text="Verified" />
+                                @elseif($grn->status === 'Rejected')
+                                    <x-partials.badges.status-badge status="danger" text="Rejected" />
+                                @else
+                                    <x-partials.badges.status-badge status="default" text="{{ $grn->status }}" />
+                                @endif
+                            <p class="text-sm text-gray-500">GRN Payemnt Status :</p>
+                            @if ($grn->isPaymentPaid())
+                                <x-partials.badges.status-badge status="success" text="Fully Paid" />
+                            @elseif($grn->isPaymentPartial())
+                                <x-partials.badges.status-badge status="info" text="Partially Paid" />
+                            @else
+                                <x-partials.badges.status-badge status="warning" text="Pending Payment" />
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar-day mr-2"></i>
+                            <span>Received: {{ $grn->received_date->format('M d, Y') }}</span>
+                        </div>
+                        @if($grn->invoice_number)
+                        <div class="flex items-center">
+                            <i class="fas fa-file-invoice mr-2"></i>
+                            <span>Invoice: {{ $grn->invoice_number }}</span>
+                        </div>
+                        @endif
+                        @if($grn->delivery_note_number)
+                        <div class="flex items-center">
+                            <i class="fas fa-truck mr-2"></i>
+                            <span>DN: {{ $grn->delivery_note_number }}</span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex flex-col items-end">
+                    <div class="text-2xl font-bold text-indigo-600">Rs. {{ number_format($grn->total_amount, 2) }}</div>
+                    <div class="text-sm text-gray-500 mt-1">Total Amount</div>
                 </div>
             </div>
         </div>
@@ -185,7 +245,7 @@
                                     {{ number_format($item->rejected_quantity, 2) }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    Rs. {{ number_format($item->buying_price, 4) }}
+                                    Rs. {{ number_format($item->buying_price, 2) }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     Rs. {{ number_format($item->line_total, 2) }}

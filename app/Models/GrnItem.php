@@ -47,7 +47,6 @@ class GrnItem extends Model
         'days_until_expiry'
     ];
 
-    // Relationships
     public function grn()
     {
         return $this->belongsTo(GrnMaster::class, 'grn_id', 'grn_id');
@@ -68,12 +67,10 @@ class GrnItem extends Model
         return $this->belongsTo(ItemMaster::class, 'item_code', 'item_code');
     }
 
-    // Scopes
     public function scopeForItem($query, $itemId)
     {
         return $query->where('item_id', $itemId);
     }
-    
 
     public function scopeForItemCode($query, $itemCode)
     {
@@ -97,7 +94,6 @@ class GrnItem extends Model
                     ->where('expiry_date', '<', now());
     }
 
-    // Accessors
     public function getIsCompleteAttribute()
     {
         return $this->accepted_quantity >= $this->ordered_quantity;
@@ -129,7 +125,6 @@ class GrnItem extends Model
         return 'Good';
     }
 
-    // Business logic methods
     public function calculateLineTotal()
     {
         $this->line_total = $this->accepted_quantity * $this->buying_price;

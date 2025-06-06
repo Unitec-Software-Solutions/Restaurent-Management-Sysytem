@@ -194,6 +194,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             //  Supplier json (remove  later | only for testing) 
             Route::get('/{supplier}/pending-grns', [SupplierController::class, 'pendingGrns']); 
             Route::get('/{supplier}/pending-pos', [SupplierController::class, 'pendingPos']);
+
+            // Route::get('/{supplier}/pending-grns-pay', [SupplierPaymentController::class, 'getPendingGrns'])->name('pending-grns-pay');
+            // Route::get('/{supplier}/pending-pos-pay', [SupplierPaymentController::class, 'getPendingPos'])->name('pending-pos-pay');
+
+
         });
 
         // Separate GRN Routes
@@ -220,16 +225,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
                 Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
                 Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
+                    // AJAX routes for pending GRNs and POs
+                
         });
 
-
-        // Miscellaneous Admin Routes
-        Route::get('/testpage', function () { return view('admin.testpage'); })->name('testpage');
-        Route::get('/reports', function () { return view('admin.reports.index'); })->name('reports.index');
-        Route::get('/customers', function () { return view('admin.customers.index'); })->name('customers.index');
-        Route::get('/web-test', function () { return view('admin.testpage'); })->name('web-test.index');
-        Route::get('/digital-menu', function () { return view('admin.digital-menu.index'); })->name('digital-menu.index');
-        Route::get('/settings', function () { return view('admin.settings.index'); })->name('settings.index');
 
         // purchase orders ( temporarily moved out from suppliers section due to conflict with supplier routes )
         Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
