@@ -9,6 +9,7 @@ use App\Models\ItemMaster;
 use App\Models\OrderItem;
 use App\Http\Requests\StoreOrderRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class AdminOrderController extends Controller
 {
@@ -90,7 +91,7 @@ class AdminOrderController extends Controller
     public function storeForReservation(Request $request, Reservation $reservation)
     {
         // Debugging: Log reservation details
-        \Log::debug('Storing order for reservation', [
+        Log::debug('Storing order for reservation', [
             'reservation_id' => $reservation->id,
             'branch_id' => $reservation->branch_id,
             'name' => $reservation->name,
@@ -114,7 +115,7 @@ class AdminOrderController extends Controller
         ]);
 
         // Debugging: Log created order
-        \Log::debug('Order created', [
+        Log::debug('Order created', [
             'order_id' => $order->id,
             'reservation_id' => $order->reservation_id
         ]);
@@ -459,7 +460,15 @@ class AdminOrderController extends Controller
 
        public function adminIndex()
     {
-        $orders = Order::with('reservation')->latest()->paginate(10); // Eager load reservations with pagination
+        // Get the admin's branch ID
+        $branchId = \Illuminate\Support\Facades\Auth::user()->branch_id;
+
+        // Fetch orders for the admin's branch
+        $orders = \App\Models\Order::with(['reservation', 'branch'])
+            ->where('branch_id', $branchId)
+            ->latest()
+            ->paginate(10);
+
         return view('admin.orders.index', compact('orders'));
     }
 }
