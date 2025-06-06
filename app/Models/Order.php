@@ -78,6 +78,11 @@ class Order extends Model
         return $this->belongsTo(Reservation::class);
     }
 
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     public function markAsPreparing()
     {
         if ($this->status !== self::STATUS_ACTIVE) {
@@ -98,12 +103,6 @@ class Order extends Model
             'status' => self::STATUS_READY,
             'ready_at' => now()
         ]);
-    }
-
-    public function orderItems()
-    {
-        // For backward compatibility, alias to items()
-        return $this->items();
     }
 
     /**
