@@ -274,3 +274,11 @@ Route::get('/test-email', function() {
 
 // Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
 Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
+
+// Takeaway routes
+Route::get('admin/orders/takeaway/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('admin.orders.takeaway.edit');
+Route::put('admin/orders/takeaway/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('admin.orders.takeaway.update');
+
+// Reservation routes
+Route::get('admin/orders/reservations/{reservation}/orders/{order}/edit', [AdminOrderController::class, 'editReservationOrder'])->name('admin.orders.reservations.edit');
+Route::put('admin/orders/reservations/{reservation}/orders/{order}', [AdminOrderController::class, 'updateReservationOrder'])->name('admin.orders.reservations.update');
