@@ -57,9 +57,25 @@
                                     </td>
                                     <td class="px-4 py-2 border-b">{{ $order->created_at->diffForHumans() }}</td>
                                     <td class="px-4 py-2 border-b">
-                                        <a href="{{ route('admin.orders.reservations.summary', ['reservation' => $order->reservation_id, 'order' => $order->id]) }}" class="text-blue-600 hover:underline">View</a>
-                                        <span class="mx-1">|</span>
-                                        <a href="{{ route('admin.orders.reservations.edit', ['reservation' => $order->reservation_id, 'order' => $order->id]) }}" class="text-yellow-600 hover:underline">Edit</a>
+                                        @if($order->reservation)
+                                            <a href="{{ route('admin.reservations.show', ['reservation' => $order->reservation->id]) }}" 
+                                               class="inline-block text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 transition">
+                                                View
+                                            </a>
+                                        @else
+                                            <span class="inline-block text-sm text-gray-500 italic">No Reservation</span>
+                                        @endif
+                                        @if($order->reservation)
+                                            <a href="{{ route('admin.orders.reservations.edit', ['reservation' => $order->reservation->id, 'order' => $order->id]) }}"
+                                               class="inline-block ml-2 text-sm font-medium text-white bg-yellow-500 hover:bg-yellow-600 rounded px-3 py-1 transition">
+                                                Edit
+                                            </a>
+                                        @else
+                                            <a href="{{ route('admin.orders.reservations.edit', ['reservation' => null, 'order' => $order->id]) }}"
+                                               class="inline-block ml-2 text-sm font-medium text-white bg-yellow-400 hover:bg-yellow-500 rounded px-3 py-1 transition">
+                                                Edit (No Res.)
+                                            </a>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
