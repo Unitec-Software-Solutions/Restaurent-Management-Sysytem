@@ -8,6 +8,8 @@ use App\Models\SupplierPaymentDetail;
 use App\Models\Supplier;
 use App\Models\Branch;
 use App\Models\GrnMaster;
+use App\Models\PurchaseOrder;
+use App\Models\PaymentAllocation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +18,6 @@ use Illuminate\Validation\ValidationException;
 
 class SupplierPaymentController extends Controller
 {
-    // Get current user's organization ID with strict validation
     protected function getOrganizationId()
     {
         $user = Auth::user();
@@ -26,7 +27,6 @@ class SupplierPaymentController extends Controller
         return $user->organization_id;
     }
 
-    // Base query for payments belonging to current organization
     protected function basePaymentQuery()
     {
         return SupplierPaymentMaster::whereHas('supplier', function ($q) {
@@ -34,13 +34,11 @@ class SupplierPaymentController extends Controller
         });
     }
 
-    // Base query for suppliers belonging to current organization
     protected function baseSupplierQuery()
     {
         return Supplier::where('organization_id', $this->getOrganizationId());
     }
 
-    // Verify payment belongs to user's organization with more detailed checks
     protected function checkOrganization(SupplierPaymentMaster $payment)
     {
         if (!$payment->exists || !$payment->supplier || $payment->supplier->organization_id !== $this->getOrganizationId()) {
@@ -75,7 +73,7 @@ class SupplierPaymentController extends Controller
             ->get();
 
         $payments = $this->basePaymentQuery()
-            ->with(['supplier', 'purchaseOrder', 'paymentDetails'])
+            ->with(['supplier', 'paymentDetails', 'grns'])
             ->when(request('status'), function ($query, $status) {
                 $query->where('payment_status', $status);
             })
@@ -84,7 +82,7 @@ class SupplierPaymentController extends Controller
             })
             ->when(request('search'), function ($query, $search) {
                 $query->where('payment_number', 'like', '%' . $search . '%')
-                    ->orWhereHas('supplier', fn($q) => $q->where('name', 'like', '%' . $search . '%'));
+                    ->orWhereHas('supplier', fn($query) => $query->where('name', 'like', '%' . $search . '%'));
             })
             ->orderBy('payment_date', 'desc')
             ->paginate(10);
@@ -112,7 +110,6 @@ class SupplierPaymentController extends Controller
     {
         $orgId = $this->getOrganizationId();
 
-        // Validation rules
         $rules = [
             'supplier_id' => ['required', 'exists:suppliers,id,organization_id,' . $orgId],
             'branch_id' => ['required', 'exists:branches,id,organization_id,' . $orgId],
@@ -189,7 +186,42 @@ class SupplierPaymentController extends Controller
                             $grn->save();
 
                             // Create payment allocation record
-                            $payment->grns()->attach($grn->grn_id, [
+                            PaymentAllocation::create([
+                                'payment_id' => $payment->id,
+                                'grn_id' => $grn->grn_id,
+                                'po_id' => null,
+                                'amount' => $amountToAllocate,
+                                'allocated_at' => now(),
+                                'allocated_by' => Auth::id(),
+                            ]);
+
+                            $allocatedTotal += $amountToAllocate;
+                        }
+                    } elseif ($type === 'po') {
+                        $po = PurchaseOrder::where('po_id', $id)
+                            ->where('organization_id', $orgId)
+                            ->where('supplier_id', $validated['supplier_id'])
+                            ->where('status', 'approved')
+                            ->first();
+
+                        if (!$po) {
+                            throw new \Exception("Invalid or unauthorized PO ID: {$id}");
+                        }
+
+                        $dueAmount = $po->total_amount - ($po->paid_amount ?? 0);
+                        $amountToAllocate = min($allocation['amount'], $dueAmount, $validated['total_amount'] - $allocatedTotal);
+
+                        if ($amountToAllocate > 0) {
+                            // Update PO paid amount
+                            $po->paid_amount = ($po->paid_amount ?? 0) + $amountToAllocate;
+                            $po->calculatePaymentStatus();
+                            $po->save();
+
+                            // Create payment allocation record
+                            PaymentAllocation::create([
+                                'payment_id' => $payment->id,
+                                'grn_id' => null,
+                                'po_id' => $po->po_id,
                                 'amount' => $amountToAllocate,
                                 'allocated_at' => now(),
                                 'allocated_by' => Auth::id(),
@@ -198,7 +230,6 @@ class SupplierPaymentController extends Controller
                             $allocatedTotal += $amountToAllocate;
                         }
                     }
-                    // Add support for POs if needed in the future
                 }
 
                 // Validate total allocated amount
@@ -220,7 +251,6 @@ class SupplierPaymentController extends Controller
             return redirect()
                 ->route('admin.payments.show', $payment)
                 ->with('success', 'Payment created successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error creating payment: ' . $e->getMessage(), [
@@ -233,31 +263,40 @@ class SupplierPaymentController extends Controller
         }
     }
 
-public function show($id)
-{
-    $payment = $this->basePaymentQuery()
-        ->with(['supplier', 'purchaseOrder', 'paymentDetails', 'grns'])
-        ->findOrFail($id);
+    public function show($id)
+    {
+        $payment = $this->basePaymentQuery()
+            ->with([
+                'supplier',
+                'branch',
+                'paymentDetails',
+                'grns' => function ($query) {
+                    $query->with(['purchaseOrder']);
+                },
+                'allocations' => function ($query) {
+                    $query->with(['grn', 'po']);
+                },
+                'processedBy'
+            ])
+            ->findOrFail($id);
 
-    $this->checkOrganization($payment);
+        $this->checkOrganization($payment);
 
-    // Fetch branches for the dropdown
-    $branches = Branch::where('organization_id', $this->getOrganizationId())
-        ->where('is_active', true)
-        ->get();
+        $branches = Branch::where('organization_id', $this->getOrganizationId())
+            ->where('is_active', true)
+            ->get();
 
-    // Fetch suppliers for the dropdown (if needed in the view)
-    $suppliers = $this->baseSupplierQuery()
-        ->where('is_active', true)
-        ->get();
+        $suppliers = $this->baseSupplierQuery()
+            ->where('is_active', true)
+            ->get();
 
-    return view('admin.suppliers.payments.show', compact('payment', 'branches', 'suppliers'));
-}
+        return view('admin.suppliers.payments.show', compact('payment', 'branches', 'suppliers'));
+    }
 
     public function edit($id)
     {
         $payment = $this->basePaymentQuery()
-            ->with(['supplier', 'paymentDetails', 'grns'])
+            ->with(['supplier', 'branch', 'paymentDetails', 'allocations'])
             ->findOrFail($id);
 
         $this->checkOrganization($payment);
@@ -311,9 +350,8 @@ public function show($id)
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            // Update payment details
             $payment->paymentDetails()->updateOrCreate(
-                ['payment_master_id' => $payment->id],
+                ['payment_id' => $payment->id],
                 [
                     'method_type' => $validated['method_type'],
                     'reference_number' => $validated['reference_number'] ?? null,
@@ -324,7 +362,7 @@ public function show($id)
 
             DB::commit();
             return redirect()->route('admin.payments.show', $payment->id)
-                ->with('success', 'Payment updated successfully.');
+                ->with('success', 'Payment updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating payment: ' . $e->getMessage(), [
@@ -344,14 +382,25 @@ public function show($id)
 
         DB::beginTransaction();
         try {
-            // Reverse GRN allocations
-            foreach ($payment->grns as $grn) {
-                $grn->paid_amount = ($grn->paid_amount ?? 0) - $payment->grns()->where('grn_id', $grn->grn_id)->first()->pivot->amount;
-                $grn->calculatePaymentStatus();
-                $grn->save();
+            foreach ($payment->allocations as $allocation) {
+                if ($allocation->grn_id) {
+                    $grn = GrnMaster::find($allocation->grn_id);
+                    if ($grn) {
+                        $grn->paid_amount = ($grn->paid_amount ?? 0) - $allocation->amount;
+                        $grn->calculatePaymentStatus();
+                        $grn->save();
+                    }
+                } elseif ($allocation->po_id) {
+                    $po = PurchaseOrder::find($allocation->po_id);
+                    if ($po) {
+                        $po->paid_amount = ($po->paid_amount ?? 0) - $allocation->amount;
+                        $po->calculatePaymentStatus();
+                        $po->save();
+                    }
+                }
             }
 
-            $payment->grns()->detach();
+            $payment->allocations()->delete();
             $payment->paymentDetails()->delete();
             $payment->delete();
 
@@ -368,11 +417,63 @@ public function show($id)
     public function print($id)
     {
         $payment = $this->basePaymentQuery()
-            ->with(['supplier', 'paymentDetails', 'grns'])
+            ->with(['supplier', 'branch', 'paymentDetails', 'allocations'])
             ->findOrFail($id);
 
         $this->checkOrganization($payment);
 
         return view('admin.suppliers.payments.print', compact('payment'));
+    }
+
+    public function getPendingGrns($supplierId)
+    {
+        $orgId = $this->getOrganizationId();
+
+        $grns = GrnMaster::where('organization_id', $orgId)
+            ->where('supplier_id', $supplierId)
+            ->where('status', GrnMaster::STATUS_VERIFIED)
+            ->whereRaw('total_amount > COALESCE(paid_amount, 0)')
+            ->with(['purchaseOrder'])
+            ->get()
+            ->map(function ($grn) {
+                return [
+                    'grn_id' => $grn->grn_id,
+                    'grn_number' => $grn->grn_number,
+                    'po_number' => $grn->purchaseOrder ? $grn->purchaseOrder->po_number : null,
+                    'received_date' => $grn->received_date->format('Y-m-d'),
+                    'total_amount' => $grn->total_amount,
+                    'paid_amount' => $grn->paid_amount ?? 0,
+                    'due_amount' => $grn->total_amount - ($grn->paid_amount ?? 0),
+                    'due_date' => $grn->due_date ? $grn->due_date->format('Y-m-d') : null,
+                    'status' => $grn->payment_status ?? 'pending',
+                ];
+            });
+
+        return response()->json($grns);
+    }
+
+    public function getPendingPos($supplierId)
+    {
+        $orgId = $this->getOrganizationId();
+
+        $pos = PurchaseOrder::where('organization_id', $orgId)
+            ->where('supplier_id', $supplierId)
+            ->where('status', 'approved')
+            ->whereRaw('total_amount > COALESCE(paid_amount, 0)')
+            ->get()
+            ->map(function ($po) {
+                return [
+                    'po_id' => $po->po_id,
+                    'po_number' => $po->po_number,
+                    'order_date' => $po->order_date->format('Y-m-d'),
+                    'total_amount' => $po->total_amount,
+                    'paid_amount' => $po->paid_amount ?? 0,
+                    'due_amount' => $po->total_amount - ($po->paid_amount ?? 0),
+                    'due_date' => $po->expected_delivery_date ? $po->expected_delivery_date->format('Y-m-d') : null,
+                    'status' => $po->payment_status ?? 'pending',
+                ];
+            });
+
+        return response()->json($pos);
     }
 }
