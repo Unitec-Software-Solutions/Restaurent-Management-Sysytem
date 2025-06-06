@@ -22,6 +22,10 @@
             <div class="px-4 py-4">
                 @php
                     $navItems = [
+
+ 
+                        
+
                         ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'icon_type' => 'svg'],
                         ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package', 'icon_type' => 'svg'],
                         ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock', 'icon_type' => 'svg'],
@@ -31,6 +35,7 @@
                         ['title' => 'Suppliers', 'route' => 'admin.suppliers.index', 'icon' => 'fas fa-truck', 'icon_type' => 'fa'],
                         // ['title' => 'Purchase Orders', 'route' => 'admin.purchase-orders.index', 'icon' => 'fas fa-file-invoice-dollar', 'icon_type' => 'fa'],
                         // ['title' => 'GRN Management', 'route' => 'admin.grn.index', 'icon' => 'fas fa-clipboard-check', 'icon_type' => 'fa'],
+
                     ];
                 @endphp
 

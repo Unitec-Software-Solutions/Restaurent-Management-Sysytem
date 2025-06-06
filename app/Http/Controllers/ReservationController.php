@@ -5,10 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Reservation;
 use App\Models\Branch;
 use App\Models\Payment;
-use App\Models\Waitlist;
 use App\Models\Table;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -22,9 +20,20 @@ class ReservationController extends Controller
     public function create(Request $request)
     {
         $branches = Branch::where('is_active', true)->get();
+        
+        // Check if we're in edit mode and populate from request
+        $input = [];
+        if ($request->has('edit_mode')) {
+            $input = $request->only([
+                'name', 'email', 'phone', 'branch_id', 
+                'date', 'start_time', 'end_time', 
+                'number_of_people', 'comments'
+            ]);
+        }
+        
         return view('reservations.create', [
             'branches' => $branches,
-            'request' => $request
+            'input' => $input  // Pass input data to pre-fill form
         ]);
     }
 
@@ -223,7 +232,7 @@ class ReservationController extends Controller
 
     public function cancellationSuccess()
     {
-        return view('reservations.cancellation-success');
+        return view('reservations.cancellation_success');
     }
 
     public function show(Reservation $reservation)
@@ -267,8 +276,21 @@ class ReservationController extends Controller
             }
         }
 
+        // Construct a reservation object and pass it to the view.
+        $reservation = (object) [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'],
+            'branch_id' => $validated['branch_id'],
+            'date' => $validated['date'],
+            'start_time' => $validated['start_time'],
+            'end_time' => $validated['end_time'],
+            'number_of_people' => $validated['number_of_people'],
+            'comments' => $validated['comments'],
+        ];
+
         return view('reservations.review', [
-            'request' => $request,
+            'reservation' => $reservation,
             'branch' => $branch
         ]);
     }
@@ -334,15 +356,15 @@ class ReservationController extends Controller
             ]);
 
             // Check if status changed and send the appropriate email
-            if ($reservation->wasChanged('status')) {
-                if ($reservation->status === 'confirmed') {
-                    Mail::to($reservation->email)->send(new ReservationConfirmed($reservation));
-                } elseif ($reservation->status === 'cancelled') {
-                    Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
-                } elseif ($reservation->status === 'rejected') {
-                    Mail::to($reservation->email)->send(new ReservationRejected($reservation));
-                }
-            }
+            // if ($reservation->wasChanged('status')) {
+            //     if ($reservation->status === 'confirmed') {
+            //         Mail::to($reservation->email)->send(new ReservationConfirmed($reservation));
+            //     } elseif ($reservation->status === 'cancelled') {
+            //         Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
+            //     } elseif ($reservation->status === 'rejected') {
+            //         Mail::to($reservation->email)->send(new ReservationRejected($reservation));
+            //     }
+            // }
 
             return redirect()->route('reservations.show', $reservation)
                 ->with('success', 'Reservation updated successfully.');

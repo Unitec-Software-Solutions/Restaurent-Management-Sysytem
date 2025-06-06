@@ -9,6 +9,8 @@ class RouteServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        parent::boot();
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')
@@ -18,12 +20,7 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/web.php'));
         });
 
-        // Add custom route binding for reservations
-        Route::bind('reservation', function ($value) {
-            if ($value === 'review') {
-                return null;
-            }
-            return \App\Models\Reservation::findOrFail($value);
-        });
+        // Explicit route model binding
+        \Route::model('reservation', \App\Models\Reservation::class);
     }
-} 
+}
