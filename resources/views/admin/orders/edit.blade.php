@@ -40,8 +40,7 @@
                     @endif
 
                     <!-- For reservation orders -->
-                    <form method="POST" 
-                          action="{{ route($order->reservation_id ? 'admin.orders.reservations.update' : 'admin.orders.takeaway.update', $order) }}">
+                    <form action="{{ route('admin.orders.takeaway.update', ['order' => $order->id]) }}" method="POST">
                         @csrf
                         @method('PUT')
                         @if($order->reservation)
