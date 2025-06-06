@@ -121,8 +121,8 @@
                                 <tr>
                                     <th class="px-4 py-3">Item *</th>
                                     <th class="px-4 py-3">Batch No</th>
-                                    <th class="px-4 py-3">Ordered Qty *</th>
                                     <th class="px-4 py-3">Received Qty *</th>
+                                    <th class="px-4 py-3">Ordered Qty *</th>
                                     <th class="px-4 py-3">Price *</th>
                                     <th class="px-4 py-3">Total</th>
                                     <th class="px-4 py-3 w-20">Actions</th>
@@ -157,14 +157,14 @@
                                                    value="{{ $item['batch_no'] }}">
                                         </td>
                                         <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][ordered_quantity]"
-                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ordered-qty"
-                                                   min="0.01" step="0.01" value="{{ $item['ordered_quantity'] }}" required>
-                                        </td>
-                                        <td class="px-4 py-3">
                                             <input type="number" name="items[{{ $index }}][received_quantity]"
                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
                                                    min="0.01" step="0.01" value="{{ $item['received_quantity'] }}" required>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <input type="number" name="items[{{ $index }}][ordered_quantity]"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ordered-qty"
+                                                   min="0.01" step="0.01" value="{{ $item['ordered_quantity'] }}" required>
                                         </td>
                                         <td class="px-4 py-3">
                                             <input type="number" name="items[{{ $index }}][buying_price]"
@@ -303,15 +303,16 @@
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no">
                 </td>
                 <td class="px-4 py-3">
-                    <input type="number" name="items[${itemCount}][ordered_quantity]" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ordered-qty" 
-                           min="0.01" step="0.01" value="1" required>
-                </td>
-                <td class="px-4 py-3">
                     <input type="number" name="items[${itemCount}][received_quantity]" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty" 
                            min="0.01" step="0.01" value="1" required>
                 </td>
+                <td class="px-4 py-3">
+                    <input type="number" name="items[${itemCount}][ordered_quantity]" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ordered-qty" 
+                           min="0.01" step="0.01" value="1" required>
+                </td>
+
                 <td class="px-4 py-3">
                     <input type="number" name="items[${itemCount}][buying_price]" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-price" 

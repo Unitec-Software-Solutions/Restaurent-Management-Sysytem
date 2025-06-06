@@ -185,7 +185,7 @@
                                     {{ number_format($item->rejected_quantity, 2) }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
-                                    Rs. {{ number_format($item->buying_price, 4) }}
+                                    Rs. {{ number_format($item->buying_price, 2) }}
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     Rs. {{ number_format($item->line_total, 2) }}
