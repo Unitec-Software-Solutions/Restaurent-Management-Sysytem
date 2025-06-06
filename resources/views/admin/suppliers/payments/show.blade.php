@@ -1,198 +1,284 @@
 @extends('layouts.admin')
 
-@section('header-title', 'View Supplier Payment')
+@section('header-title', 'Supplier Payment Details')
 
 @section('content')
     <div class="p-4 rounded-lg">
+        <!-- Back and Action Buttons -->
         <div class="flex justify-between items-center mb-6">
             <a href="{{ route('admin.payments.index') }}" class="flex items-center text-indigo-600 hover:text-indigo-800">
                 <i class="fas fa-arrow-left mr-2"></i> Back to Payments
             </a>
+            <div class="flex space-x-2">
+                <a href="{{ route('admin.payments.edit', $payment->id) }}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-edit mr-2"></i> Edit
+                </a>
+                <a href="{{ route('admin.payments.print', $payment->id) }}"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-print mr-2"></i> Print
+                </a>
+            </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h1 class="text-2xl font-bold text-gray-900 mb-6">Supplier Payment Details</h1>
+        <!-- Payment Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Payment #{{ $payment->payment_number }}</h1>
+                    <div class="flex items-center mt-2">
+                        <span class="text-sm font-medium mr-2">Status:</span>
+                        @if ($payment->payment_status === 'draft')
+                            <x-partials.badges.status-badge status="default" text="Draft" />
+                        @elseif($payment->payment_status === 'pending')
+                            <x-partials.badges.status-badge status="warning" text="Pending" />
+                        @elseif($payment->payment_status === 'partial')
+                            <x-partials.badges.status-badge status="info" text="Partial" />
+                        @elseif($payment->payment_status === 'paid')
+                            <x-partials.badges.status-badge status="success" text="Paid" />
+                        @else
+                            <x-partials.badges.status-badge status="default" text="{{ $payment->payment_status }}" />
+                        @endif
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-gray-500 text-sm">Payment Date</div>
+                    <div class="text-lg font-semibold">{{ $payment->payment_date->format('M d, Y') }}</div>
+                </div>
+            </div>
+        </div>
 
-            @if (session('success'))
-                <div class="bg-green-50 text-green-700 p-3 rounded-lg mb-6 text-sm">
-                    {{ session('success') }}
-                </div>
-            @endif
-            @if (session('error'))
-                <div class="bg-red-50 text-red-700 p-3 rounded-lg mb-6 text-sm">
-                    {{ session('error') }}
-                </div>
-            @endif
-
-            <!-- Payment Information -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment Number</label>
-                    <input type="text" value="{{ $payment->payment_number }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100" readonly>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
-                    <input type="text" value="{{ $payment->payment_date->format('Y-m-d') }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100" readonly>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
-                    <input type="text" value="${{ number_format($payment->total_amount, 2) }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100" readonly>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Allocated Amount</label>
-                    <input type="text" value="${{ number_format($payment->allocated_amount, 2) }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100" readonly>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <span class="inline-block px-3 py-1 text-sm font-medium rounded-full {{ $payment->payment_status == 'paid' ? 'bg-green-100 text-green-800' : ($payment->payment_status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800') }}">
-                        {{ ucwords($payment->payment_status) }}
-                    </span>
+        <!-- Payment Details -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Supplier Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Supplier Information</h2>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Supplier Name</p>
+                        <p class="font-medium">{{ $payment->supplier->name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact Person</p>
+                        <p class="font-medium">{{ $payment->supplier->contact_person ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Phone</p>
+                        <p class="font-medium">{{ $payment->supplier->phone }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Email</p>
+                        <p class="font-medium">{{ $payment->supplier->email ?? 'N/A' }}</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Form for Editing (Optional) -->
-            <form method="POST" action="{{ route('admin.payments.update', $payment->id) }}">
-                @csrf
-                @method('POST')
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <!-- Branch Selection -->
+            <!-- Branch Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Branch Information</h2>
+                <div class="space-y-3">
                     <div>
-                        <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
-                        <select id="branch_id" name="branch_id" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select Branch</option>
-                            @foreach($branches as $branch)
-                                <option value="{{ $branch->id }}" {{ old('branch_id', $payment->branch_id) == $branch->id ? 'selected' : '' }}>
-                                    {{ $branch->name }} ({{ $branch->code ?? $branch->id }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('branch_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        <p class="text-sm text-gray-500">Branch Name</p>
+                        <p class="font-medium">{{ $payment->branch->name }}</p>
                     </div>
-
-                    <!-- Supplier Selection -->
                     <div>
-                        <label for="supplier_id" class="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
-                        <select id="supplier_id" name="supplier_id" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select Supplier</option>
-                            @foreach($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}" {{ old('supplier_id', $payment->supplier_id) == $supplier->id ? 'selected' : '' }}>
-                                    {{ $supplier->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('supplier_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        <p class="text-sm text-gray-500">Branch Code</p>
+                        <p class="font-medium">{{ $payment->branch->code }}</p>
                     </div>
-
-                    <!-- Payment Date -->
                     <div>
-                        <label for="payment_date" class="block text-sm font-medium text-gray-700 mb-1">Payment Date *</label>
-                        <input type="date" id="payment_date" name="payment_date" required
-                            value="{{ old('payment_date', $payment->payment_date->format('Y-m-d')) }}"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @error('payment_date')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p class="font-medium">{{ $payment->branch->address }}</p>
                     </div>
-
-                    <!-- Payment Method -->
                     <div>
-                        <label for="method_type" class="block text-sm font-medium text-gray-700 mb-1">Payment Method *</label>
-                        <select id="method_type" name="method_type" required
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select Method</option>
-                            <option value="cash" {{ old('method_type', $payment->paymentDetails->method_type ?? '') == 'cash' ? 'selected' : '' }}>Cash</option>
-                            <option value="bank_transfer" {{ old('method_type', $payment->paymentDetails->method_type ?? '') == 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
-                            <option value="check" {{ old('method_type', $payment->paymentDetails->method_type ?? '') == 'check' ? 'selected' : '' }}>Check</option>
-                            <option value="credit_card" {{ old('method_type', $payment->paymentDetails->method_type ?? '') == 'credit_card' ? 'selected' : '' }}>Credit Card</option>
-                        </select>
-                        @error('method_type')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Total Amount -->
-                    <div>
-                        <label for="total_amount" class="block text-sm font-medium text-gray-700 mb-1">Total Amount *</label>
-                        <input type="number" step="0.01" min="0" id="total_amount" name="total_amount" required
-                            value="{{ old('total_amount', $payment->total_amount) }}"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @error('total_amount')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Reference Number -->
-                    <div>
-                        <label for="reference_number" class="block text-sm font-medium text-gray-700 mb-1">Reference Number</label>
-                        <input type="text" id="reference_number" name="reference_number"
-                            value="{{ old('reference_number', $payment->paymentDetails->reference_number ?? '') }}"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @error('reference_number')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        <p class="text-sm text-gray-500">Contact</p>
+                        <p class="font-medium">{{ $payment->branch->phone }}</p>
                     </div>
                 </div>
+            </div>
 
-                <!-- Allocated Documents -->
-                <div class="mb-8">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Allocated Documents</h2>
-                    @if($payment->grns->isEmpty())
-                        <p class="text-sm text-gray-500">No documents allocated to this payment.</p>
-                    @else
-                        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GRN No.</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Allocated Amount</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    @foreach($payment->grns as $grn)
-                                        <tr>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $grn->grn_number }}</td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${{ number_format($grn->total_amount, 2) }}</td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${{ number_format($grn->pivot->amount, 2) }}</td>
-                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ $grn->received_date }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+            <!-- Payment Summary -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Payment Summary</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Amount:</span>
+                        <span class="font-bold">Rs. {{ number_format($payment->total_amount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Allocated Amount:</span>
+                        <span class="font-bold">Rs. {{ number_format($payment->allocated_amount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Balance:</span>
+                        <span class="font-bold">Rs.
+                            {{ number_format($payment->total_amount - $payment->allocated_amount, 2) }}</span>
+                    </div>
+                    <div class="pt-2 border-t">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Processed By:</span>
+                            <span class="font-medium">{{ $payment->processedBy->name ?? 'N/A' }}</span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-gray-600">Created At:</span>
+                            <span class="font-medium">{{ $payment->created_at->format('M d, Y H:i') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Details Section -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-6 border-b">
+                <h2 class="text-lg font-semibold">Payment Details</h2>
+                <p class="text-sm text-gray-500">Details of the payment transaction</p>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-sm text-gray-500">Method Type</p>
+                        <p class="font-medium">{{ ucfirst(str_replace('_', ' ', $payment->paymentDetails->method_type)) }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Amount</p>
+                        <p class="font-medium">Rs. {{ number_format($payment->paymentDetails->amount, 2) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Reference Number</p>
+                        <p class="font-medium">{{ $payment->paymentDetails->reference_number ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Value Date</p>
+                        <p class="font-medium">
+                            {{ $payment->paymentDetails->value_date ? \Carbon\Carbon::parse($payment->paymentDetails->value_date)->format('M d, Y') : 'N/A' }}
+                        </p>
+                    </div>
+                    @if ($payment->paymentDetails->cheque_number)
+                        <div>
+                            <p class="text-sm text-gray-500">Cheque Number</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->cheque_number }}</p>
                         </div>
                     @endif
+                    @if ($payment->paymentDetails->bank_name)
+                        <div>
+                            <p class="text-sm text-gray-500">Bank Name</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->bank_name }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->cheque_date)
+                        <p class="font-medium">
+                            {{ \Carbon\Carbon::parse($payment->paymentDetails->cheque_date)->format('M d, Y') }}
+                        </p>
+                    @endif
+                    @if ($payment->paymentDetails->transaction_id)
+                        <div>
+                            <p class="text-sm text-gray-500">Transaction ID</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->transaction_id }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->bank_reference)
+                        <div>
+                            <p class="text-sm text-gray-500">Bank Reference</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->bank_reference }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->installment_number)
+                        <div>
+                            <p class="text-sm text-gray-500">Installment Number</p>
+                            <p class="font-medium">{{ $payment->paymentDetails->installment_number }}</p>
+                        </div>
+                    @endif
+                    @if ($payment->paymentDetails->due_date)
+                        <p class="font-medium">
+                            {{ \Carbon\Carbon::parse($payment->paymentDetails->due_date)->format('M d, Y') }}
+                        </p>
+                    @endif
                 </div>
-
-                <!-- Notes -->
-                <div class="mb-6">
-                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea id="notes" name="notes" rows="3"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('notes', $payment->notes) }}</textarea>
-                    @error('notes')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Submit Button -->
-                <div class="flex justify-end space-x-4">
-                    <a href="{{ route('admin.payments.index') }}"
-                        class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
-                        Cancel
-                    </a>
-                    <button type="submit"
-                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center">
-                        <i class="fas fa-save mr-2"></i> Update Payment
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
+
+        <!-- Allocations -->
+        @if ($payment->allocations->count() > 0)
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                <div class="p-6 border-b">
+                    <h2 class="text-lg font-semibold">Payment Allocations</h2>
+                    <p class="text-sm text-gray-500">Documents this payment is allocated to</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Document Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Document Number</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount Allocated</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Allocated At</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Allocated By</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @foreach ($payment->allocations as $allocation)
+                                <tr>
+                                    <td class="px-6 py-4">
+                                        {{ $allocation->grn_id ? 'GRN' : 'PO' }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @if ($allocation->grn_id)
+                                            <a href="{{ route('admin.grn.show', $allocation->grn->grn_id) }}"
+                                                class="text-indigo-600 hover:text-indigo-800">
+                                                {{ $allocation->grn->grn_number }}
+                                            </a>
+                                        @else
+                                            <a href="{{ route('admin.purchase-orders.show', $allocation->po->po_id) }}"
+                                                class="text-indigo-600 hover:text-indigo-800">
+                                                {{ $allocation->po->po_number }}
+                                            </a>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        Rs. {{ number_format($allocation->amount, 2) }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        {{ $allocation->allocated_at->format('M d, Y H:i') }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        {{ $allocation->allocatedBy->name ?? 'N/A' }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+
+        <!-- Notes Section -->
+        @if ($payment->notes)
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-2">Payment Notes</h2>
+                <div class="prose max-w-none">
+                    {!! nl2br(e($payment->notes)) !!}
+                </div>
+            </div>
+        @endif
     </div>
 @endsection
+
+@push('styles')
+    <style>
+        .prose {
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        .prose a {
+            color: #4f46e5;
+            text-decoration: underline;
+        }
+    </style>
+@endpush
