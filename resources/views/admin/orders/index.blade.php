@@ -72,7 +72,7 @@
                                     Edit
                                 </a>
                             @else
-                                <a href="{{ route('admin.orders.takeaway.edit', $order->id) }}"
+                                <a href="{{ route('admin.orders.takeaway.edit', ['order' => $order->id]) }}"
                                    class="text-blue-500 hover:text-blue-700">
                                     Edit
                                 </a>
