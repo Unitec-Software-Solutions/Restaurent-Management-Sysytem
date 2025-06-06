@@ -32,12 +32,15 @@ class GrnDashboardController extends Controller
     {
         $orgId = $this->getOrganizationId();
 
+        // Set default dates if not provided
         $startDate = $request->input('start_date', Carbon::now()->subMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
 
+        // Base query with relationships
         $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder'])
             ->where('organization_id', $orgId);
 
+        // Apply filters
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -55,7 +58,10 @@ class GrnDashboardController extends Controller
         }
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('received_date', [$request->start_date, $request->end_date]);
+            $query->whereBetween('received_date', [
+                $request->start_date,
+                $request->end_date
+            ]);
         }
 
         if ($request->filled('status') && $request->status != 'all') {
@@ -70,12 +76,15 @@ class GrnDashboardController extends Controller
             $query->where('supplier_id', $request->supplier_id);
         }
 
+        // Sorting
         $sortBy = $request->input('sort_by', 'received_date');
         $sortDir = $request->input('sort_dir', 'desc');
         $query->orderBy($sortBy, $sortDir);
 
+        // Get paginated results
         $grns = $query->paginate(10);
 
+        // Get summary statistics (using a fresh query to avoid pagination interference)
         $statsQuery = GrnMaster::where('organization_id', $orgId);
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
@@ -93,6 +102,7 @@ class GrnDashboardController extends Controller
                 ->sum('total_amount'),
         ];
 
+        // Get filter options
         $branches = Branch::where('organization_id', $orgId)->active()->get();
         $suppliers = Supplier::where('organization_id', $orgId)->active()->get();
 
@@ -113,6 +123,7 @@ class GrnDashboardController extends Controller
             abort(403);
         }
 
+        // Only allow editing of pending GRNs
         if (!$grn->isPending()) {
             return redirect()->route('admin.grn.show', $grn)
                 ->with('error', 'Only pending GRNs can be edited');
@@ -122,7 +133,10 @@ class GrnDashboardController extends Controller
             ->active()
             ->get();
 
-        $grn->load(['items.item', 'purchaseOrder.items']);
+        $grn->load([
+            'items.item',
+            'purchaseOrder.items'
+        ]);
 
         $suppliers = Supplier::where('organization_id', $orgId)
             ->active()
@@ -138,6 +152,7 @@ class GrnDashboardController extends Controller
             ->with(['items'])
             ->get();
 
+        // Backfill item names from ItemMaster
         foreach ($grn->items as $item) {
             if ($item->item) {
                 $item->item_name = $item->item->name;
@@ -150,6 +165,7 @@ class GrnDashboardController extends Controller
             'branches',
             'purchaseOrders',
             'items'
+
         ));
     }
 
@@ -160,11 +176,10 @@ class GrnDashboardController extends Controller
             abort(403);
         }
 
+        // Only allow updating of pending GRNs
         if (!$grn->isPending()) {
             return back()->with('error', 'Only pending GRNs can be updated');
         }
-
-        Log::info('GRN Update Request Received', ['grn_id' => $grn->grn_id, 'data' => $request->all()]);
 
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,id',
@@ -185,24 +200,12 @@ class GrnDashboardController extends Controller
             'items.*.buying_price' => 'required|numeric|min:0',
             'items.*.manufacturing_date' => 'nullable|date',
             'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
-            'items.*.rejection_reason' => [
-                'nullable',
-                'string',
-                'max:255',
-                function ($attribute, $value, $fail) use ($request) {
-                    $index = explode('.', $attribute)[1];
-                    $rejectedQuantity = $request->input("items.$index.rejected_quantity");
-                    if ($rejectedQuantity > 0 && empty($value)) {
-                        $fail("The rejection reason is required when rejected quantity is greater than 0.");
-                    }
-                },
-            ],
+            'items.*.rejection_reason' => 'nullable|required_if:items.*.rejected_quantity,>,0|string|max:255'
         ]);
-
-        Log::info('GRN Data Validated', ['grn_id' => $grn->grn_id, 'validated' => $validated]);
 
         DB::beginTransaction();
         try {
+            // Update GRN Master
             $grn->update([
                 'branch_id' => $validated['branch_id'],
                 'supplier_id' => $validated['supplier_id'],
@@ -212,13 +215,14 @@ class GrnDashboardController extends Controller
                 'notes' => $validated['notes'],
             ]);
 
-            Log::info('GRN Master Updated', ['grn_id' => $grn->grn_id]);
-
+            // Remove existing items
             $grn->items()->delete();
 
+            // Create new items
             $total = 0;
             foreach ($validated['items'] as $item) {
                 $itemMaster = ItemMaster::findOrFail($item['item_id']);
+
                 $lineTotal = $item['accepted_quantity'] * $item['buying_price'];
                 $total += $lineTotal;
 
@@ -227,7 +231,7 @@ class GrnDashboardController extends Controller
                     'po_detail_id' => $item['po_detail_id'] ?? null,
                     'item_id' => $item['item_id'],
                     'item_code' => $itemMaster->item_code,
-                    'item_name' => $itemMaster->name,
+                    'item_name' => $itemMaster->name, // Fetch and save item_name
                     'batch_no' => $item['batch_no'],
                     'ordered_quantity' => $item['ordered_quantity'],
                     'received_quantity' => $item['received_quantity'],
@@ -241,17 +245,13 @@ class GrnDashboardController extends Controller
                 ]);
             }
 
-            Log::info('GRN Items Created', ['grn_id' => $grn->grn_id, 'item_count' => count($validated['items'])]);
-
             $grn->update(['total_amount' => $total]);
 
             DB::commit();
-            Log::info('GRN Update Committed', ['grn_id' => $grn->grn_id]);
             return redirect()->route('admin.grn.show', $grn)
                 ->with('success', 'GRN updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('GRN Update Failed', ['grn_id' => $grn->grn_id, 'error' => $e->getMessage()]);
             return back()->withInput()
                 ->with('error', 'Error updating GRN: ' . $e->getMessage());
         }
@@ -261,9 +261,19 @@ class GrnDashboardController extends Controller
     {
         $orgId = $this->getOrganizationId();
 
-        $items = ItemMaster::where('organization_id', $orgId)->active()->get();
-        $suppliers = Supplier::where('organization_id', $orgId)->active()->get();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $items = ItemMaster::where('organization_id', $orgId)
+            ->active()
+            ->get();
+
+        $suppliers = Supplier::where('organization_id', $orgId)
+            ->active()
+            ->get();
+
+        $branches = Branch::where('organization_id', $orgId)
+            ->active()
+            ->get();
+
+        // Get approved POs
         $purchaseOrders = PurchaseOrder::where('organization_id', $orgId)
             ->where('status', 'Approved')
             ->with(['supplier', 'items'])
@@ -298,6 +308,7 @@ class GrnDashboardController extends Controller
 
         DB::beginTransaction();
         try {
+            // Create GRN Master
             $grn = GrnMaster::create([
                 'grn_number' => 'GRN-' . date('Ymd') . '-' . Str::random(4),
                 'branch_id' => $validated['branch_id'],
@@ -313,9 +324,11 @@ class GrnDashboardController extends Controller
                 'created_by' => optional(Auth::user())->id
             ]);
 
+            // Create GRN Items
             $total = 0;
             foreach ($validated['items'] as $item) {
                 $itemMaster = ItemMaster::findOrFail($item['item_id']);
+
                 $lineTotal = $item['received_quantity'] * $item['buying_price'];
                 $total += $lineTotal;
 
@@ -323,11 +336,11 @@ class GrnDashboardController extends Controller
                     'grn_id' => $grn->grn_id,
                     'item_id' => $item['item_id'],
                     'item_code' => $itemMaster->item_code,
-                    'item_name' => $itemMaster->name,
+                    'item_name' => $itemMaster->name, // Fetch and save item_name
                     'batch_no' => $item['batch_no'] ?? null,
                     'ordered_quantity' => $item['ordered_quantity'],
                     'received_quantity' => $item['received_quantity'],
-                    'accepted_quantity' => $item['received_quantity'],
+                    'accepted_quantity' => $item['received_quantity'], // Default to all received
                     'rejected_quantity' => 0,
                     'buying_price' => $item['buying_price'],
                     'line_total' => $lineTotal,
@@ -384,6 +397,7 @@ class GrnDashboardController extends Controller
             'createdByUser'
         ]);
 
+
         $organization = Organizations::find($orgId);
         $printedDate = now()->format('M d, Y h:i A');
 
@@ -418,7 +432,9 @@ class GrnDashboardController extends Controller
             $grn->save();
 
             if ($validated['status'] === GrnMaster::STATUS_VERIFIED) {
+                // Create stock transactions for accepted items
                 $this->createStockTransactions($grn);
+
                 if ($grn->po_id) {
                     $this->updatePurchaseOrderStatus($grn->purchaseOrder);
                 }

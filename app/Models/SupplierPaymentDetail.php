@@ -35,12 +35,6 @@ class SupplierPaymentDetail extends Model
         'metadata'
     ];
 
-    protected $casts = [
-    'value_date' => 'date',
-    'cheque_date' => 'date',
-    'due_date' => 'date',
-    ];
-
     /**
      * Get the payment master record associated with this detail.
      */

@@ -39,13 +39,19 @@ class GrnMaster extends Model
         'deleted_at' => 'datetime'
     ];
 
+    // Payment status constants
     const PAYMENT_STATUS_PENDING = 'Pending';
     const PAYMENT_STATUS_PARTIAL = 'Partial';
     const PAYMENT_STATUS_PAID = 'Paid';
+    // Status constants
     const STATUS_PENDING = 'Pending';
     const STATUS_VERIFIED = 'Verified';
     const STATUS_REJECTED = 'Rejected';
     const STATUS_PARTIAL = 'Partially Verified';
+
+    // Relationships
+
+
 
     public function isPaymentPending()
     {
@@ -102,6 +108,7 @@ class GrnMaster extends Model
         return $this->belongsTo(User::class, 'created_by', 'id');
     }
 
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -149,9 +156,10 @@ class GrnMaster extends Model
 
     public function grnItems()
     {
-        return $this->hasMany(GrnItem::class, 'grn_id', 'id');
+        return $this->hasMany(GrnItem::class, 'grn_id', 'id'); // Adjust foreign keys as needed
     }
 
+    // Status methods
     public function isPending()
     {
         return $this->status === self::STATUS_PENDING;
@@ -172,6 +180,9 @@ class GrnMaster extends Model
         return $this->status === self::STATUS_PARTIAL;
     }
 
+
+
+    // Helper methods
     public function recalculateTotal()
     {
         $this->total_amount = $this->items()->sum('line_total');
