@@ -41,10 +41,16 @@ class AdminOrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'status' => 'required|in:submitted,preparing,ready,completed,cancelled'
+            'status' => 'required|in:submitted,preparing,ready,completed,cancelled',
+            'order_type' => 'required|string',
+            'branch_id' => 'required|exists:branches,id',
+            'order_time' => 'required|date',
+            'customer_phone' => 'required|string|min:10|max:15'
         ]);
+
         $order->update($validated);
-        return redirect()->route('admin.orders.index')->with('success', 'Order status updated!');
+
+        return redirect()->route('admin.orders.index')->with('success', 'Order updated successfully!');
     }
 
     // List orders for a specific branch (admin)
@@ -304,6 +310,8 @@ class AdminOrderController extends Controller
      */
     public function editReservationOrder(Reservation $reservation, Order $order)
     {
+        $order->load('items.menuItem'); // Eager load items with their menu items
+
         $branches = Branch::all();
         $menuItems = ItemMaster::where('is_menu_item', true)->get();
         $statusOptions = [
@@ -313,6 +321,7 @@ class AdminOrderController extends Controller
             Order::STATUS_COMPLETED => 'Completed',
             Order::STATUS_CANCELLED => 'Cancelled'
         ];
+
         return view('admin.orders.edit', compact('order', 'reservation', 'branches', 'menuItems', 'statusOptions'));
     }
 
@@ -325,7 +334,8 @@ class AdminOrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'status' => 'required|in:submitted,preparing,ready,completed,cancelled'
+            'status' => 'required|in:submitted,preparing,ready,completed,cancelled',
+            'order_type' => 'required|in:dine-in,takeaway,delivery'
         ]);
         // Remove old items
         $order->orderItems()->delete();

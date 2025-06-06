@@ -78,6 +78,11 @@ class Order extends Model
         return $this->belongsTo(Reservation::class);
     }
 
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     public function markAsPreparing()
     {
         if ($this->status !== self::STATUS_ACTIVE) {
@@ -100,9 +105,13 @@ class Order extends Model
         ]);
     }
 
-    public function orderItems()
+    /**
+     * Check if the order is submitted.
+     *
+     * @return bool
+     */
+    public function isSubmitted(): bool
     {
-        // For backward compatibility, alias to items()
-        return $this->items();
+        return $this->status === self::STATUS_SUBMITTED;
     }
 }
