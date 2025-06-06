@@ -106,63 +106,69 @@ class SupplierPaymentController extends Controller
         return view('admin.suppliers.payments.create', compact('suppliers', 'branches'));
     }
 
-    public function store(Request $request)
-    {
-        $orgId = $this->getOrganizationId();
+public function store(Request $request)
+{
+    $orgId = $this->getOrganizationId();
 
-        $rules = [
-            'supplier_id' => ['required', 'exists:suppliers,id,organization_id,' . $orgId],
-            'branch_id' => ['required', 'exists:branches,id,organization_id,' . $orgId],
-            'payment_date' => ['required', 'date'],
-            'total_amount' => ['required', 'numeric', 'min:0'],
-            'payment_status' => ['required', 'in:draft,pending,partial,paid'],
-            'method_type' => ['required', 'in:cash,bank_transfer,check,credit_card'],
-            'reference_number' => ['nullable', 'string', 'max:255'],
-            'value_date' => ['nullable', 'date'],
-            'notes' => ['nullable', 'string'],
-            'document_ids' => ['required_unless:payment_status,draft', 'array'],
-            'document_ids.*' => ['string', 'regex:/^(grn|po)_[0-9]+$/'],
-            'allocations' => ['required_unless:payment_status,draft', 'array'],
-            'allocations.*.document_id' => ['string', 'regex:/^(grn|po)_[0-9]+$/'],
-            'allocations.*.amount' => ['numeric', 'min:0'],
-        ];
+    $rules = [
+        'supplier_id' => ['required', 'exists:suppliers,id,organization_id,' . $orgId],
+        'branch_id' => ['required', 'exists:branches,id,organization_id,' . $orgId],
+        'payment_date' => ['required', 'date'],
+        'total_amount' => ['required', 'numeric', 'min:0'],
+        'payment_status' => ['required', 'in:draft,pending,partial,paid'],
+        'method_type' => ['required', 'in:cash,bank_transfer,check,credit_card'],
+        'reference_number' => ['nullable', 'string', 'max:255'],
+        'value_date' => ['nullable', 'date'],
+        'notes' => ['nullable', 'string'],
+        'document_ids' => ['nullable', 'array'], // Make optional for drafts
+        'document_ids.*' => ['string', 'regex:/^(grn|po)_[0-9]+$/'],
+        'allocations' => ['nullable', 'array'], // Make optional for drafts
+        'allocations.*.document_id' => ['string', 'regex:/^(grn|po)_[0-9]+$/'],
+        'allocations.*.amount' => ['numeric', 'min:0'],
+    ];
 
-        try {
-            $validated = $request->validate($rules);
-        } catch (ValidationException $e) {
-            Log::error('Validation failed for payment creation: ' . $e->getMessage(), $request->all());
-            return back()->withInput()->withErrors($e->errors());
-        }
+    try {
+        $validated = $request->validate($rules);
+    } catch (ValidationException $e) {
+        Log::error('Validation failed for payment creation: ' . $e->getMessage(), $request->all());
+        return back()->withInput()->withErrors($e->errors());
+    }
 
-        DB::beginTransaction();
-        try {
-            // Create payment master
-            $payment = SupplierPaymentMaster::create([
-                'organization_id' => $orgId,
-                'supplier_id' => $validated['supplier_id'],
-                'branch_id' => $validated['branch_id'],
-                'payment_number' => 'PAY-' . strtoupper(uniqid()),
-                'payment_date' => $validated['payment_date'],
-                'total_amount' => $validated['total_amount'],
-                'allocated_amount' => 0,
-                'payment_status' => $validated['payment_status'],
-                'processed_by' => Auth::id(),
-                'notes' => $validated['notes'] ?? null,
-            ]);
+    DB::beginTransaction();
+    try {
+        // Create payment master
+        $payment = SupplierPaymentMaster::create([
+            'organization_id' => $orgId,
+            'supplier_id' => $validated['supplier_id'],
+            'branch_id' => $validated['branch_id'],
+            'payment_number' => 'PAY-' . strtoupper(uniqid()),
+            'payment_date' => $validated['payment_date'],
+            'total_amount' => $validated['total_amount'],
+            'allocated_amount' => 0,
+            'payment_status' => $validated['payment_status'],
+            'processed_by' => Auth::id(),
+            'notes' => $validated['notes'] ?? null,
+        ]);
 
-            // Create payment details
-            $payment->paymentDetails()->create([
-                'method_type' => $validated['method_type'],
-                'reference_number' => $validated['reference_number'] ?? null,
-                'amount' => $validated['total_amount'],
-                'value_date' => $validated['value_date'] ?? $validated['payment_date'],
-            ]);
+        // Create payment details
+        $payment->paymentDetails()->create([
+            'method_type' => $validated['method_type'],
+            'reference_number' => $validated['reference_number'] ?? null,
+            'amount' => $validated['total_amount'],
+            'value_date' => $validated['value_date'] ?? $validated['payment_date'],
+        ]);
 
-            $allocatedTotal = 0;
+        $allocatedTotal = 0;
+        $allocationErrors = [];
 
-            // Process allocations only if not a draft
-            if ($validated['payment_status'] !== 'draft' && !empty($validated['allocations'])) {
-                foreach ($validated['allocations'] as $allocation) {
+        // Process allocations for non-draft payments
+        if ($validated['payment_status'] !== 'draft' && !empty($validated['allocations'])) {
+            if (empty($validated['document_ids'])) {
+                throw new \Exception('Document IDs are required for non-draft payments.');
+            }
+
+            foreach ($validated['allocations'] as $index => $allocation) {
+                try {
                     [$type, $id] = explode('_', $allocation['document_id']);
 
                     if ($type === 'grn') {
@@ -196,6 +202,8 @@ class SupplierPaymentController extends Controller
                             ]);
 
                             $allocatedTotal += $amountToAllocate;
+                        } else {
+                            $allocationErrors[] = "GRN {$grn->grn_number}: Invalid allocation amount or no due amount remaining.";
                         }
                     } elseif ($type === 'po') {
                         $po = PurchaseOrder::where('po_id', $id)
@@ -228,40 +236,52 @@ class SupplierPaymentController extends Controller
                             ]);
 
                             $allocatedTotal += $amountToAllocate;
+                        } else {
+                            $allocationErrors[] = "PO {$po->po_number}: Invalid allocation amount or no due amount remaining.";
                         }
                     }
+                } catch (\Exception $e) {
+                    $allocationErrors[] = "Allocation {$index}: {$e->getMessage()}";
+                    continue; // Skip this allocation, continue with others
                 }
-
-                // Validate total allocated amount
-                if ($allocatedTotal > $validated['total_amount']) {
-                    throw new \Exception('Allocated amount exceeds payment total');
-                }
-
-                // Update payment allocated amount and status
-                $payment->allocated_amount = $allocatedTotal;
-                if ($allocatedTotal >= $validated['total_amount']) {
-                    $payment->payment_status = 'paid';
-                } elseif ($allocatedTotal > 0) {
-                    $payment->payment_status = 'partial';
-                }
-                $payment->save();
             }
 
-            DB::commit();
-            return redirect()
-                ->route('admin.payments.show', $payment)
-                ->with('success', 'Payment created successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error creating payment: ' . $e->getMessage(), [
-                'request' => $request->all(),
-                'user_id' => Auth::id(),
-            ]);
-            return back()
-                ->withInput()
-                ->with('error', 'Error creating payment: ' . $e->getMessage());
+            // Validate total allocated amount
+            if ($allocatedTotal > $validated['total_amount']) {
+                throw new \Exception('Allocated amount exceeds payment total: ' . implode('; ', $allocationErrors));
+            }
+
+            // Update payment allocated amount and status
+            $payment->allocated_amount = $allocatedTotal;
+            if ($allocatedTotal >= $validated['total_amount']) {
+                $payment->payment_status = 'paid';
+            } elseif ($allocatedTotal > 0) {
+                $payment->payment_status = 'partial';
+            } elseif ($validated['payment_status'] !== 'draft' && $allocatedTotal == 0) {
+                throw new \Exception('No valid allocations provided for non-draft payment: ' . implode('; ', $allocationErrors));
+            }
+            $payment->save();
         }
+
+        DB::commit();
+        $message = 'Payment created successfully.';
+        if (!empty($allocationErrors)) {
+            $message .= ' Some allocations failed: ' . implode('; ', $allocationErrors);
+        }
+        return redirect()
+            ->route('admin.payments.show', $payment)
+            ->with('success', $message);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error creating payment: ' . $e->getMessage(), [
+            'request' => $request->all(),
+            'user_id' => Auth::id(),
+        ]);
+        return back()
+            ->withInput()
+            ->with('error', 'Error creating payment: ' . $e->getMessage());
     }
+}
 
     public function show($id)
     {
