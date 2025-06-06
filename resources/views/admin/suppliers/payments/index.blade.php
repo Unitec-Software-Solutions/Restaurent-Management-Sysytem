@@ -218,15 +218,15 @@
                                             class="text-purple-600 hover:text-purple-800" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
-                                        <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST"
+                                        {{-- <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST"
                                             class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:text-red-800" title="Delete"
-                                                onclick="return confirm('Are you sure?')">
+                                                onclick="return confirm(' For testing only ')">
                                                 <i class="fas fa-trash"></i>
                                             </button>
-                                        </form>
+                                        </form> --}}
                                     </div>
                                 </td>
                             </tr>
