@@ -75,10 +75,7 @@ class Order extends Model
 
     public function reservation()
     {
-        return $this->belongsTo(Reservation::class)->withDefault([
-            'name' => 'Deleted Reservation',
-            'scheduled_time' => null
-        ]);
+        return $this->belongsTo(Reservation::class);
     }
 
     public function markAsPreparing()
