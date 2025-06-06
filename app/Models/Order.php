@@ -105,4 +105,14 @@ class Order extends Model
         // For backward compatibility, alias to items()
         return $this->items();
     }
+
+    /**
+     * Check if the order is submitted.
+     *
+     * @return bool
+     */
+    public function isSubmitted(): bool
+    {
+        return $this->status === self::STATUS_SUBMITTED;
+    }
 }
