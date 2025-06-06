@@ -3,7 +3,7 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 card">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl custom-shadow overflow-hidden fadeInUp">
         <!-- Card Header -->
         <div class="bg-gradient-to-r from-primary to-secondary py-6 px-6">
             <div class="flex flex-col md:flex-row justify-between items-center">
@@ -28,11 +28,11 @@
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <div class="flex">
                     <div class="flex-shrink-0">
-                        <i class="fas fa-check-circle text-black-100-500 text-xl"></i>
+                        <i class="fas fa-check-circle text-blue-500 text-xl"></i>
                     </div>
                     <div class="ml-3">
-                        <h3 class="text-black-100-800 font-medium">Order confirmed successfully!</h3>
-                        <p class="mt-1 text-black-100-700">Order ID: {{ $order->takeaway_id }}</p>
+                        <h3 class="text-blue-800 font-medium">Order confirmed successfully!</h3>
+                        <p class="mt-1 text-blue-700">Order ID: {{ $order->takeaway_id }}</p>
                     </div>
                 </div>
             </div>
@@ -81,7 +81,7 @@
                         </div>
                         <div class="flex justify-between mt-4 pt-4 border-t border-gray-200">
                             <span class="text-gray-600">Status:</span>
-                            <span class="px-3 py-1 bg-blue-100 text-black-100-800 rounded-full text-sm">Ready for pickup</span>
+                            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">Ready for pickup</span>
                         </div>
                     </div>
                 </div>
@@ -174,7 +174,7 @@
                     <a href="{{ route('orders.takeaway.edit', $order->id) }}" class="flex-1 py-3 px-4 bg-secondary hover:bg-blue-800 text-white font-medium rounded-lg flex items-center justify-center transition">
                         <i class="fas fa-edit mr-2"></i> Update Order
                     </a>
-                    <a href="{{ route('orders.takeaway.create') }}" class="flex-1 py-3 px-4 bg-success hover:bg-blue-600 text-white font-medium rounded-lg flex items-center justify-center transition">
+                    <a href="{{ route('orders.takeaway.create') }}" class="flex-1 py-3 px-4 bg-success hover:bg-green-600 text-white font-medium rounded-lg flex items-center justify-center transition">
                         <i class="fas fa-plus mr-2"></i> Add Another Order
                     </a>
                     <form action="{{ route('orders.takeaway.destroy', $order->id) }}" method="POST" class="flex-1">
@@ -201,16 +201,17 @@
         window.print();
     });
 
-    // Adding simple animations
+    // Add hover effect to table rows
     document.addEventListener('DOMContentLoaded', function() {
-        const card = document.querySelector('.card');
-        card.classList.add('opacity-0', 'scale-95', '-translate-y-2');
-        
-        setTimeout(() => {
-            card.classList.add('transition-all', 'duration-500', 'ease-out');
-            card.classList.remove('opacity-0', 'scale-95', '-translate-y-2');
-            card.classList.add('opacity-100', 'scale-100');
-        }, 100);
+        const tableRows = document.querySelectorAll('tbody tr');
+        tableRows.forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.classList.add('bg-blue-50');
+            });
+            row.addEventListener('mouseleave', () => {
+                row.classList.remove('bg-blue-50');
+            });
+        });
     });
 </script>
 @endsection
