@@ -8,7 +8,7 @@
             <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-semibold text-gray-900">Create New Purchase Order</h2>
-                    <p class="text-sm text-gray-500">Add items from suppliers to your inventory</p>
+                    <p class="text-sm text-gray-500"> ~ sub ~ </p>
                 </div>
 
                 <a href="{{ route('admin.purchase-orders.index') }}"
