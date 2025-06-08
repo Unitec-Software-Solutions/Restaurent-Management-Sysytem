@@ -134,9 +134,7 @@
                 <a href="{{ route('orders.takeaway.edit', $order->id) }}" class="flex-1 md:flex-none bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                     <i class="fas fa-edit mr-2"></i> Update Order
                 </a>
-                <a href="{{ route('orders.takeaway.create') }}" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
-                    <i class="fas fa-plus mr-2"></i> Add Another Order
-                </a>
+                
                 <form action="{{ route('orders.takeaway.destroy', $order->id) }}" method="POST" class="flex-1 md:flex-none">
                     @csrf
                     @method('DELETE')
