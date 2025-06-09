@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('supplier_id')->nullable()->constrained('suppliers');
             $table->foreignId('received_by_user_id')->constrained('users');
             $table->foreignId('verified_by_user_id')->nullable()->constrained('users');
+            $table->timestamp('verified_at')->nullable();
             $table->date('received_date');
             $table->string('delivery_note_number')->nullable();
             $table->string('invoice_number')->nullable();
