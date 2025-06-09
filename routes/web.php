@@ -8,6 +8,7 @@ use App\Http\Controllers\AdminReservationController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\GrnDashboardController;
+use App\Http\Controllers\GoodsTransferNoteController;
 use App\Http\Controllers\ItemDashboardController;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ItemMasterController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\SupplierPaymentController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\GrnPaymentController;
+use Illuminate\Support\Facades\Mail;
 
 
 // Public Routes
@@ -59,7 +61,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
         Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
         Route::put('/{order}', [OrderController::class, 'update'])->name('update');
-        
+
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function () {
             Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
@@ -75,7 +77,9 @@ Route::middleware(['web'])->group(function () {
     });
 });
 
-Route::get('/login', function () { return redirect()->route('admin.login'); })->name('login');  // fix for redirecting to admin login Login not Found issue
+Route::get('/login', function () {
+    return redirect()->route('admin.login');
+})->name('login');  // fix for redirecting to admin login Login not Found issue
 // Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
     // Authentication
@@ -172,7 +176,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
-            
+
             // Categories
             Route::resource('categories', ItemCategoryController::class);
         });
@@ -190,8 +194,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{supplier}/purchase-orders', [SupplierController::class, 'purchaseOrders'])->name('purchase-orders');
             Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->name('grns');
 
-            //  Supplier json (remove  later | only for testing) 
-            Route::get('/{supplier}/pending-grns', [SupplierController::class, 'pendingGrns']); 
+            //  Supplier json (remove  later | only for testing)
+            Route::get('/{supplier}/pending-grns', [SupplierController::class, 'pendingGrns']);
             Route::get('/{supplier}/pending-pos', [SupplierController::class, 'pendingPos']);
 
             // Route::get('/{supplier}/pending-grns-pay', [SupplierPaymentController::class, 'getPendingGrns'])->name('pending-grns-pay');
@@ -211,21 +215,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->name('verify');
             Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
-    
+        });
+
+        // GTN (Goods Transfer Notes)
+        Route::prefix('gtn')->name('gtn.')->group(function () {
+            Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
+            Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
+            Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
+            Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->name('show');
+            Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->name('edit');
+            Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->name('update');
         });
 
         // Supplier Payments ( temporarily moved out from suppliers section due to conflict with supplier routes )
         Route::prefix('payments')->name('payments.')->group(function () {
-                Route::get('/', [SupplierPaymentController::class, 'index'])->name('index');
-                Route::get('/create', [SupplierPaymentController::class, 'create'])->name('create');
-                Route::post('/', [SupplierPaymentController::class, 'store'])->name('store');
-                Route::get('/{payment}', [SupplierPaymentController::class, 'show'])->name('show');
-                Route::get('/{payment}/edit', [SupplierPaymentController::class, 'edit'])->name('edit');
-                Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
-                Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
-                Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
-                    // AJAX routes for pending GRNs and POs
-                
+            Route::get('/', [SupplierPaymentController::class, 'index'])->name('index');
+            Route::get('/create', [SupplierPaymentController::class, 'create'])->name('create');
+            Route::post('/', [SupplierPaymentController::class, 'store'])->name('store');
+            Route::get('/{payment}', [SupplierPaymentController::class, 'show'])->name('show');
+            Route::get('/{payment}/edit', [SupplierPaymentController::class, 'edit'])->name('edit');
+            Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
+            Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
+            Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
+            // AJAX routes for pending GRNs and POs
+
         });
 
 
@@ -238,7 +251,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{po}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
             Route::post('/{po}/approve', [PurchaseOrderController::class, 'approve'])->name('approve');
             Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
-
         });
 
 
@@ -262,15 +274,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
     });
-
 });
 
 // Test Email Route
-Route::get('/test-email', function() {
+Route::get('/test-email', function () {
     $reservation = \App\Models\Reservation::first();
     Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
     return 'Email sent!';
-
 });
 
 // Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
