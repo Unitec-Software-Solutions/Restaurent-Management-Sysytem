@@ -38,7 +38,7 @@ class GrnDashboardController extends Controller
         $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder'])
             ->where('organization_id', $orgId);
 
-        if ($request->filled('search')) {
+        if ($request->filled('search') ) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('grn_number', 'like', "%{$search}%")
@@ -181,6 +181,8 @@ class GrnDashboardController extends Controller
             'items.*.ordered_quantity' => 'required|numeric|min:0',
             'items.*.received_quantity' => 'required|numeric|min:0',
             'items.*.accepted_quantity' => 'required|numeric|min:0|lte:items.*.received_quantity',
+            'items.*.free_received_quantity' => 'nullable|numeric|min:0',
+            'items.*.discount_received' => 'nullable|numeric|min:0',
             'items.*.rejected_quantity' => 'required|numeric|min:0',
             'items.*.buying_price' => 'required|numeric|min:0',
             'items.*.manufacturing_date' => 'nullable|date',
@@ -218,17 +220,17 @@ class GrnDashboardController extends Controller
 
             $total = 0;
             foreach ($validated['items'] as $item) {
-                $itemMaster = ItemMaster::findOrFail($item['item_id']);
-                $lineTotal = $item['accepted_quantity'] * $item['buying_price'];
+                $itemMaster = \App\Models\ItemMaster::findOrFail($item['item_id']);
+                $lineTotal = $item['accepted_quantity'] * $item['buying_price'] - ($item['discount_received'] ?? 0);
                 $total += $lineTotal;
 
-                GrnItem::create([
+                \App\Models\GrnItem::create([
                     'grn_id' => $grn->grn_id,
                     'po_detail_id' => $item['po_detail_id'] ?? null,
                     'item_id' => $item['item_id'],
                     'item_code' => $itemMaster->item_code,
                     'item_name' => $itemMaster->name,
-                    'batch_no' => $item['batch_no'],
+                    'batch_no' => $item['batch_no'] ?? (date('Y') . '-' . str_pad(\App\Models\GrnItem::max('id') + 1, 4, '0', STR_PAD_LEFT)),
                     'ordered_quantity' => $item['ordered_quantity'],
                     'received_quantity' => $item['received_quantity'],
                     'accepted_quantity' => $item['accepted_quantity'],
@@ -238,6 +240,8 @@ class GrnDashboardController extends Controller
                     'manufacturing_date' => $item['manufacturing_date'],
                     'expiry_date' => $item['expiry_date'],
                     'rejection_reason' => $item['rejection_reason'],
+                    'free_received_quantity' => $item['free_received_quantity'] ?? 0,
+                    'discount_received' => $item['discount_received'] ?? 0,
                 ]);
             }
 
@@ -294,12 +298,14 @@ class GrnDashboardController extends Controller
             'items.*.ordered_quantity' => 'required|numeric|min:0',
             'items.*.received_quantity' => 'required|numeric|min:0',
             'items.*.buying_price' => 'required|numeric|min:0',
+            'items.*.discount_received' => 'nullable|numeric|min:0',
+            'items.*.free_received_quantity' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
         try {
             $grn = GrnMaster::create([
-                'grn_number' => 'GRN-' . date('Ymd') . '-' . Str::random(4),
+                'grn_number' => GrnMaster::generateGRNNumber($orgId),
                 'branch_id' => $validated['branch_id'],
                 'organization_id' => $orgId,
                 'supplier_id' => $validated['supplier_id'],
@@ -315,22 +321,24 @@ class GrnDashboardController extends Controller
 
             $total = 0;
             foreach ($validated['items'] as $item) {
-                $itemMaster = ItemMaster::findOrFail($item['item_id']);
-                $lineTotal = $item['received_quantity'] * $item['buying_price'];
+                $itemMaster = \App\Models\ItemMaster::findOrFail($item['item_id']);
+                $lineTotal = $item['received_quantity'] * $item['buying_price'] - ($item['discount_received'] ?? 0);
                 $total += $lineTotal;
 
-                GrnItem::create([
+                \App\Models\GrnItem::create([
                     'grn_id' => $grn->grn_id,
                     'item_id' => $item['item_id'],
                     'item_code' => $itemMaster->item_code,
                     'item_name' => $itemMaster->name,
-                    'batch_no' => $item['batch_no'] ?? null,
+                    'batch_no' => $item['batch_no'] ?? (date('Y') . '-' . str_pad((\App\Models\GrnItem::max('grn_item_id') ?? 0) + 1, 4, '0', STR_PAD_LEFT)),
                     'ordered_quantity' => $item['ordered_quantity'],
                     'received_quantity' => $item['received_quantity'],
                     'accepted_quantity' => $item['received_quantity'],
                     'rejected_quantity' => 0,
                     'buying_price' => $item['buying_price'],
                     'line_total' => $lineTotal,
+                    'free_received_quantity' => $item['free_received_quantity'] ?? 0,
+                    'discount_received' => $item['discount_received'] ?? 0,
                 ]);
             }
 
@@ -396,11 +404,15 @@ class GrnDashboardController extends Controller
 
     public function verify(Request $request, GrnMaster $grn)
     {
+        Log::info('Starting GRN verification', ['grn_id' => $grn->grn_id]);
+
         if ($grn->organization_id !== $this->getOrganizationId()) {
+            Log::error('Unauthorized access to GRN verification', ['grn_id' => $grn->grn_id]);
             abort(403);
         }
 
         if (!$grn->isPending()) {
+            Log::warning('Attempt to verify a non-pending GRN', ['grn_id' => $grn->grn_id, 'status' => $grn->status]);
             return back()->with('error', 'Only pending GRNs can be verified.');
         }
 
@@ -411,24 +423,54 @@ class GrnDashboardController extends Controller
 
         DB::beginTransaction();
         try {
-            $grn->verified_by_user_id = Auth::id();
+            Log::info('Updating GRN status', ['grn_id' => $grn->grn_id, 'new_status' => $validated['status']]);
+
+            $grn->verified_by_user_id = Auth::id(); // Fetch logged-in user ID
             $grn->verified_at = now();
             $grn->status = $validated['status'];
             $grn->notes = $validated['notes'] ?? $grn->notes;
             $grn->save();
 
             if ($validated['status'] === GrnMaster::STATUS_VERIFIED) {
-                $this->createStockTransactions($grn);
+                foreach ($grn->items as $grnItem) {
+                    $qty = $grnItem->accepted_quantity + $grnItem->free_received_quantity;
+                    if ($qty > 0) {
+                        ItemTransaction::create([
+                            'organization_id' => $grn->organization_id,
+                            'branch_id' => $grn->branch_id,
+                            'inventory_item_id' => $grnItem->item_id,
+                            'transaction_type' => 'grn',
+                            'incoming_branch_id' => $grn->branch_id,
+                            'receiver_user_id' => $grn->received_by_user_id,
+                            'quantity' => $qty,
+                            'received_quantity' => $grnItem->received_quantity,
+                            'damaged_quantity' => $grnItem->rejected_quantity,
+                            'cost_price' => $grnItem->line_total,
+                            'unit_price' => $grnItem->buying_price,
+                            'source_id' => (string) $grnItem->batch_no,
+                            'source_type' => 'supplier',
+                            'created_by_user_id' => Auth::id(),
+                            'notes' => 'Stock added from GRN #' . $grn->grn_number,
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+
                 if ($grn->po_id) {
                     $this->updatePurchaseOrderStatus($grn->purchaseOrder);
                 }
             }
 
             DB::commit();
+            Log::info('GRN verification completed successfully', ['grn_id' => $grn->grn_id]);
             return redirect()->route('admin.grn.show', $grn)
                 ->with('success', 'GRN ' . strtolower($validated['status']) . ' successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error during GRN verification', [
+                'grn_id' => $grn->grn_id,
+                'error' => $e->getMessage()
+            ]);
             return back()->with('error', 'Error verifying GRN: ' . $e->getMessage());
         }
     }
@@ -436,13 +478,14 @@ class GrnDashboardController extends Controller
     protected function createStockTransactions(GrnMaster $grn)
     {
         foreach ($grn->items as $grnItem) {
-            if ($grnItem->accepted_quantity > 0) {
+            $qty = $grnItem->accepted_quantity + $grnItem->free_received_quantity;
+            if ($qty > 0) {
                 ItemTransaction::create([
                     'organization_id' => $grn->organization_id,
                     'branch_id' => $grn->branch_id,
                     'inventory_item_id' => $grnItem->item_id,
                     'transaction_type' => 'purchase_order',
-                    'quantity' => $grnItem->accepted_quantity,
+                    'quantity' => $qty,
                     'cost_price' => $grnItem->buying_price,
                     'created_by_user_id' => optional(Auth::user())->id,
                     'is_active' => true,
