@@ -44,7 +44,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">GRN Number</label>
                         <input type="text" value="{{ $grn->grn_number }}" disabled class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100">
                     </div>
-                    
+
                     <div>
                         <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
                         <div class="relative">
@@ -61,7 +61,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div>
                         <label for="supplier_id" class="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
                         <div class="relative">
@@ -85,23 +85,23 @@
                     <div>
                         <label for="received_date" class="block text-sm font-medium text-gray-700 mb-1">Received Date *</label>
                         <div class="relative">
-                            <input type="date" id="received_date" name="received_date" value="{{ $grn->received_date->format('Y-m-d') }}" 
+                            <input type="date" id="received_date" name="received_date" value="{{ $grn->received_date->format('Y-m-d') }}"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
                                 <i class="fas fa-calendar"></i>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div>
                         <label for="delivery_note_number" class="block text-sm font-medium text-gray-700 mb-1">Delivery Note Number</label>
-                        <input type="text" id="delivery_note_number" name="delivery_note_number" value="{{ $grn->delivery_note_number }}" 
+                        <input type="text" id="delivery_note_number" name="delivery_note_number" value="{{ $grn->delivery_note_number }}"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
-                    
+
                     <div>
                         <label for="invoice_number" class="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
-                        <input type="text" id="invoice_number" name="invoice_number" value="{{ $grn->invoice_number }}" 
+                        <input type="text" id="invoice_number" name="invoice_number" value="{{ $grn->invoice_number }}"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                 </div>
@@ -134,7 +134,7 @@
                                                             <select name="items[{{ $loop->index }}][item_id]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select" required>
                                                                 <option value="">Select Item</option>
                                                                 @foreach ($items as $itemOption)
-                                                                    <option value="{{ $itemOption->id }}" 
+                                                                    <option value="{{ $itemOption->id }}"
                                                                         data-code="{{ $itemOption->item_code }}"
                                                                         data-price="{{ $itemOption->buying_price }}"
                                                                         {{ $item->item_id == $itemOption->id ? 'selected' : '' }}>
@@ -151,7 +151,7 @@
                                                         <input type="text" name="items[{{ $loop->index }}][batch_no]" value="{{ $item->batch_no }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
                                                     <div>
                                                         <label class="block text-xs font-medium text-gray-500 mb-1">Ordered Qty</label>
@@ -170,7 +170,7 @@
                                                         <input type="number" step="0.01" name="items[{{ $loop->index }}][rejected_quantity]" value="{{ $item->rejected_quantity }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg rejected-qty" required>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                                     <div>
                                                         <label class="block text-xs font-medium text-gray-500 mb-1">Buying Price *</label>
@@ -189,13 +189,13 @@
                                                         <input type="date" name="items[{{ $loop->index }}][expiry_date]" value="{{ $item->expiry_date ? $item->expiry_date->format('Y-m-d') : '' }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div class="mt-3">
                                                     <label class="block text-xs font-medium text-gray-500 mb-1">Rejection Reason</label>
                                                     <input type="text" name="items[{{ $loop->index }}][rejection_reason]" value="{{ $item->rejection_reason }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                                                 </div>
                                             </td>
-                                            
+
                                             <td class="px-4 py-3 text-center">
                                                 <button type="button" class="remove-item text-red-500 hover:text-red-700">
                                                     <i class="fas fa-trash"></i>
@@ -247,7 +247,7 @@
                                     <select name="items[${itemCounter}][item_id]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select" required>
                                         <option value="">Select Item</option>
                                         @foreach ($items as $itemOption)
-                                            <option value="{{ $itemOption->id }}" 
+                                            <option value="{{ $itemOption->id }}"
                                                 data-code="{{ $itemOption->item_code }}"
                                                 data-price="{{ $itemOption->buying_price }}">
                                                 {{ $itemOption->name }} ({{ $itemOption->item_code }})
@@ -263,7 +263,7 @@
                                 <input type="text" name="items[${itemCounter}][batch_no]" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                             </div>
                         </div>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
                             <div>
                                 <label class="block text-xs font-medium text-gray-500 mb-1">Ordered Qty</label>
@@ -282,7 +282,7 @@
                                 <input type="number" step="0.01" name="items[${itemCounter}][rejected_quantity]" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg rejected-qty" required>
                             </div>
                         </div>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label class="block text-xs font-medium text-gray-500 mb-1">Buying Price *</label>
@@ -301,13 +301,13 @@
                                 <input type="date" name="items[${itemCounter}][expiry_date]" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                             </div>
                         </div>
-                        
+
                         <div class="mt-3">
                             <label class="block text-xs font-medium text-gray-500 mb-1">Rejection Reason</label>
                             <input type="text" name="items[${itemCounter}][rejection_reason]" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         </div>
                     </td>
-                    
+
                     <td class="px-4 py-3 text-center">
                         <button type="button" class="remove-item text-red-500 hover:text-red-700">
                             <i class="fas fa-trash"></i>
@@ -315,18 +315,18 @@
                     </td>
                 `;
                 document.getElementById('itemsContainer').appendChild(newRow);
-                
+
                 // Add event listeners to the new row
                 const select = newRow.querySelector('.item-select');
                 const priceInput = newRow.querySelector('.price');
                 const acceptedQtyInput = newRow.querySelector('.accepted-qty');
                 const removeBtn = newRow.querySelector('.remove-item');
-                
+
                 select.addEventListener('change', handleItemChange);
                 priceInput.addEventListener('input', function() { calculateLineTotal(this.closest('.item-row')); });
                 acceptedQtyInput.addEventListener('input', function() { calculateLineTotal(this.closest('.item-row')); });
                 removeBtn.addEventListener('click', function() { newRow.remove(); });
-                
+
                 itemCounter++;
             });
 
@@ -366,13 +366,13 @@
             document.querySelectorAll('.item-select').forEach(select => {
                 select.addEventListener('change', handleItemChange);
             });
-            
+
             document.querySelectorAll('.accepted-qty, .price').forEach(input => {
                 input.addEventListener('input', function() {
                     calculateLineTotal(this.closest('.item-row'));
                 });
             });
-            
+
             document.querySelectorAll('.remove-item').forEach(btn => {
                 btn.addEventListener('click', function() {
                     this.closest('.item-row').remove();
