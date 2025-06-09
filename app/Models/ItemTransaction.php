@@ -87,7 +87,7 @@ class ItemTransaction extends Model
      */
     public static function stockOnHand($itemId, $branchId = null)
     {
-        Log::info('Calculating stock on hand', ['item_id' => $itemId, 'branch_id' => $branchId]);
+        //Log::info('Calculating stock on hand', ['item_id' => $itemId, 'branch_id' => $branchId]);
 
         $query = self::where('inventory_item_id', $itemId)->where('is_active', true);
 
@@ -98,7 +98,7 @@ class ItemTransaction extends Model
         $transactions = $query->get();
 
         $stock = $transactions->sum('quantity');
-        Log::info('Stock on hand calculated', ['item_id' => $itemId, 'branch_id' => $branchId, 'stock' => $stock]);
+        //Log::info('Stock on hand calculated', ['item_id' => $itemId, 'branch_id' => $branchId, 'stock' => $stock]);
 
         return $stock;
     }
