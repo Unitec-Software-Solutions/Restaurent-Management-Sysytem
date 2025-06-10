@@ -190,7 +190,8 @@ class AdminOrderController extends Controller
         }
         $order = Order::create($validated);
         $this->createOrderItems($order, $validated['items']);
-        return redirect()->route('admin.orders.takeaway.summary', $order->id);
+        return redirect()->route('admin.orders.takeaway.summary', $order->id)
+            ->with('success', 'Order placed successfully!');
     }
 
     private function createOrderItems(Order $order, array $items)
