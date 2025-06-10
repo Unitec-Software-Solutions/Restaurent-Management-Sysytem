@@ -13,8 +13,8 @@ use App\Mail\ReservationRejected;
 use App\Mail\ReservationConfirmationMail;
 use App\Mail\ReservationCancellationMail;
 use App\Services\SmsService;
-use Illuminate\Support\Facades\DB;
 use App\Models\Employee;
+use Illuminate\Support\Facades\DB;
 
 class AdminReservationController extends Controller
 {
@@ -360,7 +360,7 @@ public function update(Request $request, Reservation $reservation)
         $start_time = $now->format('H:i');
         $end_time = $now->copy()->addHours(2)->format('H:i');
 
-        $nextId = \DB::table('reservations')->max('id') + 1;
+        $nextId = DB::table('reservations')->max('id') + 1;
         $defaultName = 'customer ' . $nextId . '';
 
         $stewards = Employee::where('branch_id', $admin->branch->id)->get();
