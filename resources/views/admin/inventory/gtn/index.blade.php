@@ -9,14 +9,14 @@
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                 ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
                 ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Goods Transfer Notes', 'link' => route('admin.gtn.index')],
+                ['name' => 'Goods Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                 ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
             ]" active="Goods Transfer Notes" />
         </div>
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <form method="GET" action="{{ route('admin.gtn.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <form method="GET" action="{{ route('admin.inventory.gtn.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- From Branch Filter -->
                 <div>
                     <label for="from_branch_id" class="block text-sm font-medium text-gray-700 mb-1">From Branch</label>
@@ -74,7 +74,7 @@
                         class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
                         <i class="fas fa-filter mr-2"></i> Filter
                     </button>
-                    <a href="{{ route('admin.gtn.index') }}"
+                    <a href="{{ route('admin.inventory.gtn.index') }}"
                         class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
                         <i class="fas fa-redo mr-2"></i> Reset
                     </a>
@@ -103,7 +103,7 @@
                         class="bg-indigo-600 hover:bg-indigo-700 opacity-50 cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center pointer-events-none">
                         <i class="fas fa-file-export mr-2"></i> Export
                     </a>
-                    <a href="{{ route('admin.gtn.create') }}"
+                    <a href="{{ route('admin.inventory.gtn.create') }}"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-plus mr-2"></i> New GTN
                     </a>
@@ -128,7 +128,9 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4">
                                     <div class="font-medium text-indigo-600">{{ $gtn->gtn_number }}</div>
-                                    <div class="text-sm text-gray-500">{{ $gtn->transfer_date->format('d M Y') }}</div>
+                                    <div class="text-sm text-gray-500">
+                                        {{ \Illuminate\Support\Carbon::parse($gtn->transfer_date)->format('d M Y') }}
+                                    </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="font-medium">{{ $gtn->fromBranch->name ?? 'N/A' }}</div>
@@ -161,16 +163,16 @@
                                 </td>
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end space-x-3">
-                                        <a href="{{ route('admin.gtn.show', $gtn->id) }}"
+                                        <a href="{{ route('admin.inventory.gtn.show', $gtn->gtn_id) }}"
                                             class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.gtn.print', $gtn->id) }}"
+                                        <a href="{{ route('admin.inventory.gtn.print', $gtn->gtn_id) }}"
                                             class="text-blue-600 hover:text-blue-800" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
                                         @if ($gtn->status == 'Pending')
-                                            <a href="{{ route('admin.gtn.edit', $gtn->id) }}"
+                                            <a href="{{ route('admin.inventory.gtn.edit', $gtn->gtn_id) }}"
                                                 class="text-gray-600 hover:text-gray-800" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
