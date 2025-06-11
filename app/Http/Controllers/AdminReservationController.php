@@ -105,7 +105,7 @@ class AdminReservationController extends Controller
     public function edit(Reservation $reservation)
     {
         $admin = auth('admin')->user();
-        $reservation->load(['branch', 'tables', 'employee']); // Load relationships
+        $reservation->load(['branch', 'tables', 'employee']); 
 
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
