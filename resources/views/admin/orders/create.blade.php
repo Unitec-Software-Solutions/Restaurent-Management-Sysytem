@@ -67,42 +67,37 @@
                                 <!-- Menu Items Grid -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="menu-items-container">
                                     @foreach($menuItems as $item)
-                                    <div class="item-card bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                                        <div class="flex items-start">
-                                            <!-- Item Image Placeholder -->
-                                            <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-3">
-                                                <i class="fas fa-utensils text-gray-400"></i>
-                                            </div>
-                                            <div class="flex-1">
-                                                <div class="flex items-start justify-between">
-                                                    <div>
-                                                        <div class="flex items-center space-x-2">
-                                                            <input type="checkbox" 
-                                                                   name="items[{{ $item->id }}][item_id]"
-                                                                   value="{{ $item->id }}"
-                                                                   id="item{{ $item->id }}"
-                                                                   class="mt-1 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded item-check"
-                                                                   data-item-id="{{ $item->id }}">
-                                                            <label for="item{{ $item->id }}" class="font-semibold text-gray-800">{{ $item->name }}</label>
-                                                        </div>
-                                                        <div class="ml-6 text-sm text-gray-600">
-                                                            <span class="font-medium">Rs. {{ number_format($item->selling_price, 2) }}</span>
-                                                            @if($item->description)
-                                                                <p class="mt-1 text-gray-500 text-xs">{{ $item->description }}</p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="ml-6 mt-3 flex items-center">
-                                                    <input type="number"
-                                                           min="1"
-                                                           value="1"
-                                                           class="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 item-qty quantity-input"
-                                                           data-item-id="{{ $item->id }}"
-                                                           name="items[{{ $item->id }}][quantity]"
-                                                           disabled>
-                                                </div>
-                                            </div>
+                                    @php
+                                        $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
+                                    @endphp
+                                    <div class="flex items-center border-b py-4">
+                                        <input type="checkbox"
+                                            class="item-check mr-4"
+                                            data-item-id="{{ $item->id }}"
+                                            id="item_{{ $item->id }}"
+                                            name="items[{{ $item->id }}][item_id]"
+                                            value="{{ $item->id }}"
+                                            @if($existing) checked @endif>
+                                        <label for="item_{{ $item->id }}" class="flex-1">
+                                            <span class="font-semibold">{{ $item->name }}</span>
+                                            <span class="ml-2 text-gray-500">LKR {{ number_format($item->selling_price, 2) }}</span>
+                                        </label>
+                                        <div class="flex items-center ml-4">
+                                            <button type="button"
+                                                class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                                data-item-id="{{ $item->id }}"
+                                                @if(!$existing) disabled @endif>-</button>
+                                            <input type="number"
+                                                min="1"
+                                                value="{{ $existing ? $existing->quantity : 1 }}"
+                                                class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
+                                                data-item-id="{{ $item->id }}"
+                                                @if(!$existing) disabled @endif
+                                                @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
+                                            <button type="button"
+                                                class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                                data-item-id="{{ $item->id }}"
+                                                @if(!$existing) disabled @endif>+</button>
                                         </div>
                                     </div>
                                     @endforeach
