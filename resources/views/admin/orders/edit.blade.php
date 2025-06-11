@@ -133,45 +133,36 @@
                                     @foreach($menuItems as $item)
                                     @php
                                         // Corrected relationship and column:
-                                        $existingItem = $order->items->where('menu_item_id', $item->id)->first();
+                                        $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
                                     @endphp
-                                    <div class="item-card bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                                        <div class="flex items-start">
-                                            <!-- Item Image Placeholder -->
-                                            <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-3">
-                                                <i class="fas fa-utensils text-gray-400"></i>
-                                            </div>
-                                            <div class="flex-1">
-                                                <div class="flex items-start justify-between">
-                                                    <div>
-                                                        <div class="flex items-center space-x-2">
-                                                            <input type="checkbox" 
-                                                                   name="items[{{ $item->id }}][item_id]"
-                                                                   value="{{ $item->id }}"
-                                                                   id="item{{ $item->id }}"
-                                                                   class="mt-1 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded item-check"
-                                                                   data-item-id="{{ $item->id }}"
-                                                                   {{ $existingItem ? 'checked' : '' }}>
-                                                            <label for="item{{ $item->id }}" class="font-semibold text-gray-800">{{ $item->name }}</label>
-                                                        </div>
-                                                        <div class="ml-6 text-sm text-gray-600">
-                                                            <span class="font-medium">Rs. {{ number_format($item->selling_price, 2) }}</span>
-                                                            @if($item->description)
-                                                                <p class="mt-1 text-gray-500 text-xs">{{ $item->description }}</p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="ml-6 mt-3 flex items-center">
-                                                    <input type="number"
-                                                           name="items[{{ $item->id }}][quantity]"
-                                                           min="1"
-                                                           value="{{ $existingItem ? $existingItem->quantity : 1 }}"
-                                                           class="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 item-qty quantity-input"
-                                                           data-item-id="{{ $item->id }}"
-                                                           {{ $existingItem ? '' : 'disabled' }}>
-                                                </div>
-                                            </div>
+                                    <div class="flex items-center border-b py-4">
+                                        <input type="checkbox"
+                                            class="item-check mr-4"
+                                            data-item-id="{{ $item->id }}"
+                                            id="item_{{ $item->id }}"
+                                            name="items[{{ $item->id }}][item_id]"
+                                            value="{{ $item->id }}"
+                                            @if($existing) checked @endif>
+                                        <label for="item_{{ $item->id }}" class="flex-1">
+                                            <span class="font-semibold">{{ $item->name }}</span>
+                                            <span class="ml-2 text-gray-500">LKR {{ number_format($item->selling_price, 2) }}</span>
+                                        </label>
+                                        <div class="flex items-center ml-4">
+                                            <button type="button"
+                                                class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                                data-item-id="{{ $item->id }}"
+                                                @if(!$existing) disabled @endif>-</button>
+                                            <input type="number"
+                                                min="1"
+                                                value="{{ $existing ? $existing->quantity : 1 }}"
+                                                class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
+                                                data-item-id="{{ $item->id }}"
+                                                @if(!$existing) disabled @endif
+                                                @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
+                                            <button type="button"
+                                                class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                                data-item-id="{{ $item->id }}"
+                                                @if(!$existing) disabled @endif>+</button>
                                         </div>
                                     </div>
                                     @endforeach
@@ -318,136 +309,59 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Enable/disable quantity fields and update cart on change
     document.querySelectorAll('.item-check').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
             const itemId = this.getAttribute('data-item-id');
             const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
+            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
             if (this.checked) {
                 qtyInput.disabled = false;
+                plusBtn.disabled = false;
+                minusBtn.disabled = false;
                 qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-                qtyInput.classList.add('border-blue-400', 'ring-1', 'ring-blue-200');
             } else {
                 qtyInput.disabled = true;
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
                 qtyInput.removeAttribute('name');
                 qtyInput.value = 1;
-                qtyInput.classList.remove('border-blue-400', 'ring-1', 'ring-blue-200');
             }
-            updateCart();
         });
     });
-    
+
     document.querySelectorAll('.item-qty').forEach(function(input) {
         input.addEventListener('input', function() {
-            if (this.value < 1) this.value = 1;
-            updateCart();
-        });
-    });
-
-    // Menu search functionality
-    document.getElementById('menu-search').addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        document.querySelectorAll('.item-card').forEach(function(card) {
-            const itemName = card.querySelector('label').textContent.toLowerCase();
-            if (itemName.includes(searchTerm)) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
+            if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
+                this.value = 1;
             }
         });
     });
 
-    // AJAX cart update
-    function updateCart() {
-        const items = [];
-        let itemCount = 0;
-        
-        document.querySelectorAll('.item-check:checked').forEach(function(checkbox) {
-            const itemId = checkbox.getAttribute('data-item-id');
-            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-            items.push({
-                item_id: itemId,
-                quantity: qtyInput.value
-            });
-            itemCount += parseInt(qtyInput.value);
-        });
-
-        fetch('{{ route("admin.orders.update-cart") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ items: items })
-        })
-        .then(response => response.json())
-        .then(cart => {
-            // Update cart display
-            const cartItemsEl = document.getElementById('cart-items');
-            
-            if (cart.items.length > 0) {
-                let itemsHtml = '';
-                cart.items.forEach(function(item) {
-                    itemsHtml += `
-                        <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100 last:border-0">
-                            <div class="flex-1">
-                                <div class="font-semibold text-gray-700 truncate">${item.name}</div>
-                                <div class="flex items-center text-xs text-gray-500 mt-1">
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">Rs. ${item.price.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>
-                                    <span class="text-gray-400">×</span>
-                                    <span class="ml-2 bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${item.quantity}</span>
-                                </div>
-                            </div>
-                            <div class="font-semibold text-gray-800">
-                                Rs. ${item.total.toLocaleString('en-US', {minimumFractionDigits: 2})}
-                            </div>
-                        </div>`;
-                });
-                
-                cartItemsEl.innerHTML = itemsHtml;
-                
-                document.getElementById('cart-subtotal').textContent = 'LKR ' + cart.subtotal.toFixed(2);
-                document.getElementById('cart-tax').textContent = 'LKR ' + cart.tax.toFixed(2);
-                document.getElementById('cart-service').textContent = 'LKR ' + cart.service.toFixed(2);
-                document.getElementById('cart-total').textContent = 'LKR ' + cart.total.toFixed(2);
-                
-                // Update item count badge
-                document.getElementById('item-count').textContent = itemCount + (itemCount === 1 ? ' item' : ' items');
-                document.getElementById('item-count').classList.remove('bg-blue-100', 'text-blue-800');
-                document.getElementById('item-count').classList.add('bg-blue-600', 'text-white');
-            } else {
-                cartItemsEl.innerHTML = `
-                    <div class="text-center py-8">
-                        <i class="fas fa-shopping-basket text-gray-200 text-5xl mb-3"></i>
-                        <p class="text-gray-400 font-medium">Your cart is empty</p>
-                        <p class="text-gray-400 text-sm mt-1">Add items from the menu</p>
-                    </div>`;
-                
-                document.getElementById('cart-subtotal').textContent = 'LKR 0.00';
-                document.getElementById('cart-tax').textContent = 'LKR 0.00';
-                document.getElementById('cart-service').textContent = 'LKR 0.00';
-                document.getElementById('cart-total').textContent = 'LKR 0.00';
-                
-                // Reset item count badge
-                document.getElementById('item-count').textContent = '0 items';
-                document.getElementById('item-count').classList.remove('bg-blue-600', 'text-white');
-                document.getElementById('item-count').classList.add('bg-blue-100', 'text-blue-800');
-            }
-        });
-    }
-
-    // On form submit, disable unchecked checkboxes
-    const form = document.getElementById('order-form');
-    form.addEventListener('submit', function() {
-        document.querySelectorAll('.item-check').forEach(function(checkbox) {
-            if (!checkbox.checked) {
-                checkbox.disabled = true;
+    document.querySelectorAll('.qty-increase').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                input.value = parseInt(input.value) + 1;
+                input.dispatchEvent(new Event('input'));
             }
         });
     });
 
-    // Initial cart update
-    updateCart();
+    document.querySelectorAll('.qty-decrease').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                const currentValue = parseInt(input.value);
+                if (currentValue > 1) {
+                    input.value = currentValue - 1;
+                    input.dispatchEvent(new Event('input'));
+                }
+            }
+        });
+    });
 });
 </script>
 @endsection
