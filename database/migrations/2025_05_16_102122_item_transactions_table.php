@@ -24,8 +24,7 @@ return new class extends Migration
             $table->decimal('damaged_quantity', 12, 2)->default(0);
             $table->decimal('cost_price', 12, 4)->default(0.0000);
             $table->decimal('unit_price', 12, 4)->default(0.0000);
-            $table->string('source_id')->nullable(); // Add the column first
-            $table->string('source_id')->nullable()->change(); // Modify the column
+            $table->string('source_id')->nullable(); // Only define once as string
             $table->string('source_type', 50)->nullable();
             $table->foreignId('created_by_user_id')->constrained('users');
             $table->text('notes')->nullable();

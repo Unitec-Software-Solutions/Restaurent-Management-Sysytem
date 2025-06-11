@@ -8,30 +8,59 @@ use App\Models\Branch;
 use App\Models\ItemMaster;
 use App\Models\Employee;
 use App\Models\Organizations;
+use App\Models\ItemTransaction;
+use App\Models\GrnMaster;
+use App\Services\GTNService;
+use App\Http\Requests\GTNStoreRequest;
+use App\Http\Requests\GTNUpdateRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Exception;
 
 class GoodsTransferNoteController extends Controller
 {
+    protected $gtnService;
+
+    public function __construct(GTNService $gtnService)
+    {
+        $this->gtnService = $gtnService;
+    }
     public function index()
     {
-        $gtns = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy'])->latest()->paginate(15);
-        // Add: fetch organization for the current user
-        $organization = null;
-        if (\Illuminate\Support\Facades\Auth::check() && \Illuminate\Support\Facades\Auth::user()->organization_id) {
-            $organization = Organizations::find(auth()->guard()->user()->organization_id);
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
-        $branches = \App\Models\Branch::all();
-        $items = \App\Models\ItemMaster::all();
+
+        $orgId = $admin->organization_id;
+
+        $gtns = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy'])
+            ->where('organization_id', $orgId)
+            ->latest()
+            ->paginate(15);
+
+        $organization = Organizations::find($orgId);
+        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $items = ItemMaster::where('organization_id', $orgId)->active()->get();
+
         return view('admin.inventory.gtn.index', compact('gtns', 'organization', 'branches', 'items'));
     }
 
     public function create()
     {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $orgId = $admin->organization_id;
+
         // Generate next GTN number (simple example: GTN-YYYYMMDD-XXX)
-        $lastGtn = \App\Models\GoodsTransferNote::orderByDesc('gtn_id')->first();
+        $lastGtn = GoodsTransferNote::where('organization_id', $orgId)->orderByDesc('gtn_id')->first();
         $datePrefix = now()->format('Ymd');
         $nextSeq = 1;
         if ($lastGtn && str_starts_with($lastGtn->gtn_number, 'GTN-' . $datePrefix)) {
@@ -41,88 +70,19 @@ class GoodsTransferNoteController extends Controller
         $nextGtnNumber = 'GTN-' . $datePrefix . '-' . str_pad($nextSeq, 3, '0', STR_PAD_LEFT);
 
         return view('admin.inventory.gtn.create', [
-            'branches' => Branch::all(),
-            'items' => ItemMaster::all(),
-            'employees' => Employee::all(),
-            'organization' => Organizations::first(), // Adjust if multi-org
+            'branches' => Branch::where('organization_id', $orgId)->active()->get(),
+            'items' => ItemMaster::where('organization_id', $orgId)->active()->get(),
+            'employees' => Employee::where('organization_id', $orgId)->get(),
+            'organization' => Organizations::find($orgId),
             'nextGtnNumber' => $nextGtnNumber,
         ]);
     }
 
-    public function store(Request $request)
+    public function store(GTNStoreRequest $request)
     {
-        $request->validate([
-            'gtn_number' => 'required|unique:gtn_master',
-            'from_branch_id' => 'required',
-            'to_branch_id' => 'required|different:from_branch_id',
-            'transfer_date' => 'required|date',
-            'items.*.item_id' => 'required',
-            'items.*.transfer_quantity' => 'required|numeric|min:0.01',
-        ]);
-
         try {
-            DB::transaction(function () use ($request) {
-                $user = \Illuminate\Support\Facades\Auth::user();
-                if (!$user || !$user->organization_id) {
-                    abort(403, 'Unauthorized access - organization not set');
-                }
-                $organizationId = $user->organization_id;
-
-                // Find or create Employee record for the current user
-                $employee = \App\Models\Employee::where('email', $user->email)->first();
-                if (!$employee) {
-                    // Try to infer branch from from_branch_id, fallback to first branch of org
-                    $branchId = $request->from_branch_id;
-                    if (!$branchId) {
-                        $branchId = \App\Models\Branch::where('organization_id', $organizationId)->value('id');
-                    }
-                    $employee = \App\Models\Employee::create([
-                        'emp_id' => 'AUTO-' . strtoupper(uniqid()),
-                        'name' => $user->name ?? 'Auto Employee',
-                        'email' => $user->email,
-                        'phone' => $user->phone_number ?? 'N/A',
-                        'role' => 'manager',
-                        'branch_id' => $branchId,
-                        'organization_id' => $organizationId,
-                        'is_active' => true,
-                        'joined_date' => now(),
-                        'address' => '',
-                        'emergency_contact' => '',
-                    ]);
-                }
-
-                $gtn = GoodsTransferNote::create([
-                    'gtn_number' => $request->gtn_number,
-                    'from_branch_id' => $request->from_branch_id,
-                    'to_branch_id' => $request->to_branch_id,
-                    'created_by' => $employee->id, // Use Employee id
-                    'organization_id' => $organizationId,
-                    'transfer_date' => $request->transfer_date,
-                    'status' => 'Pending',
-                    'notes' => $request->notes,
-                ]);
-
-                foreach ($request->items as $item) {
-                    $itemModel = ItemMaster::findOrFail($item['item_id']);
-
-                    GoodsTransferItem::create([
-                        'gtn_id' => $gtn->gtn_id,
-                        'item_id' => $itemModel->id,
-                        'item_code' => $itemModel->item_code,
-                        'item_name' => $itemModel->name, // Use correct property
-                        'batch_no' => $item['batch_no'] ?? null,
-                        'expiry_date' => $item['expiry_date'] ?? null,
-                        'transfer_quantity' => $item['transfer_quantity'],
-                        'transfer_price' => $item['transfer_price'] ?? 0,
-                        'line_total' => ($item['transfer_quantity'] * ($item['transfer_price'] ?? 0)),
-                        'notes' => $item['notes'] ?? null,
-                    ]);
-                }
-
-                Log::info('GTN created', ['gtn_id' => $gtn->gtn_id, 'user_id' => $user->id]);
-            });
-
-            return redirect()->route('admin.gtn.index')->with('success', 'GTN Created');
+            $gtn = $this->gtnService->createGTN($request->validated());
+            return redirect()->route('admin.inventory.gtn.index')->with('success', 'GTN Created Successfully');
         } catch (Exception $e) {
             Log::error('GTN creation failed', [
                 'message' => $e->getMessage(),
@@ -136,67 +96,47 @@ class GoodsTransferNoteController extends Controller
 
     public function show($id)
     {
-        $gtn = GoodsTransferNote::with(['fromBranch', 'toBranch', 'items'])->findOrFail($id);
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $gtn = GoodsTransferNote::with(['fromBranch', 'toBranch', 'items'])
+            ->where('organization_id', $admin->organization_id)
+            ->findOrFail($id);
+
         return view('admin.inventory.gtn.show', compact('gtn'));
     }
 
     public function edit($id)
     {
-        $gtn = GoodsTransferNote::with('items')->findOrFail($id);
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $orgId = $admin->organization_id;
+
+        $gtn = GoodsTransferNote::with('items')
+            ->where('organization_id', $orgId)
+            ->findOrFail($id);
+
         return view('admin.inventory.gtn.edit', [
             'gtn' => $gtn,
-            'branches' => Branch::all(),
-            'items' => ItemMaster::all(),
-            'employees' => Employee::all(),
-            'organization' => Organizations::first() // Adjust if multi-org
+            'branches' => Branch::where('organization_id', $orgId)->active()->get(),
+            'items' => ItemMaster::where('organization_id', $orgId)->active()->get(),
+            'employees' => Employee::where('organization_id', $orgId)->get(),
+            'organization' => Organizations::find($orgId)
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(GTNUpdateRequest $request, $id)
     {
-        $request->validate([
-            'gtn_number' => 'required|unique:gtn_master,gtn_number,' . $id . ',gtn_id',
-            'from_branch_id' => 'required',
-            'to_branch_id' => 'required|different:from_branch_id',
-            'transfer_date' => 'required|date',
-            'items.*.item_id' => 'required',
-            'items.*.transfer_quantity' => 'required|numeric|min:0.01',
-        ]);
-
         try {
-            DB::transaction(function () use ($request, $id) {
-                $gtn = GoodsTransferNote::findOrFail($id);
-                $gtn->update([
-                    'gtn_number' => $request->gtn_number,
-                    'from_branch_id' => $request->from_branch_id,
-                    'to_branch_id' => $request->to_branch_id,
-                    'transfer_date' => $request->transfer_date,
-                    'status' => $request->status ?? $gtn->status,
-                    'notes' => $request->notes,
-                ]);
-
-                $gtn->items()->delete(); // Remove old items
-                foreach ($request->items as $item) {
-                    $itemModel = ItemMaster::findOrFail($item['item_id']);
-
-                    GoodsTransferItem::create([
-                        'gtn_id' => $gtn->gtn_id,
-                        'item_id' => $itemModel->id,
-                        'item_code' => $itemModel->item_code,
-                        'item_name' => $itemModel->name, // Use correct property
-                        'batch_no' => $item['batch_no'] ?? null,
-                        'expiry_date' => $item['expiry_date'] ?? null,
-                        'transfer_quantity' => $item['transfer_quantity'],
-                        'transfer_price' => $item['transfer_price'] ?? 0,
-                        'line_total' => ($item['transfer_quantity'] * ($item['transfer_price'] ?? 0)),
-                        'notes' => $item['notes'] ?? null,
-                    ]);
-                }
-
-                Log::info('GTN updated', ['gtn_id' => $gtn->gtn_id, 'user_id' => \Illuminate\Support\Facades\Auth::user()->id]);
-            });
-
-            return redirect()->route('admin.gtn.index')->with('success', 'GTN Updated');
+            $this->gtnService->updateGTN($id, $request->validated());
+            return redirect()->route('admin.inventory.gtn.index')->with('success', 'GTN Updated Successfully');
         } catch (Exception $e) {
             Log::error('GTN update failed', [
                 'message' => $e->getMessage(),
@@ -204,7 +144,220 @@ class GoodsTransferNoteController extends Controller
                 'input' => $request->all()
             ]);
 
-            return back()->withErrors('Failed to update GTN. Check logs for details.')->withInput();
+            return back()->withErrors('Failed to update GTN: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Remove the specified GTN from storage
+     */
+    public function destroy($id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        try {
+            DB::transaction(function () use ($id, $admin) {
+                $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
+                    ->findOrFail($id);
+
+                // Only allow deletion of pending GTNs
+                if ($gtn->status !== 'Pending') {
+                    throw new Exception('Only pending GTNs can be deleted.');
+                }
+
+                // Delete related items first
+                $gtn->items()->delete();
+
+                // Delete the GTN
+                $gtn->delete();
+
+                Log::info('GTN deleted', ['gtn_id' => $gtn->gtn_id, 'user_id' => $admin->id]);
+            });
+
+            return redirect()->route('admin.inventory.gtn.index')
+                ->with('success', 'GTN deleted successfully.');
+        } catch (Exception $e) {
+            Log::error('GTN deletion failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return back()->with('error', 'Failed to delete GTN: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Change GTN status and handle stock transactions
+     */
+    public function changeStatus(Request $request, $id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $request->validate([
+            'status' => 'required|in:Confirmed,Approved,Verified',
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $id, $admin) {
+                $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
+                    ->findOrFail($id);
+
+                if (!$this->gtnService->canChangeStatus($gtn, $request->status)) {
+                    throw new Exception('GTN status cannot be changed from current state.');
+                }
+
+                // Update GTN status
+                $gtn->update([
+                    'status' => $request->status,
+                    'approved_by' => $admin->id,
+                    'notes' => $request->notes ?? $gtn->notes
+                ]);
+
+                // Process stock transactions
+                $this->gtnService->processStockTransfer($gtn);
+
+                Log::info('GTN status changed', [
+                    'gtn_id' => $gtn->gtn_id,
+                    'new_status' => $request->status,
+                    'user_id' => $admin->id
+                ]);
+            });
+
+            return redirect()->route('admin.inventory.gtn.show', $id)
+                ->with('success', 'GTN status updated successfully and stock transfer processed.');
+        } catch (Exception $e) {
+            Log::error('GTN status change failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return back()->with('error', 'Failed to update GTN status: ' . $e->getMessage());
+        }
+    }    /**
+     * Get items with stock for a specific branch (AJAX endpoint)
+     */
+    public function getItemsWithStock(Request $request)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $branchId = $request->get('branch_id');
+
+        if (!$branchId) {
+            return response()->json(['error' => 'Branch ID is required'], 400);
+        }
+
+        // Verify branch belongs to user's organization
+        $branch = Branch::where('id', $branchId)
+            ->where('organization_id', $admin->organization_id)
+            ->first();
+
+        if (!$branch) {
+            return response()->json(['error' => 'Invalid branch'], 400);
+        }
+
+        try {
+            $items = $this->gtnService->getItemsWithStock($branchId, $admin->organization_id);
+            return response()->json($items);
+        } catch (Exception $e) {
+            Log::error('Error fetching items with stock', [
+                'branch_id' => $branchId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json(['error' => 'Failed to fetch items'], 500);
+        }
+    }
+
+    /**
+     * Search items with stock for autocomplete (AJAX endpoint)
+     */
+    public function searchItems(Request $request)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'branch_id' => 'required|exists:branches,id',
+            'search' => 'nullable|string|max:100'
+        ]);
+
+        $branchId = $request->get('branch_id');
+        $search = $request->get('search', '');
+
+        // Verify branch belongs to user's organization
+        $branch = Branch::where('id', $branchId)
+            ->where('organization_id', $admin->organization_id)
+            ->first();
+
+        if (!$branch) {
+            return response()->json(['error' => 'Invalid branch'], 400);
+        }
+
+        try {
+            $items = $this->gtnService->searchItemsWithStock($branchId, $admin->organization_id, $search);
+            return response()->json($items);
+        } catch (Exception $e) {
+            Log::error('Error searching items with stock', [
+                'branch_id' => $branchId,
+                'search' => $search,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json(['error' => 'Failed to search items'], 500);
+        }
+    }
+
+    /**
+     * Get current stock for specific item and branch (AJAX endpoint)
+     */
+    public function getItemStock(Request $request)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'item_id' => 'required|exists:item_master,id',
+            'branch_id' => 'required|exists:branches,id'
+        ]);
+
+        try {
+            $stock = $this->gtnService->getItemStock(
+                $request->get('item_id'),
+                $request->get('branch_id'),
+                $admin->organization_id
+            );
+
+            return response()->json([
+                'stock_on_hand' => $stock,
+                'max_transfer' => $stock * 1.1
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error fetching item stock', [
+                'item_id' => $request->get('item_id'),
+                'branch_id' => $request->get('branch_id'),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json(['error' => 'Failed to fetch stock'], 500);
         }
     }
 }
