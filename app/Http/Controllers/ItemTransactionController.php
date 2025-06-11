@@ -182,7 +182,7 @@ class ItemTransactionController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $validated['created_by_user_id'] = auth()->id();
+        $validated['created_by_user_id'] = optional(Auth::user())->id;
         $validated['organization_id'] = $orgId;
         $validated['is_active'] = true;
 
@@ -234,7 +234,7 @@ class ItemTransactionController extends Controller
                 'inventory_item_id' => $item_id,
                 'branch_id' => $branch_id,
                 'organization_id' => $orgId,
-                'created_by_user_id' => auth()->id(),
+                'created_by_user_id' => optional(Auth::user())->id,
                 'is_active' => true
             ]);
         }
@@ -274,7 +274,7 @@ class ItemTransactionController extends Controller
 
         $validated['inventory_item_id'] = $item_id;
         $validated['branch_id'] = $branch_id;
-        $validated['created_by_user_id'] = auth()->id();
+        $validated['created_by_user_id'] = optional(Auth::user())->id;
         $validated['organization_id'] = $orgId;
         $validated['is_active'] = true;
 
