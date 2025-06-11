@@ -3,7 +3,12 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-
+use Illuminate\Support\Str;
+use App\Models\Organization;
+use App\Observers\OrganizationObserver;
+use Illuminate\Support\Facades\Gate;
+use App\Policies\RolePolicy;
+use App\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +25,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Organization::creating(function ($org) {
+            $org->activation_key = Str::random(40);
+        });
+
+        // Register observer
+        Organization::observe(OrganizationObserver::class);
+        
+        // Register policy
+        Gate::policy(Role::class, RolePolicy::class);
     }
 }
