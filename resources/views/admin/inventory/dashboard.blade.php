@@ -15,7 +15,7 @@
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                 ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
                 ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Goods Transfer Notes', 'link' => route('admin.gtn.index')],
+                ['name' => 'Goods Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                 ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
                 ]" active="Dashboard" />
 
