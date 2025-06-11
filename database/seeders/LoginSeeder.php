@@ -13,6 +13,20 @@ class LoginSeeder extends Seeder
      */
     public function run(): void
     {
+        $organization = \App\Models\Organizations::first();
+
+        if (!$organization) {
+            $this->command->error('❌ No organizations found. Ensure organizations are seeded before running LoginSeeder.');
+            return;
+        }
+
+        $role = \App\Models\Role::first();
+
+        if (!$role) {
+            $this->command->error('❌ No roles found. Ensure roles are seeded before running LoginSeeder.');
+            return;
+        }
+
         // Admin user  admin@restaurant.com / admin123
         User::firstOrCreate(
             ['email' => 'admin@restaurant.com'],
@@ -24,6 +38,8 @@ class LoginSeeder extends Seeder
                 'is_registered' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),
+                'organization_id' => $organization->id,
+                'role_id' => $role->id,
             ]
         );
 
@@ -38,6 +54,8 @@ class LoginSeeder extends Seeder
                 'is_registered' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),
+                'organization_id' => $organization->id,
+                'role_id' => $role->id,
             ]
         );
 
@@ -52,6 +70,8 @@ class LoginSeeder extends Seeder
                 'is_registered' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),
+                'organization_id' => $organization->id,
+                'role_id' => $role->id,
             ]
         );
 
@@ -66,6 +86,8 @@ class LoginSeeder extends Seeder
                 'is_registered' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),
+                'organization_id' => $organization->id,
+                'role_id' => $role->id,
             ]
         );
 
@@ -80,6 +102,8 @@ class LoginSeeder extends Seeder
                 'is_registered' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),
+                'organization_id' => $organization->id,
+                'role_id' => $role->id,
             ]
         );
 
@@ -94,6 +118,8 @@ class LoginSeeder extends Seeder
                 'is_registered' => true,
                 'is_active' => true,
                 'email_verified_at' => now(),
+                'organization_id' => $organization->id,
+                'role_id' => $role->id,
             ]
         );
 
