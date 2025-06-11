@@ -13,7 +13,7 @@
                     All Orders
                 @endif
             </h1>
-            <a href="{{ route('orders.create', ['reservation_id' => $reservationId]) }}" 
+            <a href="{{ route('orders.create', ['reservation' => $reservationId]) }}" 
                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
                 Add New Order
             </a>
@@ -60,7 +60,14 @@
             </div>
         </div>
         @endif
-    </div>
+
+        {{-- Return to Dashboard Button --}}
+        <div class="mb-4 flex justify-end">
+            <a href="/customer-dashboard"
+               class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded transition">
+                <i class="fas fa-home mr-2"></i> Return to Dashboard
+            </a>
+        </div>
 
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
         <table class="w-full">
