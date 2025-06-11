@@ -10,10 +10,10 @@
             </a>
             <div class="flex space-x-2">
                 @if($grn->status === 'Pending')
-                    <a href="{{ route('admin.grn.edit', $grn->grn_id) }}"
+                    {{-- <a href="{{ route('admin.grn.edit', $grn->grn_id) }}"
                        class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-edit mr-2"></i> Edit GRN
-                    </a>
+                    </a> --}}
                     <form action="{{ route('admin.grn.verify', $grn->grn_id) }}" method="POST" class="inline">
                         @csrf
                         <input type="hidden" name="status" value="Verified">
@@ -50,7 +50,7 @@
                         @if ($grn->isPaymentPaid())
                             <x-partials.badges.status-badge status="success" text="Fully Paid" />
                         @elseif($grn->isPaymentPartial())
-                            <x-partials.badges.status-badge status="info" text="Partially Paid" />
+                            <x-partials.badges.status="info" text="Partially Paid" />
                         @else
                             <x-partials.badges.status-badge status="warning" text="Pending Payment" />
                         @endif
