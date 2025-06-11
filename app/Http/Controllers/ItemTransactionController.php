@@ -162,13 +162,13 @@ class ItemTransactionController extends Controller
         return response()->json($stockData);
     }
 
-    public function create()
-    {
-        $orgId = $this->getOrganizationId();
-        $items = ItemMaster::where('organization_id', $orgId)->get();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
-        return view('admin.inventory.stock.create', compact('items', 'branches'));
-    }
+    // public function create()
+    // {
+    //     $orgId = $this->getOrganizationId();
+    //     $items = ItemMaster::where('organization_id', $orgId)->get();
+    //     $branches = Branch::where('organization_id', $orgId)->active()->get();
+    //     return view('admin.inventory.stock.create', compact('items', 'branches'));
+    // }
 
     public function store(Request $request)
     {
@@ -177,7 +177,7 @@ class ItemTransactionController extends Controller
         $validated = $request->validate([
             'inventory_item_id' => 'required|exists:item_master,id,organization_id,' . $orgId,
             'branch_id' => 'required|exists:branches,id,organization_id,' . $orgId,
-            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out',
+            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out,grn_stock_added,gtn_stock_out',
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
@@ -267,7 +267,7 @@ class ItemTransactionController extends Controller
             ->firstOrFail();
 
         $validated = $request->validate([
-            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out',
+            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out,grn_stock_added,gtn_stock_out',
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
