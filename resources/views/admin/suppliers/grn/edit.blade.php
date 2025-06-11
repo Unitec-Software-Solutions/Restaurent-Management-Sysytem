@@ -138,7 +138,7 @@
                                                                         data-code="{{ $itemOption->item_code }}"
                                                                         data-price="{{ $itemOption->buying_price }}"
                                                                         {{ $item->item_id == $itemOption->id ? 'selected' : '' }}>
-                                                                        {{ $itemOption->name }} ({{ $itemOption->item_code }})
+                                                                        {{ $itemOption->item_code }} - {{ $itemOption->name }}
                                                                     </option>
                                                                 @endforeach
                                                             </select>
@@ -249,8 +249,9 @@
                                         @foreach ($items as $itemOption)
                                             <option value="{{ $itemOption->id }}"
                                                 data-code="{{ $itemOption->item_code }}"
-                                                data-price="{{ $itemOption->buying_price }}">
-                                                {{ $itemOption->name }} ({{ $itemOption->item_code }})
+                                                data-price="{{ $itemOption->buying_price }}"
+                                                {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}>
+                                                {{ $itemOption->item_code }} - {{ $itemOption->name }}
                                             </option>
                                         @endforeach
                                     </select>
