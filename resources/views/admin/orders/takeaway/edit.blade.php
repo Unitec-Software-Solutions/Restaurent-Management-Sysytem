@@ -81,31 +81,38 @@
                             <h4 class="section-title border-bottom pb-2 mb-3">Menu Items</h4>
                             
                             <div class="menu-items-container" style="max-height: 400px; overflow-y: auto;">
-                                @foreach($items as $item)
+                                @foreach($menuItems as $item)
                                 @php
-                                    $orderItem = $order->items->firstWhere('item_id', $item->id);
+                                    $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
                                 @endphp
-                                <div class="card mb-2 menu-item-card">
-                                    <div class="card-body d-flex align-items-center">
-                                        <div class="form-check me-3">
-                                            <input class="form-check-input item-check" type="checkbox" 
-                                                name="items[{{ $item->id }}][item_id]" 
-                                                value="{{ $item->id }}" 
-                                                id="item_{{ $item->id }}"
-                                                {{ $orderItem ? 'checked' : '' }}>
-                                        </div>
-                                        <label class="form-check-label flex-grow-1" for="item_{{ $item->id }}">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="fw-medium">{{ $item->name }}</span>
-                                                <span class="text-primary">LKR {{ number_format($item->selling_price, 2) }}</span>
-                                            </div>
-                                        </label>
-                                        <input type="number" name="items[{{ $item->id }}][quantity]" 
-                                            min="1" 
-                                            value="{{ $orderItem ? $orderItem->quantity : 1 }}" 
-                                            class="form-control quantity-input ms-2" 
-                                            style="width: 70px;" 
-                                            {{ $orderItem ? '' : 'disabled' }}>
+                                <div class="flex items-center border-b py-4">
+                                    <input type="checkbox"
+                                        class="item-check mr-4"
+                                        data-item-id="{{ $item->id }}"
+                                        id="item_{{ $item->id }}"
+                                        name="items[{{ $item->id }}][item_id]"
+                                        value="{{ $item->id }}"
+                                        @if($existing) checked @endif>
+                                    <label for="item_{{ $item->id }}" class="flex-1">
+                                        <span class="font-semibold">{{ $item->name }}</span>
+                                        <span class="ml-2 text-gray-500">LKR {{ number_format($item->selling_price, 2) }}</span>
+                                    </label>
+                                    <div class="flex items-center ml-4">
+                                        <button type="button"
+                                            class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                            data-item-id="{{ $item->id }}"
+                                            @if(!$existing) disabled @endif>-</button>
+                                        <input type="number"
+                                            min="1"
+                                            value="{{ $existing ? $existing->quantity : 1 }}"
+                                            class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
+                                            data-item-id="{{ $item->id }}"
+                                            @if(!$existing) disabled @endif
+                                            @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
+                                        <button type="button"
+                                            class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                            data-item-id="{{ $item->id }}"
+                                            @if(!$existing) disabled @endif>+</button>
                                     </div>
                                 </div>
                                 @endforeach
@@ -191,6 +198,60 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please enter a valid phone number');
             phoneInput.focus();
         }
+    });
+
+    document.querySelectorAll('.item-check').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const itemId = this.getAttribute('data-item-id');
+            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
+            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
+            if (this.checked) {
+                qtyInput.disabled = false;
+                plusBtn.disabled = false;
+                minusBtn.disabled = false;
+                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+            } else {
+                qtyInput.disabled = true;
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
+                qtyInput.removeAttribute('name');
+                qtyInput.value = 1;
+            }
+        });
+    });
+
+    document.querySelectorAll('.item-qty').forEach(function(input) {
+        input.addEventListener('input', function() {
+            if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
+                this.value = 1;
+            }
+        });
+    });
+
+    document.querySelectorAll('.qty-increase').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                input.value = parseInt(input.value) + 1;
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+
+    document.querySelectorAll('.qty-decrease').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                const currentValue = parseInt(input.value);
+                if (currentValue > 1) {
+                    input.value = currentValue - 1;
+                    input.dispatchEvent(new Event('input'));
+                }
+            }
+        });
     });
 });
 </script>
