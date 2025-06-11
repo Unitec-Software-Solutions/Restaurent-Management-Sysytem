@@ -65,6 +65,7 @@ class BranchSeeder extends Seeder
                         'reservation_fee' => 10.00,
                         'cancellation_fee' => 5.00,
                         'is_active' => true,
+                        'activation_key' => \Illuminate\Support\Str::random(40),
                     ]
                 );
             }
