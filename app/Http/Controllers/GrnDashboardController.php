@@ -294,7 +294,7 @@ class GrnDashboardController extends Controller
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.item_code' => 'required|exists:item_master,item_code',
+            'items.*.item_code' => 'nullable|exists:item_master,item_code',
             'items.*.batch_no' => 'nullable|string|max:50',
             'items.*.ordered_quantity' => 'required|numeric|min:0',
             'items.*.received_quantity' => 'required|numeric|min:0',
