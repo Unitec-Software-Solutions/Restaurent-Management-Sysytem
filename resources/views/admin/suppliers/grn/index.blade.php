@@ -175,7 +175,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($grns as $grn)
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{{ route('admin.grn.show', $grn->grn_id) }}'">
                                 <td class="px-6 py-4">
                                     <div class="font-medium text-indigo-600">{{ $grn->grn_number }}</div>
                                     <div class="text-sm text-gray-500">{{ $grn->received_date->format('d M Y') }}</div>
@@ -229,12 +229,12 @@
                                             class="text-blue-600 hover:text-blue-800" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
-                                        @if ($grn->status == 'Pending')
+                                        {{-- @if ($grn->status == 'Pending')
                                             <a href="{{ route('admin.grn.edit', $grn->grn_id) }}"
                                                 class="text-gray-600 hover:text-gray-800" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                        @endif
+                                        @endif --}}
                                     </div>
                                 </td>
                             </tr>
