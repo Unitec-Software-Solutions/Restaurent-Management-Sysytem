@@ -26,7 +26,7 @@ return new class extends Migration
 
     public function down()
     {
-        Schema::tableIfExists('payment_allocations');
+        Schema::dropIfExists('payment_allocations');
     }
 }
 ?>
