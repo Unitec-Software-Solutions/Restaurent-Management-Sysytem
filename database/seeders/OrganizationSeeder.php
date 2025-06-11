@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Organizations;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class OrganizationSeeder extends Seeder
 {
@@ -16,6 +18,7 @@ class OrganizationSeeder extends Seeder
                 'registration_number' => 'REGSL001',
                 'description' => 'Authentic Sri Lankan cuisine with a modern twist',
                 'email' => 'info@spicehouse.lk',
+                'password' => Hash::make('defaultpassword'), 
                 'phone' => '+94 11 234 5678',
                 'alternative_phone' => '+94 77 123 4567',
                 'address' => '123 Galle Road, Colombo 03, Sri Lanka',
@@ -33,6 +36,7 @@ class OrganizationSeeder extends Seeder
                 'business_type' => 'restaurant',
                 'status' => 'active',
                 'is_active' => true,
+                'activation_key' => Str::random(40),
             ],
             [
                 'name' => 'Hill Country Kitchens',
@@ -40,6 +44,7 @@ class OrganizationSeeder extends Seeder
                 'registration_number' => 'REGSL002',
                 'description' => 'Traditional meals from Sri Lanka’s hill country',
                 'email' => 'hello@kandykitchen.lk',
+                'password' => Hash::make('defaultpassword'), 
                 'phone' => '+94 81 222 3344',
                 'alternative_phone' => '+94 76 987 6543',
                 'address' => '45 Peradeniya Road, Kandy, Sri Lanka',
@@ -57,6 +62,7 @@ class OrganizationSeeder extends Seeder
                 'business_type' => 'restaurant',
                 'status' => 'active',
                 'is_active' => true,
+                'activation_key' => Str::random(40),
             ],
             [
                 'name' => 'Southern Coast Delights',
@@ -64,6 +70,7 @@ class OrganizationSeeder extends Seeder
                 'registration_number' => 'REGSL003',
                 'description' => 'Fresh seafood and coastal delicacies',
                 'email' => 'contact@gallebites.lk',
+                'password' => Hash::make('defaultpassword'),
                 'phone' => '+94 91 223 5566',
                 'alternative_phone' => '+94 71 345 6789',
                 'address' => '7 Beach Road, Galle, Sri Lanka',
@@ -81,6 +88,7 @@ class OrganizationSeeder extends Seeder
                 'business_type' => 'restaurant',
                 'status' => 'active',
                 'is_active' => true,
+                'activation_key' => Str::random(40),
             ],
             [
                 'name' => 'Negombo Curry House',
@@ -88,6 +96,7 @@ class OrganizationSeeder extends Seeder
                 'registration_number' => 'REGSL004',
                 'description' => 'Best local curries and rice dishes by the sea',
                 'email' => 'orders@negombocurry.lk',
+                'password' => Hash::make('defaultpassword'), 
                 'phone' => '+94 31 225 8899',
                 'alternative_phone' => '+94 70 112 2334',
                 'address' => '56 Lewis Place, Negombo, Sri Lanka',
@@ -105,6 +114,7 @@ class OrganizationSeeder extends Seeder
                 'business_type' => 'restaurant',
                 'status' => 'active',
                 'is_active' => true,
+                'activation_key' => Str::random(40),
             ],
             [
                 'name' => 'Airport Express Meals',
@@ -112,6 +122,7 @@ class OrganizationSeeder extends Seeder
                 'registration_number' => 'REGSL005',
                 'description' => 'Quick Sri Lankan meals for travelers',
                 'email' => 'support@expressmeals.lk',
+                'password' => Hash::make('defaultpassword'), 
                 'phone' => '+94 11 225 3344',
                 'alternative_phone' => '+94 77 888 9990',
                 'address' => 'Bandaranaike International Airport, Katunayake, Sri Lanka',
@@ -129,6 +140,7 @@ class OrganizationSeeder extends Seeder
                 'business_type' => 'restaurant',
                 'status' => 'active',
                 'is_active' => true,
+                'activation_key' => Str::random(40),
             ]
         ];
 
