@@ -265,13 +265,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 });
 
-// Test Email Route
-Route::get('/test-email', function() {
-    $reservation = \App\Models\Reservation::first();
-    Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
-    return 'Email sent!';
+// // Test Email Route
+// Route::get('/test-email', function() {
+//     $reservation = \App\Models\Reservation::first();
+//     Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
+//     return 'Email sent!';
 
-});
+// });
 
 // Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
 Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
@@ -287,3 +287,4 @@ Route::put('admin/orders/reservations/{reservation}/orders/{order}', [AdminOrder
 // Additional Order Routes
 Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
 Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
