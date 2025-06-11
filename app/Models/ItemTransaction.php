@@ -16,7 +16,7 @@ class ItemTransaction extends Model
         'transaction_type',
         'incoming_branch_id',
         'receiver_user_id',
-        'quantity',
+        'quantity', // Can be positive (stock in) or negative (stock out)
         'received_quantity',
         'damaged_quantity',
         'cost_price',
@@ -35,7 +35,7 @@ class ItemTransaction extends Model
         'cost_price' => 'decimal:4',
         'unit_price' => 'decimal:4',
         'is_active' => 'boolean',
-        'source_id' => 'string',
+        'source_id' => 'string', // Ensure source_id is always treated as a string
     ];
 
     /*
