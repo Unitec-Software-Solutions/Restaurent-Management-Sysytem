@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateOrganizationsTable extends Migration
 {
     public function up()
     {
@@ -20,16 +20,14 @@ return new class extends Migration
             $table->string('registration_number')->unique()->nullable();
             $table->string('phone')->nullable();
             $table->string('alternative_phone')->nullable();
+            $table->string('activation_key')->unique();
+            $table->boolean('is_active')->default(false);
+            $table->timestamp('activated_at')->nullable();
             $table->json('business_hours')->nullable();
             $table->enum('business_type', ['restaurant', 'cafe', 'bar', 'food_truck', 'catering', 'other'])->default('restaurant');
             $table->enum('status', ['pending', 'active', 'suspended', 'inactive'])->default('pending');
-            $table->boolean('is_active')->default(true);
             $table->timestamps();
-
-            $table->unique('name');
-
             $table->softDeletes();
-
         });
     }
 
@@ -37,4 +35,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('organizations');
     }
-}; 
+}
