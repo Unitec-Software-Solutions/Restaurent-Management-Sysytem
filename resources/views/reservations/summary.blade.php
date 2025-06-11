@@ -74,18 +74,18 @@
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="/customer-dashboard" class="btn-primary text-white font-semibold py-3 px-6 rounded-lg flex-1 sm:flex-none text-center">
                 <i class="fas fa-home mr-2"></i> Return to Dashboard
-
-
             </a>
             <a href="{{ route('reservations.payment', $reservation) }}" class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                 <i class="fas fa-credit-card mr-2"></i> Payment
             </a>
+            <a href="{{ route('orders.create', ['reservation' => $reservation->id]) }}"
+               class="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <i class="fas fa-utensils mr-2"></i> Place Order for This Reservation
+            </a>
             <button id="printBtn" class="bg-white border border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg flex items-center justify-center transition-colors duration-200 hover:bg-gray-50 hover:border-blue-300 hover:text-blue-600">
                 <i class="fas fa-print mr-2"></i> Print
             </button>
-
-            
-
+        </div>
 
         <div class="flex justify-end mt-4">
             <button id="cancelBtn" class="text-red-600 hover:text-red-800 font-medium flex items-center transition-colors duration-200">
