@@ -9,7 +9,7 @@
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                 ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
                 ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Goods Transfer Notes', 'link' => route('admin.gtn.index')],
+                ['name' => 'Goods Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                 ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
         ]" active="Stocks Management" />
 
@@ -94,10 +94,10 @@
                     <p class="text-sm text-gray-500">Moniter and Manage Your stock levels</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    <a href="{{ route('admin.inventory.stock.create') }}"
+                    {{-- <a href="{{ route('admin.inventory.stock.create') }}"
                         class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
                         <i class="fas fa-plus mr-2"></i> Add New Stock
-                    </a>
+                    </a> --}}
                     <a href="{{ route('admin.inventory.stock.transactions.index') }}"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-history mr-2"></i> View History
