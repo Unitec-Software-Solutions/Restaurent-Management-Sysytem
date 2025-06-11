@@ -125,7 +125,7 @@
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
                                     <th class="px-4 py-3">Item *</th>
-                                    <th class="px-4 py-3">Batch No</th>
+                                    {{-- <th class="px-4 py-3">Batch No</th> --}}
                                     <th class="px-4 py-3">Received Qty *</th>
                                     <th class="px-4 py-3">Free Qty</th>
                                     <th class="px-4 py-3">Price *</th>
@@ -141,7 +141,7 @@
                                         old('items', [
                                             [
                                                 'item_id' => '',
-                                                'batch_no' => '',
+                                                // 'batch_no' => '',
                                                 // 'ordered_quantity' => '',
                                                 'received_quantity' => '',
                                                 'buying_price' => '',
@@ -180,16 +180,17 @@
                                                     <option value="{{ $itemOption->id }}"
                                                         {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}
                                                         data-price="{{ $itemOption->buying_price }}">
-                                                        {{ $itemOption->name }} ({{ $itemOption->item_code }})
+                                                        {{ $itemOption->item_code }} - {{ $itemOption->name }}
                                                     </option>
                                                 @endforeach
                                             </select>
+                                            <input type="hidden" name="items[{{ $index }}][item_code]" value="{{ $item['item_code'] ?? '' }}">
                                         </td>
-                                        <td class="px-4 py-3">
+                                        {{-- <td class="px-4 py-3">
                                             <input type="text" name="items[{{ $index }}][batch_no]"
                                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no"
                                                 value="{{ $item['batch_no'] }}">
-                                        </td>
+                                        </td> --}}
                                         <td class="px-4 py-3">
                                             <input type="number" name="items[{{ $index }}][received_quantity]"
                                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
@@ -400,11 +401,9 @@
                             </option>
                         @endforeach
                     </select>
+                    <input type="hidden" name="items[${itemCount}][item_code]" value="">
                 </td>
-                <td class="px-4 py-3">
-                    <input type="text" name="items[${itemCount}][batch_no]"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no">
-                </td>
+                
                 <td class="px-4 py-3">
                     <input type="number" name="items[${itemCount}][received_quantity]"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
