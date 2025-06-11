@@ -150,7 +150,7 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch</th>
+                            {{-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch</th> --}}
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
@@ -163,9 +163,9 @@
                                     <div class="font-medium">{{ $item->item->name ?? $item->item_code }}</div>
                                     <div class="text-sm text-gray-500">{{ $item->item_code }}</div>
                                 </td>
-                                <td class="px-6 py-4">
+                                {{-- <td class="px-6 py-4">
                                     {{ $item->batch_no ?? 'N/A' }}
-                                </td>
+                                </td> --}}
                                 <td class="px-6 py-4">
                                     {{ number_format($item->quantity, 2) }}
                                 </td>
