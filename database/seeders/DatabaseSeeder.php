@@ -17,19 +17,19 @@ class DatabaseSeeder extends Seeder
         DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
 
         $this->call([
-            OrganizationSeeder::class,
-            BranchSeeder::class,
-            TableSeeder::class,
-            LoginSeeder::class,
-            SupplierSeeder::class,
-            ItemCategorySeeder::class,
-            ItemMasterSeeder::class,
+            // OrganizationSeeder::class,
+            // BranchSeeder::class,
+            // TableSeeder::class,
+            // LoginSeeder::class,
+            // SupplierSeeder::class,
+            // ItemCategorySeeder::class,
+            // ItemMasterSeeder::class,
             AdminSeeder::class,
-            ReservationSeeder::class,
+            // ReservationSeeder::class,
             // PurchaseOrderSeeder::class,
             // GRNSeeder::class,
             // SupplierPaymentSeeder::class,
-            ItemTransactionSeeder::class,
+            // ItemTransactionSeeder::class,
             //EmployeeSeeder::class,
         ]);
     }
