@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
             // GRNSeeder::class,
             // SupplierPaymentSeeder::class,
             ItemTransactionSeeder::class,
-            //EmployeeSeeder::class,
+            EmployeeSeeder::class,
         ]);
     }
 }
