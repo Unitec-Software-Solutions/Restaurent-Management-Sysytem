@@ -146,7 +146,7 @@
                                                 @foreach ($items as $itemOption)
                                                     <option value="{{ $itemOption->id }}"
                                                         {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}>
-                                                        {{ $itemOption->name }}
+                                                        {{ $itemOption->item_code }} - {{ $itemOption->name }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -258,12 +258,10 @@
             const row = this.closest('tr');
             const itemId = this.value;
             const priceInput = row.querySelector('.item-price');
-            
             if (itemId && itemsData[itemId]) {
                 priceInput.value = itemsData[itemId].buying_price;
                 // Trigger the input event to recalculate the row total
-                const event = new Event('input', { bubbles: true });
-                priceInput.dispatchEvent(event);
+                priceInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
 
@@ -282,7 +280,7 @@
                     <select name="items[${itemCount}][item_id]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select" required>
                         <option value="">Select Item</option>
                         @foreach ($items as $item)
-                            <option value="{{ $item->id }}">{{ $item->name }}</option>
+                            <option value="{{ $item->id }}">{{ $item->item_code }} - {{ $item->name }}</option>
                         @endforeach
                     </select>
                 </td>
@@ -303,23 +301,17 @@
                     </button>
                 </td>
             `;
-
             itemsContainer.appendChild(newRow);
-            
+
             // Add event listeners to the new row
             const select = newRow.querySelector('.item-select');
             const quantityInput = newRow.querySelector('.item-quantity');
             const priceInput = newRow.querySelector('.item-price');
             const removeBtn = newRow.querySelector('.remove-item-btn');
 
-            // Add item change handler
             select.addEventListener('change', handleItemChange);
-            
-            // Add calculation handlers
             quantityInput.addEventListener('input', calculateRowTotal);
             priceInput.addEventListener('input', calculateRowTotal);
-            
-            // Add remove button handler
             removeBtn.addEventListener('click', function() {
                 newRow.remove();
                 updateGrandTotal();
@@ -333,9 +325,7 @@
             const row = this.closest('tr');
             const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
             const price = parseFloat(row.querySelector('.item-price').value) || 0;
-            const total = quantity * price;
-
-            row.querySelector('.item-total').textContent = total.toFixed(2);
+            row.querySelector('.item-total').textContent = (quantity * price).toFixed(2);
             updateGrandTotal();
         }
 
@@ -347,7 +337,6 @@
                 const totalValue = parseFloat(totalText) || 0;
                 grandTotal += totalValue;
             });
-
             grandTotalEl.textContent = grandTotal.toFixed(2);
         }
 
