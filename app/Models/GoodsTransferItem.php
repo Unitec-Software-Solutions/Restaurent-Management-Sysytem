@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class GoodsTransferItem extends Model
 {
+    use HasFactory;
+
     protected $table = 'gtn_items';
     protected $primaryKey = 'gtn_item_id';
 
