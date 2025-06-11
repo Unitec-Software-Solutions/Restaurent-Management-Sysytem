@@ -164,7 +164,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Stock Management
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
-                Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
+               // Route::get('/create', [ItemTransactionController::class, 'create'])->name('create'); removed admin.inventory.stock.create route
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
                 Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
                 Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
@@ -179,6 +179,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Categories
             Route::resource('categories', ItemCategoryController::class);
+
+            // GTN (Goods Transfer Note) Management
+            Route::prefix('gtn')->name('gtn.')->group(function () {
+                // AJAX endpoints must come before parameterized routes
+                Route::get('/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->name('items-with-stock');
+
+                // Standard CRUD routes
+                Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
+                Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
+                Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
+                Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('show');
+                Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->whereNumber('gtn')->name('edit');
+                Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->whereNumber('gtn')->name('update');
+                Route::delete('/{gtn}', [GoodsTransferNoteController::class, 'destroy'])->whereNumber('gtn')->name('destroy');
+                route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('print');
+
+                // Status management
+                Route::post('/{gtn}/change-status', [GoodsTransferNoteController::class, 'changeStatus'])->whereNumber('gtn')->name('change-status');
+            });
         });
 
         // Suppliers Management
@@ -215,16 +234,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->name('verify');
             Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
-        });
-
-        // GTN (Goods Transfer Notes)
-        Route::prefix('gtn')->name('gtn.')->group(function () {
-            Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
-            Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
-            Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
-            Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->name('show');
-            Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->name('edit');
-            Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->name('update');
         });
 
         // Supplier Payments ( temporarily moved out from suppliers section due to conflict with supplier routes )
