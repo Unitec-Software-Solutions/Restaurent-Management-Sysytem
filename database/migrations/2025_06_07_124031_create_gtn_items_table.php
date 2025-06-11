@@ -17,7 +17,7 @@ return new class extends Migration
 
             // Item Details
             $table->string('item_code')->index();
-            $table->string('item_name');
+            $table->string('item_name'); // Copy of ItemMaster::name at transfer time
             $table->string('batch_no')->nullable();
             $table->date('expiry_date')->nullable();
 
