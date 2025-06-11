@@ -294,6 +294,7 @@ class GrnDashboardController extends Controller
             'notes' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_code' => 'required|exists:item_master,item_code',
             'items.*.batch_no' => 'nullable|string|max:50',
             'items.*.ordered_quantity' => 'required|numeric|min:0',
             'items.*.received_quantity' => 'required|numeric|min:0',
@@ -439,7 +440,7 @@ class GrnDashboardController extends Controller
                             'organization_id' => $grn->organization_id,
                             'branch_id' => $grn->branch_id,
                             'inventory_item_id' => $grnItem->item_id,
-                            'transaction_type' => 'grn',
+                            'transaction_type' => 'stock_in', // fixed transaction type for stock in
                             'incoming_branch_id' => $grn->branch_id,
                             'receiver_user_id' => $grn->received_by_user_id,
                             'quantity' => $qty,
