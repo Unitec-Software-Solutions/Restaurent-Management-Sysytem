@@ -99,15 +99,27 @@
                 </h3>
 
                 <x-partials.detail-item label="Initial Quantity">
-                    {{ number_format($transaction->quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                    @php
+                        $qty = $transaction->quantity;
+                        $sign = $qty > 0 ? '+' : ($qty < 0 ? '-' : '');
+                    @endphp
+                    {{ $sign }}{{ number_format(abs($qty), 2) }} {{ $transaction->item->unit_of_measurement }}
                 </x-partials.detail-item>
 
                 <x-partials.detail-item label="Received Quantity">
-                    {{ number_format($transaction->received_quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                    @php
+                        $recv = $transaction->received_quantity;
+                        $recvSign = $recv > 0 ? '+' : ($recv < 0 ? '-' : '');
+                    @endphp
+                    {{ $recvSign }}{{ number_format(abs($recv), 2) }} {{ $transaction->item->unit_of_measurement }}
                 </x-partials.detail-item>
 
                 <x-partials.detail-item label="Damaged Quantity">
-                    {{ number_format($transaction->damaged_quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                    @php
+                        $dam = $transaction->damaged_quantity;
+                        $damSign = $dam > 0 ? '+' : ($dam < 0 ? '-' : '');
+                    @endphp
+                    {{ $damSign }}{{ number_format(abs($dam), 2) }} {{ $transaction->item->unit_of_measurement }}
                 </x-partials.detail-item>
             </div>
 
