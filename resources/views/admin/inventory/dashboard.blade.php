@@ -12,10 +12,11 @@
         <div class="  justify-between items-center mb-4">
             <div class="rounded-lg ">
                 <x-nav-buttons :items="[
-                    ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-                    ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
-                    ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-                    ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
+                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+                ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
+                ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
+                ['name' => 'Stock Transfers', 'link' => route('admin.gtn.index')],
                 ]" active="Dashboard" />
 
 

@@ -6,10 +6,11 @@
     <div class="p-4 rounded-lg">
         <!-- Header with buttons -->
         <x-nav-buttons :items="[
-            ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-            ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
-            ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-            ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
+                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+                ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
+                ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
+                ['name' => 'Stock Transfers', 'link' => route('admin.gtn.index')],
         ]" active="Stocks Management" />
 
         <!-- Stats Cards -->

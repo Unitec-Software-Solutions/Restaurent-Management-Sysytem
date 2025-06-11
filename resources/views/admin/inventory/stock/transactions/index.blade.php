@@ -11,7 +11,8 @@
             ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
             ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
             ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-            ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
+            ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
+            ['name' => 'Stock Transfers', 'link' => route('admin.gtn.index')],
         ]" active="Transactions Management" />
 
         <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-sm p-6">
@@ -34,7 +35,8 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
                         <div class="relative">
-                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Item name or code"
+                            <input type="text" name="search" value="{{ request('search') }}"
+                                placeholder="Item name or code"
                                 class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                         </div>
@@ -63,19 +65,20 @@
                             <select name="transaction_type"
                                 class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
                                 <option value="">All Types</option>
-                                @foreach([
-                                    'purchase_order' => 'Purchase Order',
-                                    'return' => 'Return',
-                                    'adjustment' => 'Adjustment',
-                                    'audit' => 'Audit',
-                                    'transfer_in' => 'Transfer In',
-                                    'sales_order' => 'Sales Order',
-                                    'write_off' => 'Write Off',
-                                    'transfer' => 'Transfer',
-                                    'usage' => 'Usage',
-                                    'transfer_out' => 'Transfer Out'
-                                ] as $value => $label)
-                                    <option value="{{ $value }}" {{ request('transaction_type') == $value ? 'selected' : '' }}>
+                                @foreach ([
+            'purchase_order' => 'Purchase Order',
+            'return' => 'Return',
+            'adjustment' => 'Adjustment',
+            'audit' => 'Audit',
+            'transfer_in' => 'Transfer In',
+            'sales_order' => 'Sales Order',
+            'write_off' => 'Write Off',
+            'transfer' => 'Transfer',
+            'usage' => 'Usage',
+            'transfer_out' => 'Transfer Out',
+        ] as $value => $label)
+                                    <option value="{{ $value }}"
+                                        {{ request('transaction_type') == $value ? 'selected' : '' }}>
                                         {{ $label }}
                                     </option>
                                 @endforeach
@@ -139,7 +142,8 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @forelse ($transactions as $tx)
-                                <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{{ route('admin.inventory.stock.show', $tx->id) }}'" >
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    onclick="window.location='{{ route('admin.inventory.stock.show', $tx->id) }}'">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">{{ $tx->created_at->format('M d, Y') }}</div>
                                         <div class="text-xs text-gray-500">{{ $tx->created_at->format('h:i A') }}</div>
@@ -163,15 +167,16 @@
                                     @endphp
 
                                     {{-- <td class="px-6 py-4 whitespace-nowrap">
-                                        <x-partials.badges.status-badge 
-                                            :status="$isIn ? 'success' : 'danger'" 
+                                        <x-partials.badges.status-badge
+                                            :status="$isIn ? 'success' : 'danger'"
                                             :text="ucwords(str_replace('_', ' ', $tx->transaction_type))" />
                                     </td> --}}
 
                                     <td class="px-6 py-4 whitespace-nowrap text-right">
                                         <div class="{{ $isIn ? 'text-green-600' : 'text-red-600' }}">
                                             {{ $isIn ? '+' : '-' }}{{ number_format($tx->quantity, 2) }}
-                                            <span class="text-xs text-gray-500">{{ $tx->item->unit_of_measurement ?? 'N/A' }}</span>
+                                            <span
+                                                class="text-xs text-gray-500">{{ $tx->item->unit_of_measurement ?? 'N/A' }}</span>
                                         </div>
                                     </td>
 
@@ -184,16 +189,14 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-right">
                                         <div class="flex justify-end space-x-3">
                                             <a href="{{ route('admin.inventory.stock.show', $tx->id) }}"
-                                                class="text-indigo-600 hover:text-indigo-800"
-                                                title="View Details">
+                                                class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            @if(auth()->user()->can('edit_inventory'))
-                                            <a href="{{ route('admin.inventory.stock.edit', ['item_id' => $tx->inventory_item_id, 'branch_id' => $tx->branch_id]) }}"
-                                                class="text-blue-600 hover:text-blue-800"
-                                                title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
+                                            @if (auth()->user()->can('edit_inventory'))
+                                                <a href="{{ route('admin.inventory.stock.edit', ['item_id' => $tx->inventory_item_id, 'branch_id' => $tx->branch_id]) }}"
+                                                    class="text-blue-600 hover:text-blue-800" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
                                             @endif
                                         </div>
                                     </td>
@@ -219,4 +222,3 @@
         </div>
     </div>
 @endsection
-

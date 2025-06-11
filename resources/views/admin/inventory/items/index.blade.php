@@ -4,11 +4,13 @@
     <div class="p-4 rounded-lg">
         <!-- Navigation Buttons -->
         <x-nav-buttons :items="[
-            ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-            ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
-            ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-            ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
+                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+                ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
+                ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
+                ['name' => 'Stock Transfers', 'link' => route('admin.gtn.index')],
         ]" active="Items Management" />
+
 
         <!-- Header with KPI Cards -->
         {{-- <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -170,7 +172,7 @@
                                             class="text-indigo-600 hover:text-indigo-900" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        
+
                                         {{-- @if ($item->deleted_at)
                                             <form action="{{ route('admin.inventory.items.restore', $item->id) }}"
                                                 method="POST">
