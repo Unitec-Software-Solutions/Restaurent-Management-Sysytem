@@ -13,17 +13,17 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <a href="{{ route('admin.gtn.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
+                    <a href="{{ route('admin.inventory.gtn.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-arrow-left mr-2"></i> Back to GTNs
                     </a>
-                    <a href="{{ route('admin.gtn.show', $gtn->id) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <a href="{{ route('admin.inventory.gtn.show', $gtn->id) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-eye mr-2"></i> View GTN
                     </a>
                 </div>
             </div>
 
             <!-- Form Container -->
-            <form action="{{ route('admin.gtn.update', $gtn->id) }}" method="POST" class="p-6">
+            <form action="{{ route('admin.inventory.gtn.update', $gtn->id) }}" method="POST" class="p-6">
                 @csrf
                 @method('PUT')
 
@@ -149,8 +149,8 @@
                                                         <option value="{{ $itemOption->id }}"
                                                             data-code="{{ $itemOption->item_code }}"
                                                             data-price="{{ $itemOption->buying_price }}"
-                                                            {{ $item->item_id == $itemOption->id ? 'selected' : '' }}>
-                                                            {{ $itemOption->name }} ({{ $itemOption->item_code }})
+                                                            {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}>
+                                                            {{ $itemOption->item_code }} - {{ $itemOption->name }}
                                                         </option>
                                                     @endforeach
                                                 </select>
