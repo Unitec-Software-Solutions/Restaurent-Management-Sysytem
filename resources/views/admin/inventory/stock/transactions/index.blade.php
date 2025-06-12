@@ -11,9 +11,9 @@
             ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
             ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
             ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-            ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
-            ['name' => 'Stock Transfers', 'link' => route('admin.inventory.gtn.index')],
-        ]" active="Transactions Management" />
+            ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+            ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+        ]" active="Transactions" />
 
         <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-sm p-6">
             <!-- Header -->
