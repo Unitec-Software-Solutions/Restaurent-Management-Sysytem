@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Transfer Notes - Management')
+@section('header-title', 'Goods Transfer Notes')
 
 @section('content')
     <div class="p-4 rounded-lg">
@@ -8,12 +8,12 @@
         <div class="  justify-between items-center mb-4">
             <div class="rounded-lg ">
                 <x-nav-buttons :items="[
-                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-                ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
-                ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
-                ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
-                ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+                    ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+                    ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+                    ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+                    ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                    ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+                    ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
                 ]" active="Transfer Notes" />
             </div>
 
@@ -58,8 +58,10 @@
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All Status</option>
                             <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="Confirmed" {{ request('status') == 'Confirmed' ? 'selected' : '' }}>Confirmed</option>
-                            <option value="Cancelled" {{ request('status') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            <option value="Confirmed" {{ request('status') == 'Confirmed' ? 'selected' : '' }}>Confirmed
+                            </option>
+                            <option value="Cancelled" {{ request('status') == 'Cancelled' ? 'selected' : '' }}>Cancelled
+                            </option>
                         </select>
                     </div>
 
