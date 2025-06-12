@@ -440,7 +440,7 @@ class GrnDashboardController extends Controller
                             'organization_id' => $grn->organization_id,
                             'branch_id' => $grn->branch_id,
                             'inventory_item_id' => $grnItem->item_id,
-                            'transaction_type' => 'stock_in', // fixed transaction type for stock in
+                            'transaction_type' => 'grn_stock_in',
                             'incoming_branch_id' => $grn->branch_id,
                             'receiver_user_id' => $grn->received_by_user_id,
                             'quantity' => $qty,
