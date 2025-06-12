@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'GRN Details')
+@section('header-title', 'Goods Received Note Details')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Back and Action Buttons -->
@@ -9,7 +9,7 @@
                 <i class="fas fa-arrow-left mr-2"></i> Back to GRNs
             </a>
             <div class="flex space-x-2">
-                @if($grn->status === 'Pending')
+                @if ($grn->status === 'Pending')
                     {{-- <a href="{{ route('admin.grn.edit', $grn->grn_id) }}"
                        class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-edit mr-2"></i> Edit GRN
@@ -17,13 +17,14 @@
                     <form action="{{ route('admin.grn.verify', $grn->grn_id) }}" method="POST" class="inline">
                         @csrf
                         <input type="hidden" name="status" value="Verified">
-                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <button type="submit"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-check mr-2"></i> Verify GRN
                         </button>
                     </form>
                 @endif
                 <a href="{{ route('admin.grn.print', $grn->grn_id) }}"
-                   class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-print mr-2"></i> Print
                 </a>
             </div>
@@ -36,7 +37,7 @@
                     <h1 class="text-2xl font-bold text-gray-900">GRN #{{ $grn->grn_number }}</h1>
                     <div class="flex items-center mt-2 space-x-2">
                         <span class="text-sm font-medium">Status:</span>
-                        @if($grn->status === 'Pending')
+                        @if ($grn->status === 'Pending')
                             <x-partials.badges.status-badge status="warning" text="Pending" />
                         @elseif($grn->status === 'Verified')
                             <x-partials.badges.status-badge status="success" text="Verified" />
@@ -65,23 +66,24 @@
             </div>
         </div> --}}
 
-         <!-- GRN Header Card -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6 border-l-4 {{ $grn->status === 'Pending' ? 'border-yellow-500' : ($grn->status === 'Verified' ? 'border-green-500' : 'border-red-500') }}">
+        <!-- GRN Header Card -->
+        <div
+            class="bg-white rounded-xl shadow-sm p-6 mb-6 border-l-4 {{ $grn->status === 'Pending' ? 'border-yellow-500' : ($grn->status === 'Verified' ? 'border-green-500' : 'border-red-500') }}">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <div class="flex items-center flex-wrap gap-4 mb-2">
                         <h1 class="text-2xl font-bold text-gray-900">GRN #{{ $grn->grn_number }}</h1>
                         <div class="flex items-center space-x-2">
                             <p class="text-sm text-gray-500">GRN Status :</p>
-                                @if($grn->status === 'Pending')
-                                    <x-partials.badges.status-badge status="warning" text="Pending" />
-                                @elseif($grn->status === 'Verified')
-                                    <x-partials.badges.status-badge status="success" text="Verified" />
-                                @elseif($grn->status === 'Rejected')
-                                    <x-partials.badges.status-badge status="danger" text="Rejected" />
-                                @else
-                                    <x-partials.badges.status-badge status="default" text="{{ $grn->status }}" />
-                                @endif
+                            @if ($grn->status === 'Pending')
+                                <x-partials.badges.status-badge status="warning" text="Pending" />
+                            @elseif($grn->status === 'Verified')
+                                <x-partials.badges.status-badge status="success" text="Verified" />
+                            @elseif($grn->status === 'Rejected')
+                                <x-partials.badges.status-badge status="danger" text="Rejected" />
+                            @else
+                                <x-partials.badges.status-badge status="default" text="{{ $grn->status }}" />
+                            @endif
                             <p class="text-sm text-gray-500">GRN Payemnt Status :</p>
                             @if ($grn->isPaymentPaid())
                                 <x-partials.badges.status-badge status="success" text="Fully Paid" />
@@ -98,17 +100,17 @@
                             <i class="fas fa-calendar-day mr-2"></i>
                             <span>Received: {{ $grn->received_date->format('M d, Y') }}</span>
                         </div>
-                        @if($grn->invoice_number)
-                        <div class="flex items-center">
-                            <i class="fas fa-file-invoice mr-2"></i>
-                            <span>Invoice: {{ $grn->invoice_number }}</span>
-                        </div>
+                        @if ($grn->invoice_number)
+                            <div class="flex items-center">
+                                <i class="fas fa-file-invoice mr-2"></i>
+                                <span>Invoice: {{ $grn->invoice_number }}</span>
+                            </div>
                         @endif
-                        @if($grn->delivery_note_number)
-                        <div class="flex items-center">
-                            <i class="fas fa-truck mr-2"></i>
-                            <span>DN: {{ $grn->delivery_note_number }}</span>
-                        </div>
+                        @if ($grn->delivery_note_number)
+                            <div class="flex items-center">
+                                <i class="fas fa-truck mr-2"></i>
+                                <span>DN: {{ $grn->delivery_note_number }}</span>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -185,17 +187,19 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Total Before Discount:</span>
-                        <span class="font-bold">Rs. {{ number_format($grn->items->sum(function($item) { return $item->ordered_quantity * $item->buying_price; }), 2) }}</span>
+                        <span class="font-bold">Rs.
+                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price;}),2) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Total Discount (Items):</span>
-                        <span class="font-bold">Rs. {{ number_format($grn->items->sum(function($item) { return ($item->ordered_quantity * $item->buying_price) * ($item->discount_received / 100); }), 2) }}</span>
+                        <span class="font-bold">Rs.
+                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price * ($item->discount_received / 100);}),2) }}</span>
                     </div>
-                    @if($grn->grand_discount ?? false)
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Grand Discount (Total Bill):</span>
-                        <span class="font-bold">{{ $grn->grand_discount }}%</span>
-                    </div>
+                    @if ($grn->grand_discount ?? false)
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Grand Discount (Total Bill):</span>
+                            <span class="font-bold">{{ $grn->grand_discount }}%</span>
+                        </div>
                     @endif
                     <div class="pt-2 border-t">
                         <div class="flex justify-between">
@@ -232,22 +236,34 @@
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ordered Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Received Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accepted Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Free Received</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total to Stock</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rejected Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount (%)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line Total</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EXP Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Batch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Ordered Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Received Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Accepted Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Free
+                                Received</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Total to Stock</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Rejected Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Price</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Discount (%)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line
+                                Total</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EXP
+                                Date</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        @foreach($grn->items as $item)
+                        @foreach ($grn->items as $item)
                             <tr>
                                 <td class="px-6 py-4">
                                     <div class="font-medium">{{ $item->item->name ?? $item->item_code }}</div>
@@ -287,12 +303,12 @@
                                     {{ optional($item->expiry_date)->format('M d, Y') ?? 'N/A' }}
                                 </td>
                             </tr>
-                            @if($item->rejected_quantity > 0 && $item->rejection_reason)
-                            <tr>
-                                <td colspan="12" class="px-6 py-2 text-sm text-red-600 bg-red-50">
-                                    <span class="font-medium">Rejection Reason:</span> {{ $item->rejection_reason }}
-                                </td>
-                            </tr>
+                            @if ($item->rejected_quantity > 0 && $item->rejection_reason)
+                                <tr>
+                                    <td colspan="12" class="px-6 py-2 text-sm text-red-600 bg-red-50">
+                                        <span class="font-medium">Rejection Reason:</span> {{ $item->rejection_reason }}
+                                    </td>
+                                </tr>
                             @endif
                         @endforeach
                     </tbody>
@@ -308,7 +324,7 @@
         </div>
 
         <!-- Related Purchase Order -->
-        @if($grn->purchaseOrder)
+        @if ($grn->purchaseOrder)
             <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
                 <div class="p-6 border-b">
                     <h2 class="text-lg font-semibold">Related Purchase Order</h2>
@@ -319,20 +335,27 @@
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO Number</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Date</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expected Delivery</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    PO Number</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Order Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Expected Delivery</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Created By</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Total Amount</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td class="px-6 py-4">
                                     <a href="{{ route('admin.purchase-orders.show', $grn->purchaseOrder->po_id) }}"
-                                       class="text-indigo-600 hover:text-indigo-800">
+                                        class="text-indigo-600 hover:text-indigo-800">
                                         {{ $grn->purchaseOrder->po_number }}
                                     </a>
                                 </td>
@@ -346,14 +369,15 @@
                                     {{ $grn->purchaseOrder->user->name }}
                                 </td>
                                 <td class="px-6 py-4">
-                                    @if($grn->purchaseOrder->status === 'Pending')
+                                    @if ($grn->purchaseOrder->status === 'Pending')
                                         <x-partials.badges.status-badge status="warning" text="Pending" />
                                     @elseif($grn->purchaseOrder->status === 'Approved')
                                         <x-partials.badges.status-badge status="info" text="Approved" />
                                     @elseif($grn->purchaseOrder->status === 'Received')
                                         <x-partials.badges.status-badge status="success" text="Received" />
                                     @else
-                                        <x-partials.badges.status-badge status="default" text="{{ $grn->purchaseOrder->status }}" />
+                                        <x-partials.badges.status-badge status="default"
+                                            text="{{ $grn->purchaseOrder->status }}" />
                                     @endif
                                 </td>
                                 <td class="px-6 py-4">
@@ -361,7 +385,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <a href="{{ route('admin.purchase-orders.show', $grn->purchaseOrder->po_id) }}"
-                                       class="text-indigo-600 hover:text-indigo-800" title="View">
+                                        class="text-indigo-600 hover:text-indigo-800" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                 </td>
@@ -373,7 +397,7 @@
         @endif
 
         <!-- Notes Section -->
-        @if($grn->notes)
+        @if ($grn->notes)
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h2 class="text-lg font-semibold mb-2">GRN Notes</h2>
                 <div class="prose max-w-none">
@@ -390,20 +414,25 @@
             color: #374151;
             line-height: 1.6;
         }
+
         .prose a {
             color: #4f46e5;
             text-decoration: underline;
         }
+
         table {
             border-collapse: separate;
             border-spacing: 0;
             width: 100%;
         }
-        th, td {
+
+        th,
+        td {
             padding: 0.75rem 1.5rem;
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
         }
+
         thead th {
             background-color: #f9fafb;
             color: #6b7280;
@@ -412,9 +441,11 @@
             letter-spacing: 0.05em;
             font-size: 0.75rem;
         }
+
         tbody tr:hover {
             background-color: #f9fafb;
         }
+
         tfoot td {
             font-weight: 600;
             background-color: #f9fafb;
