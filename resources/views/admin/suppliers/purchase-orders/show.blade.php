@@ -5,25 +5,26 @@
     <div class="p-4 rounded-lg">
         <!-- Back and Action Buttons -->
         <div class="flex justify-between items-center mb-6">
-            <a href="{{ route('admin.purchase-orders.index') }}" class="flex items-center text-indigo-600 hover:text-indigo-800">
+            <a href="{{ route('admin.purchase-orders.index') }}"
+                class="flex items-center text-indigo-600 hover:text-indigo-800">
                 <i class="fas fa-arrow-left mr-2"></i> Back to POs
             </a>
             <div class="flex space-x-2">
-                {{-- @if($po->status === 'Pending')
+                {{-- @if ($po->status === 'Pending')
                     <form action="{{ route('admin.purchase-orders.approve', $po->po_id) }}" method="POST" class="inline">
                         @csrf
-                        <button type="submit" 
+                        <button type="submit"
                                 class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-check mr-2"></i> Approve
                         </button>
                     </form>
                 @endif
-                <a href="{{ route('admin.purchase-orders.edit', $po->po_id) }}" 
+                <a href="{{ route('admin.purchase-orders.edit', $po->po_id) }}"
                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-edit mr-2"></i> Edit
                 </a> --}}
-                <a href="{{ route('admin.purchase-orders.print', $po->po_id) }}" 
-                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <a href="{{ route('admin.purchase-orders.print', $po->po_id) }}"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-print mr-2"></i> Print
                 </a>
             </div>
@@ -36,7 +37,7 @@
                     <h1 class="text-2xl font-bold text-gray-900">Purchase Order #{{ $po->po_number }}</h1>
                     <div class="flex items-center mt-2">
                         <span class="text-sm font-medium mr-2">Status:</span>
-                        @if($po->status === 'Pending')
+                        @if ($po->status === 'Pending')
                             <x-partials.badges.status-badge status="warning" text="Pending" />
                         @elseif($po->status === 'Approved')
                             <x-partials.badges.status-badge status="info" text="Approved" />
@@ -144,20 +145,24 @@
                 <h2 class="text-lg font-semibold">Order Items</h2>
                 <p class="text-sm text-gray-500">Items included in this purchase order</p>
             </div>
-            
+
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
+                            </th>
                             {{-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch</th> --}}
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Quantity</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        @foreach($items as $item)
+                        @foreach ($items as $item)
                             <tr>
                                 <td class="px-6 py-4">
                                     <div class="font-medium">{{ $item->item->name ?? $item->item_code }}</div>
@@ -190,32 +195,39 @@
         </div>
 
         <!-- Related GRNs -->
-        @if($po->grns->count() > 0)
+        @if ($po->grns->count() > 0)
             <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
                 <div class="p-6 border-b">
                     <h2 class="text-lg font-semibold">Related GRNs</h2>
                     <p class="text-sm text-gray-500">Goods received notes for this purchase order</p>
                 </div>
-                
+
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GRN Number</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Received By</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    GRN Number</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Received By</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Items</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @foreach($po->grns as $grn)
+                            @foreach ($po->grns as $grn)
                                 <tr>
                                     <td class="px-6 py-4">
-                                        <a href="{{ route('admin.grn.show', $grn->grn_id) }}" 
-                                           class="text-indigo-600 hover:text-indigo-800">
+                                        <a href="{{ route('admin.grn.show', $grn->grn_id) }}"
+                                            class="text-indigo-600 hover:text-indigo-800">
                                             {{ $grn->grn_number }}
                                         </a>
                                     </td>
@@ -232,17 +244,18 @@
                                         Rs. {{ number_format($grn->total_amount, 2) }}
                                     </td>
                                     <td class="px-6 py-4">
-                                        @if($grn->status === 'Pending')
+                                        @if ($grn->status === 'Pending')
                                             <x-partials.badges.status-badge status="warning" text="Pending" />
                                         @elseif($grn->status === 'Verified')
                                             <x-partials.badges.status-badge status="success" text="Verified" />
                                         @else
-                                            <x-partials.badges.status-badge status="default" text="{{ $grn->status }}" />
+                                            <x-partials.badges.status-badge status="default"
+                                                text="{{ $grn->status }}" />
                                         @endif
                                     </td>
                                     <td class="px-6 py-4">
                                         <a href="{{ route('admin.grn.show', $grn->grn_id) }}"
-                                           class="text-indigo-600 hover:text-indigo-800" title="View">
+                                            class="text-indigo-600 hover:text-indigo-800" title="View">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </td>
@@ -255,7 +268,7 @@
         @endif
 
         <!-- Notes Section -->
-        @if($po->notes)
+        @if ($po->notes)
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h2 class="text-lg font-semibold mb-2">PO Notes</h2>
                 <div class="prose max-w-none">
@@ -272,6 +285,7 @@
             color: #374151;
             line-height: 1.6;
         }
+
         .prose a {
             color: #4f46e5;
             text-decoration: underline;
