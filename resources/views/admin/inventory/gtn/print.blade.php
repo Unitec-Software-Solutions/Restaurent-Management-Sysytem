@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'View GTN')
+@section('header-title', 'Print Goods Transfer Note')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Main Content Card -->
@@ -13,26 +13,32 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <a href="{{ route('admin.inventory.gtn.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
+                    <a href="{{ route('admin.inventory.gtn.index') }}"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-arrow-left mr-2"></i> Back to GTNs
                     </a>
-                    <a href=" " class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <a href=" "
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-print mr-2"></i> Print
                     </a>
-                    @if($gtn->status == 'Pending')
-                        <a href="{{ route('admin.inventory.gtn.edit', $gtn->gtn_id) }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    @if ($gtn->status == 'Pending')
+                        <a href="{{ route('admin.inventory.gtn.edit', $gtn->gtn_id) }}"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-edit mr-2"></i> Edit
                         </a>
 
                         <!-- Status Change Buttons -->
                         <div class="flex gap-2">
-                            <button onclick="changeStatus('Confirmed')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <button onclick="changeStatus('Confirmed')"
+                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                                 <i class="fas fa-check mr-2"></i> Confirm
                             </button>
-                            <button onclick="changeStatus('Approved')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <button onclick="changeStatus('Approved')"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                                 <i class="fas fa-thumbs-up mr-2"></i> Approve
                             </button>
-                            <button onclick="changeStatus('Verified')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <button onclick="changeStatus('Verified')"
+                                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
                                 <i class="fas fa-shield-check mr-2"></i> Verify
                             </button>
                         </div>
@@ -123,7 +129,8 @@
                                         <td class="px-4 py-3">{{ $item->transfer_quantity }}</td>
                                         <td class="px-4 py-3">Internal Transfer</td>
                                         <td class="px-4 py-3">-</td>
-                                        <td class="px-4 py-3">{{ $item->expiry_date ? $item->expiry_date->format('d M Y') : 'N/A' }}</td>
+                                        <td class="px-4 py-3">
+                                            {{ $item->expiry_date ? $item->expiry_date->format('d M Y') : 'N/A' }}</td>
                                     </tr>
                                 @endforeach
                                 <tr class="bg-gray-50 font-semibold">
@@ -162,7 +169,8 @@
     </div>
 
     <!-- Status Change Modal -->
-    <div id="statusChangeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 1000;">
+    <div id="statusChangeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden"
+        style="z-index: 1000;">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div class="mt-3 text-center">
                 <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
@@ -171,18 +179,23 @@
                 <h3 class="text-lg font-medium text-gray-900 mt-2" id="modalTitle">Confirm Status Change</h3>
                 <div class="mt-2 px-7 py-3">
                     <p class="text-sm text-gray-500" id="modalMessage">
-                        Are you sure you want to change the status? This action cannot be undone and will process stock transfers.
+                        Are you sure you want to change the status? This action cannot be undone and will process stock
+                        transfers.
                     </p>
                     <div class="mt-4">
                         <label for="statusNotes" class="block text-sm font-medium text-gray-700">Notes (Optional)</label>
-                        <textarea id="statusNotes" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add any notes about this status change..."></textarea>
+                        <textarea id="statusNotes" rows="3"
+                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Add any notes about this status change..."></textarea>
                     </div>
                 </div>
                 <div class="items-center px-4 py-3">
-                    <button id="confirmStatusBtn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                    <button id="confirmStatusBtn"
+                        class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
                         Confirm
                     </button>
-                    <button onclick="closeModal()" class="mt-3 px-4 py-2 bg-gray-300 text-gray-900 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    <button onclick="closeModal()"
+                        class="mt-3 px-4 py-2 bg-gray-300 text-gray-900 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
                         Cancel
                     </button>
                 </div>
@@ -191,7 +204,8 @@
     </div>
 
     <!-- Status Change Form (Hidden) -->
-    <form id="statusChangeForm" action="{{ route('admin.inventory.gtn.change-status', $gtn->gtn_id) }}" method="POST" style="display: none;">
+    <form id="statusChangeForm" action="{{ route('admin.inventory.gtn.change-status', $gtn->gtn_id) }}" method="POST"
+        style="display: none;">
         @csrf
         <input type="hidden" name="status" id="statusInput">
         <input type="hidden" name="notes" id="notesInput">
@@ -203,7 +217,8 @@
         function changeStatus(status) {
             selectedStatus = status;
             document.getElementById('modalTitle').textContent = `${status} GTN`;
-            document.getElementById('modalMessage').textContent = `Are you sure you want to ${status.toLowerCase()} this GTN? This will process the stock transfer and cannot be undone.`;
+            document.getElementById('modalMessage').textContent =
+                `Are you sure you want to ${status.toLowerCase()} this GTN? This will process the stock transfer and cannot be undone.`;
             document.getElementById('statusChangeModal').classList.remove('hidden');
         }
 
