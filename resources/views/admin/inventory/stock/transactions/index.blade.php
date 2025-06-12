@@ -9,7 +9,7 @@
     $dateFrom = request('date_from', $defaultDateFrom);
     $dateTo = request('date_to', $defaultDateTo);
 @endphp
-@section('header-title', 'Transfer Notes - Management')
+@section('header-title', 'Stock Transactions')
 
 @section('content')
     <div class="p-4 rounded-lg">
@@ -17,12 +17,12 @@
         <div class="justify-between items-center mb-4">
             <div class="rounded-lg ">
                 <x-nav-buttons :items="[
-                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-                ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
-                ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
-                ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
-                ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+                    ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+                    ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+                    ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+                    ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                    ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+                    ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
                 ]" active="Transactions" />
             </div>
 
