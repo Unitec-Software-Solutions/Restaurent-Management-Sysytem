@@ -49,10 +49,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <div
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
+
                         </div>
                     </div>
 
@@ -70,10 +67,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <div
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -86,11 +80,7 @@
                         <div class="relative">
                             <input type="date" name="received_date" id="received_date"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                value="{{ old('received_date', date('Y-m-d')) }}" required>
-                            <div
-                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
-                                <i class="fas fa-calendar"></i>
-                            </div>
+                                value="{{ old('received_date', date('Y-m-d')) }}" required style="appearance: none;">
                         </div>
                     </div>
 
@@ -184,13 +174,14 @@
                                                     </option>
                                                 @endforeach
                                             </select>
-                                            <input type="hidden" name="items[{{ $index }}][item_code]" value="{{ $item['item_code'] ?? '' }}">
+                                            <input type="hidden" name="items[{{ $index }}][item_code]"
+                                                value="{{ $item['item_code'] ?? '' }}">
                                         </td>
                                         {{-- <td class="px-4 py-3">
-                                            <input type="text" name="items[{{ $index }}][batch_no]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no"
-                                                value="{{ $item['batch_no'] }}">
-                                        </td> --}}
+                                    <input type="text" name="items[{{ $index }}][batch_no]"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no"
+                                        value="{{ $item['batch_no'] }}">
+                                </td> --}}
                                         <td class="px-4 py-3">
                                             <input type="number" name="items[{{ $index }}][received_quantity]"
                                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
@@ -200,8 +191,7 @@
                                                 class="ordered-qty" value="{{ $item['received_quantity'] }}">
                                         </td>
                                         <td class="px-4 py-3">
-                                            <input type="number"
-                                                name="items[{{ $index }}][free_received_quantity]"
+                                            <input type="number" name="items[{{ $index }}][free_received_quantity]"
                                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent free-qty"
                                                 min="0" step="0.01"
                                                 value="{{ $item['free_received_quantity'] ?? 0 }}">
@@ -403,7 +393,7 @@
                     </select>
                     <input type="hidden" name="items[${itemCount}][item_code]" value="">
                 </td>
-                
+
                 <td class="px-4 py-3">
                     <input type="number" name="items[${itemCount}][received_quantity]"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
@@ -527,19 +517,19 @@
 
                 // Add event listeners to existing inputs
                 document.querySelectorAll('.received-qty, .item-price, .discount-received, .free-qty').forEach(
-                input => {
-                    if (input.classList.contains('discount-received')) {
-                        input.addEventListener('input', function() {
-                            if (parseFloat(this.value) > 100) {
-                                this.value = 100;
-                                alert('Discount (%) cannot be more than 100%');
-                            }
-                            calculateRowTotal.call(this);
-                        });
-                    } else {
-                        input.addEventListener('input', calculateRowTotal);
-                    }
-                });
+                    input => {
+                        if (input.classList.contains('discount-received')) {
+                            input.addEventListener('input', function() {
+                                if (parseFloat(this.value) > 100) {
+                                    this.value = 100;
+                                    alert('Discount (%) cannot be more than 100%');
+                                }
+                                calculateRowTotal.call(this);
+                            });
+                        } else {
+                            input.addEventListener('input', calculateRowTotal);
+                        }
+                    });
 
                 document.getElementById('grand-discount-input').addEventListener('input', updateSummaryFooter);
 
