@@ -1,15 +1,15 @@
 @extends('layouts.admin')
-@section('header-title', 'Items Management')
+@section('header-title', 'Inventory Items Management')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Navigation Buttons -->
         <x-nav-buttons :items="[
-                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-                ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
-                ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
-                ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
-                ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+            ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+            ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+            ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+            ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+            ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+            ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
         ]" active="Item Management" />
 
 
