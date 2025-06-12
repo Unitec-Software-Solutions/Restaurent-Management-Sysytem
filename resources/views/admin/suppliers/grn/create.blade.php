@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Goods Received Note - Create New GRN')
+@section('header-title', 'Create Goods Received Note')
 
 @section('content')
     <div class="p-4 rounded-lg">
