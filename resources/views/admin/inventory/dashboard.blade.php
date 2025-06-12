@@ -15,31 +15,9 @@
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                 ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
                 ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Goods Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
-                ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
+                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
                 ]" active="Dashboard" />
-
-
-                <!-- KPI Widgets -->
-                {{-- <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <!-- Total Items Card -->
-                    <x-partials.cards.stats-card title="Total Items" value="{{ $totalItems }}"
-                        trend="+{{ $newItemsToday }} from today" icon="fas fa-box-open" color="indigo" />
-
-                    <!-- Total Stock Value Card -->
-                    <x-partials.cards.stats-card title="Total Stock Value"
-                        value="Rs. {{ number_format($totalStockValue, 2) }}" trend="+{{ $stockValueChange }} from yesterday"
-                        icon="fas fa-dollar-sign" color="blue" />
-
-                    <!-- Purchase Orders Card -->
-                    <x-partials.cards.stats-card title="Purchase Orders"
-                        value="Rs. {{ number_format($purchaseOrdersTotal, 2) }}"
-                        trend="+{{ $purchaseOrdersCount }} from yesterday" icon="fas fa-shopping-cart" color="purple" />
-
-                    <!-- Sales Orders Card -->
-                    <x-partials.cards.stats-card title="Sales Orders" value="Rs. {{ number_format($salesOrdersTotal, 2) }}"
-                        trend="+{{ $salesOrdersCount }} from yesterday" icon="fas fa-chart-line" color="green" />
-                </div> --}}
 
                 <!-- Search and Filter -->
                 <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -47,7 +25,7 @@
                         <div class="flex-1">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Search Item</label>
                             <div class="relative">
-                                <input type="text" placeholder="Search by name or item code"
+                                <input type="text" placeholder="Search by name"
                                     class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                             </div>
