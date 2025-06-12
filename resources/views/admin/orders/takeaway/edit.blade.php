@@ -160,7 +160,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth()->check() && auth()->user()->isAdmin());
 
     // Initialize enabled quantity inputs for checked items
     document.querySelectorAll('.item-check:checked').forEach(checkbox => {
