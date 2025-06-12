@@ -135,6 +135,19 @@ class ItemTransactionController extends Controller
             $query->where('branch_id', request('branch_id'));
         }
 
+        // Add transaction_type filter
+        if (request('transaction_type')) {
+            $query->where('transaction_type', request('transaction_type'));
+        }
+
+        // Add date range filter
+        if (request('date_from')) {
+            $query->whereDate('created_at', '>=', request('date_from'));
+        }
+        if (request('date_to')) {
+            $query->whereDate('created_at', '<=', request('date_to'));
+        }
+
         $transactions = $query->paginate(25);
         $branches = Branch::where('organization_id', $orgId)->active()->get();
 
@@ -177,7 +190,7 @@ class ItemTransactionController extends Controller
         $validated = $request->validate([
             'inventory_item_id' => 'required|exists:item_master,id,organization_id,' . $orgId,
             'branch_id' => 'required|exists:branches,id,organization_id,' . $orgId,
-            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out,grn_stock_added,gtn_stock_out',
+            'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out,grn_stock_in,gtn_stock_in,gtn_stock_out',
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
         ]);
@@ -302,7 +315,7 @@ class ItemTransactionController extends Controller
 
     public function isStockOut($type)
     {
-        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'transfer_out'];
+        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'gtn_stock_out'];
         return in_array($type, $outTypes);
     }
 }
