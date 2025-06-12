@@ -7,26 +7,27 @@
         <!-- Header with buttons -->
         <x-nav-buttons :items="[
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-                ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
-                ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+                ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
                 ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
                 ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
-        ]" active="Stocks Management" />
+        ]" active="Stock Management" />
 
         <!-- Stats Cards -->
         {{-- <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <x-partials.cards.stats-card title="Total Items" value="{{ $itemsCount ?? 0 }}" trend="Across all branches"
-                icon="fas fa-boxes" color="indigo" />
+        <x-partials.cards.stats-card title="Total Items" value="{{ $itemsCount ?? 0 }}" trend="Across all branches"
+            icon="fas fa-boxes" color="indigo" />
 
-            <x-partials.cards.stats-card title="In Stock" value="{{ $inStockCount ?? 0 }}" trend="Available items"
-                icon="fas fa-check-circle" color="green" />
+        <x-partials.cards.stats-card title="In Stock" value="{{ $inStockCount ?? 0 }}" trend="Available items"
+            icon="fas fa-check-circle" color="green" />
 
-            <x-partials.cards.stats-card title="Low Stock" value="{{ $nearReorderCount ?? 0 }}" trend="Needs reordering"
-                icon="fas fa-exclamation-triangle" color="yellow" />
+        <x-partials.cards.stats-card title="Low Stock" value="{{ $nearReorderCount ?? 0 }}" trend="Needs reordering"
+            icon="fas fa-exclamation-triangle" color="yellow" />
 
-            <x-partials.cards.stats-card title="Out of Stock" value="{{ $outOfStockCount ?? 0 }}" trend="Restock needed"
-                icon="fas fa-times-circle" color="red" />
-        </div> --}}
+        <x-partials.cards.stats-card title="Out of Stock" value="{{ $outOfStockCount ?? 0 }}" trend="Restock needed"
+            icon="fas fa-times-circle" color="red" />
+    </div> --}}
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -95,9 +96,9 @@
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
                     {{-- <a href="{{ route('admin.inventory.stock.create') }}"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-plus mr-2"></i> Add New Stock
-                    </a> --}}
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-plus mr-2"></i> Add New Stock
+                </a> --}}
                     <a href="{{ route('admin.inventory.stock.transactions.index') }}"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-history mr-2"></i> View History
@@ -176,7 +177,8 @@
                                             };
                                         @endphp
                                         <div class="h-1.5 rounded-full {{ $color }}"
-                                            style="width: {{ $percentage }}%"></div>
+                                            style="width: {{ $percentage }}%">
+                                        </div>
                                     </div>
                                 </td>
 
@@ -194,12 +196,19 @@
                                 <!-- Actions -->
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end space-x-3">
-                                        <a href="{{ route('admin.inventory.stock.edit', ['item_id' => $stock['item']->id, 'branch_id' => $stock['branch']->id]) }}"
-                                            class="text-indigo-600 hover:text-indigo-800" title="Add Transaction">
-                                            <i class="fas fa-plus-circle"></i>
-                                        </a>
+                                        {{-- <a
+                                    href="{{ route('admin.inventory.stock.edit', ['item_id' => $stock['item']->id, 'branch_id' => $stock['branch']->id]) }}"
+                                    class="text-indigo-600 hover:text-indigo-800" title="Add Transaction">
+                                    <i class="fas fa-plus-circle"></i>
+                                </a> --}}
 
-                                        <a href="{{ route('admin.inventory.stock.transactions.index', ['item_id' => $stock['item']->id, 'branch_id' => $stock['branch']->id]) }}"
+                                        <a href="{{ route('admin.inventory.stock.transactions.index', [
+                                            'search' => $stock['item']->item_code,
+                                            'branch_id' => $stock['branch']->id,
+                                            'transaction_type' => '',
+                                            'date_from' => '',
+                                            'date_to' => '',
+                                        ]) }}"
                                             class="text-purple-600 hover:text-purple-800" title="View History">
                                             <i class="fas fa-history"></i>
                                         </a>
