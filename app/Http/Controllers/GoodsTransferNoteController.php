@@ -37,10 +37,27 @@ class GoodsTransferNoteController extends Controller
 
         $orgId = $admin->organization_id;
 
-        $gtns = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy'])
-            ->where('organization_id', $orgId)
-            ->latest()
-            ->paginate(15);
+        // Apply filters from request
+        $query = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy'])
+            ->where('organization_id', $orgId);
+
+        if ($from = request('from_branch_id')) {
+            $query->where('from_branch_id', $from);
+        }
+        if ($to = request('to_branch_id')) {
+            $query->where('to_branch_id', $to);
+        }
+        if (($status = request('status')) && $status !== 'all') {
+            $query->where('status', $status);
+        }
+        if ($start = request('start_date')) {
+            $query->whereDate('transfer_date', '>=', $start);
+        }
+        if ($end = request('end_date')) {
+            $query->whereDate('transfer_date', '<=', $end);
+        }
+
+        $gtns = $query->latest()->paginate(15);
 
         $organization = Organizations::find($orgId);
         $branches = Branch::where('organization_id', $orgId)->active()->get();
@@ -82,7 +99,9 @@ class GoodsTransferNoteController extends Controller
     {
         try {
             $gtn = $this->gtnService->createGTN($request->validated());
-            return redirect()->route('admin.inventory.gtn.index')->with('success', 'GTN Created Successfully');
+            return redirect()
+                ->route('admin.inventory.gtn.show', $gtn->gtn_id)
+                ->with('success', 'GTN Created Successfully');
         } catch (Exception $e) {
             Log::error('GTN creation failed', [
                 'message' => $e->getMessage(),
