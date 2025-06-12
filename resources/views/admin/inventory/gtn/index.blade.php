@@ -1,21 +1,23 @@
 @extends('layouts.admin')
 
+@section('header-title', 'Transfer Notes - Management')
+
 @section('content')
-    <!-- Page Content -->
     <div class="p-4 rounded-lg">
-        <!-- Header with buttons -->
-        <div class="sticky top-0 z-10 mb-6">
-            <x-nav-buttons :items="[
+        <!-- Header with navigation buttons -->
+        <div class="  justify-between items-center mb-4">
+            <div class="rounded-lg ">
+                <x-nav-buttons :items="[
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                 ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
                 ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Goods Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
-                ['name' => 'Transactions ~ Dev ~', 'link' => route('admin.inventory.stock.transactions.index')],
-            ]" active="Goods Transfer Notes" />
+                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+            ]" active="Transfer Notes" />
         </div>
 
-        <!-- Filters -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <!-- Search and Filter -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <form method="GET" action="{{ route('admin.inventory.gtn.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- From Branch Filter -->
                 <div>
@@ -50,7 +52,7 @@
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" id="status"
                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All Statuses</option>
+                        <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All Status</option>
                         <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
                         <option value="Completed" {{ request('status') == 'Completed' ? 'selected' : '' }}>Completed</option>
                         <option value="Cancelled" {{ request('status') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
