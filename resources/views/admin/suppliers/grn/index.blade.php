@@ -1,4 +1,7 @@
 @extends('layouts.admin')
+@section('header-title', 'GRN List')
+{{-- @section('header-subtitle', 'Manage all goods received notes for your organization.') --}}
+
 
 @section('content')
     <!-- Page Content -->
