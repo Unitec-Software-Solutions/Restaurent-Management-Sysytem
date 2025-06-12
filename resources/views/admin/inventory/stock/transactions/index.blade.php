@@ -2,34 +2,32 @@
 @php
     // Pass the controller instance to the view for helper methods
     $controller = app(\App\Http\Controllers\ItemTransactionController::class);
+
+    // Default date range: last 30 days
+    $defaultDateFrom = now()->subDays(29)->format('Y-m-d');
+    $defaultDateTo = now()->format('Y-m-d');
+    $dateFrom = request('date_from', $defaultDateFrom);
+    $dateTo = request('date_to', $defaultDateTo);
 @endphp
-@section('header-title', 'Stock Transactions')
+@section('header-title', 'Transfer Notes - Management')
+
 @section('content')
     <div class="p-4 rounded-lg">
-        <!-- Header with buttons -->
-        <x-nav-buttons :items="[
-            ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-            ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
-            ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-            ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
-            ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
-        ]" active="Transactions" />
-
-        <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-sm p-6">
-            <!-- Header -->
-            <div class="flex justify-between items-center mb-6 pb-4 border-b">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-900">Stock Transactions</h2>
-                    <p class="text-sm text-gray-500">History of all inventory movements in your organization</p>
-                </div>
-                {{-- <a href="{{ route('admin.inventory.stock.create') }}"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-plus-circle mr-2"></i> Create a Transaction
-                </a> --}}
+        <!-- Header with navigation buttons -->
+        <div class="justify-between items-center mb-4">
+            <div class="rounded-lg ">
+                <x-nav-buttons :items="[
+                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+                ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+                ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+                ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+                ]" active="Transactions" />
             </div>
 
-            <!-- Filters -->
-            <div class="bg-gray-50 rounded-xl p-4 mb-6">
+            <!-- Search and Filter -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <form method="GET" action="{{ route('admin.inventory.stock.transactions.index') }}"
                     class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
@@ -55,7 +53,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <i class="fas fa-store absolute right-3 top-3 text-gray-400"></i>
+
                         </div>
                     </div>
 
@@ -66,33 +64,26 @@
                                 class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
                                 <option value="">All Types</option>
                                 @foreach ([
-                                'purchase_order' => 'Purchase Order',
-                                'return' => 'Return',
-                                'adjustment' => 'Adjustment',
-                                'audit' => 'Audit',
-                                'transfer_in' => 'Transfer In',
-                                'sales_order' => 'Sales Order',
-                                'write_off' => 'Write Off',
-                                'transfer' => 'Transfer',
-                                'usage' => 'Usage',
-                                'transfer_out' => 'Transfer Out',
-                            ] as $value => $label)
+            'purchase_order' => 'Purchase Order',
+            'grn_stock_in' => 'GRN Stock In',
+            'gtn_stock_in' => 'GTN Stock In',
+            'gtn_stock_out' => 'GTN Stock Out', // 'return' => 'Return','adjustment' => 'Adjustment', // 'audit' => 'Audit',            // 'sales_order' => 'Sales Order',            // 'write_off' => 'Write Off',            // 'transfer' => 'Transfer',            // 'usage' => 'Usage',
+        ] as $value => $label)
                                     <option value="{{ $value }}"
                                         {{ request('transaction_type') == $value ? 'selected' : '' }}>
                                         {{ $label }}
                                     </option>
                                 @endforeach
                             </select>
-                            <i class="fas fa-filter absolute right-3 top-3 text-gray-400"></i>
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="date" name="date_from" value="{{ request('date_from') }}"
+                            <input type="date" name="date_from" value="{{ $dateFrom }}"
                                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-                            <input type="date" name="date_to" value="{{ request('date_to') }}"
+                            <input type="date" name="date_to" value="{{ $dateTo }}"
                                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
@@ -110,121 +101,168 @@
                                 </a>
                             @endif
                         </div>
-                        <button type="button" onclick="window.print()"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg flex items-center">
-                            <i class="fas fa-print mr-2"></i> Print
-                        </button>
+
                     </div>
                 </form>
             </div>
 
-            <!-- Transactions Table -->
+
+
+            <!-- Transaction List -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Date</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Item</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Branch</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Type</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Quantity</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Notes</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @forelse ($transactions as $tx)
-                                <tr class="hover:bg-gray-50 cursor-pointer"
-                                    onclick="window.location='{{ route('admin.inventory.stock.show', $tx->id) }}'">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ $tx->created_at->format('M d, Y') }}</div>
-                                        <div class="text-xs text-gray-500">{{ $tx->created_at->format('h:i A') }}</div>
-                                    </td>
+                <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Stock Transactions</h2>
+                        <p class="text-sm text-gray-500">
+                            @if (
+                                $transactions instanceof \Illuminate\Pagination\LengthAwarePaginator ||
+                                    $transactions instanceof \Illuminate\Pagination\Paginator)
+                                Showing {{ $transactions->firstItem() ?? 0 }} to {{ $transactions->lastItem() ?? 0 }} of
+                                {{ $transactions->total() ?? 0 }} Transactions
+                            @else
+                                {{ $transactions->count() }} Transactions
+                            @endif
+                        </p>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Organization: {{ Auth::user()->organization->name }}
+                        </p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button type="button" onclick="window.print()"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-print mr-2"></i> Print
+                        </button>
+                        <a href="#"
+                            class="bg-indigo-600 hover:bg-indigo-700 opacity-50 cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center pointer-events-none">
+                            <i class="fas fa-file-export mr-2"></i> Export
+                        </a>
 
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        @if ($tx->item)
-                                            <div class="font-medium text-gray-900">{{ $tx->item->name }}</div>
-                                            <div class="text-xs text-gray-500">{{ $tx->item->item_code }}</div>
-                                        @else
-                                            <div class="text-gray-500 italic">Item deleted</div>
-                                        @endif
-                                    </td>
-
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        {{ optional($tx->branch)->name ?? '-' }}
-                                    </td>
-
-                                    @php
-                                        $isIn = !$controller->isStockOut($tx->transaction_type);
-                                    @endphp
-
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <x-partials.badges.status-badge
-                                            :status="$isIn ? 'success' : 'danger'"
-                                            :text="ucwords(str_replace('_', ' ', $tx->transaction_type))" />
-                                    </td>
-
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <div class="{{ $isIn ? 'text-green-600' : 'text-red-600' }}">
-                                            @php
-                                                // Determine the sign based on transaction type
-                                                $sign = $isIn ? '+' : '-';
-                                                // Ensure we don't get double signs or incorrect combinations
-                                                $quantity = $sign . number_format(abs($tx->quantity), 2);
-                                            @endphp
-                                            {{ $quantity }}
-                                            <span class="text-xs text-gray-500">{{ $tx->item->unit_of_measurement ?? 'N/A' }}</span>
-                                        </div>
-                                    </td>
-
-
-                                    <td class="px-6 py-4">
-                                        <div class="text-sm text-gray-500 max-w-xs truncate">
-                                            {{ $tx->notes }}
-                                        </div>
-                                    </td>
-
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <div class="flex justify-end space-x-3">
-                                            <a href="{{ route('admin.inventory.stock.show', $tx->id) }}"
-                                                class="text-indigo-600 hover:text-indigo-800" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            @if (auth()->user()->can('edit_inventory'))
-                                                <a href="{{ route('admin.inventory.stock.edit', ['item_id' => $tx->inventory_item_id, 'branch_id' => $tx->branch_id]) }}"
-                                                    class="text-blue-600 hover:text-blue-800" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                                        No transactions found matching your criteria.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    </div>
                 </div>
 
-                <!-- Pagination -->
-                @if ($transactions->hasPages())
-                    <div class="p-4 border-t">
-                        {{ $transactions->withQueryString()->links() }}
+
+
+                <!-- Transactions Table -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Date</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Item</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Branch</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Type</th>
+                                    <th
+                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Quantity</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Notes</th>
+                                    <th
+                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @forelse ($transactions as $tx)
+                                    <tr class="hover:bg-gray-50 cursor-pointer"
+                                        onclick="window.location='{{ route('admin.inventory.stock.show', $tx->id) }}'">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900">{{ $tx->created_at->format('M d, Y') }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">{{ $tx->created_at->format('h:i A') }}</div>
+                                        </td>
+
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            @if ($tx->item)
+                                                <div class="font-medium text-gray-900">{{ $tx->item->name }}</div>
+                                                <div class="text-xs text-gray-500">{{ $tx->item->item_code }}</div>
+                                            @else
+                                                <div class="text-gray-500 italic">Item deleted</div>
+                                            @endif
+                                        </td>
+
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            {{ optional($tx->branch)->name ?? '-' }}
+                                        </td>
+
+                                        @php
+                                            $isIn = !$controller->isStockOut($tx->transaction_type);
+                                        @endphp
+
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <x-partials.badges.status-badge :status="$isIn ? 'success' : 'danger'" :text="ucwords(str_replace('_', ' ', $tx->transaction_type))" />
+                                        </td>
+
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            <div class="{{ $isIn ? 'text-green-600' : 'text-red-600' }}">
+                                                @php
+                                                    // Determine the sign based on transaction type
+                                                    $sign = $isIn ? '+' : '-';
+                                                    // Ensure we don't get double signs or incorrect combinations
+                                                    $quantity = $sign . number_format(abs($tx->quantity), 2);
+                                                @endphp
+                                                {{ $quantity }}
+                                                <span
+                                                    class="text-xs text-gray-500">{{ $tx->item->unit_of_measurement ?? 'N/A' }}</span>
+                                            </div>
+                                        </td>
+
+
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm text-gray-500  truncate">
+                                                @php
+                                                    $words = str_word_count(strip_tags($tx->notes), 1);
+                                                    $preview = implode(' ', array_slice($words, 0, 3));
+                                                    $more = count($words) > 3 ? '...' : '';
+                                                @endphp
+                                                {{ $preview }}{{ $more }}
+                                            </div>
+                                        </td>
+
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            <div class="flex justify-end space-x-3">
+                                                <a href="{{ route('admin.inventory.stock.show', $tx->id) }}"
+                                                    class="text-indigo-600 hover:text-indigo-800" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                @if (auth()->user()->can('edit_inventory'))
+                                                    <a href="{{ route('admin.inventory.stock.edit', ['item_id' => $tx->inventory_item_id, 'branch_id' => $tx->branch_id]) }}"
+                                                        class="text-blue-600 hover:text-blue-800" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                            No transactions found matching your criteria.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
-                @endif
+
+                    <!-- Pagination -->
+                    @if ($transactions->hasPages())
+                        <div class="p-4 border-t">
+                            {{ $transactions->withQueryString()->links() }}
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
+
 @endsection
