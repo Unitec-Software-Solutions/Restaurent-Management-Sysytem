@@ -135,8 +135,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth()->check() && auth()->user()->isAdmin());
-
     // Admin-specific time handling
     if (isAdmin) {
         const setDefaultTime = (minutesToAdd) => {
