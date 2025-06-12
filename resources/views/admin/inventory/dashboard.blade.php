@@ -13,9 +13,10 @@
             <div class="rounded-lg ">
                 <x-nav-buttons :items="[
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-                ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
-                ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+                ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
                 ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
                 ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
                 ]" active="Dashboard" />
 
