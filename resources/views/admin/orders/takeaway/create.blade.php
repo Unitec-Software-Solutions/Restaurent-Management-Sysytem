@@ -246,7 +246,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth('admin')->check());
 
     // Initialize datetime picker
     const orderTimeInput = document.querySelector('input[name="order_time"]');
