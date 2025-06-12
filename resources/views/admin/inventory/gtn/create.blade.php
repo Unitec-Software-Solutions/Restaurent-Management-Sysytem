@@ -13,14 +13,14 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <a href="{{ route('admin.gtn.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
+                    <a href="{{ route('admin.inventory.gtn.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-arrow-left mr-2"></i> Back to GTNs
                     </a>
                 </div>
             </div>
 
             <!-- Form Container -->
-            <form action="{{ route('admin.gtn.store') }}" method="POST" class="p-6">
+            <form action="{{ route('admin.inventory.gtn.store') }}" method="POST" class="p-6">
                 @csrf
 
                 @if ($errors->any())
@@ -43,10 +43,10 @@
                     </div>
 
                     <div>
-                        <label for="from_branch_id" class="block text-sm font-medium text-gray-700 mb-1">From Branch *</label>
+                        <label for="from_branch_id" class="block text-sm font-medium text-gray-700 mb-1">Origin Branch (Select First) *</label>
                         <div class="relative">
                             <select id="from_branch_id" name="from_branch_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
-                                <option value="">Select Branch</option>
+                                <option value="">Select Origin Branch First</option>
                                 @foreach ($branches as $branch)
                                     <option value="{{ $branch->id }}" {{ old('from_branch_id') == $branch->id ? 'selected' : '' }}>
                                         {{ $branch->name }}
@@ -57,13 +57,14 @@
                                 <i class="fas fa-chevron-down"></i>
                             </div>
                         </div>
+                        <p class="text-xs text-gray-500 mt-1">Select this first to see available items with stock</p>
                     </div>
 
                     <div>
-                        <label for="to_branch_id" class="block text-sm font-medium text-gray-700 mb-1">To Branch *</label>
+                        <label for="to_branch_id" class="block text-sm font-medium text-gray-700 mb-1">Destination Branch *</label>
                         <div class="relative">
                             <select id="to_branch_id" name="to_branch_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
-                                <option value="">Select Branch</option>
+                                <option value="">Select Destination Branch</option>
                                 @foreach ($branches as $branch)
                                     <option value="{{ $branch->id }}" {{ old('to_branch_id') == $branch->id ? 'selected' : '' }}>
                                         {{ $branch->name }}
@@ -112,48 +113,20 @@
                                 <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                     <tr>
                                         <th class="px-4 py-3">Item</th>
-                                        <th class="px-4 py-3">Batch No</th>
-                                        <th class="px-4 py-3">Quantity</th>
-                                        <th class="px-4 py-3">Unit Price</th>
-                                        <th class="px-4 py-3">Line Total</th>
+                                        <th class="px-4 py-3">Available Stock</th>
+                                        <th class="px-4 py-3">Transfer Quantity*</th>
+                                        {{-- <th class="px-4 py-3">Batch No</th> --}}
                                         <th class="px-4 py-3">Expiry Date</th>
+                                        <th class="px-4 py-3">Notes</th>
                                         <th class="px-4 py-3">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsContainer">
-                                    <tr class="item-row border-b bg-white">
-                                        <td class="px-4 py-3">
-                                            <select name="items[0][item_id]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select" required>
-                                                <option value="">Select Item</option>
-                                                @foreach ($items as $item)
-                                                    <option value="{{ $item->id }}"
-                                                        data-code="{{ $item->item_code }}"
-                                                        data-price="{{ $item->buying_price }}">
-                                                        {{ $item->name }} ({{ $item->item_code }})
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <input type="hidden" name="items[0][item_code]" value="">
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="text" name="items[0][batch_no]" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" step="0.01" name="items[0][transfer_quantity]" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg quantity" required>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" step="0.01" name="items[0][transfer_price]" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg price" required>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="w-full px-3 py-2 font-medium line-total">$0.00</div>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="date" name="items[0][expiry_date]" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                        </td>
-                                        <td class="px-4 py-3 text-center">
-                                            <button type="button" class="remove-item text-red-500 hover:text-red-700">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                    <!-- Items will be added dynamically after selecting origin branch -->
+                                    <tr id="noItemsRow">
+                                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                            <i class="fas fa-info-circle mr-2"></i>
+                                            Please select an origin branch first to see available items with stock
                                         </td>
                                     </tr>
                                 </tbody>
@@ -185,40 +158,171 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            let itemCounter = 1;
+            let itemCounter = 0;
+            let availableItems = [];
+            let selectedBranchId = null;
+
+            const fromBranchSelect = document.getElementById('from_branch_id');
+            const toBranchSelect = document.getElementById('to_branch_id');
+            const addItemBtn = document.getElementById('addItemBtn');
+            const itemsContainer = document.getElementById('itemsContainer');
+
+            // Initially disable the add item button
+            addItemBtn.disabled = true;
+            addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Handle origin branch selection
+            fromBranchSelect.addEventListener('change', function() {
+                const branchId = this.value;
+                selectedBranchId = branchId;
+
+                if (branchId) {
+                    // Filter to_branch options to exclude selected from_branch
+                    updateToBranchOptions(branchId);
+
+                    // Fetch items with stock for this branch
+                    fetchItemsWithStock(branchId);
+                } else {
+                    // Reset items container
+                    resetItemsContainer();
+                    addItemBtn.disabled = true;
+                    addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            });
+
+            // Handle destination branch selection
+            toBranchSelect.addEventListener('change', function() {
+                const fromBranchId = fromBranchSelect.value;
+                if (this.value === fromBranchId) {
+                    alert('Destination branch cannot be the same as origin branch');
+                    this.value = '';
+                }
+            });
+
+            function updateToBranchOptions(excludeBranchId) {
+                const options = toBranchSelect.querySelectorAll('option');
+                options.forEach(option => {
+                    if (option.value === excludeBranchId) {
+                        option.disabled = true;
+                        option.style.display = 'none';
+                    } else {
+                        option.disabled = false;
+                        option.style.display = 'block';
+                    }
+                });
+
+                // Reset selection if currently selected branch is now excluded
+                if (toBranchSelect.value === excludeBranchId) {
+                    toBranchSelect.value = '';
+                }
+            }
+
+            function fetchItemsWithStock(branchId) {
+                // Show loading state
+                itemsContainer.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                            Loading available items...
+                        </td>
+                    </tr>
+                `;
+
+                fetch(`{{ route('admin.inventory.gtn.items-with-stock') }}?branch_id=${branchId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        availableItems = data;
+                        resetItemsContainer();
+
+                        if (availableItems.length > 0) {
+                            addItemBtn.disabled = false;
+                            addItemBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            itemsContainer.innerHTML = `
+                                <tr>
+                                    <td colspan="7" class="px-4 py-8 text-center text-yellow-600">
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                                        No items with available stock found in this branch
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        itemsContainer.innerHTML = `
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center text-red-600">
+                                    <i class="fas fa-exclamation-circle mr-2"></i>
+                                    Error loading items: ${error.message}
+                                </td>
+                            </tr>
+                        `;
+                    });
+            }
+
+            function resetItemsContainer() {
+                itemsContainer.innerHTML = `
+                    <tr id="noItemsRow">
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-plus mr-2"></i>
+                            Click "Add Item" to start adding items to transfer
+                        </td>
+                    </tr>
+                `;
+                itemCounter = 0;
+            }
 
             // Add new item row
-            document.getElementById('addItemBtn').addEventListener('click', function() {
+            addItemBtn.addEventListener('click', function() {
+                if (!selectedBranchId || availableItems.length === 0) {
+                    alert('Please select an origin branch with available stock first');
+                    return;
+                }
+
+                // Remove the no items row if it exists
+                const noItemsRow = document.getElementById('noItemsRow');
+                if (noItemsRow) {
+                    noItemsRow.remove();
+                }
+
                 const newRow = document.createElement('tr');
                 newRow.className = 'item-row border-b bg-white';
                 newRow.innerHTML = `
                     <td class="px-4 py-3">
                         <select name="items[${itemCounter}][item_id]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select" required>
                             <option value="">Select Item</option>
-                            @foreach ($items as $item)
-                                <option value="{{ $item->id }}"
-                                    data-code="{{ $item->item_code }}"
-                                    data-price="{{ $item->buying_price }}">
-                                    {{ $item->name }} ({{ $item->item_code }})
-                                </option>
-                            @endforeach
+                            ${availableItems.map(item =>
+                                `<option value="${item.id}"
+                                    data-code="${item.item_code}"
+                                    data-stock="${item.stock_on_hand}"
+                                    data-max="${item.max_transfer}">
+                                    ${item.name} (${item.item_code})
+                                </option>`
+                            ).join('')}
                         </select>
-                        <input type="hidden" name="items[${itemCounter}][item_code]" value="">
                     </td>
                     <td class="px-4 py-3">
-                        <input type="text" name="items[${itemCounter}][batch_no]" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <div class="text-sm font-medium stock-display text-gray-600">-</div>
                     </td>
                     <td class="px-4 py-3">
-                        <input type="number" step="0.01" name="items[${itemCounter}][transfer_quantity]" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg quantity" required>
+                        <input type="number" step="0.01" name="items[${itemCounter}][transfer_quantity]" value=""
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg quantity" required
+                            min="0.01" max="" placeholder="0.00">
+                        <div class="text-xs text-gray-500 mt-1 stock-hint"></div>
                     </td>
                     <td class="px-4 py-3">
-                        <input type="number" step="0.01" name="items[${itemCounter}][transfer_price]" value="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg price" required>
+                        <input type="date" name="items[${itemCounter}][expiry_date]"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                     </td>
                     <td class="px-4 py-3">
-                        <div class="w-full px-3 py-2 font-medium line-total">$0.00</div>
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="date" name="items[${itemCounter}][expiry_date]" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <input type="text" name="items[${itemCounter}][notes]"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="Notes (optional)">
                     </td>
                     <td class="px-4 py-3 text-center">
                         <button type="button" class="remove-item text-red-500 hover:text-red-700">
@@ -226,69 +330,130 @@
                         </button>
                     </td>
                 `;
-                document.getElementById('itemsContainer').appendChild(newRow);
+
+                itemsContainer.appendChild(newRow);
 
                 // Add event listeners to the new row
                 const select = newRow.querySelector('.item-select');
-                const priceInput = newRow.querySelector('.price');
                 const qtyInput = newRow.querySelector('.quantity');
                 const removeBtn = newRow.querySelector('.remove-item');
 
-                select.addEventListener('change', handleItemChange);
-                priceInput.addEventListener('input', function() { calculateLineTotal(this.closest('.item-row')); });
-                qtyInput.addEventListener('input', function() { calculateLineTotal(this.closest('.item-row')); });
-                removeBtn.addEventListener('click', function() { newRow.remove(); });
+                select.addEventListener('change', function() {
+                    handleItemChange(this);
+                });
+
+                qtyInput.addEventListener('input', function() {
+                    validateQuantity(this);
+                });
+
+                removeBtn.addEventListener('click', function() {
+                    newRow.remove();
+
+                    // Show no items row if no items left
+                    if (itemsContainer.children.length === 0) {
+                        resetItemsContainer();
+                    }
+                });
 
                 itemCounter++;
             });
 
-            // Remove item row
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('.remove-item')) {
-                    e.target.closest('.item-row').remove();
-                }
-            });
-
             // Handle item selection change
-            function handleItemChange() {
-                const selectedOption = this.options[this.selectedIndex];
-                const row = this.closest('.item-row');
-                if (selectedOption && selectedOption.value) {
-                    row.querySelector('input[name$="[item_code]"]').value = selectedOption.dataset.code || '';
-                    const priceInput = row.querySelector('.price');
-                    priceInput.value = selectedOption.dataset.price || '0';
-                    calculateLineTotal(row);
-                }
-            }
-
-            // Calculate line total
-            function calculateLineTotal(row) {
+            function handleItemChange(selectElement) {
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
+                const row = selectElement.closest('.item-row');
+                const stockDisplay = row.querySelector('.stock-display');
                 const qtyInput = row.querySelector('.quantity');
-                const priceInput = row.querySelector('.price');
-                const lineTotalCell = row.querySelector('.line-total');
-                if (qtyInput && priceInput) {
-                    const qty = parseFloat(qtyInput.value) || 0;
-                    const price = parseFloat(priceInput.value) || 0;
-                    const total = qty * price;
-                    lineTotalCell.textContent = '$' + total.toFixed(2);
+                const stockHint = row.querySelector('.stock-hint');
+
+                if (selectedOption && selectedOption.value) {
+                    const stock = parseFloat(selectedOption.dataset.stock);
+                    const maxTransfer = parseFloat(selectedOption.dataset.max);
+
+                    // Update the available stock display
+                    stockDisplay.textContent = `${stock} available`;
+                    stockDisplay.className = stock > 0 ? 'text-sm font-medium text-green-600 stock-display' : 'text-sm font-medium text-red-600 stock-display';
+
+                    qtyInput.max = maxTransfer;
+                    qtyInput.placeholder = `Max: ${stock}`;
+                    // stockHint.textContent = `Available: ${stock}, Max with 10% margin: ${maxTransfer.toFixed(2)}`;
+
+                    if (stock <= 0) {
+                        qtyInput.disabled = true;
+                        qtyInput.value = '';
+                        stockHint.textContent = 'No stock available for this item';
+                        stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                    } else {
+                        qtyInput.disabled = false;
+                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
+                    }
+                } else {
+                    stockDisplay.textContent = '-';
+                    stockDisplay.className = 'text-sm font-medium text-gray-600 stock-display';
+                    qtyInput.max = '';
+                    qtyInput.placeholder = '0.00';
+                    qtyInput.disabled = false;
+                    stockHint.textContent = '';
                 }
             }
 
-            // Attach event listeners to existing elements
-            document.querySelectorAll('.item-select').forEach(select => {
-                select.addEventListener('change', handleItemChange);
-            });
+            // Validate quantity input
+            function validateQuantity(qtyInput) {
+                const max = parseFloat(qtyInput.max);
+                const value = parseFloat(qtyInput.value);
+                const row = qtyInput.closest('.item-row');
+                const stockHint = row.querySelector('.stock-hint');
 
-            document.querySelectorAll('.quantity, .price').forEach(input => {
-                input.addEventListener('input', function() {
-                    calculateLineTotal(this.closest('.item-row'));
-                });
-            });
+                if (value > max) {
+                    qtyInput.setCustomValidity(`Quantity cannot exceed ${max.toFixed(2)}`);
+                    stockHint.textContent = `Error: Maximum allowed is ${max.toFixed(2)}`;
+                    stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                } else {
+                    qtyInput.setCustomValidity('');
+                    const selectedOption = row.querySelector('.item-select').selectedOptions[0];
+                    if (selectedOption) {
+                        const stock = parseFloat(selectedOption.dataset.stock);
+                        const remainingStock = stock - value;
+                        stockHint.textContent = `Remaining stock after transfer: ${remainingStock.toFixed(2)}`;
+                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
+                    }
+                }
+            }
 
-            document.querySelectorAll('.remove-item').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    this.closest('.item-row').remove();
+            // Form submission validation
+            document.querySelector('form').addEventListener('submit', function(e) {
+                const itemRows = document.querySelectorAll('.item-row');
+
+                if (itemRows.length === 0) {
+                    e.preventDefault();
+                    alert('Please add at least one item to transfer');
+                    return false;
+                }
+
+                // Validate all quantity inputs
+                let hasErrors = false;
+                itemRows.forEach(row => {
+                    const qtyInput = row.querySelector('.quantity');
+                    const selectInput = row.querySelector('.item-select');
+
+                    if (!selectInput.value) {
+                        hasErrors = true;
+                        selectInput.focus();
+                        return;
+                    }
+
+                    if (!qtyInput.value || parseFloat(qtyInput.value) <= 0) {
+                        hasErrors = true;
+                        qtyInput.focus();
+                        return;
+                    }
                 });
+
+                if (hasErrors) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields correctly');
+                    return false;
+                }
             });
         });
     </script>
