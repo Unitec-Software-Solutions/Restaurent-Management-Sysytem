@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Create GTN')
+@section('header-title', 'Create Goods Transfer Note')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Main Content Card -->
@@ -206,6 +206,7 @@
         function openModal() {
             document.getElementById('statusChangeModal').classList.remove('hidden');
         }
+
         function closeModal() {
             document.getElementById('statusChangeModal').classList.add('hidden');
         }
@@ -235,11 +236,11 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                              data-code="${item.item_code}"
-                                              data-stock="${item.stock_on_hand}"
-                                              data-max="${item.max_transfer}">
-                                              ${item.item_code} - ${item.name}
-                                        </option>`
+                                                  data-code="${item.item_code}"
+                                                  data-stock="${item.stock_on_hand}"
+                                                  data-max="${item.max_transfer}">
+                                                  ${item.item_code} - ${item.name}
+                                            </option>`
                             ).join('')}
                         </select>
                     </td>
