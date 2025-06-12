@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'View GTN')
+@section('header-title', 'Goods Transfer Note Details')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Main Content Card -->
