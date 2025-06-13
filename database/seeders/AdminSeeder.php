@@ -8,6 +8,7 @@ use App\Models\Admin;
 use App\Models\Branch;
 use App\Models\Organizations;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class AdminSeeder extends Seeder
 {
@@ -66,7 +67,7 @@ class AdminSeeder extends Seeder
         // $defaultBranch = Branch::first();
         // $defaultOrg = $defaultBranch ? $defaultBranch->organization_id : null;
 
-        Admin::firstOrCreate(
+        $admin = Admin::firstOrCreate(
             ['email' => 'admin@rms.com'],
             [
                 'name' => 'Testing Admin',
@@ -74,6 +75,14 @@ class AdminSeeder extends Seeder
                 'is_superadmin' => true,
             ]
         );
+
+        // Make sure the role exists
+        $role = Role::firstOrCreate(
+            ['name' => 'Super Admin', 'guard_name' => 'admin']
+        );
+
+        // Assign the role to the admin
+        $admin->assignRole($role);
 
         $this->command->info('  ✅ 10 Admin users and 1 testing admin seeded successfully (skipped existing ones).');
     }
