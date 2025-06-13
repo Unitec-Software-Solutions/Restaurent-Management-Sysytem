@@ -109,4 +109,9 @@ class Branch extends Model
     {
         $this->update(['is_active' => false]);
     }
+
+    public function isSystemActive()
+    {
+        return $this->organization->is_active && $this->is_active;
+    }
 }
