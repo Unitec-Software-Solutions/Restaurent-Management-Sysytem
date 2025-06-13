@@ -104,14 +104,13 @@
                 <div class="mb-8">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold text-gray-800">GRN Items</h3>
-                    </div>
-                    <!-- Add Item Button placed above the table, left-aligned -->
-                    <div class="mb-2 flex justify-start">
                         <button type="button" id="addItemBtn"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-plus mr-2"></i> Add Item
                         </button>
                     </div>
+
+
                     <div class="rounded-lg border border-gray-200 overflow-hidden">
                         <table class="w-full text-sm text-left text-gray-700">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -335,12 +334,37 @@
                         class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-center">
                         <i class="fas fa-redo mr-2"></i> Reset Form
                     </button>
-                    <button type="submit"
+                    <button type="button" id="openConfirmModalBtn"
                         class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center justify-center">
                         <i class="fas fa-check-circle mr-2"></i> Create GRN
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Confirm Modal for GRN Creation -->
+    <div id="grnConfirmModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div class="flex items-center mb-4">
+                <div class="bg-green-100 p-3 rounded-xl mr-3">
+                    <i class="fas fa-exclamation-triangle text-green-600"></i>
+                </div>
+                <h2 class="text-xl font-semibold text-gray-800">Confirm GRN Creation</h2>
+            </div>
+            <p class="mb-6 text-gray-700">
+                Are you sure you want to create this GRN? This action will record the goods received.
+            </p>
+            <div class="flex gap-3 mt-6">
+                <button id="confirmCreateGrnBtn"
+                    class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                    Yes, Create GRN
+                </button>
+                <button type="button" id="cancelCreateGrnBtn"
+                    class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    Cancel
+                </button>
+            </div>
         </div>
     </div>
 
@@ -635,6 +659,38 @@
                         .toFixed(2);
                 });
                 updateSummaryFooter();
+
+                // Modal logic for GRN confirmation
+                const openConfirmModalBtn = document.getElementById('openConfirmModalBtn');
+                const grnConfirmModal = document.getElementById('grnConfirmModal');
+                const confirmCreateGrnBtn = document.getElementById('confirmCreateGrnBtn');
+                const cancelCreateGrnBtn = document.getElementById('cancelCreateGrnBtn');
+
+                openConfirmModalBtn.addEventListener('click', function() {
+                    grnConfirmModal.classList.remove('hidden');
+                });
+
+                cancelCreateGrnBtn.addEventListener('click', function() {
+                    grnConfirmModal.classList.add('hidden');
+                });
+
+                confirmCreateGrnBtn.addEventListener('click', function() {
+                    grnConfirmModal.classList.add('hidden');
+                    grnForm.requestSubmit();
+                });
+
+                // Override form submit to show modal instead
+                grnForm.addEventListener('submit', function(e) {
+                    if (!grnConfirmModal.classList.contains('hidden')) {
+                        // Modal is already open, allow submit (user confirmed)
+                        return;
+                    }
+                    // Only show modal if submit is triggered by button (not programmatically)
+                    if (document.activeElement === openConfirmModalBtn) {
+                        // Prevent default, modal will handle submit
+                        e.preventDefault();
+                    }
+                });
             });
         </script>
     @endpush
