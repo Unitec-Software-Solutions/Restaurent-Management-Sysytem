@@ -3,6 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Organization;
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use App\Mail\UserInvitation;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
