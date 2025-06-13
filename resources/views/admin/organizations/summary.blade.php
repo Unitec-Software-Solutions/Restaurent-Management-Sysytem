@@ -90,5 +90,46 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Organization Subscription Details --}}
+    <div class="bg-white rounded-xl shadow p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Subscription Details</h3>
+        @if($organization->subscriptions->count())
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2">Plan</th>
+                        <th class="px-4 py-2">Status</th>
+                        <th class="px-4 py-2">Start</th>
+                        <th class="px-4 py-2">End</th>
+                        <th class="px-4 py-2">Amount</th>
+                        <th class="px-4 py-2">Currency</th>
+                        <th class="px-4 py-2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($organization->subscriptions as $subscription)
+                        <tr>
+                            <td class="px-4 py-2">{{ $subscription->plan_id }}</td>
+                            <td class="px-4 py-2">{{ ucfirst($subscription->status) }}</td>
+                            <td class="px-4 py-2">{{ $subscription->start_date }}</td>
+                            <td class="px-4 py-2">{{ $subscription->end_date }}</td>
+                            <td class="px-4 py-2">{{ number_format($subscription->amount / 100, 2) }}</td>
+                            <td class="px-4 py-2">{{ $subscription->currency }}</td>
+                            <td class="px-4 py-2">
+                                @if(auth('admin')->user()->isSuperAdmin())
+                                    <a href="{{ route('admin.subscriptions.edit', $subscription->id) }}" class="text-blue-600 hover:underline">Edit</a>
+                                @else
+                                    <span class="text-gray-400">Read Only</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @else
+            <div class="text-gray-500">No subscriptions found.</div>
+        @endif
+    </div>
 </div>
 @endsection
