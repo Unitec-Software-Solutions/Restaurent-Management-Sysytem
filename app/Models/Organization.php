@@ -43,10 +43,12 @@ class Organization extends Model
     public function activate()
     {
         $this->update(['is_active' => true]);
+        $this->branches()->update(['is_active' => true]);
     }
 
     public function deactivate()
     {
         $this->update(['is_active' => false]);
+        $this->branches()->update(['is_active' => false]);
     }
 }
