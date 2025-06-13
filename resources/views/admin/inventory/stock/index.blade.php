@@ -14,20 +14,6 @@
             ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
         ]" active="Stock Management" />
 
-        <!-- Stats Cards -->
-        {{-- <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <x-partials.cards.stats-card title="Total Items" value="{{ $itemsCount ?? 0 }}" trend="Across all branches"
-            icon="fas fa-boxes" color="indigo" />
-
-        <x-partials.cards.stats-card title="In Stock" value="{{ $inStockCount ?? 0 }}" trend="Available items"
-            icon="fas fa-check-circle" color="green" />
-
-        <x-partials.cards.stats-card title="Low Stock" value="{{ $nearReorderCount ?? 0 }}" trend="Needs reordering"
-            icon="fas fa-exclamation-triangle" color="yellow" />
-
-        <x-partials.cards.stats-card title="Out of Stock" value="{{ $outOfStockCount ?? 0 }}" trend="Restock needed"
-            icon="fas fa-times-circle" color="red" />
-    </div> --}}
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -87,18 +73,14 @@
             </form>
         </div>
 
-        <!-- Stock Levels Table -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <!-- Card Header with Actions -->
             <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-semibold text-gray-900">Inventory Stock Management</h2>
                     <p class="text-sm text-gray-500">Moniter and Manage Your stock levels</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    {{-- <a href="{{ route('admin.inventory.stock.create') }}"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                    <i class="fas fa-plus mr-2"></i> Add New Stock
-                </a> --}}
                     <a href="{{ route('admin.inventory.stock.transactions.index') }}"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-history mr-2"></i> View History
@@ -112,6 +94,7 @@
                 </div>
             </div>
 
+            <!-- Stock Levels Table -->
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">
