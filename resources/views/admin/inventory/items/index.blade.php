@@ -145,7 +145,8 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @forelse($items as $item)
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    onclick="window.location='{{ route('admin.inventory.items.show', $item->id) }}'">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="font-medium text-indigo-600">{{ $item->item_code }}</span>
                                     </td>
@@ -173,19 +174,12 @@
                                     <td class="px-6 py-4 text-right">
                                         Rs. {{ number_format($item->selling_price, 2) }}
                                     </td>
-                                    {{-- <td class="px-6 py-4 text-center">
-                                    @if ($item->deleted_at)
-                                        <x-partials.badges.status-badge status="danger" text="Inactive" />
-                                    @else
-                                        <x-partials.badges.status-badge status="success" text="Active" />
-                                    @endif
-                                </td> --}}
                                     <td class="px-6 py-4 text-center">
                                         <div class="flex justify-center space-x-3">
-                                            <a href="{{ route('admin.inventory.items.show', $item->id) }}"
+                                            {{-- <a href="{{ route('admin.inventory.items.show', $item->id) }}"
                                                 class="text-blue-600 hover:text-blue-800">
                                                 <i class="fas fa-eye"></i>
-                                            </a>
+                                            </a> --}}
                                             <a href="{{ route('admin.inventory.items.edit', $item->id) }}"
                                                 class="text-indigo-600 hover:text-indigo-900" title="Edit">
                                                 <i class="fas fa-edit"></i>
