@@ -22,11 +22,11 @@
         </div>
         <div>
             <label class="block mb-1 font-medium">Opening Time</label>
-            <input type="time" name="opening_time" value="{{ old('opening_time', $branch->opening_time) }}" class="w-full border rounded px-3 py-2" required>
+            <input type="time" name="opening_time" value="{{ old('opening_time', \Carbon\Carbon::parse($branch->opening_time)->format('H:i')) }}" class="w-full border rounded px-3 py-2" required>
         </div>
         <div>
             <label class="block mb-1 font-medium">Closing Time</label>
-            <input type="time" name="closing_time" value="{{ old('closing_time', $branch->closing_time) }}" class="w-full border rounded px-3 py-2" required>
+            <input type="time" name="closing_time" value="{{ old('closing_time', \Carbon\Carbon::parse($branch->closing_time)->format('H:i')) }}" class="w-full border rounded px-3 py-2" required>
         </div>
         <div>
             <label class="block mb-1 font-medium">Total Capacity</label>
@@ -34,17 +34,17 @@
         </div>
         <div>
             <label class="block mb-1 font-medium">Reservation Fee</label>
-            <input type="number" name="reservation_fee" value="{{ old('reservation_fee', $branch->reservation_fee) }}" class="w-full border rounded px-3 py-2" required>
+            <input type="number" step="0.01" name="reservation_fee" value="{{ old('reservation_fee', $branch->reservation_fee) }}" class="w-full border rounded px-3 py-2" required>
         </div>
         <div>
             <label class="block mb-1 font-medium">Cancellation Fee</label>
-            <input type="number" name="cancellation_fee" value="{{ old('cancellation_fee', $branch->cancellation_fee) }}" class="w-full border rounded px-3 py-2" required>
+            <input type="number" step="0.01" name="cancellation_fee" value="{{ old('cancellation_fee', $branch->cancellation_fee) }}" class="w-full border rounded px-3 py-2" required>
         </div>
         <div>
             <label class="block mb-1 font-medium">Status</label>
             <select name="is_active" class="w-full border rounded px-3 py-2">
-                <option value="1" {{ $branch->is_active ? 'selected' : '' }}>Active</option>
-                <option value="0" {{ !$branch->is_active ? 'selected' : '' }}>Inactive</option>
+                <option value="1" {{ old('is_active', $branch->is_active) ? 'selected' : '' }}>Active</option>
+                <option value="0" {{ !old('is_active', $branch->is_active) ? 'selected' : '' }}>Inactive</option>
             </select>
         </div>
         <div>
