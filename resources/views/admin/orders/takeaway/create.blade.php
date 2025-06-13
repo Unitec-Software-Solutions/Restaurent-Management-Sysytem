@@ -207,6 +207,7 @@
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     .quantity-input {
+        appearance: textfield;
         -moz-appearance: textfield;
     }
     .quantity-input::-webkit-outer-spin-button,
