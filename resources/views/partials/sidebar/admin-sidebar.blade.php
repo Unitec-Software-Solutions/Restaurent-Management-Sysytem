@@ -21,11 +21,8 @@
             {{-- Navigation --}}
             <div class="px-4 py-4">
                 @php
+                    $admin = auth()->user();
                     $navItems = [
-
- 
-                        
-
                         ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'icon_type' => 'svg'],
                         ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package', 'icon_type' => 'svg'],
                         ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock', 'icon_type' => 'svg'],
@@ -33,27 +30,98 @@
                         ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3', 'icon_type' => 'svg'],
                         ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users', 'icon_type' => 'svg'],
                         ['title' => 'Suppliers', 'route' => 'admin.suppliers.index', 'icon' => 'fas fa-truck', 'icon_type' => 'fa'],
-                        // ['title' => 'Purchase Orders', 'route' => 'admin.purchase-orders.index', 'icon' => 'fas fa-file-invoice-dollar', 'icon_type' => 'fa'],
-                        // ['title' => 'GRN Management', 'route' => 'admin.grn.index', 'icon' => 'fas fa-clipboard-check', 'icon_type' => 'fa'],
-
+                        ['title' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'icon_type' => 'svg'],
                     ];
+
+                    // Organizations nav with sub-item for activation
+                    $organizationsNav = [
+                        'title' => 'Organizations',
+                        'route' => 'admin.organizations.index',
+                        'icon' => 'building',
+                        'icon_type' => 'svg',
+                        'sub_items' => [],
+                    ];
+                    if($admin->isSuperAdmin()) {
+                        $organizationsNav['sub_items'][] = [
+                            'title' => 'Activate Organization',
+                            'route' => 'admin.organizations.activate.form',
+                            'icon' => 'fas fa-key',
+                            'icon_type' => 'fa',
+                        ];
+                    }
+
+                    // Branches nav with correct route and sub-item for activation
+                    $branchesNav = [
+                        'title' => 'Branches',
+                        'icon' => 'store',
+                        'icon_type' => 'svg',
+                        'sub_items' => [
+                            [
+                                'title' => 'Activate Branch',
+                                'route' => 'admin.branches.activate.form',
+                                'icon' => 'fas fa-key',
+                                'icon_type' => 'fa',
+                            ],
+                        ],
+                    ];
+                    if($admin->isSuperAdmin()) {
+                        $branchesNav['route'] = 'admin.branches.global';
+                        $branchesNav['route_params'] = [];
+                    } elseif($admin->organization_id) {
+                        $branchesNav['route'] = 'admin.branches.index';
+                        $branchesNav['route_params'] = ['organization' => $admin->organization_id];
+                    } else {
+                        $branchesNav['route'] = '#';
+                        $branchesNav['route_params'] = [];
+                    }
+
+                    // Add to nav
+                    $navItems[] = $organizationsNav;
+                    $navItems[] = $branchesNav;
+                    if($admin->isSuperAdmin()) {
+                        $navItems[] = ['title' => 'Roles & Permissions', 'route' => 'admin.roles.index', 'icon' => 'lock', 'icon_type' => 'svg'];
+                    }
                 @endphp
 
                 <ul class="space-y-2">
                     @foreach ($navItems as $item)
                         <li>
-                            <a href="{{ route($item['route']) }}"
+                            <a href="{{ $item['route'] !== '#' ? route($item['route'], $item['route_params'] ?? []) : '#' }}"
                                 class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors
                                 {{ request()->routeIs($item['route'])
                                     ? 'bg-white text-gray-700 border-white'
                                     : 'bg-transparent text-white border-white hover:bg-white/10' }}">
                                 @if($item['icon_type'] === 'svg')
-                                    @include('partials.icons.' . $item['icon'])
+                                    @if(View::exists('partials.icons.' . $item['icon']))
+                                        @include('partials.icons.' . $item['icon'])
+                                    @else
+                                        <svg class="w-5 h-5" fill="none"><rect width="100%" height="100%" fill="#ccc"/></svg>
+                                    @endif
                                 @else
                                     <i class="{{ $item['icon'] }} w-5 text-center"></i>
                                 @endif
                                 <span class="font-medium">{{ $item['title'] }}</span>
                             </a>
+                            @if(isset($item['sub_items']) && count($item['sub_items']))
+                                <ul class="ml-8 mt-1 space-y-1">
+                                    @foreach($item['sub_items'] as $sub)
+                                        <li>
+                                            <a href="{{ route($sub['route']) }}"
+                                                class="flex items-center gap-2 px-3 py-1 rounded border transition-colors text-sm
+                                                {{ request()->routeIs($sub['route'])
+                                                    ? 'bg-white text-gray-700 border-white'
+                                                    : 'bg-transparent text-white border-white hover:bg-white/10' }}">
+                                                @if($sub['icon_type'] === 'svg')
+                                                    @includeIf('partials.icons.' . $sub['icon'])
+                                                @else
+                                                    <i class="{{ $sub['icon'] }} w-4 text-center"></i>
+                                                @endif
+                                                <span>{{ $sub['title'] }}</span>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
