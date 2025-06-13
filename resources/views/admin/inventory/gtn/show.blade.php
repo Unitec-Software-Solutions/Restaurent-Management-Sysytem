@@ -3,77 +3,42 @@
 @section('header-title', 'Goods Transfer Note Details')
 @section('content')
     <div class="p-4 rounded-lg">
-        <!-- Main Content Card -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <!-- Card Header -->
-            <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900">Goods Transfer Note: {{ $gtn->gtn_number }}</h2>
-                    <p class="text-sm text-gray-500">Transfer details</p>
-                </div>
-
-                <div class="flex gap-2">
-                    <a href="{{ route('admin.inventory.gtn.index') }}"
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-arrow-left mr-2"></i> Back to GTNs
-                    </a>
-                    {{-- <a href="{{ route('admin.inventory.gtn.print', $gtn->gtn_id) }}"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-print mr-2"></i> Print
-                </a> --}}
-                    @if ($gtn->status == 'Pending')
-                        {{-- <a href="{{ route('admin.inventory.gtn.edit', $gtn->gtn_id) }}"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-edit mr-2"></i> Edit
-                </a> --}}
-
-                        <!-- Status Change Buttons -->
-                        <div class="flex gap-2">
-                            <button onclick="changeStatus('Confirmed')"
-                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                                <i class="fas fa-check mr-2"></i> Confirm
-                            </button>
-                            {{-- <button onclick="changeStatus('Approved')"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-thumbs-up mr-2"></i> Approve
+        <!-- Back and Action Buttons -->
+        <div class="flex justify-between items-center mb-6">
+            <a href="{{ route('admin.inventory.gtn.index') }}"
+                class="flex items-center text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i> Back to GTNs
+            </a>
+            <div class="flex space-x-2">
+                @if ($gtn->status == 'Pending')
+                    <button onclick="changeStatus('Confirmed')"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-check mr-2"></i> Confirm GTN
                     </button>
-                    <button onclick="changeStatus('Verified')"
-                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-shield-check mr-2"></i> Verify
-                    </button> --}}
-                        </div>
-                    @endif
-                </div>
+                    <button disabled
+                        class="bg-purple-400 text-white px-4 py-2 rounded-lg flex items-center opacity-60 cursor-not-allowed">
+                        <i class="fas fa-print mr-2"></i> Print
+                    </button>
+                @endif
             </div>
+        </div>
 
-            <!-- GTN Info Section -->
-            <div class="p-6 border-b">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">GTN Number</h3>
-                        <p class="mt-1 text-sm text-gray-900">{{ $gtn->gtn_number }}</p>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">Transfer Date</h3>
-                        <p class="mt-1 text-sm text-gray-900">
-                            {{ \Illuminate\Support\Carbon::parse($gtn->transfer_date)->format('d M Y') }}
-                        </p>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">Reference Number</h3>
-                        <p class="mt-1 text-sm text-gray-900">{{ $gtn->reference_number ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">From Branch</h3>
-                        <p class="mt-1 text-sm text-gray-900">{{ $gtn->fromBranch->name }}</p>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">To Branch</h3>
-                        <p class="mt-1 text-sm text-gray-900">{{ $gtn->toBranch->name }}</p>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">Status</h3>
-                        <p class="mt-1 text-sm">
+        <!-- GTN Header Card -->
+        <div
+            class="bg-white rounded-xl shadow-sm p-6 mb-6 border-l-4
+            @if ($gtn->status == 'Pending') border-yellow-500
+            @elseif($gtn->status == 'Confirmed') border-green-500
+            @elseif($gtn->status == 'Approved') border-blue-500
+            @elseif($gtn->status == 'Verified') border-purple-500
+            @elseif($gtn->status == 'Completed') border-green-500
+            @else border-red-500 @endif">
+
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <div class="flex items-center flex-wrap gap-4 mb-2">
+                        <h1 class="text-2xl font-bold text-gray-900">GTN #{{ $gtn->gtn_number }}</h1>
+                        <div class="flex items-center space-x-2">
+                            <p class="text-sm text-gray-500">Status :</p>
                             @if ($gtn->status == 'Pending')
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                     Pending
@@ -99,76 +64,170 @@
                                     Cancelled
                                 </span>
                             @endif
-                        </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar-day mr-2"></i>
+                            <span>Transfer Date:
+                                {{ \Illuminate\Support\Carbon::parse($gtn->transfer_date)->format('M d, Y') }}</span>
+                        </div>
+                        @if ($gtn->reference_number)
+                            <div class="flex items-center">
+                                <i class="fas fa-file-alt mr-2"></i>
+                                <span>Reference: {{ $gtn->reference_number }}</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex flex-col items-end">
+                    <div class="text-2xl font-bold text-indigo-600">{{ $gtn->items->sum('transfer_quantity') }}</div>
+                    <div class="text-sm text-gray-500 mt-1">Total Items Transferred</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GTN Details -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- From Branch Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">From Branch</h2>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Name</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Code</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->code ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->address ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->phone ?? 'N/A' }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Items Section -->
-            <div class="p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Transfer Items</h3>
-
-                <div class="rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left text-gray-700">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3">Item Code</th>
-                                    <th class="px-4 py-3">Item Name</th>
-                                    <th class="px-4 py-3">Batch No</th>
-                                    <th class="px-4 py-3">Quantity</th>
-                                    {{-- <th class="px-4 py-3">Unit Price</th> --}}
-                                    {{-- <th class="px-4 py-3">Line Total</th> --}}
-                                    <th class="px-4 py-3">Expiry Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($gtn->items as $item)
-                                    <tr class="border-b bg-white">
-                                        <td class="px-4 py-3">{{ $item->item_code }}</td>
-                                        <td class="px-4 py-3">{{ $item->item->name ?? $item->item_name }}</td>
-                                        <td class="px-4 py-3">{{ $item->batch_no ?? 'N/A' }}</td>
-                                        <td class="px-4 py-3">{{ $item->transfer_quantity }}</td>
-                                        {{-- <td class="px-4 py-3">Internal Transfer</td> --}}
-                                        {{-- <td class="px-4 py-3">-</td> --}}
-                                        <td class="px-4 py-3">
-                                            {{ $item->expiry_date ? \Illuminate\Support\Carbon::parse($item->expiry_date)->format('d M Y') : 'N/A' }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                                <tr class="bg-gray-50 font-semibold">
-                                    <td colspan="5" class="px-4 py-3 text-right">Total Items Transferred</td>
-                                    <td class="px-4 py-3">{{ $gtn->items->sum('transfer_quantity') }}</td>
-                                    <td></td>
-                                </tr>
-                            </tbody>
-                        </table>
+            <!-- To Branch Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">To Branch</h2>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Name</p>
+                        <p class="font-medium">{{ $gtn->toBranch->name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Branch Code</p>
+                        <p class="font-medium">{{ $gtn->toBranch->code ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p class="font-medium">{{ $gtn->toBranch->address ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact</p>
+                        <p class="font-medium">{{ $gtn->toBranch->phone ?? 'N/A' }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Notes Section -->
-            <div class="p-6 border-t">
-                <h3 class="text-sm font-medium text-gray-500">Notes</h3>
-                <p class="mt-1 text-sm text-gray-900">{{ $gtn->notes ?? 'No notes provided' }}</p>
-            </div>
-
-            <!-- Created/Updated Info -->
-            <div class="p-6 border-t bg-gray-50">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">Created By</h3>
-                        <p class="mt-1 text-sm text-gray-900">{{ $gtn->createdBy->name ?? 'System' }}</p>
-                        <p class="text-xs text-gray-500">{{ $gtn->created_at->format('d M Y H:i') }}</p>
+            <!-- GTN Summary -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-4">Transfer Summary</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Items:</span>
+                        <span class="font-bold">{{ $gtn->items->sum('transfer_quantity') }}</span>
                     </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-gray-500">Last Updated</h3>
-                        <p class="mt-1 text-sm text-gray-900">{{ $gtn->updatedBy->name ?? 'System' }}</p>
-                        <p class="text-xs text-gray-500">{{ $gtn->updated_at->format('d M Y H:i') }}</p>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Created By:</span>
+                        <span class="font-medium">{{ $gtn->createdBy->name ?? 'System' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Created At:</span>
+                        <span class="font-medium">{{ $gtn->created_at->format('M d, Y H:i') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Last Updated By:</span>
+                        <span class="font-medium">{{ $gtn->updatedBy->name ?? 'System' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Last Updated:</span>
+                        <span class="font-medium">{{ $gtn->updated_at->format('M d, Y H:i') }}</span>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- GTN Items -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-6 border-b">
+                <h2 class="text-lg font-semibold">Transfer Items</h2>
+                <p class="text-sm text-gray-500">Items included in this goods transfer note</p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch
+                                No</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Quantity</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EXP
+                                Date</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach ($gtn->items as $item)
+                            <tr>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium">{{ $item->item->name ?? $item->item_name }}</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ $item->item_code }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ $item->batch_no ?? 'N/A' }}
+                                </td>
+                                <td class="px-6 py-4 text-right font-medium text-indigo-600">
+                                    {{ $item->transfer_quantity }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ $item->expiry_date ? \Illuminate\Support\Carbon::parse($item->expiry_date)->format('M d, Y') : 'N/A' }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <td colspan="3" class="px-6 py-3 text-right font-medium">Total Items:</td>
+                            <td class="px-6 py-3 font-bold">{{ $gtn->items->sum('transfer_quantity') }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Notes Section -->
+        @if ($gtn->notes)
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-lg font-semibold mb-2">GTN Notes</h2>
+                <div class="prose max-w-none">
+                    {!! nl2br(e($gtn->notes)) !!}
+                </div>
+            </div>
+        @endif
     </div>
 
     <!-- Status Change Modal -->
@@ -231,3 +290,43 @@
         });
     </script>
 @endsection
+
+@push('styles')
+    <style>
+        .prose {
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        th,
+        td {
+            padding: 0.75rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        thead th {
+            background-color: #f9fafb;
+            color: #6b7280;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.75rem;
+        }
+
+        tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        tfoot td {
+            font-weight: 600;
+            background-color: #f9fafb;
+        }
+    </style>
+@endpush
