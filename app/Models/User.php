@@ -6,11 +6,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
+use App\Models\Organization;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -55,10 +57,23 @@ class User extends Authenticatable
     {
         return $this->user_type === 'admin';
     }
-
     public function organization()
     {
-        return $this->belongsTo(Organizations::class, 'organization_id');
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
+    public function hasBranchPermission($branchId, $permission)
+    {
+        return $this->roles()->where(function ($query) use ($branchId) {
+            $query->where('branch_id', $branchId)
+                  ->orWhereNull('branch_id');
+        })->whereHas('permissions', function ($q) use ($permission) {
+            $q->where('name', $permission);
+        })->exists();
+    }
+
+    public function isSuperAdmin()
+    {
+        return $this->hasRole('Super Admin'); 
+    }
 }
