@@ -22,10 +22,6 @@
             <div class="px-4 py-4">
                 @php
                     $navItems = [
-
- 
-                        
-
                         ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'icon_type' => 'svg'],
                         ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package', 'icon_type' => 'svg'],
                         ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock', 'icon_type' => 'svg'],
