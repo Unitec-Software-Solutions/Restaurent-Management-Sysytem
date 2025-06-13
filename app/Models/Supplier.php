@@ -47,6 +47,7 @@ class Supplier extends Model
     public function transactions()
     {
         return $this->morphMany(ItemTransaction::class, 'source')
+            ->whereRaw('source_id::text = ?', [(string) $this->getKey()]) // Use PostgreSQL's "::text" for casting
             ->orderBy('created_at', 'desc');
     }
 

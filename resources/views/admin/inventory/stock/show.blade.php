@@ -9,8 +9,8 @@
         <div class="mb-6 border-b pb-4">
             <h2 class="text-2xl font-bold text-gray-900 mb-1">Transaction Details</h2>
             <div class="flex items-center space-x-4">
-                {{-- <x-partials.badges.status-badge :status="$transaction->is_active ? 'success' : 'danger'" 
-                    :text="$transaction->is_active ? 'Active' : 'Inactive'" 
+                {{-- <x-partials.badges.status-badge :status="$transaction->is_active ? 'success' : 'danger'"
+                    :text="$transaction->is_active ? 'Active' : 'Inactive'"
                 /> --}}
                 <span class="text-sm text-gray-500">
                     {{ $transaction->created_at->format('M d, Y H:i') }}
@@ -26,7 +26,7 @@
                     <i class="fas fa-file-invoice mr-2 text-indigo-600"></i>
                     Transaction Overview
                 </h3>
-                
+
                 <x-partials.detail-item label="Item">
                     {{ $transaction->item->name }} ({{ $transaction->item->item_code }})
                 </x-partials.detail-item>
@@ -47,7 +47,7 @@
             </div>
 
             <!-- Transfer Details -->
-            @if($transaction->transfer_to_branch_id)
+            @if($transaction->incoming_branch_id)
             <div class="space-y-4">
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">
                     <i class="fas fa-truck-moving mr-2 text-indigo-600"></i>
@@ -99,15 +99,27 @@
                 </h3>
 
                 <x-partials.detail-item label="Initial Quantity">
-                    {{ number_format($transaction->quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                    @php
+                        $qty = $transaction->quantity;
+                        $sign = $qty > 0 ? '+' : ($qty < 0 ? '-' : '');
+                    @endphp
+                    {{ $sign }}{{ number_format(abs($qty), 2) }} {{ $transaction->item->unit_of_measurement }}
                 </x-partials.detail-item>
 
                 <x-partials.detail-item label="Received Quantity">
-                    {{ number_format($transaction->received_quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                    @php
+                        $recv = $transaction->received_quantity;
+                        $recvSign = $recv > 0 ? '+' : ($recv < 0 ? '-' : '');
+                    @endphp
+                    {{ $recvSign }}{{ number_format(abs($recv), 2) }} {{ $transaction->item->unit_of_measurement }}
                 </x-partials.detail-item>
 
                 <x-partials.detail-item label="Damaged Quantity">
-                    {{ number_format($transaction->damaged_quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                    @php
+                        $dam = $transaction->damaged_quantity;
+                        $damSign = $dam > 0 ? '+' : ($dam < 0 ? '-' : '');
+                    @endphp
+                    {{ $damSign }}{{ number_format(abs($dam), 2) }} {{ $transaction->item->unit_of_measurement }}
                 </x-partials.detail-item>
             </div>
 
@@ -147,7 +159,7 @@
 
         <!-- Actions -->
         <div class="mt-6 pt-4 border-t flex justify-end space-x-3">
-            <a href="{{ route('admin.inventory.stock.transactions.index') }}" 
+            <a href="{{ route('admin.inventory.stock.transactions.index') }}"
                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center">
                 <i class="fas fa-arrow-left mr-2"></i> Back to Transactions
             </a>

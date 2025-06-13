@@ -4,93 +4,131 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Faker\Factory as Faker;
 use Carbon\Carbon;
+use App\Models\Organizations;
+use App\Models\Branch;
 
 class EmployeeSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    protected array $roles = ['manager', 'chef', 'steward', 'cashier', 'waiter'];
+    protected array $firstNames = [
+        'Nimal', 'Sunil', 'Kumari', 'Nadeesha', 'Ruwantha', 'Dilani', 'Kavindu', 'Chathurika',
+        'Malsha', 'Tharindu', 'Sajith', 'Sachini', 'Isuru', 'Hansani', 'Kalum', 'Madhushani',
+        'Niroshan', 'Thilini', 'Pasindu', 'Yasodha', 'Lahiru', 'Sanduni', 'Anura', 'Dulani',
+        'Ravindu', 'Kanchana', 'Manoj', 'Rashmi', 'Pradeep', 'Shanika', 'Heshan', 'Pavithra',
+        'Dilshan', 'Samantha', 'Lasith', 'Anjali', 'Upul', 'Nadee', 'Chamara', 'Apsara',
+        'Dinesh', 'Harini', 'Ruwan', 'Iresha', 'Lakshan', 'Shalini', 'Kasun', 'Dilini',
+        'Janaka', 'Yasmin', 'Tharaka', 'Dulanjana', 'Sandamali', 'Chathura', 'Prashan',
+        'Nisansala', 'Kamalan', 'Suresh', 'Shanika', 'Hiran', 'Vimukthi', 'Maleesha',
+        'Ashan', 'Himali', 'Sanjaya', 'Piumi', 'Chamara', 'Nimantha', 'Gayan', 'Sewwandi',
+        'Lahiru', 'Ishara', 'Madhawa', 'Sachitha', 'Eshan', 'Sithara', 'Bimsara', 'Nisansala',
+        'Ruwantha', 'Dilani', 'Chamara', 'Supun', 'Nadeesha', 'Iroshini'
+    ];
+    protected array $middleNames = [
+        'N.', 'S.', 'K.', 'R.', 'T.', 'M.', 'D.', 'I.', 'H.', 'P.', 'L.', 'J.', 'G.', 'C.',
+        'V.', 'F.', 'B.', 'A.', 'E.', 'W.', 'Y.', 'Z.', 'Q.', 'X.', 'O.', 'U.', 'N.W.', 'S.K.', 'P.L.'
+    ];
+    protected array $lastNames = [
+        'Perera', 'Jayasinghe', 'Fernando', 'Weerasinghe', 'Silva', 'Senanayake', 'Gunawardena',
+        'Wickramasinghe', 'Abeysekara', 'Rajapaksha', 'Hettiarachchi', 'Jayawardena', 'Dias',
+        'Ranasinghe', 'Bandara', 'Rathnayake', 'Karunaratne', 'Alwis', 'De Silva', 'Wijesinghe',
+        'Amarasinghe', 'Herath', 'Liyanage', 'Nawarathne', 'Rajapakse', 'Peris', 'Samaraweera',
+        'Vithanage', 'Kulasekara', 'Senarath', 'Hewawasam', 'Wimalasena', 'Premaratne', 'Jayalath',
+        'Fonseka', 'Hettiarachchi', 'Jayathilaka', 'Dharmasena', 'Bandara', 'Pathirana', 'Dissanayake',
+        'Kumara', 'Wijeratne', 'Gamage', 'Ratnayake', 'Amarasiri', 'Hettiarachchi', 'Abeyrathne',
+        'Wijayapala', 'Jayawardhana', 'Samarasinghe', 'Fernando', 'Kulathunga', 'Samaranayake',
+        'Hewage', 'Jayasuriya', 'Gunasekara', 'Herath', 'Ranathunga', 'Mahawela', 'Mudalige'
+    ];
+
     public function run(): void
     {
-        $now = Carbon::now();
+        $faker = Faker::create();
 
-        DB::table('employees')->insert([
-            [
-                'emp_id' => 'EMP001',
-                'name' => 'John Doe',
-                'email' => 'john.doe@restaurant.com',
-                'phone' => '5550101001',
-                'role' => 'manager',
-                'branch_id' => 1,
-                'organization_id' => 1,
-                'is_active' => true,
-                'joined_date' => $now->subYears(2),
-                'address' => '123 Main St, Cityville',
-                'emergency_contact' => '5550101002 (Mary Doe)',
-                'created_at' => $now,
-                'updated_at' => $now
-            ],
-            [
-                'emp_id' => 'EMP002',
-                'name' => 'Jane Smith',
-                'email' => 'jane.smith@restaurant.com',
-                'phone' => '5550202002',
-                'role' => 'chef',
-                'branch_id' => 1,
-                'organization_id' => 1,
-                'is_active' => true,
-                'joined_date' => $now->subYear(),
-                'address' => '456 Oak Ave, Townsville',
-                'emergency_contact' => '5550202003 (Robert Smith)',
-                'created_at' => $now,
-                'updated_at' => $now
-            ],
-            [
-                'emp_id' => 'EMP003',
-                'name' => 'Alice Johnson',
-                'email' => 'alice.johnson@restaurant.com',
-                'phone' => '5550303003',
-                'role' => 'steward',
-                'branch_id' => 1,
-                'organization_id' => 1,
-                'is_active' => true,
-                'joined_date' => $now->subMonths(6),
-                'address' => '789 Pine Rd, Villageton',
-                'emergency_contact' => '5550303004 (David Johnson)',
-                'created_at' => $now,
-                'updated_at' => $now
-            ],
-            [
-                'emp_id' => 'EMP004',
-                'name' => 'Bob Williams',
-                'email' => 'bob.williams@restaurant.com',
-                'phone' => '5550404004',
-                'role' => 'steward',
-                'branch_id' => 1,
-                'organization_id' => 1,
-                'is_active' => true,
-                'joined_date' => $now->subMonths(3),
-                'address' => '321 Elm Blvd, Hamletville',
-                'emergency_contact' => '5550404005 (Sarah Williams)',
-                'created_at' => $now,
-                'updated_at' => $now
-            ],
-            [
-                'emp_id' => 'EMP005',
-                'name' => 'Emma Brown',
-                'email' => 'emma.brown@restaurant.com',
-                'phone' => '5550505005',
-                'role' => 'cashier',
-                'branch_id' => 1,
-                'organization_id' => 1,
-                'is_active' => true,
-                'joined_date' => $now->subMonth(),
-                'address' => '654 Maple Ln, Boroughburg',
-                'emergency_contact' => '5550505006 (Michael Brown)',
-                'created_at' => $now,
-                'updated_at' => $now
-            ]
-        ]);
+        if (!$this->hasEnoughOrganizations(5)) {
+            $this->command->warn("  🚨 Expected at least 5 organizations, aborting seeder.");
+            return;
+        }
+
+        $branches = Branch::with('organization')->get();
+        $empIdMap = [];
+
+        $employees = [];
+
+        // Step 1: Ensure each branch has at least one employee per role
+        foreach ($branches as $branch) {
+            $orgId = $branch->organization_id;
+            $branchId = $branch->id;
+            $empIdMap[$orgId][$branchId] = 0;
+
+            foreach ($this->roles as $role) {
+                $employees[] = $this->createEmployee($faker, $orgId, $branchId, ++$empIdMap[$orgId][$branchId], $role);
+            }
+        }
+
+        // Step 2: Add extra random employees up to 500 total
+        $extraEmployeesCount = max(0, 500 - count($employees));
+
+        for ($i = 0; $i < $extraEmployeesCount; $i++) {
+            $branch = $branches->random();
+            $orgId = $branch->organization_id;
+            $branchId = $branch->id;
+
+            $empIdMap[$orgId][$branchId] = ($empIdMap[$orgId][$branchId] ?? 0) + 1;
+
+            $employees[] = $this->createEmployee(
+                $faker,
+                $orgId,
+                $branchId,
+                $empIdMap[$orgId][$branchId],
+                $faker->randomElement($this->roles)
+            );
+        }
+
+        try {
+            DB::table('employees')->insert($employees);
+            $this->command->info("  ✅ Inserted " . count($employees) . " employees with full role coverage per branch.");
+        } catch (\Exception $e) {
+            $this->command->error("  ❌ Failed to insert employees: " . $e->getMessage());
+            Log::error("EmployeeSeeder insert failed", ['error' => $e]);
+        }
+    }
+
+    protected function hasEnoughOrganizations(int $minimum): bool
+    {
+        return Organizations::count() >= $minimum;
+    }
+
+    protected function createEmployee($faker, int $orgId, int $branchId, int $empIndex, string $role): array
+    {
+        $joinedDate = $faker->dateTimeBetween('-3 years', 'now');
+        $createdAt = Carbon::instance($faker->dateTimeBetween($joinedDate, 'now'));
+        $empId = "ORG{$orgId}-BR{$branchId}-EMP" . str_pad($empIndex, 3, '0', STR_PAD_LEFT);
+
+        return [
+            'emp_id' => $empId,
+            'name' => $this->generateUniqueSLName($faker),
+            'email' => $faker->unique()->safeEmail,
+            'phone' => $faker->numerify('07########'),
+            'role' => $role,
+            'branch_id' => $branchId,
+            'organization_id' => $orgId,
+            'is_active' => true,
+            'joined_date' => $joinedDate,
+            'address' => $faker->address,
+            'emergency_contact' => $faker->numerify('07########') . ' (' . $this->generateUniqueSLName($faker) . ')',
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
+        ];
+    }
+
+    protected function generateUniqueSLName($faker): string
+    {
+        $first = $faker->randomElement($this->firstNames);
+        $middle = $faker->optional()->randomElement($this->middleNames);
+        $last = $faker->randomElement($this->lastNames);
+
+        return trim("{$first} {$middle} {$last}");
     }
 }

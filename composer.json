@@ -7,9 +7,11 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "algolia/algoliasearch-client-php": "^4.21",
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.1",
+        "laravel/scout": "^10.15",
         "laravel/tinker": "^2.10.1",
         "laravel/ui": "^4.6",
         "orangehill/iseed": "^3.1",
@@ -24,7 +26,8 @@
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "phpunit/phpunit": "*",
-        "rector/rector": "^2.0"
+        "rector/rector": "^2.0",
+        "timwassenburg/laravel-service-generator": "^1.0"
     },
     "autoload": {
         "psr-4": {

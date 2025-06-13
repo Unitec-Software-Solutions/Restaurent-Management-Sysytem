@@ -1,14 +1,17 @@
 @extends('layouts.admin')
-@section('header-title', 'Items Management')
+@section('header-title', 'Inventory Items Management')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Navigation Buttons -->
         <x-nav-buttons :items="[
             ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
-            ['name' => 'Items Management', 'link' => route('admin.inventory.items.index')],
-            ['name' => 'Stocks Management', 'link' => route('admin.inventory.stock.index')],
-            ['name' => 'Transactions Management', 'link' => route('admin.inventory.stock.transactions.index')],
-        ]" active="Items Management" />
+            ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+            ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+            ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+            ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+            ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+        ]" active="Item Management" />
+
 
         <!-- Header with KPI Cards -->
         {{-- <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -114,7 +117,8 @@
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Category</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost / Buying price
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost
+                                / Buying price
                             </th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Price</th>
@@ -163,14 +167,14 @@
                                 <td class="px-6 py-4 text-center">
                                     <div class="flex justify-center space-x-3">
                                         <a href="{{ route('admin.inventory.items.show', $item->id) }}"
-                                                        class="text-blue-600 hover:text-blue-800">
-                                                        <i class="fas fa-eye"></i>
+                                            class="text-blue-600 hover:text-blue-800">
+                                            <i class="fas fa-eye"></i>
                                         </a>
                                         <a href="{{ route('admin.inventory.items.edit', $item->id) }}"
                                             class="text-indigo-600 hover:text-indigo-900" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        
+
                                         {{-- @if ($item->deleted_at)
                                             <form action="{{ route('admin.inventory.items.restore', $item->id) }}"
                                                 method="POST">

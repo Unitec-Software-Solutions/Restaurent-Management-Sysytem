@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class ItemTransaction extends Model
 {
@@ -13,9 +14,9 @@ class ItemTransaction extends Model
         'branch_id',
         'inventory_item_id',
         'transaction_type',
-        'transfer_to_branch_id',
+        'incoming_branch_id',
         'receiver_user_id',
-        'quantity',
+        'quantity', // Can be positive (stock in) or negative (stock out)
         'received_quantity',
         'damaged_quantity',
         'cost_price',
@@ -34,6 +35,7 @@ class ItemTransaction extends Model
         'cost_price' => 'decimal:4',
         'unit_price' => 'decimal:4',
         'is_active' => 'boolean',
+        'source_id' => 'string', // Ensure source_id is always treated as a string
     ];
 
     /*
@@ -85,6 +87,8 @@ class ItemTransaction extends Model
      */
     public static function stockOnHand($itemId, $branchId = null)
     {
+        //Log::info('Calculating stock on hand', ['item_id' => $itemId, 'branch_id' => $branchId]);
+
         $query = self::where('inventory_item_id', $itemId)->where('is_active', true);
 
         if ($branchId) {
@@ -93,7 +97,9 @@ class ItemTransaction extends Model
 
         $transactions = $query->get();
 
-        // Sum all quantities directly, positive for stock in, negative for stock out
-        return $transactions->sum('quantity');
+        $stock = $transactions->sum('quantity');
+        //Log::info('Stock on hand calculated', ['item_id' => $itemId, 'branch_id' => $branchId, 'stock' => $stock]);
+
+        return $stock;
     }
 }

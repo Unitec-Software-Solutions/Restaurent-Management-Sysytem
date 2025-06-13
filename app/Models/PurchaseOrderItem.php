@@ -35,7 +35,7 @@ class PurchaseOrderItem extends Model
      */
     protected $fillable = [
         'po_id',
-        'item_id',  // Changed from item_code
+        'item_id',
         'batch_no',
         'buying_price',
         'previous_buying_price', // Added

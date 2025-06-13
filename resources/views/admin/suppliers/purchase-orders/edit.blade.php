@@ -80,7 +80,7 @@
                                             <option value="{{ $itemOption->id }}"
                                                 {{ $item->item_id == $itemOption->id ? 'selected' : '' }}
                                                 data-price="{{ $itemOption->buying_price }}">
-                                                {{ $itemOption->name }}
+                                                {{ $itemOption->item_code }} - {{ $itemOption->name }}
                                             </option>
                                         @endforeach
                                     </select>

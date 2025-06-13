@@ -31,13 +31,91 @@
         .footer-gradient {
             background: linear-gradient(135deg, #ffffff 0%, #D9DCFF 100%);
         }
+
+        
+        @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+
+            .p-6,
+            .px-6,
+            .py-3,
+            .py-4 {
+                padding: 4px !important;
+            }
+
+            h1,
+            h3 {
+                font-size: 16px !important;
+            }
+
+            html,
+            body {
+                width: 210mm;
+                height: 297mm;
+                padding: 0;
+                margin: 0;
+                background: white;
+                font-size: 11px;
+                line-height: 1.3;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .page-break {
+                page-break-before: always;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
+            }
+
+            body {
+                padding: 0;
+                margin: 0;
+                background: white;
+            }
+
+            .grn-table th,
+            .grn-table td {
+                padding: 6px !important;
+            }
+        }
+
+        .status-badge {
+            @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+        }
+
+        .status-pending {
+            @apply bg-yellow-100 text-yellow-800;
+        }
+
+        .status-verified {
+            @apply bg-green-100 text-green-800;
+        }
+
+        .status-rejected {
+            @apply bg-red-100 text-red-800;
+        }
+
+        .status-default {
+            @apply bg-gray-100 text-gray-800;
+        }
+
     </style>
 </head>
 
 <body class="bg-[#e3e4f8] text-gray-800">
     <div class="min-h-screen flex flex-col">
         <!-- Navigation -->
-        <nav class="nav-gradient shadow-sm border-b border-[#515DEF]/20">
+        <nav class=" no-print nav-gradient shadow-sm border-b border-[#515DEF]/20">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between h-16 items-center">
                     <a href="{{ url('/') }}" class="flex items-center">
@@ -74,7 +152,7 @@
         @endif
 
     </div>
-    @yield('content')
+    
     @stack('scripts')
 </body>
 

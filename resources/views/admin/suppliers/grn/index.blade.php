@@ -1,16 +1,21 @@
 @extends('layouts.admin')
+@section('header-title', 'GRN List')
+{{-- @section('header-subtitle', 'Manage all goods received notes for your organization.') --}}
+
 
 @section('content')
     <!-- Page Content -->
     <div class="p-4 rounded-lg">
-        <!-- Header with buttons -->
+        <!-- Header with buttons                         inventory path                              -->
         <div class="sticky top-0 z-10 mb-6">
             <x-nav-buttons :items="[
-            ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
-            ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
-            ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
-            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
-            ]" active="Supplier GRNs" />
+                ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
+                ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
+                ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+                ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
+            ]" active="Goods Received Notes" />
         </div>
 
         <!-- Filters -->
@@ -42,12 +47,26 @@
                     </select>
                 </div>
 
+                <!-- Branch Filter -->
+                <div>
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                    <select name="branch_id" id="branch_id"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Branches</option>
+                        @foreach ($branches as $branch)
+                            <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <!-- Status Filter -->
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" id="status"
                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All Statuses</option>
+                        <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>Status</option>
                         <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
                         <option value="Verified" {{ request('status') == 'Verified' ? 'selected' : '' }}>Verified</option>
                         <option value="Rejected" {{ request('status') == 'Rejected' ? 'selected' : '' }}>Rejected</option>
@@ -59,26 +78,10 @@
                     <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
                     <div class="grid grid-cols-2 gap-2">
                         <input type="date" name="start_date" id="start_date"
-                         
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <input type="date" name="end_date" id="end_date" 
+                        <input type="date" name="end_date" id="end_date"
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                </div>
-
-                <!-- Branch Filter -->
-                <div>
-                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch*</label>
-                    <select name="branch_id" id="branch_id"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Branches</option>
-                        @foreach ($branches as $branch)
-                            <option value="{{ $branch->id }}"
-                                {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
                 </div>
 
                 {{-- <!-- PO Number Filter -->
@@ -130,14 +133,13 @@
         <!-- GRN List -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                 <div>
+                <div>
                     <h2 class="text-xl font-semibold text-gray-900">Goods Received Notes</h2>
                     <p class="text-sm text-gray-500">
                         Showing {{ $grns->firstItem() }} to {{ $grns->lastItem() }} of {{ $grns->total() }} GRNs
                     </p>
                     <p class="text-sm text-gray-500 mt-1">
-                        {{-- remove-001 late --}}
-                        Organization: {{ Auth::user()->organization->name }} 
+                        Organization: {{ Auth::user()->organization->name }}
                     </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -175,7 +177,8 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($grns as $grn)
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer"
+                                onclick="window.location='{{ route('admin.grn.show', $grn->grn_id) }}'">
                                 <td class="px-6 py-4">
                                     <div class="font-medium text-indigo-600">{{ $grn->grn_number }}</div>
                                     <div class="text-sm text-gray-500">{{ $grn->received_date->format('d M Y') }}</div>
@@ -194,9 +197,10 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div>{{ $grn->items->count() }} items</div>
+                                    <div>{{ $grn->items->count() }} item{{ $grn->items->count() == 1 ? '' : 's' }}</div>
                                     <div class="text-sm text-gray-500">
-                                        Total: {{ $grn->items->sum('received_quantity') }} units
+                                        Total: {{ $grn->items->sum('received_quantity') }}
+                                        unit{{ $grn->items->sum('received_quantity') == 1 ? '' : 's' }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
@@ -229,19 +233,19 @@
                                             class="text-blue-600 hover:text-blue-800" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
-                                        @if ($grn->status == 'Pending')
+                                        {{-- @if ($grn->status == 'Pending')
                                             <a href="{{ route('admin.grn.edit', $grn->grn_id) }}"
                                                 class="text-gray-600 hover:text-gray-800" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                        @endif
+                                        @endif --}}
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                                    No GRNs found matching your criteria
+                                    No GRNs found matching your criteria.
                                 </td>
                             </tr>
                         @endforelse
@@ -265,7 +269,6 @@
     </script>
 
     <style>
-
         /* !!! remove-001 later !!! */
         .progress-bar {
             height: 6px;

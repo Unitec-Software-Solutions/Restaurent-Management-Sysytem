@@ -207,4 +207,22 @@ class GrnMaster extends Model
         }
         $this->save();
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->grn_number)) {
+                $model->grn_number = static::generateGRNNumber($model->organization_id);
+            }
+        });
+    }
+
+    public static function generateGRNNumber($organizationId)
+    {
+        $latest = static::where('organization_id', $organizationId)->latest('grn_id')->first();
+        $nextId = $latest ? $latest->grn_id + 1 : 1;
+        return 'GRN-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+    }
 }

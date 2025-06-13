@@ -17,6 +17,7 @@ class Employee extends Model
         'phone',
         'role',
         'branch_id',
+        'organization_id',
         'is_active',
         'joined_date',
         'address',
