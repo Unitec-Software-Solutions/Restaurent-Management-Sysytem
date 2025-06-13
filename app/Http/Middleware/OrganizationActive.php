@@ -9,8 +9,9 @@ class OrganizationActive
 {
     public function handle(Request $request, Closure $next)
     {
-        if (!$request->user()->organization->is_active) {
-            abort(403, 'Organization is inactive.');
+        $organization = $request->route('organization') ?? $request->user()->organization;
+        if (!$organization || !$organization->is_active) {
+            return redirect()->route('admin.dashboard')->withErrors(['message' => 'Organization subscription is inactive or expired']);
         }
         return $next($request);
     }
