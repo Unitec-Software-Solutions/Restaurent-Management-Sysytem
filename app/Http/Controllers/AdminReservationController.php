@@ -22,22 +22,19 @@ class AdminReservationController extends Controller
     {
         $admin = auth('admin')->user();
 
-        if (!$admin) {
-            return redirect()->route('admin.login')->with('error', 'You must be logged in to access this page.');
+        if ($admin->isSuperAdmin()) { // Use property instead of method
+            $reservations = \App\Models\Reservation::with(['branch', 'organization'])->latest()->paginate(20);
+        } elseif ($admin->branch_id) {
+            $reservations = \App\Models\Reservation::with(['branch', 'organization'])
+                ->where('branch_id', $admin->branch_id)
+                ->latest()->paginate(20);
+        } elseif ($admin->organization_id) {
+            $reservations = \App\Models\Reservation::with(['branch', 'organization'])
+                ->where('organization_id', $admin->organization_id)
+                ->latest()->paginate(20);
+        } else {
+            $reservations = collect();
         }
-
-        if (!$admin->branch || !$admin->branch->id) {
-            return redirect()->route('admin.dashboard')->with('error', 'Branch information is missing for this user.');
-        }
-
-        $query = Reservation::with(['tables', 'branch', 'user'])
-            ->where('branch_id', $admin->branch->id);
-
-        if (request('phone')) {
-            $query->where('phone', request('phone'));
-        }
-
-        $reservations = $query->get();
 
         return view('admin.reservations.index', compact('reservations'));
     }
