@@ -43,10 +43,7 @@
                     </a>
                     
                     @auth
-                    <a href="{{ route('dashboard') }}" 
-                       class="block w-full bg-white border border-[#515DEF] text-[#515DEF] hover:bg-[#515DEF]/10 text-center py-3 px-4 rounded-lg transition-colors">
-                        <i class="fas fa-tachometer-alt mr-2"></i> Go to Dashboard
-                    </a>
+                    <a href="{{ route('admin.dashboard') }}">Go to Dashboard</a>
                     @endauth
                 </div>
             </div>
