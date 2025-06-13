@@ -37,6 +37,10 @@ class GoodsTransferNoteController extends Controller
 
         $orgId = $admin->organization_id;
 
+        // Set default date range: 30 days back to today
+        $startDate = request('start_date', now()->subDays(30)->format('Y-m-d'));
+        $endDate = request('end_date', now()->format('Y-m-d'));
+
         // Apply filters from request
         $query = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy'])
             ->where('organization_id', $orgId);
@@ -50,12 +54,9 @@ class GoodsTransferNoteController extends Controller
         if (($status = request('status')) && $status !== 'all') {
             $query->where('status', $status);
         }
-        if ($start = request('start_date')) {
-            $query->whereDate('transfer_date', '>=', $start);
-        }
-        if ($end = request('end_date')) {
-            $query->whereDate('transfer_date', '<=', $end);
-        }
+
+        // Always apply date range filter
+        $query->whereBetween('transfer_date', [$startDate, $endDate]);
 
         $gtns = $query->latest()->paginate(15);
 
@@ -63,7 +64,7 @@ class GoodsTransferNoteController extends Controller
         $branches = Branch::where('organization_id', $orgId)->active()->get();
         $items = ItemMaster::where('organization_id', $orgId)->active()->get();
 
-        return view('admin.inventory.gtn.index', compact('gtns', 'organization', 'branches', 'items'));
+        return view('admin.inventory.gtn.index', compact('gtns', 'organization', 'branches', 'items', 'startDate', 'endDate'));
     }
 
     public function create()

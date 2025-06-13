@@ -32,8 +32,9 @@ class GrnDashboardController extends Controller
     {
         $orgId = $this->getOrganizationId();
 
-        $startDate = $request->input('start_date', Carbon::now()->subMonth()->format('Y-m-d'));
-        $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
+        // Set default date range: 30 days back to today
+        $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
         $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder'])
             ->where('organization_id', $orgId);
@@ -54,9 +55,8 @@ class GrnDashboardController extends Controller
             });
         }
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('received_date', [$request->start_date, $request->end_date]);
-        }
+        // Always apply date range filter
+        $query->whereBetween('received_date', [$startDate, $endDate]);
 
         if ($request->filled('status') && $request->status != 'all') {
             $query->where('status', $request->status);
@@ -78,9 +78,8 @@ class GrnDashboardController extends Controller
 
         $statsQuery = GrnMaster::where('organization_id', $orgId);
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $statsQuery->whereBetween('received_date', [$request->start_date, $request->end_date]);
-        }
+        // Always apply date range filter for stats
+        $statsQuery->whereBetween('received_date', [$startDate, $endDate]);
 
         $stats = [
             'total_grns' => $statsQuery->count(),
@@ -517,3 +516,4 @@ class GrnDashboardController extends Controller
         }
     }
 }
+
