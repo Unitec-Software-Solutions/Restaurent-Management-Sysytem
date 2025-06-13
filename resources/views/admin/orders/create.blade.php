@@ -193,6 +193,7 @@
         transition: all 0.3s ease;
     }
     .quantity-input {
+        appearance: textfield;
         -moz-appearance: textfield;
     }
     .quantity-input::-webkit-outer-spin-button,
