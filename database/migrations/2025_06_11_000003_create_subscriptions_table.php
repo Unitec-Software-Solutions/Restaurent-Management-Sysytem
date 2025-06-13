@@ -10,11 +10,16 @@ class CreateSubscriptionsTable extends Migration
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
+            $table->uuid('organization_id');
+            $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
+            $table->uuid('branch_id')->nullable();
+            $table->foreign('branch_id')->references('id')->on('branches')->onDelete('cascade');
             $table->date('start_date');
             $table->date('end_date');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->timestamp('activated_at')->nullable();
+            $table->timestamp('terminated_at')->nullable();
         });
     }
 
