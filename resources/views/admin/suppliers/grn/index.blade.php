@@ -78,8 +78,10 @@
                     <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
                     <div class="grid grid-cols-2 gap-2">
                         <input type="date" name="start_date" id="start_date"
+                            value="{{ request('start_date', $startDate ?? \Carbon\Carbon::now()->subDays(30)->format('Y-m-d')) }}"
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <input type="date" name="end_date" id="end_date"
+                            value="{{ request('end_date', $endDate ?? \Carbon\Carbon::now()->format('Y-m-d')) }}"
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                 </div>

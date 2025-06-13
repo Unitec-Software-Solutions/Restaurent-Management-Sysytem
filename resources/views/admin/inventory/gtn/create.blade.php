@@ -236,11 +236,11 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                                  data-code="${item.item_code}"
-                                                  data-stock="${item.stock_on_hand}"
-                                                  data-max="${item.max_transfer}">
-                                                  ${item.item_code} - ${item.name}
-                                            </option>`
+                                          data-code="${item.item_code}"
+                                          data-stock="${item.stock_on_hand}"
+                                          data-max="${item.max_transfer}">
+                                          ${item.name} (${item.item_code})
+                                    </option>`
                             ).join('')}
                         </select>
                     </td>
@@ -284,11 +284,8 @@
 
                 removeBtn.addEventListener('click', function() {
                     newRow.remove();
-                    // If no item rows left, always add a new placeholder row
-                    if (itemsContainer.querySelectorAll('.item-row').length === 0) {
-                        itemCounter++;
-                        createPlaceholderRow();
-                    }
+                    // Removed: Always ensure at least one placeholder row exists
+                    // Now, all rows including the first can be removed freely
                 });
 
                 itemsContainer.appendChild(newRow);

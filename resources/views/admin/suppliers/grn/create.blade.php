@@ -104,12 +104,14 @@
                 <div class="mb-8">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold text-gray-800">GRN Items</h3>
+                    </div>
+                    <!-- Add Item Button placed above the table, left-aligned -->
+                    <div class="mb-2 flex justify-start">
                         <button type="button" id="addItemBtn"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-plus mr-2"></i> Add Item
                         </button>
                     </div>
-
                     <div class="rounded-lg border border-gray-200 overflow-hidden">
                         <table class="w-full text-sm text-left text-gray-700">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -158,85 +160,90 @@
                                         ->toArray();
                                 @endphp
 
-                                @foreach ($oldItems as $index => $item)
-                                    <tr class="item-row border-b bg-white hover:bg-gray-50"
-                                        data-index="{{ $index }}">
-                                        <td class="px-4 py-3">
-                                            <select name="items[{{ $index }}][item_id]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select"
-                                                required>
-                                                <option value="">Select Item</option>
-                                                @foreach ($items as $itemOption)
-                                                    <option value="{{ $itemOption->id }}"
-                                                        {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}
-                                                        data-price="{{ $itemOption->buying_price }}">
-                                                        {{ $itemOption->item_code }} - {{ $itemOption->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <input type="hidden" name="items[{{ $index }}][item_code]"
-                                                value="{{ $item['item_code'] ?? '' }}">
+                                @if (count($oldItems) === 0)
+                                    <tr class="placeholder-row">
+                                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                            <i class="fas fa-info-circle mr-2"></i>
+                                            Please add at least one item to the GRN.
                                         </td>
-                                        {{-- <td class="px-4 py-3">
-                                    <input type="text" name="items[{{ $index }}][batch_no]"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no"
-                                        value="{{ $item['batch_no'] }}">
-                                </td> --}}
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][received_quantity]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
-                                                min="0.01" step="0.01" value="{{ $item['received_quantity'] }}"
-                                                required>
-                                            <input type="hidden" name="items[{{ $index }}][ordered_quantity]"
-                                                class="ordered-qty" value="{{ $item['received_quantity'] }}">
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][free_received_quantity]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent free-qty"
-                                                min="0" step="0.01"
-                                                value="{{ $item['free_received_quantity'] ?? 0 }}">
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][buying_price]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-price"
-                                                min="0" step="0.01" value="{{ $item['buying_price'] }}"
-                                                required>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][discount_received]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent discount-received"
-                                                min="0" max="100" step="0.01"
-                                                value="{{ $item['discount_received'] ?? 0 }}">
-                                        </td>
-                                        <td class="px-4 py-3 font-medium item-total">
-                                            @php
-                                                $quantity = is_numeric($item['received_quantity'] ?? 0)
-                                                    ? (float) $item['received_quantity']
-                                                    : 0;
-                                                $price = is_numeric($item['buying_price'] ?? 0)
-                                                    ? (float) $item['buying_price']
-                                                    : 0;
-                                                $discountPercent = is_numeric($item['discount_received'] ?? 0)
-                                                    ? (float) $item['discount_received']
-                                                    : 0;
-                                                $discountAmount = $quantity * $price * ($discountPercent / 100);
-                                                echo number_format($quantity * $price - $discountAmount, 2);
-                                            @endphp
-                                        </td>
-                                        <td class="px-4 py-3 text-center">
-                                            @if ($index === 0)
-                                                <button type="button" class="text-gray-500 hover:text-gray-700">
-                                                    <i class=" "></i>
-                                                </button>
-                                            @else
+                                    </tr>
+                                @else
+                                    @foreach ($oldItems as $index => $item)
+                                        <tr class="item-row border-b bg-white hover:bg-gray-50"
+                                            data-index="{{ $index }}">
+                                            <td class="px-4 py-3">
+                                                <select name="items[{{ $index }}][item_id]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select"
+                                                    required>
+                                                    <option value="">Select Item</option>
+                                                    @foreach ($items as $itemOption)
+                                                        <option value="{{ $itemOption->id }}"
+                                                            {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}
+                                                            data-price="{{ $itemOption->buying_price }}">
+                                                            {{ $itemOption->item_code }} - {{ $itemOption->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="items[{{ $index }}][item_code]"
+                                                    value="{{ $item['item_code'] ?? '' }}">
+                                            </td>
+                                            {{-- <td class="px-4 py-3">
+                                        <input type="text" name="items[{{ $index }}][batch_no]"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no"
+                                            value="{{ $item['batch_no'] }}">
+                                    </td> --}}
+                                            <td class="px-4 py-3">
+                                                <input type="number" name="items[{{ $index }}][received_quantity]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
+                                                    min="0.01" step="0.01" value="{{ $item['received_quantity'] }}"
+                                                    required>
+                                                <input type="hidden" name="items[{{ $index }}][ordered_quantity]"
+                                                    class="ordered-qty" value="{{ $item['received_quantity'] }}">
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="number"
+                                                    name="items[{{ $index }}][free_received_quantity]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent free-qty"
+                                                    min="0" step="0.01"
+                                                    value="{{ $item['free_received_quantity'] ?? 0 }}">
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="number" name="items[{{ $index }}][buying_price]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-price"
+                                                    min="0" step="0.01" value="{{ $item['buying_price'] }}"
+                                                    required>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="number"
+                                                    name="items[{{ $index }}][discount_received]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent discount-received"
+                                                    min="0" max="100" step="0.01"
+                                                    value="{{ $item['discount_received'] ?? 0 }}">
+                                            </td>
+                                            <td class="px-4 py-3 font-medium item-total">
+                                                @php
+                                                    $quantity = is_numeric($item['received_quantity'] ?? 0)
+                                                        ? (float) $item['received_quantity']
+                                                        : 0;
+                                                    $price = is_numeric($item['buying_price'] ?? 0)
+                                                        ? (float) $item['buying_price']
+                                                        : 0;
+                                                    $discountPercent = is_numeric($item['discount_received'] ?? 0)
+                                                        ? (float) $item['discount_received']
+                                                        : 0;
+                                                    $discountAmount = $quantity * $price * ($discountPercent / 100);
+                                                    echo number_format($quantity * $price - $discountAmount, 2);
+                                                @endphp
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
                                                 <button type="button"
                                                     class="remove-item-btn text-red-500 hover:text-red-700">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @endif
                             </tbody>
                             <tfoot class="bg-gray-50 font-semibold text-gray-900">
                                 <tr>
@@ -369,6 +376,23 @@
                     }
                 }
 
+                function addPlaceholderRow() {
+                    if (!itemsContainer.querySelector('.placeholder-row')) {
+                        const row = document.createElement('tr');
+                        row.className = 'placeholder-row';
+                        row.innerHTML = `<td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Please add at least one item to the GRN.
+                        </td>`;
+                        itemsContainer.appendChild(row);
+                    }
+                }
+
+                function removePlaceholderRow() {
+                    const placeholder = itemsContainer.querySelector('.placeholder-row');
+                    if (placeholder) placeholder.remove();
+                }
+
                 // Attach event to existing item selects
                 document.querySelectorAll('.item-select').forEach(select => {
                     select.addEventListener('change', handleItemChange);
@@ -376,6 +400,7 @@
 
                 // Add new item row
                 addItemBtn.addEventListener('click', function() {
+                    removePlaceholderRow();
                     const newRow = document.createElement('tr');
                     newRow.className = 'item-row border-b bg-white hover:bg-gray-50';
                     newRow.dataset.index = itemCount;
@@ -387,7 +412,7 @@
                         <option value="">Select Item</option>
                         @foreach ($items as $item)
                             <option value="{{ $item->id }}" data-price="{{ $item->buying_price }}">
-                                {{ $item->name }} ({{ $item->item_code }})
+                                                                 {{ $item->item_code }} - {{ $item->name }}
                             </option>
                         @endforeach
                     </select>
@@ -463,11 +488,41 @@
                     // Add remove button handler
                     removeBtn.addEventListener('click', function() {
                         newRow.remove();
+                        if (itemsContainer.querySelectorAll('.item-row').length === 0) {
+                            addPlaceholderRow();
+                        }
                         updateGrandTotal();
                     });
 
                     itemCount++;
                 });
+
+                // Add remove button handler to dynamically added rows
+                function attachRemoveHandler(row) {
+                    const removeBtn = row.querySelector('.remove-item-btn');
+                    if (removeBtn) {
+                        removeBtn.addEventListener('click', function() {
+                            row.remove();
+                            if (itemsContainer.querySelectorAll('.item-row').length === 0) {
+                                addPlaceholderRow();
+                            }
+                            updateGrandTotal();
+                        });
+                    }
+                }
+
+                // Attach remove handler to existing rows
+                document.querySelectorAll('.item-row').forEach(row => {
+                    attachRemoveHandler(row);
+                });
+
+                // Add event listeners to remove buttons for dynamically added rows
+                // (already handled in addItemBtn click above)
+
+                // When page loads, if no item-row exists, show placeholder
+                if (itemsContainer.querySelectorAll('.item-row').length === 0) {
+                    addPlaceholderRow();
+                }
 
                 function updateSummaryFooter() {
                     let totalItems = 0;
@@ -532,14 +587,6 @@
                     });
 
                 document.getElementById('grand-discount-input').addEventListener('input', updateSummaryFooter);
-
-                // Add event listeners to remove buttons
-                document.querySelectorAll('.remove-item-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        this.closest('tr').remove();
-                        updateGrandTotal();
-                    });
-                });
 
                 // Form validation
                 document.getElementById('grnForm').addEventListener('submit', function(e) {
