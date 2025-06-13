@@ -27,7 +27,8 @@ class GrnMaster extends Model
         'status',
         'is_active',
         'created_by',
-        'total_amount'
+        'total_amount',
+        'grand_discount'
     ];
 
     protected $casts = [

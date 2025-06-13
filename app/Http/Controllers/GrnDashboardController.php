@@ -198,6 +198,7 @@ class GrnDashboardController extends Controller
                     }
                 },
             ],
+            'grand_discount' => 'nullable|numeric|min:0',
         ]);
 
         Log::info('GRN Data Validated', ['grn_id' => $grn->grn_id, 'validated' => $validated]);
@@ -211,6 +212,7 @@ class GrnDashboardController extends Controller
                 'delivery_note_number' => $validated['delivery_note_number'],
                 'invoice_number' => $validated['invoice_number'],
                 'notes' => $validated['notes'],
+                'grand_discount' => $validated['grand_discount'] ?? 0,
             ]);
 
             Log::info('GRN Master Updated', ['grn_id' => $grn->grn_id]);
@@ -246,7 +248,7 @@ class GrnDashboardController extends Controller
 
             Log::info('GRN Items Created', ['grn_id' => $grn->grn_id, 'item_count' => count($validated['items'])]);
 
-            $grn->update(['total_amount' => $total]);
+            $grn->update(['total_amount' => $total, 'grand_discount' => $validated['grand_discount'] ?? 0]);
 
             DB::commit();
             Log::info('GRN Update Committed', ['grn_id' => $grn->grn_id]);
@@ -300,6 +302,7 @@ class GrnDashboardController extends Controller
             'items.*.buying_price' => 'required|numeric|min:0',
             'items.*.discount_received' => 'nullable|numeric|min:0',
             'items.*.free_received_quantity' => 'nullable|numeric|min:0',
+            'grand_discount' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
@@ -316,7 +319,8 @@ class GrnDashboardController extends Controller
                 'notes' => $validated['notes'],
                 'status' => GrnMaster::STATUS_PENDING,
                 'is_active' => true,
-                'created_by' => optional(Auth::user())->id
+                'created_by' => optional(Auth::user())->id,
+                'grand_discount' => $validated['grand_discount'] ?? 0,
             ]);
 
             $total = 0;
@@ -342,7 +346,7 @@ class GrnDashboardController extends Controller
                 ]);
             }
 
-            $grn->update(['total_amount' => $total]);
+            $grn->update(['total_amount' => $total, 'grand_discount' => $validated['grand_discount'] ?? 0]);
 
             DB::commit();
             return redirect()->route('admin.grn.show', $grn)

@@ -51,7 +51,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status"
                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Statuses</option>
+                        <option value="">All Status</option>
                         <option value="in_stock" {{ request('status') == 'in_stock' ? 'selected' : '' }}>In Stock</option>
                         <option value="low_stock" {{ request('status') == 'low_stock' ? 'selected' : '' }}>Low Stock
                         </option>
