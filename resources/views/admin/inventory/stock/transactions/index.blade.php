@@ -88,20 +88,15 @@
                         </div>
                     </div>
 
-                    <div class="md:col-span-4 flex justify-between items-center space-x-3">
-                        <div class="flex space-x-3">
-                            <button type="submit"
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center">
-                                <i class="fas fa-filter mr-2"></i> Apply Filters
-                            </button>
-                            @if (request()->anyFilled(['search', 'branch_id', 'transaction_type', 'date_from', 'date_to']))
-                                <a href="{{ route('admin.inventory.stock.transactions.index') }}"
-                                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center">
-                                    Clear
-                                </a>
-                            @endif
-                        </div>
-
+                    <div class="flex items-end space-x-2">
+                        <button type="submit"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-filter mr-2"></i> Filter
+                        </button>
+                        <a href="{{ route('admin.inventory.stock.transactions.index') }}"
+                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-redo mr-2"></i> Reset
+                        </a>
                     </div>
                 </form>
             </div>
