@@ -3,12 +3,21 @@
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-5xl mx-auto">
         <div class="bg-white shadow-md rounded-lg p-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-6">Reservation Orders</h1>
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">
+                Reservation Orders
+                @php $admin = auth('admin')->user(); @endphp
+                @if($admin->isSuperAdmin())
+                    <span class="text-sm text-gray-500">(All Organizations)</span>
+                @elseif($admin->organization)
+                    <span class="text-sm text-gray-500">({{ $admin->organization->name }})</span>
+                @elseif($admin->branch)
+                    <span class="text-sm text-gray-500">({{ $admin->branch->name }})</span>
+                @endif
+            </h1>
             <div class="mb-4 flex justify-between items-center">
                 <div>
                     <span class="text-gray-600">Showing latest reservation orders</span>
                 </div>
-                <!-- Optionally, add a filter/search form here -->
             </div>
             @if($orders->count())
                 <div class="overflow-x-auto">
@@ -32,6 +41,10 @@
                                         @if($order->reservation)
                                             #{{ $order->reservation->id }}<br>
                                             {{ $order->reservation->reservation_time->format('M d, Y H:i') }}
+                                            @if($admin->isSuperAdmin() && $order->reservation->organization)
+                                                <br>
+                                                <span class="text-xs text-gray-400">Org: {{ $order->reservation->organization->name }}</span>
+                                            @endif
                                         @else
                                             —
                                         @endif
