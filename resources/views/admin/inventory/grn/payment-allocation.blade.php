@@ -1,3 +1,4 @@
+{{-- file not in use --}}
 @extends('layouts.admin')
 
 @section('header-title', 'Allocate Payment to Goods Received Note')
