@@ -4,9 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
-use App\Events\Registered;
+use Illuminate\Auth\Events\Registered;
 use App\Events\ReservationCancelled;
-use App\Listeners\SendEmailVerificationNotification;
+use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use App\Listeners\ReservationCancelledListener;
 
 class EventServiceProvider extends ServiceProvider
