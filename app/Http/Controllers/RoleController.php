@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\Module;
 
 class RoleController extends Controller
 {
@@ -63,5 +64,42 @@ class RoleController extends Controller
         $user->roles()->sync([$validated['role_id']]);
 
         return redirect()->route('users.show', $userId)->with('success', 'Role assigned successfully.');
+    }
+
+    public function assignModules(Request $request, Organization $org, Role $role)
+    {
+        $request->validate(['modules' => 'array']);
+
+        $permissions = \App\Models\Module::whereIn('id', $request->modules)
+            ->with('permissions')
+            ->get()
+            ->pluck('permissions')
+            ->flatten()
+            ->pluck('id');
+
+        $role->syncPermissions($permissions);
+
+        return response()->json([
+            'message' => 'Permissions updated',
+            'permissions' => $role->permissions
+        ]);
+    }
+    public function showAssignModulesForm(Role $role)
+    {
+        $this->authorize('assign_modules', $role);
+        $modules = Module::with('permissions')->get();
+        return view('admin.roles.assign-modules', compact('role', 'modules'));
+    }
+    public function editPermissions(Role $role)
+    {
+        $modules = Module::with('permissions')->get();
+        return view('admin.roles.permissions', compact('role', 'modules'));
+    }
+
+    public function updatePermissions(Request $request, Role $role)
+    {
+        $role->syncPermissions($request->input('permissions', []));
+        return redirect()->route('admin.roles.index')
+            ->with('success', 'Permissions updated successfully');
     }
 }
