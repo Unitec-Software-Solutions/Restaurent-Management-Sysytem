@@ -120,6 +120,7 @@ class OrganizationController extends Controller
 
     public function summary(Organization $organization)
     {
+        $organization->load('subscriptions');
         return view('admin.organizations.summary', compact('organization'));
     }
 
