@@ -3,23 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\Organization;
+use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 
 class OrganizationController extends Controller
 {
     public function index()
     {
         Gate::authorize('viewAny', Organization::class);
-        return Organization::with(['branches', 'subscriptions'])->get();
+        $organizations = Organization::with(['branches', 'subscriptions'])->get();
+        return view('admin.organizations.index', compact('organizations'));
     }
 
     // Add create method for organization registration
     public function create()
     {
         Gate::authorize('create', Organization::class);
-        return view('organizations.create');
+        return view('admin.organizations.create');
     }
 
     // Add store method for organization registration
@@ -29,32 +32,41 @@ class OrganizationController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:organizations,email',
-            'password' => 'required|string|min:8',
+            'email' => 'nullable|email|unique:organizations,email',
+            'phone' => 'required|string|max:20',
+            'password' => 'required|string|min:6',
             'address' => 'required|string|max:255',
-            'phone' => 'required|string|max:15', // Ensure phone is validated
+            // ... other validation rules ...
         ]);
 
+        // Create organization
         $organization = Organization::create([
             'name' => $validated['name'],
-            'email' => $validated['email'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'],
             'password' => bcrypt($validated['password']),
             'address' => $validated['address'],
-            'phone' => $validated['phone'], // Include phone in creation
+            // ... other fields ...
         ]);
 
-        return redirect()->route('organizations.index')->with('success', 'Organization created successfully.');
+        return redirect()->route('admin.organizations.index')->with('success', 'Organization created successfully');
     }
 
     public function update(Request $request, Organization $organization)
     {
-        Gate::authorize('update', $organization);
-        $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'is_active' => 'sometimes|boolean'
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email',
+            'phone' => 'required|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'is_active' => 'required|boolean',
         ]);
-        $organization->update($request->all());
-        return response()->json($organization);
+
+        $organization->update($validated);
+
+        return redirect()
+            ->route('admin.organizations.index')
+            ->with('success', 'Organization updated successfully.');
     }
 
     public function deactivate(Organization $organization)
@@ -63,5 +75,94 @@ class OrganizationController extends Controller
         $organization->update(['is_active' => false]);
         $organization->branches()->update(['is_active' => false]);
         return response()->json(['message' => 'Organization and branches deactivated']);
+    }
+
+    private function createDefaultRoles(Organization $org, Branch $branch)
+    {
+        $adminRole = $org->roles()->create(['name' => 'Organization Admin']);
+        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+
+        $branchRoles = [
+            'Branch Manager' => ['manage_reservation', 'manage_order', 'manage_inventory'],
+            'Staff' => ['create_order', 'view_inventory']
+        ];
+
+        foreach ($branchRoles as $name => $permissions) {
+            $role = $org->roles()->create([
+                'name' => $name,
+                'branch_id' => $branch->id
+            ]);
+            $role->givePermissionTo($permissions);
+        }
+    }
+
+    public function edit(Organization $organization)
+    {
+        $this->authorize('update', $organization);
+        return view('admin.organizations.edit', compact('organization'));
+    }
+
+    public function destroy(Organization $organization)
+    {
+        // Optional: Add authorization if needed
+        $this->authorize('delete', $organization);
+
+        // Delete related branches if needed
+        $organization->branches()->delete();
+
+        // Delete the organization
+        $organization->delete();
+
+        return redirect()
+            ->route('admin.organizations.index')
+            ->with('success', 'Organization deleted successfully.');
+    }
+
+    public function summary(Organization $organization)
+    {
+        return view('admin.organizations.summary', compact('organization'));
+    }
+
+    public function regenerateKey(Organization $organization)
+    {
+        $this->authorize('update', $organization);
+        $organization->activation_key = \Illuminate\Support\Str::random(40);
+        $organization->save();
+
+        return back()->with('success', 'Activation key regenerated!');
+    }
+
+    public function showActivationForm()
+    {
+        $admin = auth('admin')->user();
+
+        if ($admin->isSuperAdmin()) {
+            $organizations = \App\Models\Organization::all();
+            return view('admin.organizations.activate', compact('organizations'));
+        } else {
+            $organization = \App\Models\Organization::find($admin->organization_id);
+            return view('admin.organizations.activate', compact('organization'));
+        }
+    }
+
+    public function activateOrganization(Request $request)
+    {
+        $request->validate([
+            'activation_key' => 'required|string',
+            'organization_id' => 'required|exists:organizations,id'
+        ]);
+
+        $organization = \App\Models\Organization::find($request->organization_id);
+
+        if (!$organization || $organization->activation_key !== $request->activation_key) {
+            return back()->with('error', 'Invalid activation key.');
+        }
+
+        $organization->is_active = true;
+        $organization->activated_at = now();
+        $organization->activation_key = null; // Optionally clear the key after activation
+        $organization->save();
+
+        return back()->with('success', 'Organization activated successfully!');
     }
 }
