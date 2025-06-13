@@ -98,7 +98,7 @@ class GTNService
                 'batch_no' => $gtnItem->batch_no,
                 'ordered_quantity' => $gtnItem->transfer_quantity,
                 'received_quantity' => $gtnItem->transfer_quantity,
-                'accepted_quantity' => 0, // To be confirmed by receiving branch
+                'accepted_quantity' => $gtnItem->transfer_quantity, // Set accepted_quantity to match transfer_quantity
                 'rejected_quantity' => 0,
                 'buying_price' => 0, // Internal transfer
                 'line_total' => 0, // Internal transfer
@@ -109,6 +109,12 @@ class GTNService
                 'free_received_quantity' => 0
             ]);
         }
+
+        Log::info('Created receiving GRN for GTN', [
+            'gtn_id' => $gtn->gtn_id,
+            'grn_id' => $grn->grn_id,
+            'to_branch_id' => $gtn->to_branch_id
+        ]);
 
         return $grn;
     }
