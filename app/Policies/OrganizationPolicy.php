@@ -28,4 +28,9 @@ class OrganizationPolicy
     {
         return $user->is_superadmin;
     }
+    
+    public function delete($user, Organization $organization)
+    {
+        return $user->is_superadmin;
+    }
 }
