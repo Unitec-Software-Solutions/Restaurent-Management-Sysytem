@@ -23,8 +23,8 @@ class AdminAuthController extends Controller
         if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
             $admin = auth('admin')->user();
-            // Redirect to organization creation page after login
-            return redirect()->route('organizations.create');
+            
+            return redirect()->intended(route('admin.dashboard'));
         }
 
         return back()->withErrors([
