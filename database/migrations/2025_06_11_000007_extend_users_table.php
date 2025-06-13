@@ -9,9 +9,9 @@ class ExtendUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('organization_id')->after('id')->constrained()->cascadeOnDelete();
+            $table->foreignId('organization_id')->after('id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('branch_id')->after('organization_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('role_id')->after('branch_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('role_id')->after('branch_id')->nullable()->constrained()->cascadeOnDelete();
         });
     }
 
