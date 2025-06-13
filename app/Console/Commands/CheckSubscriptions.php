@@ -13,10 +13,12 @@ class CheckSubscriptions extends Command
 
     public function handle()
     {
+        // Deactivate expired subscriptions
         Subscription::where('end_date', '<', now())
             ->where('is_active', true)
             ->update(['is_active' => false]);
 
+        // Deactivate organizations with no active subscriptions
         Organization::whereDoesntHave('subscriptions', function ($query) {
                 $query->where('is_active', true);
             })
