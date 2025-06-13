@@ -10,14 +10,12 @@
             </a>
             <div class="flex space-x-2">
                 @if ($grn->status === 'Pending')
-                    {{-- <a href="{{ route('admin.grn.edit', $grn->grn_id) }}"
-                       class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-edit mr-2"></i> Edit GRN
-                    </a> --}}
-                    <form action="{{ route('admin.grn.verify', $grn->grn_id) }}" method="POST" class="inline">
+                    <!-- Verification form, but button triggers modal -->
+                    <form id="verifyGrnForm" action="{{ route('admin.grn.verify', $grn->grn_id) }}" method="POST"
+                        class="inline">
                         @csrf
                         <input type="hidden" name="status" value="Verified">
-                        <button type="submit"
+                        <button type="button" onclick="openVerifyModal()"
                             class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-check mr-2"></i> Verify GRN
                         </button>
@@ -29,42 +27,6 @@
                 </a>
             </div>
         </div>
-
-        <!-- GRN Header -->
-        {{-- <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">GRN #{{ $grn->grn_number }}</h1>
-                    <div class="flex items-center mt-2 space-x-2">
-                        <span class="text-sm font-medium">Status:</span>
-                        @if ($grn->status === 'Pending')
-                            <x-partials.badges.status-badge status="warning" text="Pending" />
-                        @elseif($grn->status === 'Verified')
-                            <x-partials.badges.status-badge status="success" text="Verified" />
-                        @elseif($grn->status === 'Rejected')
-                            <x-partials.badges.status-badge status="danger" text="Rejected" />
-                        @else
-                            <x-partials.badges.status-badge status="default" text="{{ $grn->status }}" />
-                        @endif
-
-                        <span class="text-sm font-medium ml-4">Payment:</span>
-                        @if ($grn->isPaymentPaid())
-                            <x-partials.badges.status-badge status="success" text="Fully Paid" />
-                        @elseif($grn->isPaymentPartial())
-                            <x-partials.badges.status="info" text="Partially Paid" />
-                        @else
-                            <x-partials.badges.status-badge status="warning" text="Pending Payment" />
-                        @endif
-                    </div>
-                </div>
-                <div class="text-right">
-                    <div class="text-gray-500 text-sm">Received Date</div>
-                    <div class="text-lg font-semibold">{{ $grn->received_date->format('M d, Y') }}</div>
-                    <div class="text-gray-500 text-sm mt-1">Invoice No</div>
-                    <div class="text-lg font-semibold">{{ $grn->invoice_number ?? 'N/A' }}</div>
-                </div>
-            </div>
-        </div> --}}
 
         <!-- GRN Header Card -->
         <div
@@ -405,6 +367,31 @@
                 </div>
             </div>
         @endif
+
+        <!-- Confirm Verification Modal -->
+        <div id="verifyModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+                <div class="flex items-center mb-4">
+                    <div class="bg-green-100 p-3 rounded-xl mr-3">
+                        <i class="fas fa-exclamation-triangle text-green-600"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800">Confirm GRN Verification</h2>
+                </div>
+                <p class="mb-6 text-gray-700">
+                    Are you sure you want to verify this GRN? This action cannot be undone.
+                </p>
+                <div class="flex gap-3 mt-6">
+                    <button id="confirmVerifyBtn"
+                        class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                        Yes, Verify GRN
+                    </button>
+                    <button type="button" onclick="closeVerifyModal()"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 @endsection
 
@@ -451,4 +438,24 @@
             background-color: #f9fafb;
         }
     </style>
+@endpush
+
+@push('scripts')
+    <script>
+        function openVerifyModal() {
+            document.getElementById('verifyModal').classList.remove('hidden');
+        }
+
+        function closeVerifyModal() {
+            document.getElementById('verifyModal').classList.add('hidden');
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var confirmBtn = document.getElementById('confirmVerifyBtn');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', function() {
+                    document.getElementById('verifyGrnForm').submit();
+                });
+            }
+        });
+    </script>
 @endpush
