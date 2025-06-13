@@ -120,127 +120,127 @@
                 </div>
             </div>
 
-                <!-- Stock Levels Table -->
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Item
-                                    Details</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Branch</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Stock
-                                    Level</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Status</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @forelse($stocks as $stock)
-                                <tr class="hover:bg-gray-50">
-                                    <!-- Item Details -->
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center">
-                                            <div class="bg-gray-100 p-3 rounded-lg mr-4">
-                                                <i class="fas fa-box text-gray-600"></i>
-                                            </div>
-                                            <div>
-                                                <div class="font-medium text-gray-900">{{ $stock['item']->name }}</div>
-                                                <div class="text-sm text-gray-500">
-                                                    {{ $stock['item']->item_code }} •
-                                                    {{ optional($stock['item']->category)->name ?? 'Uncategorized' }}
-                                                </div>
-                                            </div>
+            <!-- Stock Levels Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Item
+                                Details</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Branch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Stock
+                                Level</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @forelse($stocks as $stock)
+                            <tr class="hover:bg-gray-50">
+                                <!-- Item Details -->
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <div class="bg-gray-100 p-3 rounded-lg mr-4">
+                                            <i class="fas fa-box text-gray-600"></i>
                                         </div>
-                                    </td>
-
-                                    <!-- Branch -->
-                                    <td class="px-6 py-4">
-                                        <div class="text-gray-900">{{ $stock['branch']->name }}</div>
-                                    </td>
-
-                                    <!-- Stock Level -->
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium text-gray-900">
-                                            {{ $stock['current_stock'] }}
-                                            <span class="text-gray-500">/ {{ $stock['reorder_level'] }}</span>
-                                            <span
-                                                class="text-xs text-gray-500 ml-1">{{ $stock['item']->unit_of_measurement }}</span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                                            @php
-                                                $percentage =
-                                                    $stock['reorder_level'] > 0
-                                                        ? min(
-                                                            100,
-                                                            ($stock['current_stock'] / $stock['reorder_level']) * 100,
-                                                        )
-                                                        : 0;
-
-                                                $color = match (true) {
-                                                    $stock['current_stock'] <= 0 => 'bg-red-500',
-                                                    $stock['status'] === 'low_stock' => 'bg-yellow-500',
-                                                    default => 'bg-green-500',
-                                                };
-                                            @endphp
-                                            <div class="h-1.5 rounded-full {{ $color }}"
-                                                style="width: {{ $percentage }}%">
+                                        <div>
+                                            <div class="font-medium text-gray-900">{{ $stock['item']->name }}</div>
+                                            <div class="text-sm text-gray-500">
+                                                {{ $stock['item']->item_code }} •
+                                                {{ optional($stock['item']->category)->name ?? 'Uncategorized' }}
                                             </div>
                                         </div>
-                                    </td>
+                                    </div>
+                                </td>
 
-                                    <!-- Status -->
-                                    <td class="px-6 py-4">
-                                        @if ($stock['current_stock'] <= 0)
-                                            <x-partials.badges.status-badge status="danger" text="Out of Stock" />
-                                        @elseif($stock['status'] === 'low_stock')
-                                            <x-partials.badges.status-badge status="warning" text="Low Stock" />
-                                        @else
-                                            <x-partials.badges.status-badge status="success" text="In Stock" />
-                                        @endif
-                                    </td>
+                                <!-- Branch -->
+                                <td class="px-6 py-4">
+                                    <div class="text-gray-900">{{ $stock['branch']->name }}</div>
+                                </td>
 
-                                    <!-- Actions -->
-                                    <td class="px-6 py-4 text-right">
-                                        <div class="flex justify-end space-x-3">
-                                            {{-- <a
+                                <!-- Stock Level -->
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-gray-900">
+                                        {{ $stock['current_stock'] }}
+                                        <span class="text-gray-500">/ {{ $stock['reorder_level'] }}</span>
+                                        <span
+                                            class="text-xs text-gray-500 ml-1">{{ $stock['item']->unit_of_measurement }}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                        @php
+                                            $percentage =
+                                                $stock['reorder_level'] > 0
+                                                    ? min(
+                                                        100,
+                                                        ($stock['current_stock'] / $stock['reorder_level']) * 100,
+                                                    )
+                                                    : 0;
+
+                                            $color = match (true) {
+                                                $stock['current_stock'] <= 0 => 'bg-red-500',
+                                                $stock['status'] === 'low_stock' => 'bg-yellow-500',
+                                                default => 'bg-green-500',
+                                            };
+                                        @endphp
+                                        <div class="h-1.5 rounded-full {{ $color }}"
+                                            style="width: {{ $percentage }}%">
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Status -->
+                                <td class="px-6 py-4">
+                                    @if ($stock['current_stock'] <= 0)
+                                        <x-partials.badges.status-badge status="danger" text="Out of Stock" />
+                                    @elseif($stock['status'] === 'low_stock')
+                                        <x-partials.badges.status-badge status="warning" text="Low Stock" />
+                                    @else
+                                        <x-partials.badges.status-badge status="success" text="In Stock" />
+                                    @endif
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex justify-end space-x-3">
+                                        {{-- <a
                                     href="{{ route('admin.inventory.stock.edit', ['item_id' => $stock['item']->id, 'branch_id' => $stock['branch']->id]) }}"
                                     class="text-indigo-600 hover:text-indigo-800" title="Add Transaction">
                                     <i class="fas fa-plus-circle"></i>
                                 </a> --}}
 
-                                            <a href="{{ route('admin.inventory.stock.transactions.index', [
-                                                'search' => $stock['item']->item_code,
-                                                'branch_id' => $stock['branch']->id,
-                                                'transaction_type' => '',
-                                                'date_from' => '',
-                                                'date_to' => '',
-                                            ]) }}"
-                                                class="text-purple-600 hover:text-purple-800" title="View History">
-                                                <i class="fas fa-history"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                                        No stock items found matching your criteria.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                        <a href="{{ route('admin.inventory.stock.transactions.index', [
+                                            'search' => $stock['item']->item_code,
+                                            'branch_id' => $stock['branch']->id,
+                                            'transaction_type' => '',
+                                            'date_from' => '',
+                                            'date_to' => '',
+                                        ]) }}"
+                                            class="text-purple-600 hover:text-purple-800" title="View History">
+                                            <i class="fas fa-history"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                                    No stock items found matching your criteria.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-                <!-- Pagination -->
-                <div class="p-4 border-t">
-                    {{ $stocks->links() }}
-                </div>
+            <!-- Pagination -->
+            <div class="p-4 border-t">
+                {{ $stocks->links() }}
             </div>
         </div>
-    @endsection
+    </div>
+@endsection
