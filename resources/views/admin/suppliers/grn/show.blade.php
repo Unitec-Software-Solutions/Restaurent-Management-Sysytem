@@ -136,6 +136,33 @@
                 <h2 class="text-lg font-semibold mb-4">GRN Summary</h2>
                 <div class="space-y-4">
                     <div class="flex justify-between">
+                        <span class="text-gray-600">Total Before Discount:</span>
+                        <span class="font-bold">
+                            Rs.
+                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price;}),2) }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Discount (Items):</span>
+                        <span class="font-bold">
+                            Rs.
+                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price * ($item->discount_received / 100);}),2) }}
+                        </span>
+                    </div>
+                    @if (($grn->grand_discount ?? 0) != 0)
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Grand Discount (Total Bill):</span>
+                            <span class="font-bold">{{ $grn->grand_discount }}%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Total After Grand Discount:</span>
+                            <span class="font-bold">
+                                Rs.
+                                {{ number_format($grn->total_amount - $grn->total_amount * ($grn->grand_discount / 100), 2) }}
+                            </span>
+                        </div>
+                    @endif
+                    <div class="flex justify-between">
                         <span class="text-gray-600">Total Amount:</span>
                         <span class="font-bold">Rs. {{ number_format($grn->total_amount, 2) }}</span>
                     </div>
@@ -145,24 +172,15 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Balance:</span>
-                        <span class="font-bold">Rs. {{ number_format($grn->total_amount - $grn->paid_amount, 2) }}</span>
+                        <span class="font-bold">
+                            @if (($grn->grand_discount ?? 0) != 0)
+                                Rs.
+                                {{ number_format($grn->total_amount - $grn->total_amount * ($grn->grand_discount / 100) - $grn->paid_amount, 2) }}
+                            @else
+                                Rs. {{ number_format($grn->total_amount - $grn->paid_amount, 2) }}
+                            @endif
+                        </span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Total Before Discount:</span>
-                        <span class="font-bold">Rs.
-                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price;}),2) }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Total Discount (Items):</span>
-                        <span class="font-bold">Rs.
-                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price * ($item->discount_received / 100);}),2) }}</span>
-                    </div>
-                    @if ($grn->grand_discount ?? false)
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Grand Discount (Total Bill):</span>
-                            <span class="font-bold">{{ $grn->grand_discount }}%</span>
-                        </div>
-                    @endif
                     <div class="pt-2 border-t">
                         <div class="flex justify-between">
                             <span class="text-gray-600">Received By:</span>
