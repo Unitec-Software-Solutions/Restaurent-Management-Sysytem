@@ -34,5 +34,26 @@ class AppServiceProvider extends ServiceProvider
         
         // Register policy
         Gate::policy(Role::class, RolePolicy::class);
+
+        $this->registerPolicies();
     }
+
+    /**
+     * Register the application's policy mappings.
+     *
+     * @return void
+     */
+    protected function registerPolicies()
+    {
+        Gate::policy(\App\Models\Branch::class, \App\Policies\BranchPolicy::class);
+    }
+
+    /**
+     * The policy mappings for the application.
+     *
+     * @var array
+     */
+    protected $policies = [
+        \App\Models\Branch::class => \App\Policies\BranchPolicy::class,
+    ];
 }
