@@ -64,7 +64,7 @@
                                 class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
                                 <option value="">All Types</option>
                                 @foreach ([
-            'purchase_order' => 'Purchase Order',
+            // 'purchase_order' => 'Purchase Order',
             'grn_stock_in' => 'GRN Stock In',
             'gtn_stock_in' => 'GTN Stock In',
             'gtn_stock_out' => 'GTN Stock Out', // 'return' => 'Return','adjustment' => 'Adjustment', // 'audit' => 'Audit',            // 'sales_order' => 'Sales Order',            // 'write_off' => 'Write Off',            // 'transfer' => 'Transfer',            // 'usage' => 'Usage',
