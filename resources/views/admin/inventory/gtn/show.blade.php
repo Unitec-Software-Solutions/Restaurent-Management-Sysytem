@@ -15,11 +15,12 @@
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-check mr-2"></i> Confirm GTN
                     </button>
-                    <button disabled
-                        class="bg-purple-400 text-white px-4 py-2 rounded-lg flex items-center opacity-60 cursor-not-allowed">
-                        <i class="fas fa-print mr-2"></i> Print
-                    </button>
                 @endif
+                <a href="javascript:void(0);"
+                    class="bg-purple-400 text-white px-4 py-2 rounded-lg flex items-center cursor-not-allowed opacity-60 pointer-events-none"
+                    aria-disabled="true">
+                    <i class="fas fa-print mr-2"></i> Print
+                </a>
             </div>
         </div>
 
