@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone_number')->unique();
-            $table->enum('user_type', ['admin', 'manager', 'chef', 'waiter', 'cashier', 'customer']);
+            $table->string('phone_number')->unique()->nullable();
+            $table->enum('user_type', ['superadmin', 'admin', 'manager', 'chef', 'waiter', 'cashier', 'customer']);
             $table->boolean('is_registered')->default(false);
             $table->softDeletes();
         });
