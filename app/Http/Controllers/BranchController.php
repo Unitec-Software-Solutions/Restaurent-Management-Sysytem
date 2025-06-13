@@ -136,8 +136,7 @@ public function activateBranch(Request $request)
 // Show summary
 public function summary(Branch $branch)
 {
-    $this->authorize('view', $branch);
-    $branch->load('organization');
+    $branch->load(['organization', 'subscriptions']);
     return view('admin.branches.summary', compact('branch'));
 }
 
@@ -148,5 +147,15 @@ public function regenerateKey(Branch $branch)
     $branch->save();
 
     return back()->with('success', 'Activation key regenerated!');
+}
+public function destroy(Organization $organization, Branch $branch)
+{
+    $this->authorize('delete', $branch);
+
+    $branch->delete();
+
+    return redirect()
+        ->route('admin.branches.index', ['organization' => $organization->id])
+        ->with('success', 'Branch deleted successfully.');
 }
 }
