@@ -26,4 +26,14 @@ class BranchPolicy
     {
         return $admin->organization_id === $branch->organization_id;
     }
+
+    public function delete($user, $branch)
+    {
+        // Allow super admin
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+            return true;
+        }
+        // Allow org admin for their own branches
+        return $user->organization_id === $branch->organization_id;
+    }
 }
