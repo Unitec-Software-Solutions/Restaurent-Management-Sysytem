@@ -16,12 +16,26 @@ class AdminOrderController extends Controller
     // List all submitted orders (admin)
     public function index()
     {
-        $orders = Order::with(['branch', 'items', 'reservation'])
-            ->where('status', 'submitted')
-            ->latest()
-            ->paginate(10);
-        $branches = Branch::all();
-        return view('admin.orders.index', compact('orders', 'branches'));
+        $admin = auth('admin')->user();
+
+        if ($admin->isSuperAdmin()) {
+            $orders = \App\Models\Order::with(['reservation', 'branch'])->latest()->paginate(20);
+        } elseif ($admin->branch_id) {
+            $orders = \App\Models\Order::with(['reservation', 'branch'])
+                ->where('branch_id', $admin->branch_id)
+                ->latest()->paginate(20);
+        } elseif ($admin->organization_id) {
+            $orders = \App\Models\Order::with(['reservation', 'branch'])
+                ->whereHas('branch', function ($q) use ($admin) {
+                    $q->where('organization_id', $admin->organization_id);
+                })
+                ->latest()->paginate(20);
+        } else {
+            // Return an empty paginator instead of a collection
+            $orders = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+        }
+
+        return view('admin.orders.index', compact('orders'));
     }
 
     // Edit order (admin)
