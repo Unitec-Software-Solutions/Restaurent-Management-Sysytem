@@ -109,7 +109,7 @@
                             class="bg-indigo-600 hover:bg-indigo-700 opacity-50 cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center pointer-events-none">
                             <i class="fas fa-file-export mr-2"></i> Export
                         </a>
-                        <a href="{{ route('admin.inventory.gtn.create') }}"
+                        <a href="{{ route('admin.inventory.items.create') }}"
                             class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-plus mr-2"></i> New Item
                         </a>
