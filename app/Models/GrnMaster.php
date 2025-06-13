@@ -149,7 +149,7 @@ class GrnMaster extends Model
 
     public function grnItems()
     {
-        return $this->hasMany(GrnItem::class, 'grn_id', 'id');
+        return $this->hasMany(GrnItem::class, 'grn_id', 'grn_id');
     }
 
     public function isPending()
