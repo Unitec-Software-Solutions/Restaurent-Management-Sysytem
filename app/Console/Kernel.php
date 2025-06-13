@@ -18,5 +18,7 @@ class Kernel extends ConsoleKernel
                 $q->where('status', 'expired');
             })->update(['is_active' => false]);
         })->daily();
+
+        $schedule->command('subscriptions:check')->daily();
     }
 }
