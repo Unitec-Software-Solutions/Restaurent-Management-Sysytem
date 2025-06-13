@@ -26,6 +26,7 @@ use App\Http\Controllers\{
     SubscriptionController,
     UserController
 };
+use App\Http\Middleware\SuperAdmin;
 
 
 /*-------------------------------------------------------------------------
@@ -103,7 +104,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
 
         // Reservations Management
-        Route::resource('reservations', AdminReservationController::class)->except(['create', 'store']);
+        Route::resource('reservations', AdminReservationController::class);
         Route::post('reservations/{reservation}/assign-steward', [AdminReservationController::class, 'assignSteward'])
             ->name('reservations.assign-steward');
         Route::post('reservations/{reservation}/check-in', [AdminReservationController::class, 'checkIn'])
@@ -240,47 +241,52 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/digital-menu', function () { return view('admin.digital-menu.index'); })->name('digital-menu.index');
         Route::get('/settings', function () { return view('admin.settings.index'); })->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+
+        // Users Management
+        
     });
 });
 
-/*-------------------------------------------------------------------------
-| Super Admin Routes (Organization Management)
-|------------------------------------------------------------------------*/
-Route::middleware(['auth:admin', 'can:create,App\Models\Organization'])->group(function () {
-    Route::get('/organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
-    Route::post('/organizations', [OrganizationController::class, 'store'])->name('organizations.store');
+
+// Super Admin Routes
+Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
+    // Organizations CRUD
+    Route::resource('organizations', OrganizationController::class)->except(['show']);
+    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
+    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
+
+    // Branches: Organization-specific CRUD
+    Route::prefix('organizations/{organization}')->group(function () {
+        Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+        Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+        Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+        Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+    });
+
+    // Global Branches Index (for Super Admin to see all branches)
+    Route::get('branches', [BranchController::class, 'globalIndex'])->name('branches.global');
+
+    // Users Management
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+
+
+    // Roles & Permissions
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
 });
 
-/*-------------------------------------------------------------------------
-| Role Management Routes
-|------------------------------------------------------------------------*/
-Route::middleware(['auth:admin', 'organization.active', 'branch.active'])->group(function () {
-    Route::post('/roles', [RoleController::class, 'store'])->can('create', App\Models\Role::class)->name('roles.store');
-});
-
-/*-------------------------------------------------------------------------
-| Additional Routes (Legacy/Redirects)
-|------------------------------------------------------------------------*/
-Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
-
-// Ensure all numeric parameters are properly constrained
-Route::pattern('id', '[0-9]+');
-Route::pattern('reservation', '[0-9]+');
-Route::pattern('order', '[0-9]+');
-Route::pattern('item', '[0-9]+');
-Route::pattern('transaction', '[0-9]+');
-Route::pattern('supplier', '[0-9]+');
-Route::pattern('grn', '[0-9]+');
-Route::pattern('payment', '[0-9]+');
-Route::pattern('po', '[0-9]+');
-Route::pattern('branch', '[0-9]+');
-Route::pattern('item_id', '[0-9]+');
-Route::pattern('branch_id', '[0-9]+');
-
+// Branch summary and regenerate key
 Route::middleware(['auth:admin'])->group(function () {
-    Route::resource('organizations', OrganizationController::class);
-    Route::resource('branches', BranchController::class)->except(['show']);
-    Route::resource('roles', RoleController::class);
-    Route::resource('users', UserController::class)->except(['show']);
-    Route::post('subscriptions/check', [SubscriptionController::class, 'checkSubscriptions']);
+    Route::get('branches/{branch}/summary', [BranchController::class, 'summary'])->name('branches.summary');
+    Route::put('branches/{branch}/regenerate-key', [BranchController::class, 'regenerateKey'])->name('branches.regenerate-key');
+});
+
+// Show activation form for all admins
+Route::get('admin/organizations/activate', [OrganizationController::class, 'showActivationForm'])->name('admin.organizations.activate.form');
+Route::post('admin/organizations/activate', [OrganizationController::class, 'activateOrganization'])->name('admin.organizations.activate.submit');
+
+Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
+    Route::get('branches/activate', [BranchController::class, 'showActivationForm'])->name('branches.activate.form');
+    Route::post('branches/activate', [BranchController::class, 'activateBranch'])->name('branches.activate.submit');
 });
