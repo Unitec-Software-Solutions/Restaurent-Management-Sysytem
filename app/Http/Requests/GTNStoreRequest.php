@@ -30,6 +30,7 @@ class GTNStoreRequest extends FormRequest
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.transfer_quantity' => 'required|numeric|min:0.01',
+            'items.*.transfer_price' => 'nullable|numeric|min:0', // Changed from required to nullable
             'items.*.batch_no' => 'nullable|string|max:100',
             'items.*.expiry_date' => 'nullable|date|after:today',
             'items.*.notes' => 'nullable|string|max:500',
@@ -53,6 +54,7 @@ class GTNStoreRequest extends FormRequest
             'items.*.item_id.required' => 'Item selection is required.',
             'items.*.transfer_quantity.required' => 'Transfer quantity is required.',
             'items.*.transfer_quantity.min' => 'Transfer quantity must be greater than 0.',
+            'items.*.transfer_price.min' => 'Transfer price must be greater than or equal to 0.', // Removed required message
         ];
     }
 
