@@ -41,9 +41,12 @@
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-600">*</span></label>
-                <textarea name="address" rows="3" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('address', $organization->address) }}</textarea>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Address <span class="text-red-600">*</span>
+                </label>
+                <textarea name="address" rows="4" required
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Line 1&#10;Line 2&#10;Line 3&#10;Line 4">{{ old('address', $organization->address ?? '') }}</textarea>
             </div>
 
             <div class="mb-4">
