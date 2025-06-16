@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use App\Mail\UserInvitation;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -73,6 +74,19 @@ public function deactivate(User $user)
     Gate::authorize('deactivate', $user);
     $user->update(['is_active' => false]);
     return response()->json(['message' => 'User deactivated']);
+}
+
+public function create()
+{
+    $this->authorize('create', User::class);
+
+    $branches = \App\Models\Branch::where('organization_id', Auth::user()->organization_id)
+        ->where('is_active', true)
+        ->get();
+
+    $roles = \App\Models\Role::where('organization_id', Auth::user()->organization_id)->get();
+
+    return view('admin.users.create', compact('branches', 'roles'));
 }
 
 public function store(Request $request, $branchId)
