@@ -30,5 +30,6 @@ class Kernel extends HttpKernel
         'branch.active' => \App\Http\Middleware\BranchPermission::class,
         'permission' => \App\Http\Middleware\CheckPermission::class,
         'superadmin' => \App\Http\Middleware\SuperAdmin::class,
+        'subscription.active' => \App\Http\Middleware\SubscriptionActive::class
     ];
 }
