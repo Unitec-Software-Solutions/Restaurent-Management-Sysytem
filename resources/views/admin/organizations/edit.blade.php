@@ -49,17 +49,17 @@
             {{-- Contact Person Fields --}}
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                <input type="text" name="contact_person" value="{{ old('contact_person', $organization->contact_person) }}"
+                <input type="text" name="contact_person" value="{{ old('contact_person', $organization->contact_person) }}" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Designation</label>
-                <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation', $organization->contact_person_designation) }}"
+                <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation', $organization->contact_person_designation) }}" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Phone</label>
-                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone', $organization->contact_person_phone) }}"
+                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone', $organization->contact_person_phone) }}" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
@@ -73,7 +73,7 @@
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Subscription Plan</label>
-                <select name="subscription_plan_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                <select name="subscription_plan_id" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     @foreach($plans as $plan)
                         <option value="{{ $plan->id }}" {{ old('subscription_plan_id', $organization->subscription_plan_id) == $plan->id ? 'selected' : '' }}>
                             {{ $plan->name }} ({{ number_format($plan->price/100, 2) }} {{ $plan->currency }})
