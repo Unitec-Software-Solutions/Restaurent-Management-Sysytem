@@ -1,90 +1,265 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Goods Transfer Note Details')
+@section('header-title', 'GTN Details - Unified System')
+
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Back and Action Buttons -->
         <div class="flex justify-between items-center mb-6">
             <a href="{{ route('admin.inventory.gtn.index') }}"
-                class="flex items-center text-indigo-600 hover:text-indigo-800">
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
                 <i class="fas fa-arrow-left mr-2"></i> Back to GTNs
             </a>
             <div class="flex space-x-2">
-                @if ($gtn->status == 'Pending')
-                    <button onclick="changeStatus('Confirmed')"
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-check mr-2"></i> Confirm GTN
-                    </button>
-                @endif
-                <a href="javascript:void(0);"
-                    class="bg-purple-400 text-white px-4 py-2 rounded-lg flex items-center cursor-not-allowed opacity-60 pointer-events-none"
-                    aria-disabled="true">
+                <a href="{{ route('admin.inventory.gtn.print', $gtn->gtn_id) }}"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-print mr-2"></i> Print
                 </a>
+                @if ($gtn->isDraft())
+                    <a href="{{ route('admin.inventory.gtn.edit', $gtn->gtn_id) }}"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        <!-- Workflow Progress Card -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Workflow Progress</h3>
+
+            <!-- Workflow Steps -->
+            <div class="flex items-center justify-between mb-6">
+                <!-- Draft -->
+                <div class="flex flex-col items-center flex-1">
+                    <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center {{ $gtn->isDraft() || $gtn->isConfirmed() || $gtn->isDelivered() ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600' }}">
+                        <i class="fas fa-edit text-sm"></i>
+                    </div>
+                    <span class="text-xs mt-2 font-medium">Draft</span>
+                    @if ($gtn->created_at)
+                        <span class="text-xs text-gray-500">{{ $gtn->created_at->format('M d, H:i') }}</span>
+                    @endif
+                </div>
+
+                <!-- Connection Line -->
+                <div
+                    class="flex-1 h-0.5 {{ $gtn->isConfirmed() || $gtn->isDelivered() ? 'bg-green-500' : 'bg-gray-200' }} mx-2">
+                </div>
+
+                <!-- Confirmed -->
+                <div class="flex flex-col items-center flex-1">
+                    <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center {{ $gtn->isConfirmed() || $gtn->isDelivered() ? 'bg-green-500 text-white' : ($gtn->isDraft() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600') }}">
+                        <i class="fas fa-check text-sm"></i>
+                    </div>
+                    <span class="text-xs mt-2 font-medium">Confirmed</span>
+                    @if ($gtn->confirmed_at)
+                        <span class="text-xs text-gray-500">{{ $gtn->confirmed_at->format('M d, H:i') }}</span>
+                    @endif
+                </div>
+
+                <!-- Connection Line -->
+                <div
+                    class="flex-1 h-0.5 {{ $gtn->isPending() && $gtn->isConfirmed() ? 'bg-blue-500' : ($gtn->isReceived() || $gtn->isVerified() || $gtn->isAccepted() ? 'bg-green-500' : 'bg-gray-200') }} mx-2">
+                </div>
+
+                <!-- Received -->
+                <div class="flex flex-col items-center flex-1">
+                    <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center {{ $gtn->isReceived() || $gtn->isVerified() || $gtn->isAccepted() ? 'bg-green-500 text-white' : ($gtn->isPending() && $gtn->isConfirmed() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600') }}">
+                        <i class="fas fa-truck text-sm"></i>
+                    </div>
+                    <span class="text-xs mt-2 font-medium">Received</span>
+                    @if ($gtn->received_at)
+                        <span class="text-xs text-gray-500">{{ $gtn->received_at->format('M d, H:i') }}</span>
+                    @endif
+                </div>
+
+                <!-- Connection Line -->
+                <div
+                    class="flex-1 h-0.5 {{ $gtn->isVerified() || $gtn->isAccepted() ? 'bg-green-500' : ($gtn->isReceived() ? 'bg-blue-500' : 'bg-gray-200') }} mx-2">
+                </div>
+
+                <!-- Verified -->
+                <div class="flex flex-col items-center flex-1">
+                    <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center {{ $gtn->isVerified() || $gtn->isAccepted() ? 'bg-green-500 text-white' : ($gtn->isReceived() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600') }}">
+                        <i class="fas fa-search text-sm"></i>
+                    </div>
+                    <span class="text-xs mt-2 font-medium">Verified</span>
+                    @if ($gtn->verified_at)
+                        <span class="text-xs text-gray-500">{{ $gtn->verified_at->format('M d, H:i') }}</span>
+                    @endif
+                </div>
+
+                <!-- Connection Line -->
+                <div
+                    class="flex-1 h-0.5 {{ $gtn->isAccepted() || $gtn->isRejected() ? 'bg-green-500' : ($gtn->isVerified() ? 'bg-blue-500' : 'bg-gray-200') }} mx-2">
+                </div>
+
+                <!-- Accepted/Rejected -->
+                <div class="flex flex-col items-center flex-1">
+                    <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center {{ $gtn->isAccepted() ? 'bg-green-500 text-white' : ($gtn->isRejected() ? 'bg-red-500 text-white' : ($gtn->isVerified() ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600')) }}">
+                        <i
+                            class="fas {{ $gtn->isAccepted() ? 'fa-thumbs-up' : ($gtn->isRejected() ? 'fa-thumbs-down' : 'fa-clipboard-check') }} text-sm"></i>
+                    </div>
+                    <span class="text-xs mt-2 font-medium">
+                        @if ($gtn->isAccepted())
+                            Accepted
+                        @elseif($gtn->isRejected())
+                            Rejected
+                        @elseif($gtn->isPartiallyAccepted())
+                            Partial
+                        @else
+                            Final
+                        @endif
+                    </span>
+                    @if ($gtn->accepted_at)
+                        <span class="text-xs text-gray-500">{{ $gtn->accepted_at->format('M d, H:i') }}</span>
+                    @elseif($gtn->rejected_at)
+                        <span class="text-xs text-gray-500">{{ $gtn->rejected_at->format('M d, H:i') }}</span>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Current Action Required -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div class="flex items-center">
+                    <i class="fas fa-info-circle text-blue-500 mr-3"></i>
+                    <div>
+                        <h4 class="font-medium text-blue-900">
+                            @if ($gtn->isDraft())
+                                Ready to Confirm
+                            @elseif($gtn->isPending() && $gtn->isConfirmed())
+                                Waiting for Receipt
+                            @elseif($gtn->isReceived())
+                                Ready for Verification
+                            @elseif($gtn->isVerified())
+                                Ready for Acceptance/Rejection
+                            @elseif($gtn->isAccepted() || $gtn->isRejected())
+                                Transfer Complete
+                            @else
+                                Status Update Required
+                            @endif
+                        </h4>
+                        <p class="text-sm text-blue-700">
+                            @if ($gtn->isDraft())
+                                Click "Confirm Transfer" to deduct stock from sender branch and send to receiver.
+                            @elseif($gtn->isPending() && $gtn->isConfirmed())
+                                Waiting for receiver branch to mark items as received.
+                            @elseif($gtn->isReceived())
+                                Items have been received. Verify quality and quantities before final acceptance.
+                            @elseif($gtn->isVerified())
+                                Items verified. Accept or reject individual items and process final inventory updates.
+                            @elseif($gtn->isAccepted())
+                                All items accepted. Transfer completed successfully.
+                            @elseif($gtn->isRejected())
+                                Transfer rejected. Items returned to sender.
+                            @endif
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-2">
+                @if ($gtn->isDraft())
+                    <button onclick="confirmGTN()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-check mr-2"></i> Confirm Transfer
+                    </button>
+                @endif
+
+                @if ($gtn->isPending() && $gtn->isConfirmed())
+                    <button onclick="receiveGTN()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-truck mr-2"></i> Mark as Received
+                    </button>
+                @endif
+
+                @if ($gtn->isReceived())
+                    <button onclick="verifyGTN()"
+                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-search mr-2"></i> Verify Items
+                    </button>
+                @endif
+
+                @if ($gtn->isVerified())
+                    <button onclick="showAcceptanceModal()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-clipboard-check mr-2"></i> Process Acceptance
+                    </button>
+                    <button onclick="showRejectionModal()"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-times mr-2"></i> Reject Transfer
+                    </button>
+                @endif
+
+                <button onclick="viewAuditTrail()"
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-history mr-2"></i> Audit Trail
+                </button>
             </div>
         </div>
 
         <!-- GTN Header Card -->
         <div
             class="bg-white rounded-xl shadow-sm p-6 mb-6 border-l-4
-            @if ($gtn->status == 'Pending') border-yellow-500
-            @elseif($gtn->status == 'Confirmed') border-green-500
-            @elseif($gtn->status == 'Approved') border-blue-500
-            @elseif($gtn->status == 'Verified') border-purple-500
-            @elseif($gtn->status == 'Completed') border-green-500
-            @else border-red-500 @endif">
+            {{ $gtn->isAccepted()
+                ? 'border-green-500'
+                : ($gtn->isRejected()
+                    ? 'border-red-500'
+                    : ($gtn->isVerified()
+                        ? 'border-purple-500'
+                        : ($gtn->isReceived()
+                            ? 'border-blue-500'
+                            : ($gtn->isConfirmed()
+                                ? 'border-green-500'
+                                : 'border-yellow-500')))) }}">
 
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <div class="flex items-center flex-wrap gap-4 mb-2">
-                        <h1 class="text-2xl font-bold text-gray-900">GTN #{{ $gtn->gtn_number }}</h1>
-                        <div class="flex items-center space-x-2">
-                            <p class="text-sm text-gray-500">Status :</p>
-                            @if ($gtn->status == 'Pending')
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                    Pending
-                                </span>
-                            @elseif($gtn->status == 'Confirmed')
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                    Confirmed
-                                </span>
-                            @elseif($gtn->status == 'Approved')
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                    Approved
-                                </span>
-                            @elseif($gtn->status == 'Verified')
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                                    Verified
-                                </span>
-                            @elseif($gtn->status == 'Completed')
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                    Completed
-                                </span>
-                            @else
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                    Cancelled
-                                </span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                        <div class="flex items-center">
-                            <i class="fas fa-calendar-day mr-2"></i>
-                            <span>Transfer Date:
-                                {{ \Illuminate\Support\Carbon::parse($gtn->transfer_date)->format('M d, Y') }}</span>
-                        </div>
-                        @if ($gtn->reference_number)
-                            <div class="flex items-center">
-                                <i class="fas fa-file-alt mr-2"></i>
-                                <span>Reference: {{ $gtn->reference_number }}</span>
-                            </div>
-                        @endif
+                    <h1 class="text-2xl font-bold text-gray-900">{{ $gtn->gtn_number }}</h1>
+                    <p class="text-gray-600">Transfer Date:
+                        {{ \Carbon\Carbon::parse($gtn->transfer_date)->format('F d, Y') }}</p>
+                    <div class="flex items-center gap-4 mt-2">
+                        <span
+                            class="px-3 py-1 text-sm font-medium rounded-full
+                            {{ $gtn->origin_status === 'draft'
+                                ? 'bg-gray-100 text-gray-800'
+                                : ($gtn->origin_status === 'confirmed'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : ($gtn->origin_status === 'in_delivery'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-green-100 text-green-800')) }}">
+                            Origin: {{ ucfirst(str_replace('_', ' ', $gtn->origin_status ?? 'draft')) }}
+                        </span>
+                        <span
+                            class="px-3 py-1 text-sm font-medium rounded-full
+                            {{ $gtn->receiver_status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : ($gtn->receiver_status === 'received'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : ($gtn->receiver_status === 'verified'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : ($gtn->receiver_status === 'accepted'
+                                            ? 'bg-green-100 text-green-800'
+                                            : ($gtn->receiver_status === 'rejected'
+                                                ? 'bg-red-100 text-red-800'
+                                                : 'bg-orange-100 text-orange-800')))) }}">
+                            Receiver: {{ ucfirst(str_replace('_', ' ', $gtn->receiver_status ?? 'pending')) }}
+                        </span>
                     </div>
                 </div>
-                <div class="flex flex-col items-end">
-                    <div class="text-2xl font-bold text-indigo-600">{{ $gtn->items->sum('transfer_quantity') }}</div>
-                    <div class="text-sm text-gray-500 mt-1">Total Items Transferred</div>
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-gray-900">{{ $gtn->items->count() }}</div>
+                    <div class="text-sm text-gray-500">Items</div>
+                    <div class="text-lg font-semibold text-green-600 mt-1">
+                        ${{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
+                    </div>
+                    <div class="text-sm text-gray-500">Total Value</div>
                 </div>
             </div>
         </div>
@@ -104,13 +279,16 @@
                         <p class="font-medium">{{ $gtn->fromBranch->code ?? 'N/A' }}</p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500">Address</p>
-                        <p class="font-medium">{{ $gtn->fromBranch->address ?? 'N/A' }}</p>
+                        <span class="text-sm font-medium text-gray-500">Created By</span>
+                        <p class="text-gray-900">{{ $gtn->createdBy->first_name ?? 'System' }}
+                            {{ $gtn->createdBy->last_name ?? '' }}</p>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Contact</p>
-                        <p class="font-medium">{{ $gtn->fromBranch->phone ?? 'N/A' }}</p>
-                    </div>
+                    @if ($gtn->confirmed_at)
+                        <div>
+                            <span class="text-sm font-medium text-gray-500">Confirmed At</span>
+                            <p class="text-gray-900">{{ $gtn->confirmed_at->format('M d, Y H:i') }}</p>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -126,40 +304,53 @@
                         <p class="text-sm text-gray-500">Branch Code</p>
                         <p class="font-medium">{{ $gtn->toBranch->code ?? 'N/A' }}</p>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Address</p>
-                        <p class="font-medium">{{ $gtn->toBranch->address ?? 'N/A' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500">Contact</p>
-                        <p class="font-medium">{{ $gtn->toBranch->phone ?? 'N/A' }}</p>
-                    </div>
+                    @if ($gtn->received_by)
+                        <div>
+                            <span class="text-sm font-medium text-gray-500">Received By</span>
+                            <p class="text-gray-900">{{ $gtn->receivedBy->first_name ?? 'N/A' }}
+                                {{ $gtn->receivedBy->last_name ?? '' }}</p>
+                        </div>
+                    @endif
+                    @if ($gtn->received_at)
+                        <div>
+                            <span class="text-sm font-medium text-gray-500">Received At</span>
+                            <p class="text-gray-900">{{ $gtn->received_at->format('M d, Y H:i') }}</p>
+                        </div>
+                    @endif
                 </div>
             </div>
 
             <!-- GTN Summary -->
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h2 class="text-lg font-semibold mb-4">Transfer Summary</h2>
-                <div class="space-y-4">
+                <div class="space-y-3">
                     <div class="flex justify-between">
-                        <span class="text-gray-600">Total Items:</span>
-                        <span class="font-bold">{{ $gtn->items->sum('transfer_quantity') }}</span>
+                        <span class="text-sm font-medium text-gray-500">Total Items</span>
+                        <span class="text-gray-900">{{ $gtn->items->count() }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-600">Created By:</span>
-                        <span class="font-medium">{{ $gtn->createdBy->name ?? 'System' }}</span>
+                        <span class="text-sm font-medium text-gray-500">Total Quantity</span>
+                        <span class="text-gray-900">{{ number_format($gtn->items->sum('transfer_quantity'), 2) }}</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Created At:</span>
-                        <span class="font-medium">{{ $gtn->created_at->format('M d, Y H:i') }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Last Updated By:</span>
-                        <span class="font-medium">{{ $gtn->updatedBy->name ?? 'System' }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Last Updated:</span>
-                        <span class="font-medium">{{ $gtn->updated_at->format('M d, Y H:i') }}</span>
+                    @if ($gtn->items->sum('quantity_accepted') > 0)
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-green-600">Accepted Quantity</span>
+                            <span
+                                class="text-green-900">{{ number_format($gtn->items->sum('quantity_accepted'), 2) }}</span>
+                        </div>
+                    @endif
+                    @if ($gtn->items->sum('quantity_rejected') > 0)
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-red-600">Rejected Quantity</span>
+                            <span
+                                class="text-red-900">{{ number_format($gtn->items->sum('quantity_rejected'), 2) }}</span>
+                        </div>
+                    @endif
+                    <div class="flex justify-between border-t pt-2">
+                        <span class="text-sm font-medium text-gray-500">Total Value</span>
+                        <span class="text-gray-900 font-semibold">
+                            ${{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -178,42 +369,89 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch
-                                No</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Quantity</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EXP
-                                Date</th>
+                                Transfer Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit
+                                Price</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line
+                                Total</th>
+                            @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Accepted Qty</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Rejected Qty</th>
+                            @endif
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Notes</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @foreach ($gtn->items as $item)
                             <tr>
                                 <td class="px-6 py-4">
-                                    <div class="font-medium">{{ $item->item->name ?? $item->item_name }}</div>
+                                    <div class="font-medium text-gray-900">{{ $item->item_name }}</div>
+                                    <div class="text-sm text-gray-500">{{ $item->item_code }}</div>
+                                    @if ($item->batch_no)
+                                        <div class="text-xs text-gray-400">Batch: {{ $item->batch_no }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-gray-900">{{ number_format($item->transfer_quantity, 2) }}</td>
+                                <td class="px-6 py-4 text-gray-900">${{ number_format($item->transfer_price, 2) }}</td>
+                                <td class="px-6 py-4 text-gray-900">${{ number_format($item->line_total, 2) }}</td>
+                                @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
+                                    <td class="px-6 py-4 text-green-600 font-medium">
+                                        {{ $item->quantity_accepted ? number_format($item->quantity_accepted, 2) : '-' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-red-600 font-medium">
+                                        {{ $item->quantity_rejected ? number_format($item->quantity_rejected, 2) : '-' }}
+                                    </td>
+                                @endif
+                                <td class="px-6 py-4">
+                                    @php
+                                        $itemStatus = $item->item_status ?? 'pending';
+                                        $statusColors = [
+                                            'pending' => 'bg-yellow-100 text-yellow-800',
+                                            'accepted' => 'bg-green-100 text-green-800',
+                                            'rejected' => 'bg-red-100 text-red-800',
+                                            'partially_accepted' => 'bg-orange-100 text-orange-800',
+                                        ];
+                                    @endphp
+                                    <span
+                                        class="px-2 py-1 text-xs font-semibold rounded-full {{ $statusColors[$itemStatus] ?? 'bg-gray-100 text-gray-800' }}">
+                                        {{ ucfirst(str_replace('_', ' ', $itemStatus)) }}
+                                    </span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    {{ $item->item_code }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ $item->batch_no ?? 'N/A' }}
-                                </td>
-                                <td class="px-6 py-4 text-right font-medium text-indigo-600">
-                                    {{ $item->transfer_quantity }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ $item->expiry_date ? \Illuminate\Support\Carbon::parse($item->expiry_date)->format('M d, Y') : 'N/A' }}
+                                    @if ($item->notes)
+                                        <div class="text-sm text-gray-600">{{ $item->notes }}</div>
+                                    @endif
+                                    @if ($item->item_rejection_reason)
+                                        <div class="text-sm text-red-600 mt-1">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            {{ $item->item_rejection_reason }}
+                                        </div>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-50">
                         <tr>
-                            <td colspan="3" class="px-6 py-3 text-right font-medium">Total Items:</td>
-                            <td class="px-6 py-3 font-bold">{{ $gtn->items->sum('transfer_quantity') }}</td>
-                            <td></td>
+                            <td colspan="3" class="px-6 py-4 text-right font-medium text-gray-900">Total:</td>
+                            <td class="px-6 py-4 font-bold text-gray-900">
+                                ${{ number_format($gtn->items->sum('line_total'), 2) }}
+                            </td>
+                            @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
+                                <td class="px-6 py-4 font-bold text-green-600">
+                                    {{ number_format($gtn->items->sum('quantity_accepted'), 2) }}
+                                </td>
+                                <td class="px-6 py-4 font-bold text-red-600">
+                                    {{ number_format($gtn->items->sum('quantity_rejected'), 2) }}
+                                </td>
+                            @endif
+                            <td colspan="2"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -222,112 +460,342 @@
 
         <!-- Notes Section -->
         @if ($gtn->notes)
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h2 class="text-lg font-semibold mb-2">GTN Notes</h2>
-                <div class="prose max-w-none">
-                    {!! nl2br(e($gtn->notes)) !!}
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Notes</h3>
+                <p class="text-gray-600 whitespace-pre-line">{{ $gtn->notes }}</p>
+            </div>
+        @endif
+
+        <!-- Inventory Transactions -->
+        @if ($gtn->inventoryTransactions->count() > 0)
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-6 border-b">
+                    <h3 class="text-lg font-semibold text-gray-900">Inventory Transactions</h3>
+                    <p class="text-sm text-gray-500">Stock movements related to this GTN</p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Branch</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Item</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Quantity</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @foreach ($gtn->inventoryTransactions as $transaction)
+                                <tr>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        {{ $transaction->created_at->format('M d, Y H:i') }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        {{ $transaction->branch->name ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        {{ $transaction->item->name ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @php
+                                            $typeColors = [
+                                                'gtn_outgoing' => 'bg-red-100 text-red-800',
+                                                'gtn_incoming' => 'bg-green-100 text-green-800',
+                                                'gtn_rejection' => 'bg-orange-100 text-orange-800',
+                                            ];
+                                        @endphp
+                                        <span
+                                            class="px-2 py-1 text-xs font-semibold rounded-full {{ $typeColors[$transaction->transaction_type] ?? 'bg-gray-100 text-gray-800' }}">
+                                            {{ ucfirst(str_replace('_', ' ', $transaction->transaction_type)) }}
+                                        </span>
+                                    </td>
+                                    <td
+                                        class="px-6 py-4 text-sm font-medium {{ $transaction->quantity >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                        {{ $transaction->quantity >= 0 ? '+' : '' }}{{ number_format($transaction->quantity, 2) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">
+                                        {{ $transaction->notes }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         @endif
     </div>
 
-    <!-- Status Change Modal -->
-    <div id="statusChangeModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <div class="flex items-center mb-4">
-                <div class="bg-green-100 p-3 rounded-xl mr-3">
-                    <i class="fas fa-exclamation-triangle text-green-600"></i>
+    <!-- Acceptance Modal -->
+    <div id="acceptanceModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Process Item Acceptance</h3>
+                <button onclick="closeAcceptanceModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="acceptanceForm">
+                <div class="space-y-4">
+                    @foreach ($gtn->items as $item)
+                        <div class="border rounded-lg p-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                <div>
+                                    <h4 class="font-medium">{{ $item->item_name }}</h4>
+                                    <p class="text-sm text-gray-500">{{ $item->item_code }}</p>
+                                    <p class="text-sm text-gray-600">Transfer Qty:
+                                        {{ number_format($item->transfer_quantity, 2) }}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Accepted Quantity</label>
+                                    <input type="number"
+                                        name="acceptance_data[{{ $item->gtn_item_id }}][quantity_accepted]"
+                                        value="{{ $item->transfer_quantity }}" max="{{ $item->transfer_quantity }}"
+                                        min="0" step="0.01"
+                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Rejection Reason</label>
+                                    <input type="text"
+                                        name="acceptance_data[{{ $item->gtn_item_id }}][rejection_reason]"
+                                        placeholder="Optional"
+                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Quality Notes</label>
+                                    <input type="text" name="acceptance_data[{{ $item->gtn_item_id }}][quality_notes]"
+                                        placeholder="Optional"
+                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
-                <h2 class="text-xl font-semibold text-gray-800" id="modalTitle">Confirm Status Change</h2>
-            </div>
-            <p class="mb-6 text-gray-700" id="modalMessage">
-                Are you sure you want to change the status? This action cannot be undone and will process stock transfers.
-            </p>
-            <div class="flex gap-3 mt-6">
-                <button id="confirmStatusBtn"
-                    class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                    Yes, Change Status
-                </button>
-                <button type="button" onclick="closeModal()"
-                    class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                    Cancel
-                </button>
-            </div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="processAcceptance()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                        Process Acceptance
+                    </button>
+                    <button type="button" onclick="closeAcceptanceModal()"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Status Change Form (Hidden) -->
-    <form id="statusChangeForm" action="{{ route('admin.inventory.gtn.change-status', $gtn->gtn_id) }}" method="POST"
-        style="display: none;">
-        @csrf
-        <input type="hidden" name="status" id="statusInput">
-    </form>
+    <!-- Rejection Modal -->
+    <div id="rejectionModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Reject Transfer</h3>
+                <button onclick="closeRejectionModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="rejectionForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
+                    <textarea name="rejection_reason" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500"
+                        rows="3" placeholder="Please provide a reason for rejecting this transfer..."></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="rejectGTN()"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                        Reject Transfer
+                    </button>
+                    <button type="button" onclick="closeRejectionModal()"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Meta tag for CSRF token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <script>
-        let selectedStatus = '';
-
-        function changeStatus(status) {
-            selectedStatus = status;
-            document.getElementById('modalTitle').textContent = `${status} GTN`;
-            document.getElementById('modalMessage').textContent =
-                `Are you sure you want to ${status.toLowerCase()} this GTN? This will process the stock transfer and cannot be undone.`;
-            document.getElementById('statusChangeModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('statusChangeModal').classList.add('hidden');
-        }
-
-        document.getElementById('confirmStatusBtn').addEventListener('click', function() {
-            document.getElementById('statusInput').value = selectedStatus;
-            document.getElementById('statusChangeForm').submit();
-        });
-
-        // Close modal when clicking outside
-        document.getElementById('statusChangeModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
+        // Workflow action functions
+        function confirmGTN() {
+            if (confirm('Are you sure you want to confirm this GTN? This will deduct stock from the sender branch.')) {
+                fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/confirm`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.error);
+                        }
+                    });
             }
+        }
+
+        function receiveGTN() {
+            const notes = prompt('Any notes about the receipt?');
+            fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/receive`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        notes: notes
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+        }
+
+        function verifyGTN() {
+            const notes = prompt('Any verification notes?');
+            fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        notes: notes
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+        }
+
+        function showAcceptanceModal() {
+            document.getElementById('acceptanceModal').classList.remove('hidden');
+        }
+
+        function closeAcceptanceModal() {
+            document.getElementById('acceptanceModal').classList.add('hidden');
+        }
+
+        function processAcceptance() {
+            const formData = new FormData(document.getElementById('acceptanceForm'));
+            const acceptanceData = {};
+
+            for (let [key, value] of formData.entries()) {
+                const match = key.match(/acceptance_data\[(\d+)\]\[(.+)\]/);
+                if (match) {
+                    const itemId = match[1];
+                    const field = match[2];
+                    if (!acceptanceData[itemId]) acceptanceData[itemId] = {};
+                    acceptanceData[itemId][field] = value;
+                }
+            }
+
+            fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/accept`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        acceptance_data: acceptanceData
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+        }
+
+        function showRejectionModal() {
+            document.getElementById('rejectionModal').classList.remove('hidden');
+        }
+
+        function closeRejectionModal() {
+            document.getElementById('rejectionModal').classList.add('hidden');
+        }
+
+        function rejectGTN() {
+            const formData = new FormData(document.getElementById('rejectionForm'));
+            const rejectionReason = formData.get('rejection_reason');
+
+            if (!rejectionReason) {
+                alert('Please provide a rejection reason.');
+                return;
+            }
+
+            fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        rejection_reason: rejectionReason
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+        }
+
+        function viewAuditTrail() {
+            fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/audit-trail`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Display audit trail in a modal or new page
+                        console.log('Audit Trail:', data.data);
+                        alert('Audit trail displayed in console. See browser developer tools.');
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
+        }
+
+        // Auto-calculate rejected quantity when accepted quantity changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const acceptedInputs = document.querySelectorAll('input[name*="quantity_accepted"]');
+            acceptedInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    // You can add auto-calculation logic here
+                });
+            });
         });
     </script>
 @endsection
-
-@push('styles')
-    <style>
-        .prose {
-            color: #374151;
-            line-height: 1.6;
-        }
-
-        table {
-            border-collapse: separate;
-            border-spacing: 0;
-            width: 100%;
-        }
-
-        th,
-        td {
-            padding: 0.75rem 1.5rem;
-            text-align: left;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        thead th {
-            background-color: #f9fafb;
-            color: #6b7280;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.75rem;
-        }
-
-        tbody tr:hover {
-            background-color: #f9fafb;
-        }
-
-        tfoot td {
-            font-weight: 600;
-            background-color: #f9fafb;
-        }
-    </style>
-@endpush
