@@ -42,6 +42,7 @@ class OrganizationController extends Controller
             'contact_person_phone' => 'required|regex:/^\d{10,15}$/',
             'is_active' => 'required|boolean',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
+            'discount_percentage' => 'required|numeric|min:0|max:100',
         ], [
             'phone.regex' => 'Phone must be 10-15 digits.',
             'contact_person_phone.regex' => 'Contact person phone must be 10-15 digits.',
@@ -59,6 +60,7 @@ class OrganizationController extends Controller
             'contact_person_phone' => $validated['contact_person_phone'],
             'is_active' => $validated['is_active'],
             'subscription_plan_id' => $validated['subscription_plan_id'],
+            'discount_percentage' => $validated['discount_percentage'],
         ]);
 
         return redirect()->route('admin.organizations.index')->with('success', 'Organization created successfully');
@@ -77,6 +79,7 @@ class OrganizationController extends Controller
             'is_active' => 'required|boolean',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
             'password' => 'nullable|string|min:6|confirmed',
+            'discount_percentage' => 'required|numeric|min:0|max:100',
         ], [
             'phone.regex' => 'Phone must be 10-15 digits.',
             'contact_person_phone.regex' => 'Contact person phone must be 10-15 digits.',
