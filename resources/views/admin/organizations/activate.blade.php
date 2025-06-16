@@ -15,9 +15,12 @@
     @if(isset($organizations) && count($organizations))
         @foreach($organizations as $organization)
             <div class="mb-6 border-b pb-4">
-                <div class="mb-2 font-semibold">
-                    {{ $organization->name }}
-                    <span class="text-xs text-gray-500 ml-2">({{ $organization->email }})</span>
+                <div class="mb-2 font-semibold flex flex-col md:flex-row md:items-center gap-2">
+                    <span>{{ $organization->name }}</span>
+                    <span class="text-xs text-gray-500">({{ $organization->email }})</span>
+                    <span class="text-xs text-gray-500">Contact: {{ $organization->contact_person ?? '-' }}</span>
+                    <span class="text-xs text-gray-500">Designation: {{ $organization->contact_person_designation ?? '-' }}</span>
+                    <span class="text-xs text-gray-500">Phone: {{ $organization->contact_person_phone ?? '-' }}</span>
                     @if($organization->is_active)
                         <span class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Active</span>
                     @else
