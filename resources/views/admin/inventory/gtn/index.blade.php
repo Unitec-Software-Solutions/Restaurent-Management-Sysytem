@@ -156,8 +156,9 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @php
-                                $userBranchId = request('from_branch_id') ?? (Auth::user()->branch_id ?? null);
-                                $outgoingGtns = $gtns->filter(fn($gtn) => $gtn->from_branch_id == $userBranchId);
+                                // $userBranchId = request('from_branch_id') ?? (Auth::user()->branch_id ?? null);
+                                // $outgoingGtns = $gtns->filter(fn($gtn) => $gtn->from_branch_id == $userBranchId);
+                                $outgoingGtns = $gtns; // Show all GTNs as outgoing for now
                             @endphp
                             @forelse($outgoingGtns as $gtn)
                                 <tr class="hover:bg-gray-50 cursor-pointer"
@@ -257,8 +258,9 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @php
-                                $userBranchId = request('to_branch_id') ?? (Auth::user()->branch_id ?? null);
-                                $incomingGtns = $gtns->filter(fn($gtn) => $gtn->to_branch_id == $userBranchId);
+                                // $userBranchId = request('to_branch_id') ?? (Auth::user()->branch_id ?? null);
+                                // $incomingGtns = $gtns->filter(fn($gtn) => $gtn->to_branch_id == $userBranchId);
+                                $incomingGtns = $gtns; // Show all GTNs as incoming for now
                             @endphp
                             @forelse($incomingGtns as $gtn)
                                 <tr class="hover:bg-gray-50 cursor-pointer"
