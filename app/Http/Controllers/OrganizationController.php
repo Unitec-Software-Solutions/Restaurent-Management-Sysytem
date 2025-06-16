@@ -22,7 +22,8 @@ class OrganizationController extends Controller
     public function create()
     {
         Gate::authorize('create', Organization::class);
-        return view('admin.organizations.create');
+        $plans = \App\Models\SubscriptionPlan::all();
+        return view('admin.organizations.create', compact('plans'));
     }
 
     // Add store method for organization registration
@@ -59,14 +60,31 @@ class OrganizationController extends Controller
             'email' => 'nullable|email',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
+            'contact_person_designation' => 'nullable|string|max:255',
+            'contact_person_phone' => 'nullable|string|max:20',
             'is_active' => 'required|boolean',
+            
         ]);
 
         $organization->update($validated);
 
-        return redirect()
-            ->route('admin.organizations.index')
-            ->with('success', 'Organization updated successfully.');
+        // Update subscription if a new plan is selected
+        if ($request->filled('subscription_plan_id')) {
+            // Optionally, end previous active subscription
+            $organization->subscriptions()->where('is_active', true)->update(['is_active' => false, 'end_date' => now()]);
+
+            // Create new subscription
+            $organization->subscriptions()->create([
+                'plan_id' => $request->subscription_plan_id,
+                'status' => 'active',
+                'is_active' => true,
+                'start_date' => now(),
+                'end_date' => now()->addYear(),
+            ]);
+        }
+
+        return redirect()->route('admin.organizations.index')->with('success', 'Organization updated successfully');
     }
 
     public function deactivate(Organization $organization)
@@ -98,8 +116,8 @@ class OrganizationController extends Controller
 
     public function edit(Organization $organization)
     {
-        $this->authorize('update', $organization);
-        return view('admin.organizations.edit', compact('organization'));
+        $plans = \App\Models\SubscriptionPlan::all();
+        return view('admin.organizations.edit', compact('organization', 'plans'));
     }
 
     public function destroy(Organization $organization)
@@ -120,7 +138,7 @@ class OrganizationController extends Controller
 
     public function summary(Organization $organization)
     {
-        $organization->load('subscriptions');
+        $organization->load(['branches', 'subscriptions.plan']);
         return view('admin.organizations.summary', compact('organization'));
     }
 
