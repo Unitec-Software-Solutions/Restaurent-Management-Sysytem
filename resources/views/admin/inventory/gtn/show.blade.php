@@ -257,7 +257,8 @@
                     <div class="text-2xl font-bold text-gray-900">{{ $gtn->items->count() }}</div>
                     <div class="text-sm text-gray-500">Items</div>
                     <div class="text-lg font-semibold text-green-600 mt-1">
-                        ${{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
+                        Rs.
+                        {{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
                     </div>
                     <div class="text-sm text-gray-500">Total Value</div>
                 </div>
@@ -349,7 +350,8 @@
                     <div class="flex justify-between border-t pt-2">
                         <span class="text-sm font-medium text-gray-500">Total Value</span>
                         <span class="text-gray-900 font-semibold">
-                            ${{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
+                            Rs.
+                            {{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
                         </span>
                     </div>
                 </div>
@@ -398,8 +400,8 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 text-gray-900">{{ number_format($item->transfer_quantity, 2) }}</td>
-                                <td class="px-6 py-4 text-gray-900">${{ number_format($item->transfer_price, 2) }}</td>
-                                <td class="px-6 py-4 text-gray-900">${{ number_format($item->line_total, 2) }}</td>
+                                <td class="px-6 py-4 text-gray-900">Rs. {{ number_format($item->transfer_price, 2) }}</td>
+                                <td class="px-6 py-4 text-gray-900">Rs. {{ number_format($item->line_total, 2) }}</td>
                                 @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
                                     <td class="px-6 py-4 text-green-600 font-medium">
                                         {{ $item->quantity_accepted ? number_format($item->quantity_accepted, 2) : '-' }}
@@ -441,7 +443,7 @@
                         <tr>
                             <td colspan="3" class="px-6 py-4 text-right font-medium text-gray-900">Total:</td>
                             <td class="px-6 py-4 font-bold text-gray-900">
-                                ${{ number_format($gtn->items->sum('line_total'), 2) }}
+                                Rs. {{ number_format($gtn->items->sum('line_total'), 2) }}
                             </td>
                             @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
                                 <td class="px-6 py-4 font-bold text-green-600">
