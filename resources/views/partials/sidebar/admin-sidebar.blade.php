@@ -41,7 +41,7 @@
                         'icon_type' => 'svg',
                         'sub_items' => [],
                     ];
-                    if($admin->isSuperAdmin()) {
+                    if($admin->is_super_admin) {
                         $organizationsNav['sub_items'][] = [
                             'title' => 'Activate Organization',
                             'route' => 'admin.organizations.activate.form',
@@ -64,7 +64,7 @@
                             ],
                         ],
                     ];
-                    if($admin->isSuperAdmin()) {
+                    if($admin->is_super_admin) {
                         $branchesNav['route'] = 'admin.branches.global';
                         $branchesNav['route_params'] = [];
                     } elseif($admin->organization_id) {
@@ -78,7 +78,7 @@
                     // Add to nav
                     $navItems[] = $organizationsNav;
                     $navItems[] = $branchesNav;
-                    if($admin->isSuperAdmin()) {
+                    if($admin->is_super_admin) {
                         $navItems[] = [
                             'title' => 'Subscription Plans',
                             'route' => 'admin.subscription-plans.index',
