@@ -4,35 +4,48 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold mb-6">Organization Summary</h1>
+    <h1 class="text-3xl font-bold mb-8 text-gray-800">Organization Summary</h1>
 
-    <div class="bg-white rounded-xl shadow p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">{{ $organization->name }}</h2>
-        <ul class="mb-4">
-            <li><strong>ID:</strong> {{ $organization->id }}</li>
-            <li><strong>Name:</strong> {{ $organization->name }}</li>
-            <li><strong>Email:</strong> {{ $organization->email }}</li>
-            <li><strong>Address:</strong> {{ $organization->address }}</li>
-            <li><strong>Phone:</strong> {{ $organization->phone }}</li>
-            <li><strong>Status:</strong> {{ $organization->is_active ? 'Active' : 'Inactive' }}</li>
-        </ul>
-        <a href="{{ route('admin.branches.create', ['organization' => $organization->id]) }}"
-           class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
-            + Add Branch
-        </a>
-    </div>
-
-    {{-- Show Activation Key --}}
-    <div class="mb-4">
-        <label class="block font-medium mb-1">Activation Key</label>
-        <div class="flex items-center gap-2">
-            <input type="text" id="activation-key" value="{{ $organization->activation_key }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
-            <button type="button" onclick="copyActivationKey()" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Copy</button>
-            <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline">
-                @csrf
-                @method('PUT')
-                <button type="submit" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">Regenerate</button>
-            </form>
+    {{-- Organization Details --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-4 text-indigo-700">Organization Info</h2>
+            <ul class="space-y-2 text-gray-700">
+                <li><span class="font-semibold">ID:</span> {{ $organization->id }}</li>
+                <li><span class="font-semibold">Name:</span> {{ $organization->name }}</li>
+                <li><span class="font-semibold">Email:</span> {{ $organization->email ?? '-' }}</li>
+                <li><span class="font-semibold">Address:</span> {{ $organization->address ?? '-' }}</li>
+                <li><span class="font-semibold">Phone:</span> {{ $organization->phone ?? '-' }}</li>
+                <li><span class="font-semibold">Status:</span>
+                    <span class="inline-block px-2 py-1 rounded {{ $organization->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                        {{ $organization->is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                </li>
+                <li><span class="font-semibold">Created At:</span> {{ $organization->created_at }}</li>
+                <li><span class="font-semibold">Updated At:</span> {{ $organization->updated_at }}</li>
+                <li><span class="font-semibold">Activated At:</span> {{ $organization->activated_at ?? '-' }}</li>
+            </ul>
+        </div>
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold mb-4 text-indigo-700">Contact Person</h2>
+            <ul class="space-y-2 text-gray-700">
+                <li><span class="font-semibold">Name:</span> {{ $organization->contact_person ?? '-' }}</li>
+                <li><span class="font-semibold">Designation:</span> {{ $organization->contact_person_designation ?? '-' }}</li>
+                <li><span class="font-semibold">Phone:</span> {{ $organization->contact_person_phone ?? '-' }}</li>
+            </ul>
+            <div class="mt-6">
+                <label class="block font-medium mb-1">Activation Key</label>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="activation-key" value="{{ $organization->activation_key ?? '-' }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
+                    <button type="button" onclick="copyActivationKey()" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Copy</button>
+                    {{-- Regenerate Key Button --}}
+                    <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline">
+                        @csrf
+                        @method('PUT')
+                        <button type="submit" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">Regenerate</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     <script>
@@ -45,91 +58,80 @@
     }
     </script>
 
-    <div class="bg-white rounded-xl shadow p-6">
-        <h3 class="text-lg font-semibold mb-4">Branches for {{ $organization->name }}</h3>
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead>
-                <tr>
-                    <th class="px-4 py-2 text-left">#</th>
-                    <th class="px-4 py-2 text-left">Branch Name</th>
-                    <th class="px-4 py-2 text-left">Phone</th>
-                    <th class="px-4 py-2 text-left">Address</th>
-                    <th class="px-4 py-2 text-left">Status</th>
-                    <th class="px-4 py-2 text-left">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($organization->branches as $branch)
-                    <tr>
-                        <td class="px-4 py-2">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-2">{{ $branch->name }}</td>
-                        <td class="px-4 py-2">{{ $branch->phone }}</td>
-                        <td class="px-4 py-2">{{ $branch->address }}</td>
-                        <td class="px-4 py-2">
-                            @if($branch->is_active)
-                                <span class="text-green-600 font-semibold">Active</span>
-                            @else
-                                <span class="text-red-600 font-semibold">Inactive</span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-2 flex gap-2">
-                            <a href="{{ route('admin.branches.edit', ['organization' => $organization->id, 'branch' => $branch->id]) }}" class="text-blue-600 hover:underline">Edit</a>
-                            <a href="{{ route('admin.branches.index', ['organization' => $organization->id]) }}#branch-{{ $branch->id }}" class="text-green-600 hover:underline">View</a>
-                            <form action="{{ route('admin.branches.destroy', ['organization' => $organization->id, 'branch' => $branch->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this branch?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:underline">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="px-4 py-2 text-center text-gray-500">No branches found for this organization.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    {{-- Subscription Details (moved above branches) --}}
+    <div class="bg-white rounded-xl shadow p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-indigo-700">Subscription Details</h3>
+        @php
+            $subscription = $organization->subscriptions->sortByDesc('start_date')->first();
+        @endphp
+        @if($subscription)
+            <ul class="space-y-2 text-gray-700">
+                <li><span class="font-semibold">Plan:</span> {{ $subscription->plan->name ?? 'N/A' }}</li>
+                <li><span class="font-semibold">Modules:</span>
+                    @php
+                        $modules = $subscription->plan->modules ?? [];
+                        if (is_string($modules)) $modules = json_decode($modules, true);
+                    @endphp
+                    {{ is_array($modules) ? implode(', ', $modules) : 'N/A' }}
+                </li>
+                <li><span class="font-semibold">Status:</span> {{ ucfirst($subscription->status) }}</li>
+                <li><span class="font-semibold">Subscribed (Start Date):</span> {{ $subscription->start_date ?? '-' }}</li>
+                <li><span class="font-semibold">Renewal (End Date):</span> {{ $subscription->end_date ?? '-' }}</li>
+                <li><span class="font-semibold">Activated At:</span> {{ $subscription->activated_at ?? '-' }}</li>
+                <li><span class="font-semibold">Terminating Date:</span> {{ $subscription->terminated_at ?? '-' }}</li>
+            </ul>
+        @else
+            <div class="text-gray-500">No subscription found. Organization may not be activated yet.</div>
+        @endif
     </div>
 
-    {{-- Organization Subscription Details --}}
-    <div class="bg-white rounded-xl shadow p-6 mb-6">
-        <h3 class="text-lg font-semibold mb-4">Subscription Details</h3>
-        @if($organization->subscriptions->count())
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead>
+    {{-- Branches --}}
+    <div class="bg-white rounded-xl shadow p-6 mb-8">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-indigo-700">Branches</h3>
+            <a href="{{ route('admin.branches.create', ['organization' => $organization->id]) }}"
+               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                + Add Branch
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-2">Plan</th>
-                        <th class="px-4 py-2">Status</th>
-                        <th class="px-4 py-2">Start</th>
-                        <th class="px-4 py-2">End</th>
-                        <th class="px-4 py-2">Amount</th>
-                        <th class="px-4 py-2">Currency</th>
-                        <th class="px-4 py-2">Actions</th>
+                        <th class="px-4 py-2 text-left">#</th>
+                        <th class="px-4 py-2 text-left">Branch Name</th>
+                        <th class="px-4 py-2 text-left">Phone</th>
+                        <th class="px-4 py-2 text-left">Address</th>
+                        <th class="px-4 py-2 text-left">Status</th>
+                        <th class="px-4 py-2 text-left">Created</th>
+                        <th class="px-4 py-2 text-left">Updated</th>
+                        <th class="px-4 py-2 text-left">Activated</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($organization->subscriptions as $subscription)
-                        <tr>
-                            <td class="px-4 py-2">{{ $subscription->plan_id }}</td>
-                            <td class="px-4 py-2">{{ ucfirst($subscription->status) }}</td>
-                            <td class="px-4 py-2">{{ $subscription->start_date }}</td>
-                            <td class="px-4 py-2">{{ $subscription->end_date }}</td>
-                            <td class="px-4 py-2">{{ number_format($subscription->amount / 100, 2) }}</td>
-                            <td class="px-4 py-2">{{ $subscription->currency }}</td>
+                    @forelse($organization->branches as $branch)
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-2">{{ $loop->iteration }}</td>
+                            <td class="px-4 py-2">{{ $branch->name }}</td>
+                            <td class="px-4 py-2">{{ $branch->phone ?? '-' }}</td>
+                            <td class="px-4 py-2">{{ $branch->address ?? '-' }}</td>
                             <td class="px-4 py-2">
-                                @if(auth('admin')->user()->isSuperAdmin())
-                                    <a href="{{ route('admin.subscriptions.edit', $subscription->id) }}" class="text-blue-600 hover:underline">Edit</a>
-                                @else
-                                    <span class="text-gray-400">Read Only</span>
-                                @endif
+                                <span class="inline-block px-2 py-1 rounded {{ $branch->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                    {{ $branch->is_active ? 'Active' : 'Inactive' }}
+                                </span>
                             </td>
+                            <td class="px-4 py-2">{{ $branch->created_at }}</td>
+                            <td class="px-4 py-2">{{ $branch->updated_at }}</td>
+                            <td class="px-4 py-2">{{ $branch->activated_at ?? '-' }}</td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="8" class="px-4 py-2 text-center text-gray-500">No branches found.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
-        @else
-            <div class="text-gray-500">No subscriptions found.</div>
-        @endif
+        </div>
     </div>
 </div>
 @endsection
