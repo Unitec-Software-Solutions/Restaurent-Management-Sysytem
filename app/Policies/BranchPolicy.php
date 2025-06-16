@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Admin;
 use App\Models\Branch;
+use App\Models\Organization;
 
 class BranchPolicy
 {
@@ -35,5 +36,15 @@ class BranchPolicy
         }
         // Allow org admin for their own branches
         return $user->organization_id === $branch->organization_id;
+    }
+
+    public function create($user, Organization $organization)
+    {
+        // Allow super admin
+        if (isset($user->is_superadmin) && $user->is_superadmin) {
+            return true;
+        }
+        // Allow org admin for their own org
+        return $user->organization_id === $organization->id;
     }
 }
