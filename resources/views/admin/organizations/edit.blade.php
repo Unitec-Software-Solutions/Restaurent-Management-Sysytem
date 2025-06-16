@@ -46,11 +46,39 @@
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('address', $organization->address) }}</textarea>
             </div>
 
+            {{-- Contact Person Fields --}}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                <input type="text" name="contact_person" value="{{ old('contact_person', $organization->contact_person) }}"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Designation</label>
+                <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation', $organization->contact_person_designation) }}"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Phone</label>
+                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone', $organization->contact_person_phone) }}"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select name="is_active" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="1" {{ old('is_active', $organization->is_active) == 1 ? 'selected' : '' }}>Active</option>
                     <option value="0" {{ old('is_active', $organization->is_active) == 0 ? 'selected' : '' }}>Inactive</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Subscription Plan</label>
+                <select name="subscription_plan_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    @foreach($plans as $plan)
+                        <option value="{{ $plan->id }}" {{ old('subscription_plan_id', $organization->subscription_plan_id) == $plan->id ? 'selected' : '' }}>
+                            {{ $plan->name }} ({{ number_format($plan->price/100, 2) }} {{ $plan->currency }})
+                        </option>
+                    @endforeach
                 </select>
             </div>
 
