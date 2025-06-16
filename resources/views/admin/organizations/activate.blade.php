@@ -32,8 +32,13 @@
                     @csrf
                     <input type="hidden" name="organization_id" value="{{ $organization->id }}">
                     <div>
-                        <label class="block mb-1 font-medium">Activation Key</label>
-                        <input type="text" name="activation_key" class="w-full border rounded px-3 py-2" required>
+                        <label class="block mb-1 font-medium">
+                            Activation Key <span class="text-red-600">*</span>
+                        </label>
+                        <input type="text" name="activation_key" class="w-full border rounded px-3 py-2" required pattern=".{10,}" placeholder="Enter activation key">
+                        @if($errors->has('activation_key'))
+                            <span class="text-red-600 text-sm">{{ $errors->first('activation_key') }}</span>
+                        @endif
                     </div>
                     <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">Activate</button>
                 </form>
