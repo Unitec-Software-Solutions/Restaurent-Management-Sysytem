@@ -358,3 +358,14 @@ Route::middleware(['auth:admin', 'subscription.expiry.alert'])->group(function (
     // Subscription Plans
     Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
 });
+
+Route::middleware(['auth:admin', 'module:reservation'])->group(function () {
+    Route::resource('reservations', ReservationController::class);
+});
+
+Route::middleware(['auth:admin', 'module:inventory'])->group(function () {
+    Route::prefix('inventory')->group(function () {
+        // Inventory routes
+    });
+});
+// Repeat for other modules
