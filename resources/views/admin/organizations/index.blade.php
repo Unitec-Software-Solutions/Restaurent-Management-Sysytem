@@ -1,4 +1,3 @@
-{{-- filepath: resources/views/admin/organizations/index.blade.php --}}
 @extends('layouts.admin')
 
 @section('title', 'Organizations')
@@ -18,23 +17,29 @@
         </div>
     @endif
 
-    <div class="bg-white shadow rounded">
+    <div class="bg-white shadow rounded overflow-x-auto">
         <table class="min-w-full table-auto">
             <thead>
                 <tr class="bg-gray-100">
                     <th class="px-4 py-2 text-left">#</th>
                     <th class="px-4 py-2 text-left">Name</th>
                     <th class="px-4 py-2 text-left">Email</th>
+                    <th class="px-4 py-2 text-left">Contact Person</th>
+                    <th class="px-4 py-2 text-left">Designation</th>
+                    <th class="px-4 py-2 text-left">Contact Phone</th>
                     <th class="px-4 py-2 text-left">Status</th>
                     <th class="px-4 py-2 text-left">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($organizations as $org)
-                    <tr class="border-b">
+                    <tr class="border-b hover:bg-gray-50">
                         <td class="px-4 py-2">{{ $loop->iteration }}</td>
                         <td class="px-4 py-2">{{ $org->name }}</td>
                         <td class="px-4 py-2">{{ $org->email ?? '-' }}</td>
+                        <td class="px-4 py-2">{{ $org->contact_person ?? '-' }}</td>
+                        <td class="px-4 py-2">{{ $org->contact_person_designation ?? '-' }}</td>
+                        <td class="px-4 py-2">{{ $org->contact_person_phone ?? '-' }}</td>
                         <td class="px-4 py-2">
                             @if($org->is_active)
                                 <span class="text-green-600 font-semibold">Active</span>
@@ -54,7 +59,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-gray-500">No organizations found.</td>
+                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">No organizations found.</td>
                     </tr>
                 @endforelse
             </tbody>
