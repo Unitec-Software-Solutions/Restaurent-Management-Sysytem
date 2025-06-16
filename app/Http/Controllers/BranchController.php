@@ -101,7 +101,7 @@ public function showActivationForm()
 {
     $admin = auth('admin')->user();
 
-    if ($admin->isSuperAdmin()) {
+    if ($admin->is_super_admin) {
         $branches = Branch::with('organization')->get();
         return view('admin.branches.activate', compact('branches'));
     } elseif ($admin->branch_id) {
