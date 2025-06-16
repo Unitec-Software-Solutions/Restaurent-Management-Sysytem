@@ -36,7 +36,7 @@
                     <div class="flex items-center flex-wrap gap-4 mb-2">
                         <h1 class="text-2xl font-bold text-gray-900">GRN #{{ $grn->grn_number }}</h1>
                         <div class="flex items-center space-x-2">
-                            <p class="text-sm text-gray-500">GRN Status :</p>
+                            <p class="text-sm text-gray-500">GRN Status:</p>
                             @if ($grn->status === 'Pending')
                                 <x-partials.badges.status-badge status="warning" text="Pending" />
                             @elseif($grn->status === 'Verified')
@@ -46,7 +46,7 @@
                             @else
                                 <x-partials.badges.status-badge status="default" text="{{ $grn->status }}" />
                             @endif
-                            <p class="text-sm text-gray-500">GRN Payemnt Status :</p>
+                            <p class="text-sm text-gray-500">Payment Status:</p>
                             @if ($grn->isPaymentPaid())
                                 <x-partials.badges.status-badge status="success" text="Fully Paid" />
                             @elseif($grn->isPaymentPartial())
@@ -77,8 +77,13 @@
                     </div>
                 </div>
                 <div class="flex flex-col items-end">
-                    <div class="text-2xl font-bold text-indigo-600">Rs. {{ number_format($grn->total_amount, 2) }}</div>
-                    <div class="text-sm text-gray-500 mt-1">Total Amount</div>
+                    <div class="text-3xl font-bold text-indigo-600">Rs. {{ number_format($grn->final_total, 2) }}</div>
+                    <div class="text-sm text-gray-500 mt-1">Final Amount</div>
+                    @if ($grn->balance_amount > 0)
+                        <div class="text-lg font-semibold text-red-600 mt-1">
+                            Balance: Rs. {{ number_format($grn->balance_amount, 2) }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -131,74 +136,56 @@
                 </div>
             </div>
 
-            <!-- GRN Summary -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h2 class="text-lg font-semibold mb-4">GRN Summary</h2>
-                <div class="space-y-4">
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Total Before Discount:</span>
-                        <span class="font-bold">
-                            Rs.
-                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price;}),2) }}
-                        </span>
+            <!-- GRN Financial Summary -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-indigo-500">
+                <h2 class="text-lg font-semibold mb-4 text-indigo-700">Financial Summary</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Subtotal:</span>
+                        <span class="font-semibold">Rs. {{ number_format($grn->sub_total, 2) }}</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Total Discount (Items):</span>
-                        <span class="font-bold">
-                            Rs.
-                            {{ number_format($grn->items->sum(function ($item) {return $item->ordered_quantity * $item->buying_price * ($item->discount_received / 100);}),2) }}
-                        </span>
-                    </div>
-                    @if (($grn->grand_discount ?? 0) != 0)
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Grand Discount (Total Bill):</span>
-                            <span class="font-bold">{{ $grn->grand_discount }}%</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Total After Grand Discount:</span>
-                            <span class="font-bold">
-                                Rs.
-                                {{ number_format($grn->total_amount - $grn->total_amount * ($grn->grand_discount / 100), 2) }}
-                            </span>
+                    @if ($grn->item_discount_total > 0)
+                        <div class="flex justify-between items-center text-orange-600">
+                            <span>Item Discounts:</span>
+                            <span class="font-semibold">- Rs. {{ number_format($grn->item_discount_total, 2) }}</span>
                         </div>
                     @endif
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Total Amount:</span>
-                        <span class="font-bold">Rs. {{ number_format($grn->total_amount, 2) }}</span>
+                    @if (($grn->grand_discount ?? 0) > 0)
+                        <div class="flex justify-between items-center text-orange-600">
+                            <span>Grand Discount ({{ $grn->grand_discount }}%):</span>
+                            <span class="font-semibold">- Rs. {{ number_format($grn->grand_discount_amount, 2) }}</span>
+                        </div>
+                    @endif
+                    <div class="border-t pt-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-900 font-semibold">Final Total:</span>
+                            <span class="font-bold text-lg text-indigo-600">Rs.
+                                {{ number_format($grn->final_total, 2) }}</span>
+                        </div>
                     </div>
-                    <div class="flex justify-between">
+                    <div class="flex justify-between items-center">
                         <span class="text-gray-600">Paid Amount:</span>
-                        <span class="font-bold">Rs. {{ number_format($grn->paid_amount, 2) }}</span>
+                        <span class="font-semibold text-green-600">Rs.
+                            {{ number_format($grn->paid_amount ?? 0, 2) }}</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Balance:</span>
-                        <span class="font-bold">
-                            @if (($grn->grand_discount ?? 0) != 0)
-                                Rs.
-                                {{ number_format($grn->total_amount - $grn->total_amount * ($grn->grand_discount / 100) - $grn->paid_amount, 2) }}
-                            @else
-                                Rs. {{ number_format($grn->total_amount - $grn->paid_amount, 2) }}
-                            @endif
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-900 font-semibold">Balance:</span>
+                        <span class="font-bold text-lg {{ $grn->balance_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
+                            Rs. {{ number_format($grn->balance_amount, 2) }}
                         </span>
                     </div>
-                    <div class="pt-2 border-t">
-                        <div class="flex justify-between">
+                    <div class="pt-3 border-t">
+                        <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Received By:</span>
-                            <span class="font-medium">
-                                {{ $grn->receivedByUser->name ?? 'N/A' }}
-                            </span>
+                            <span class="font-medium">{{ $grn->receivedByUser->name ?? 'N/A' }}</span>
                         </div>
-                        <div class="flex justify-between mt-1">
+                        <div class="flex justify-between text-sm mt-1">
                             <span class="text-gray-600">Verified By:</span>
-                            <span class="font-medium">
-                                {{ $grn->verifiedByUser->name ?? 'N/A' }}
-                            </span>
+                            <span class="font-medium">{{ $grn->verifiedByUser->name ?? 'N/A' }}</span>
                         </div>
-                        <div class="flex justify-between mt-1">
-                            <span class="text-gray-600">Created At:</span>
-                            <span class="font-medium">
-                                {{ $grn->created_at->format('M d, Y H:i') }}
-                            </span>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span class="text-gray-600">Created:</span>
+                            <span class="font-medium">{{ $grn->created_at->format('M d, Y H:i') }}</span>
                         </div>
                     </div>
                 </div>
@@ -216,87 +203,150 @@
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Batch</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Ordered Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Received Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Accepted Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Free
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Ordered</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Received</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Total to Stock</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Rejected Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Discount (%)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line
-                                Total</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EXP
-                                Date</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Accepted</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Free</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">To
+                                Stock</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Rejected</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Unit Price</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Discount</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Line Total</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Expiry</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @foreach ($grn->items as $item)
-                            <tr>
-                                <td class="px-6 py-4">
-                                    <div class="font-medium">{{ $item->item->name ?? $item->item_code }}</div>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3">
+                                    <div class="font-medium text-gray-900">{{ $item->item->name ?? $item->item_code }}
+                                    </div>
                                     <div class="text-sm text-gray-500">{{ $item->item_code }}</div>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-4 py-3 text-sm">
                                     {{ $item->batch_no ?? 'N/A' }}
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                                <td class="px-4 py-3 text-right text-sm">
                                     {{ number_format($item->ordered_quantity, 2) }}
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                                <td class="px-4 py-3 text-right text-sm">
                                     {{ number_format($item->received_quantity, 2) }}
                                 </td>
-                                <td class="px-6 py-4 text-right text-green-600">
-                                    {{ number_format($item->accepted_quantity, 2) }}
+                                <td class="px-4 py-3 text-right text-sm">
+                                    <span
+                                        class="font-medium text-green-600">{{ number_format($item->accepted_quantity, 2) }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-right text-blue-600">
-                                    {{ number_format($item->free_received_quantity, 2) }}
+                                <td class="px-4 py-3 text-right text-sm">
+                                    <span
+                                        class="text-blue-600">{{ number_format($item->free_received_quantity, 2) }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-right text-indigo-600 font-semibold">
-                                    {{ number_format($item->total_to_stock, 2) }}
+                                <td class="px-4 py-3 text-right text-sm">
+                                    <span
+                                        class="font-semibold text-indigo-600">{{ number_format($item->total_to_stock, 2) }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-right text-red-600">
-                                    {{ number_format($item->rejected_quantity, 2) }}
+                                <td class="px-4 py-3 text-right text-sm">
+                                    @if ($item->rejected_quantity > 0)
+                                        <span
+                                            class="text-red-600 font-medium">{{ number_format($item->rejected_quantity, 2) }}</span>
+                                    @else
+                                        <span class="text-gray-400">0.00</span>
+                                    @endif
                                 </td>
-                                <td class="px-6 py-4 text-right">
+                                <td class="px-4 py-3 text-right text-sm">
                                     Rs. {{ number_format($item->buying_price, 2) }}
                                 </td>
-                                <td class="px-6 py-4 text-right">
-                                    {{ number_format($item->discount_received, 2) }}%
+                                <td class="px-4 py-3 text-right text-sm">
+                                    @if (($item->discount_received ?? 0) > 0)
+                                        <span
+                                            class="text-orange-600">{{ number_format($item->discount_received, 2) }}%</span>
+                                        <div class="text-xs text-orange-500">
+                                            Rs. {{ number_format($item->line_discount_amount, 2) }}
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">0%</span>
+                                    @endif
                                 </td>
-                                <td class="px-6 py-4 text-right">
-                                    Rs. {{ number_format($item->line_total, 2) }}
+                                <td class="px-4 py-3 text-right text-sm">
+                                    <div class="font-semibold">Rs. {{ number_format($item->line_total, 2) }}</div>
+                                    @if (($item->discount_received ?? 0) > 0)
+                                        <div class="text-xs text-gray-500 line-through">
+                                            Rs. {{ number_format($item->line_total_before_discount, 2) }}
+                                        </div>
+                                    @endif
                                 </td>
-                                <td class="px-6 py-4">
-                                    {{ optional($item->expiry_date)->format('M d, Y') ?? 'N/A' }}
+                                <td class="px-4 py-3 text-sm">
+                                    @if ($item->expiry_date)
+                                        <div
+                                            class="{{ $item->expiry_status === 'Expired' ? 'text-red-600' : ($item->expiry_status === 'Expiring Soon' ? 'text-orange-600' : 'text-gray-600') }}">
+                                            {{ $item->expiry_date->format('M d, Y') }}
+                                        </div>
+                                        <div
+                                            class="text-xs {{ $item->expiry_status === 'Expired' ? 'text-red-500' : ($item->expiry_status === 'Expiring Soon' ? 'text-orange-500' : 'text-gray-500') }}">
+                                            {{ $item->expiry_status }}
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">N/A</span>
+                                    @endif
                                 </td>
                             </tr>
                             @if ($item->rejected_quantity > 0 && $item->rejection_reason)
                                 <tr>
-                                    <td colspan="12" class="px-6 py-2 text-sm text-red-600 bg-red-50">
-                                        <span class="font-medium">Rejection Reason:</span> {{ $item->rejection_reason }}
+                                    <td colspan="12" class="px-4 py-2 text-sm bg-red-50 border-l-4 border-red-400">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                                            <span class="font-medium text-red-700">Rejection Reason:</span>
+                                            <span class="text-red-600 ml-2">{{ $item->rejection_reason }}</span>
+                                        </div>
                                     </td>
                                 </tr>
                             @endif
                         @endforeach
                     </tbody>
-                    <tfoot class="bg-gray-50">
+                    <tfoot class="bg-gray-50 border-t-2">
                         <tr>
-                            <td colspan="9" class="px-6 py-3 text-right font-medium">Total:</td>
-                            <td class="px-6 py-3 font-bold">Rs. {{ number_format($grn->total_amount, 2) }}</td>
-                            <td colspan="2"></td>
+                            <td colspan="8" class="px-4 py-3 text-right font-semibold text-gray-700">Subtotal:</td>
+                            <td class="px-4 py-3 text-right font-bold text-lg">Rs. {{ number_format($grn->sub_total, 2) }}
+                            </td>
+                            <td colspan="3"></td>
+                        </tr>
+                        @if ($grn->item_discount_total > 0)
+                            <tr>
+                                <td colspan="8" class="px-4 py-2 text-right font-medium text-orange-600">Item
+                                    Discounts:</td>
+                                <td class="px-4 py-2 text-right font-semibold text-orange-600">- Rs.
+                                    {{ number_format($grn->item_discount_total, 2) }}</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        @endif
+                        @if (($grn->grand_discount ?? 0) > 0)
+                            <tr>
+                                <td colspan="8" class="px-4 py-2 text-right font-medium text-orange-600">Grand Discount
+                                    ({{ $grn->grand_discount }}%):</td>
+                                <td class="px-4 py-2 text-right font-semibold text-orange-600">- Rs.
+                                    {{ number_format($grn->grand_discount_amount, 2) }}</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        @endif
+                        <tr class="border-t-2">
+                            <td colspan="8" class="px-4 py-3 text-right font-bold text-gray-900 text-lg">Final Total:
+                            </td>
+                            <td class="px-4 py-3 text-right font-bold text-xl text-indigo-600">Rs.
+                                {{ number_format($grn->final_total, 2) }}</td>
+                            <td colspan="3"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -425,35 +475,38 @@
             text-decoration: underline;
         }
 
-        table {
+        .table-financial {
             border-collapse: separate;
             border-spacing: 0;
-            width: 100%;
         }
 
-        th,
-        td {
-            padding: 0.75rem 1.5rem;
-            text-align: left;
+        .table-financial th,
+        .table-financial td {
             border-bottom: 1px solid #e5e7eb;
         }
 
-        thead th {
+        .table-financial thead th {
             background-color: #f9fafb;
-            color: #6b7280;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.75rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
-        tbody tr:hover {
-            background-color: #f9fafb;
+        .hover-row:hover {
+            background-color: #f8fafc;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
         }
 
-        tfoot td {
-            font-weight: 600;
-            background-color: #f9fafb;
+        .discount-highlight {
+            background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+        }
+
+        .total-highlight {
+            background: linear-gradient(90deg, #dbeafe 0%, #bfdbfe 100%);
+            border-left: 4px solid #3b82f6;
         }
     </style>
 @endpush
@@ -467,6 +520,7 @@
         function closeVerifyModal() {
             document.getElementById('verifyModal').classList.add('hidden');
         }
+
         document.addEventListener('DOMContentLoaded', function() {
             var confirmBtn = document.getElementById('confirmVerifyBtn');
             if (confirmBtn) {
@@ -474,6 +528,12 @@
                     document.getElementById('verifyGrnForm').submit();
                 });
             }
+
+            // Add smooth hover effects to table rows
+            const tableRows = document.querySelectorAll('tbody tr');
+            tableRows.forEach(row => {
+                row.classList.add('hover-row');
+            });
         });
     </script>
 @endpush
