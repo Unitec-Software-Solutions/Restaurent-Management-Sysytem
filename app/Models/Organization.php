@@ -16,7 +16,8 @@ class Organization extends Model
         'contact_person_designation',
         'contact_person_phone',
         'is_active',
-        
+        'subscription_plan_id',
+        'discount_percentage',
     ];
 
     public function branches()
