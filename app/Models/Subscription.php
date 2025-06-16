@@ -6,15 +6,32 @@ use Illuminate\Database\Eloquent\Model;
 
 class Subscription extends Model
 {
-    protected $fillable = ['organization_id', 'plan_id', 'starts_at', 'expires_at', 'status'];
+    protected $fillable = [
+        'organization_id',
+        'plan_id',
+        'start_date',   
+        'end_date',     
+        'status',
+        'is_active'
+    ];
 
     protected $casts = [
-        'starts_at' => 'datetime',
-        'expires_at' => 'datetime',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     public function organization()
     {
         return $this->belongsTo(Organization::class);
+    }
+    
+    public function plan()
+    {
+        return $this->belongsTo(\App\Models\SubscriptionPlan::class, 'plan_id');
+    }
+
+    public function latestSubscription()
+    {
+        return $this->hasOne(\App\Models\Subscription::class)->latestOfMany();
     }
 }
