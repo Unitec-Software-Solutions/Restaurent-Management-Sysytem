@@ -79,6 +79,16 @@
             <li><span class="font-semibold">Terminating Date:</span>
                 {{ $organization->activated_at ? \Carbon\Carbon::parse($organization->activated_at)->addYear()->toDateString() : '-' }}
             </li>
+            <li>
+                <span class="font-semibold">Trial:</span>
+                {{ optional($organization->subscriptions->last())->is_trial ? 'Yes' : 'No' }}
+            </li>
+            @if(optional($organization->subscriptions->last())->is_trial)
+                <li>
+                    <span class="font-semibold">Trial Ends At:</span>
+                    {{ optional($organization->subscriptions->last())->end_date }}
+                </li>
+            @endif
         </ul>
     </div>
 
