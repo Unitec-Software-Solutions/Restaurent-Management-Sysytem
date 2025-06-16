@@ -18,7 +18,7 @@ class AdminOrderController extends Controller
     {
         $admin = auth('admin')->user();
 
-        if ($admin->isSuperAdmin()) {
+        if ($admin->is_super_admin) {
             $orders = \App\Models\Order::with(['reservation', 'branch'])->latest()->paginate(20);
         } elseif ($admin->branch_id) {
             $orders = \App\Models\Order::with(['reservation', 'branch'])
