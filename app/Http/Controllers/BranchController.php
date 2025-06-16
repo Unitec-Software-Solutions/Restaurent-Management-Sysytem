@@ -31,7 +31,7 @@ public function store(Request $request, Organization $organization)
 
     $branch = $organization->branches()->create(array_merge($validated, [
         'activation_key' => Str::random(40),
-        'is_active' => true,
+        'is_active' => false,
     ]));
 
     return redirect()->route('admin.branches.index', ['organization' => $organization->id])
