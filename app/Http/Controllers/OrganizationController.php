@@ -34,14 +34,17 @@ class OrganizationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:organizations,email',
-            'phone' => 'required|string|max:20',
+            'phone' => 'required|regex:/^\d{10,15}$/',
             'password' => 'required|string|min:6',
             'address' => 'required|string|max:255',
             'contact_person' => 'required|string|max:255',
             'contact_person_designation' => 'required|string|max:255',
-            'contact_person_phone' => 'required|string|max:20',
+            'contact_person_phone' => 'required|regex:/^\d{10,15}$/',
             'is_active' => 'required|boolean',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
+        ], [
+            'phone.regex' => 'Phone must be 10-15 digits.',
+            'contact_person_phone.regex' => 'Contact person phone must be 10-15 digits.',
         ]);
 
         // Create organization
@@ -66,13 +69,16 @@ class OrganizationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:organizations,email,' . $organization->id,
-            'phone' => 'required|string|max:20',
+            'phone' => 'required|regex:/^\d{10,15}$/',
             'address' => 'required|string|max:255',
             'contact_person' => 'required|string|max:255',
             'contact_person_designation' => 'required|string|max:255',
-            'contact_person_phone' => 'required|string|max:20',
+            'contact_person_phone' => 'required|regex:/^\d{10,15}$/',
             'is_active' => 'required|boolean',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
+        ], [
+            'phone.regex' => 'Phone must be 10-15 digits.',
+            'contact_person_phone.regex' => 'Contact person phone must be 10-15 digits.',
         ]);
 
         $organization->update($validated);
