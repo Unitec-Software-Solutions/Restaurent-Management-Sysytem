@@ -92,8 +92,8 @@
                 </form>
             </div>
 
-            <!-- GTN List -->
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <!-- GTN List Tabs -->
+            <div x-data="{ tab: 'outgoing' }" class="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <h2 class="text-xl font-semibold text-gray-900">Goods Transfer Notes</h2>
@@ -121,8 +121,22 @@
                     </div>
                 </div>
 
-                <!-- GTN Table -->
-                <div class="overflow-x-auto">
+                <!-- Tabs -->
+                <div class="border-b px-6 pt-4 flex space-x-4">
+                    <button
+                        :class="tab === 'outgoing' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'"
+                        class="pb-2 px-3 border-b-2 font-medium focus:outline-none" @click="tab = 'outgoing'">
+                        Outgoing GTNs
+                    </button>
+                    <button
+                        :class="tab === 'incoming' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'"
+                        class="pb-2 px-3 border-b-2 font-medium focus:outline-none" @click="tab = 'incoming'">
+                        Incoming GTNs
+                    </button>
+                </div>
+
+                <!-- Outgoing GTNs Table -->
+                <div x-show="tab === 'outgoing'" class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
@@ -141,7 +155,11 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @forelse($gtns as $gtn)
+                            @php
+                                $userBranchId = request('from_branch_id') ?? (Auth::user()->branch_id ?? null);
+                                $outgoingGtns = $gtns->filter(fn($gtn) => $gtn->from_branch_id == $userBranchId);
+                            @endphp
+                            @forelse($outgoingGtns as $gtn)
                                 <tr class="hover:bg-gray-50 cursor-pointer"
                                     onclick="window.location='{{ route('admin.inventory.gtn.show', $gtn->gtn_id) }}'">
                                     <td class="px-6 py-4">
@@ -203,19 +221,114 @@
                                                 class="text-blue-600 hover:text-blue-800" title="Print">
                                                 <i class="fas fa-print"></i>
                                             </a>
-                                            {{-- @if ($gtn->status == 'Pending')
-                                                <a href="{{ route('admin.inventory.gtn.edit', $gtn->gtn_id) }}"
-                                                    class="text-gray-600 hover:text-gray-800" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            @endif --}}
                                         </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
                                     <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                                        No GTNs found matching your criteria
+                                        No outgoing GTNs found matching your criteria
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Incoming GTNs Table -->
+                <div x-show="tab === 'incoming'" class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    GTN Details</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    From Branch</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    To Branch</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Items</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status</th>
+                                <th
+                                    class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @php
+                                $userBranchId = request('to_branch_id') ?? (Auth::user()->branch_id ?? null);
+                                $incomingGtns = $gtns->filter(fn($gtn) => $gtn->to_branch_id == $userBranchId);
+                            @endphp
+                            @forelse($incomingGtns as $gtn)
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    onclick="window.location='{{ route('admin.inventory.gtn.show', $gtn->gtn_id) }}'">
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium text-indigo-600">{{ $gtn->gtn_number }}</div>
+                                        <div class="text-sm text-gray-500">
+                                            {{ \Illuminate\Support\Carbon::parse($gtn->transfer_date)->format('d M Y') }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium">{{ $gtn->fromBranch->name ?? 'N/A' }}</div>
+                                        <div class="text-sm text-gray-500">{{ $gtn->fromBranch->code ?? '' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium">{{ $gtn->toBranch->name ?? 'N/A' }}</div>
+                                        <div class="text-sm text-gray-500">{{ $gtn->toBranch->code ?? '' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div>{{ $gtn->items->count() }} items</div>
+                                        <div class="text-sm text-gray-500">
+                                            Total: {{ $gtn->items->sum('transfer_quantity') }} units
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @if ($gtn->status == 'Pending')
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                                Pending
+                                            </span>
+                                        @elseif($gtn->status == 'Confirmed')
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                Confirmed
+                                            </span>
+                                        @elseif($gtn->status == 'Approved')
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                Approved
+                                            </span>
+                                        @elseif($gtn->status == 'Verified')
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                                Verified
+                                            </span>
+                                        @elseif($gtn->status == 'Completed')
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                Completed
+                                            </span>
+                                        @else
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                                Cancelled
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex justify-end space-x-3">
+                                            <a href="{{ route('admin.inventory.gtn.print', $gtn->gtn_id) }}"
+                                                class="text-blue-600 hover:text-blue-800" title="Print">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                        No incoming GTNs found matching your criteria
                                     </td>
                                 </tr>
                             @endforelse
