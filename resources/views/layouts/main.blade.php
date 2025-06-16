@@ -11,9 +11,9 @@
     <link href="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 
-            <!-- CSRF Token -->
+    <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    
+
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -46,7 +46,7 @@
 
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 h-full">
+<body class="bg-[#F3F4FF] dark:bg-gray-900 h-full">
 
     <!-- Sidebar -->
     @auth
@@ -58,9 +58,9 @@
 
     <!-- Main Content -->
     <main class="p-4 lg:ml-64 pt-20 h-full">
-      
+
         <!-- Breadcrumbs -->
-        @include('partials.breadcrumbs') 
+        @include('partials.breadcrumbs')
 
         <!-- Page Content -->
         @yield('content')
@@ -70,28 +70,28 @@
     @include('partials.modals.logout-modal')
 
     <!-- Scripts -->
-<script>
-    // Sidebar toggle for mobile
-    document.addEventListener('DOMContentLoaded', function() {
-        const toggleButton = document.getElementById('toggleSidebar');
-        const sidebar = document.getElementById('sidebar');
-        
-        toggleButton.addEventListener('click', function() {
-            sidebar.classList.toggle('-translate-x-full');
-            
-            // Update aria-expanded attribute for accessibility
-            const isExpanded = sidebar.classList.contains('-translate-x-full') ? 'false' : 'true';
-            toggleButton.setAttribute('aria-expanded', isExpanded);
-        });
-    });
+    <script>
+        // Sidebar toggle for mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.getElementById('toggleSidebar');
+            const sidebar = document.getElementById('sidebar');
 
-    // Logout modal toggle
-    function toggleLogoutModal() {
-        const modal = document.getElementById('logoutModal');
-        modal.classList.toggle('hidden');
-        modal.classList.toggle('flex');
-    }
-</script>
+            toggleButton.addEventListener('click', function() {
+                sidebar.classList.toggle('-translate-x-full');
+
+                // Update aria-expanded attribute for accessibility
+                const isExpanded = sidebar.classList.contains('-translate-x-full') ? 'false' : 'true';
+                toggleButton.setAttribute('aria-expanded', isExpanded);
+            });
+        });
+
+        // Logout modal toggle
+        function toggleLogoutModal() {
+            const modal = document.getElementById('logoutModal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
+        }
+    </script>
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.3.0/dist/flowbite.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js" defer></script>

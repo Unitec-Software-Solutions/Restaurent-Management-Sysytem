@@ -13,7 +13,7 @@
 
             <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    
+
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -77,7 +77,7 @@
 
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 h-full">
+<body class="bg-[#F3F4FF] dark:bg-gray-900 h-full">
 
     <!-- Sidebar -->
     @auth
@@ -89,9 +89,9 @@
 
     <!-- Main Content -->
     <main class="p-4 lg:ml-64 pt-16 h-full  bg-[#F3F4FF]">
-      
+
         <!-- Breadcrumbs -->
-        {{-- @include('partials.breadcrumbs') // Disabled for now --}}  
+        {{-- @include('partials.breadcrumbs') // Disabled for now --}}
 
         <!-- Page Content -->
         @yield('content')
