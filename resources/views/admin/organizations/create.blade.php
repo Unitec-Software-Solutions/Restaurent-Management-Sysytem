@@ -1,4 +1,3 @@
-{{-- filepath: resources/views/admin/organizations/create.blade.php --}}
 @extends('layouts.admin')
 
 @section('title', 'Add Organization')
@@ -45,11 +44,27 @@
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
-            
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
                 <textarea name="address" rows="3"
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('address') }}</textarea>
+            </div>
+
+            {{-- Contact Person Fields --}}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                <input type="text" name="contact_person" value="{{ old('contact_person') }}"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Designation</label>
+                <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation') }}"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Phone</label>
+                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone') }}"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
             <div class="mb-4">
@@ -57,6 +72,15 @@
                 <select name="is_active" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="1" {{ old('is_active', 1) == 1 ? 'selected' : '' }}>Active</option>
                     <option value="0" {{ old('is_active') == 0 ? 'selected' : '' }}>Inactive</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block mb-1 font-medium">Subscription Plan</label>
+                <select name="subscription_plan_id" required class="w-full border rounded px-3 py-2">
+                    @foreach($plans as $plan)
+                        <option value="{{ $plan->id }}">{{ $plan->name }} ({{ number_format($plan->price/100,2) }} {{ $plan->currency }})</option>
+                    @endforeach
                 </select>
             </div>
 
