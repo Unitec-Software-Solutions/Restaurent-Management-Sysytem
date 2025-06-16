@@ -91,7 +91,7 @@
                 </div>
 
                 <!-- Transfer Info Section -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                         <label for="transfer_date" class="block text-sm font-medium text-gray-700 mb-1">Transfer Date
                             *</label>
@@ -112,6 +112,28 @@
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                 </div>
+
+                {{-- <!-- Unified Status Info -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                        <span class="text-sm text-blue-800 font-medium">Unified GTN System Status Information</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+                        <div>
+                            <p class="font-medium">Origin Status Workflow:</p>
+                            <p>Draft → Confirmed → In Delivery → Delivered</p>
+                        </div>
+                        <div>
+                            <p class="font-medium">Receiver Status Workflow:</p>
+                            <p>Pending → Received → Verified → Accepted/Rejected</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-blue-700 mt-2">
+                        This GTN will be created with "Draft" origin status and "Pending" receiver status.
+                        After creation, you can confirm the GTN to deduct stock and begin the transfer workflow.
+                    </p>
+                </div> --}}
 
                 <!-- Items Section -->
                 <div class="mb-8">
@@ -173,49 +195,14 @@
             </form>
         </div>
     </div>
-
-    <!-- Status Change Modal -->
-    <div id="statusChangeModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <div class="flex items-center mb-4">
-                <div class="bg-green-100 p-3 rounded-xl mr-3">
-                    <i class="fas fa-exclamation-triangle text-green-600"></i>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800" id="modalTitle">Confirm GTN Creation</h2>
-            </div>
-            <p class="mb-6 text-gray-700" id="modalMessage">
-                Are you sure you want to create this GTN? This action will process the goods transfer.
-            </p>
-            <div class="flex gap-3 mt-6">
-                <button id="confirmStatusBtn"
-                    class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                    Yes, Create GTN
-                </button>
-                <button type="button" onclick="closeModal()"
-                    class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @push('scripts')
     <script>
-        // Modal logic
-        function openModal() {
-            document.getElementById('statusChangeModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('statusChangeModal').classList.add('hidden');
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             let itemCounter = 0;
             let availableItems = [];
             let selectedBranchId = null;
-            let formSubmitAllowed = false;
 
             const fromBranchSelect = document.getElementById('from_branch_id');
             const toBranchSelect = document.getElementById('to_branch_id');
@@ -236,13 +223,16 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                          data-code="${item.item_code}"
-                                          data-stock="${item.stock_on_hand}"
-                                          data-max="${item.max_transfer}">
-                                          ${item.name} (${item.item_code})
-                                    </option>`
+                                                      data-code="${item.item_code}"
+                                                      data-stock="${item.stock_on_hand}"
+                                                      data-price="${item.buying_price}"
+                                                      data-max="${item.max_transfer}">
+                                                      ${item.name} (${item.item_code})
+                                                </option>`
                             ).join('')}
                         </select>
+                        <!-- Hidden field for transfer_price, auto-populated from item buying_price -->
+                        <input type="hidden" name="items[${itemCounter}][transfer_price]" class="transfer-price-input" value="0">
                     </td>
                     <td class="px-4 py-3">
                         <div class="text-sm font-medium stock-display text-gray-600">-</div>
@@ -284,8 +274,6 @@
 
                 removeBtn.addEventListener('click', function() {
                     newRow.remove();
-                    // Removed: Always ensure at least one placeholder row exists
-                    // Now, all rows including the first can be removed freely
                 });
 
                 itemsContainer.appendChild(newRow);
@@ -407,10 +395,15 @@
                 const stockDisplay = row.querySelector('.stock-display');
                 const qtyInput = row.querySelector('.quantity');
                 const stockHint = row.querySelector('.stock-hint');
+                const transferPriceInput = row.querySelector('.transfer-price-input');
 
                 if (selectedOption && selectedOption.value) {
                     const stock = parseFloat(selectedOption.dataset.stock);
                     const maxTransfer = parseFloat(selectedOption.dataset.max);
+                    const buyingPrice = parseFloat(selectedOption.dataset.price) || 0;
+
+                    // Auto-populate transfer price from item's buying price
+                    transferPriceInput.value = buyingPrice.toFixed(4);
 
                     // Update the available stock display
                     stockDisplay.textContent = `${stock} available`;
@@ -419,7 +412,6 @@
 
                     qtyInput.max = maxTransfer;
                     qtyInput.placeholder = `Max: ${stock}`;
-                    // stockHint.textContent = `Available: ${stock}, Max with 10% margin: ${maxTransfer.toFixed(2)}`;
 
                     if (stock <= 0) {
                         qtyInput.disabled = true;
@@ -433,6 +425,7 @@
                 } else {
                     stockDisplay.textContent = '-';
                     stockDisplay.className = 'text-sm font-medium text-gray-600 stock-display';
+                    transferPriceInput.value = '0';
                     qtyInput.max = '';
                     qtyInput.placeholder = '0.00';
                     qtyInput.disabled = false;
@@ -465,52 +458,42 @@
 
             // Form submission validation
             gtnForm.addEventListener('submit', function(e) {
-                if (!formSubmitAllowed) {
+                // Simplified validation - no modal confirmation
+                const itemRows = document.querySelectorAll('.item-row');
+                const validRows = Array.from(itemRows).filter(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    return selectInput && selectInput.value;
+                });
+
+                if (validRows.length === 0) {
                     e.preventDefault();
-
-                    // Existing validation logic
-                    const itemRows = document.querySelectorAll('.item-row');
-                    const validRows = Array.from(itemRows).filter(row => {
-                        const selectInput = row.querySelector('.item-select');
-                        return selectInput && selectInput.value;
-                    });
-
-                    if (validRows.length === 0) {
-                        alert('Please add at least one item to transfer');
-                        return false;
-                    }
-
-                    let hasErrors = false;
-                    validRows.forEach(row => {
-                        const qtyInput = row.querySelector('.quantity');
-                        const selectInput = row.querySelector('.item-select');
-                        if (!selectInput.value) {
-                            hasErrors = true;
-                            selectInput.focus();
-                            return;
-                        }
-                        if (!qtyInput.value || parseFloat(qtyInput.value) <= 0) {
-                            hasErrors = true;
-                            qtyInput.focus();
-                            return;
-                        }
-                    });
-
-                    if (hasErrors) {
-                        alert('Please fill in all required fields correctly');
-                        return false;
-                    }
-
-                    // Show confirmation modal
-                    openModal();
+                    alert('Please add at least one item to transfer');
+                    return false;
                 }
-            });
 
-            // Modal confirm button
-            document.getElementById('confirmStatusBtn').addEventListener('click', function(e) {
-                formSubmitAllowed = true;
-                closeModal();
-                gtnForm.submit();
+                let hasErrors = false;
+                validRows.forEach(row => {
+                    const qtyInput = row.querySelector('.quantity');
+                    const selectInput = row.querySelector('.item-select');
+                    if (!selectInput.value) {
+                        hasErrors = true;
+                        selectInput.focus();
+                        return;
+                    }
+                    if (!qtyInput.value || parseFloat(qtyInput.value) <= 0) {
+                        hasErrors = true;
+                        qtyInput.focus();
+                        return;
+                    }
+                });
+
+                if (hasErrors) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields correctly');
+                    return false;
+                }
+
+                // Form will submit normally without modal confirmation
             });
 
             // On page load, always show a placeholder row

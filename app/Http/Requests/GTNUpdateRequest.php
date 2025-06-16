@@ -25,11 +25,7 @@ class GTNUpdateRequest extends FormRequest
         $gtnId = $this->route('id');
 
         return [
-            'gtn_number' => [
-                'required',
-                'string',
-                Rule::unique('gtn_master', 'gtn_number')->ignore($gtnId, 'gtn_id')
-            ],
+            // Remove gtn_number validation since it's not editable
             'from_branch_id' => 'required|exists:branches,id',
             'to_branch_id' => 'required|exists:branches,id|different:from_branch_id',
             'transfer_date' => 'required|date',
@@ -37,6 +33,7 @@ class GTNUpdateRequest extends FormRequest
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.transfer_quantity' => 'required|numeric|min:0.01',
+            'items.*.transfer_price' => 'nullable|numeric|min:0', // Changed from required to nullable
             'items.*.batch_no' => 'nullable|string|max:100',
             'items.*.expiry_date' => 'nullable|date|after:today',
             'items.*.notes' => 'nullable|string|max:500',
@@ -59,6 +56,7 @@ class GTNUpdateRequest extends FormRequest
             'items.*.item_id.required' => 'Item selection is required.',
             'items.*.transfer_quantity.required' => 'Transfer quantity is required.',
             'items.*.transfer_quantity.min' => 'Transfer quantity must be greater than 0.',
+            'items.*.transfer_price.min' => 'Transfer price must be greater than or equal to 0.', // Removed required message
         ];
     }
 
@@ -70,13 +68,25 @@ class GTNUpdateRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             if ($this->has('items') && $this->has('from_branch_id')) {
                 $gtnService = app(GTNService::class);
-                $errors = $gtnService->validateItemStock(
-                    $this->input('items'),
-                    $this->input('from_branch_id')
-                );
+                $fromBranchId = $this->input('from_branch_id');
+                $items = $this->input('items', []);
 
-                foreach ($errors as $field => $message) {
-                    $validator->errors()->add($field, $message);
+                // Validate each item's stock availability
+                foreach ($items as $index => $item) {
+                    if (isset($item['item_id']) && isset($item['transfer_quantity'])) {
+                        try {
+                            $gtnService->validateItemStock(
+                                $item['item_id'],
+                                $fromBranchId,
+                                $item['transfer_quantity']
+                            );
+                        } catch (\Exception $e) {
+                            $validator->errors()->add(
+                                "items.{$index}.transfer_quantity",
+                                $e->getMessage()
+                            );
+                        }
+                    }
                 }
             }
         });

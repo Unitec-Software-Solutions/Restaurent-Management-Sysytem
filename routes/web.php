@@ -184,6 +184,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::prefix('gtn')->name('gtn.')->group(function () {
                 // AJAX endpoints must come before parameterized routes
                 Route::get('/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->name('items-with-stock');
+                Route::get('/search-items', [GoodsTransferNoteController::class, 'searchItems'])->name('search-items');
+                Route::get('/item-stock', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock');
 
                 // Standard CRUD routes
                 Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
@@ -193,9 +195,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->whereNumber('gtn')->name('edit');
                 Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->whereNumber('gtn')->name('update');
                 Route::delete('/{gtn}', [GoodsTransferNoteController::class, 'destroy'])->whereNumber('gtn')->name('destroy');
-                route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('print');
+                Route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('print');
 
-                // Status management
+                // Enhanced workflow routes for unified GTN system
+                Route::post('/{gtn}/confirm', [GoodsTransferNoteController::class, 'confirm'])->whereNumber('gtn')->name('confirm');
+                Route::post('/{gtn}/receive', [GoodsTransferNoteController::class, 'receive'])->whereNumber('gtn')->name('receive');
+                Route::post('/{gtn}/verify', [GoodsTransferNoteController::class, 'verify'])->whereNumber('gtn')->name('verify');
+                Route::post('/{gtn}/accept', [GoodsTransferNoteController::class, 'processAcceptance'])->whereNumber('gtn')->name('accept');
+                Route::post('/{gtn}/reject', [GoodsTransferNoteController::class, 'reject'])->whereNumber('gtn')->name('reject');
+                Route::get('/{gtn}/audit-trail', [GoodsTransferNoteController::class, 'auditTrail'])->whereNumber('gtn')->name('audit-trail');
+
+                // Legacy status management (for backward compatibility)
                 Route::post('/{gtn}/change-status', [GoodsTransferNoteController::class, 'changeStatus'])->whereNumber('gtn')->name('change-status');
             });
         });
