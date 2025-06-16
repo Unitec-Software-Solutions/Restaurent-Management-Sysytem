@@ -21,62 +21,93 @@
             @csrf
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Organization Name <span class="text-red-600">*</span>
+                </label>
                 <input type="text" name="name" value="{{ old('name') }}" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" name="email" value="{{ old('email') }}"
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Email <span class="text-red-600">*</span>
+                </label>
+                <input type="email" name="email" value="{{ old('email') }}" required
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="example@email.com">
+                @if($errors->has('email'))
+                    <span class="text-red-600 text-sm">{{ $errors->first('email') }}</span>
+                @endif
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                <input type="text" name="phone" value="{{ old('phone') }}" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Phone <span class="text-red-600">*</span>
+                </label>
+                <input type="text" name="phone" value="{{ old('phone') }}" required pattern="\d{10,15}" maxlength="15"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="0712345678">
+                @if($errors->has('phone'))
+                    <span class="text-red-600 text-sm">{{ $errors->first('phone') }}</span>
+                @endif
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Password <span class="text-red-600">*</span>
+                </label>
                 <input type="password" name="password" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                <textarea name="address" rows="3"
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Address <span class="text-red-600">*</span>
+                </label>
+                <textarea name="address" rows="3" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ old('address') }}</textarea>
             </div>
 
-            {{-- Contact Person Fields --}}
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Person <span class="text-red-600">*</span>
+                </label>
                 <input type="text" name="contact_person" value="{{ old('contact_person') }}" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Designation</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Person Designation <span class="text-red-600">*</span>
+                </label>
                 <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation') }}" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Phone</label>
-                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone') }}" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Contact Person Phone <span class="text-red-600">*</span>
+                </label>
+                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone') }}" required pattern="\d{10,15}" maxlength="15"
+                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="0712345678">
+                @if($errors->has('contact_person_phone'))
+                    <span class="text-red-600 text-sm">{{ $errors->first('contact_person_phone') }}</span>
+                @endif
             </div>
 
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select name="is_active" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Status <span class="text-red-600">*</span>
+                </label>
+                <select name="is_active" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="1" {{ old('is_active', 1) == 1 ? 'selected' : '' }}>Active</option>
                     <option value="0" {{ old('is_active') == 0 ? 'selected' : '' }}>Inactive</option>
                 </select>
             </div>
 
             <div class="mb-4">
-                <label class="block mb-1 font-medium">Subscription Plan</label>
+                <label class="block mb-1 font-medium">
+                    Subscription Plan <span class="text-red-600">*</span>
+                </label>
                 <select name="subscription_plan_id" required class="w-full border rounded px-3 py-2">
                     @foreach($plans as $plan)
                         <option value="{{ $plan->id }}">{{ $plan->name }} ({{ number_format($plan->price/100,2) }} {{ $plan->currency }})</option>
