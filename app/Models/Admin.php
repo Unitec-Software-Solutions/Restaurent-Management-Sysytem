@@ -46,6 +46,10 @@ class Admin extends Authenticatable
      */
     public function isSuperAdmin()
     {
-        return (bool) $this->is_superadmin; 
+        // Example: if you have a boolean column 'is_super_admin'
+        return $this->is_super_admin;
+
+        // Or, if you use a role column:
+        // return $this->role === 'super_admin';
     }
 }
