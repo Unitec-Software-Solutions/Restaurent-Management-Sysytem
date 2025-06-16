@@ -299,7 +299,10 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @php
-                                $incomingGtns = $gtns; // Show all GTNs as incoming for now
+                                // Filter out draft GTNs from incoming view - only show confirmed or later status
+                                $incomingGtns = $gtns->filter(function ($gtn) {
+                                    return $gtn->origin_status !== 'draft';
+                                });
                             @endphp
                             @forelse($incomingGtns as $gtn)
                                 <tr class="hover:bg-gray-50 cursor-pointer"
