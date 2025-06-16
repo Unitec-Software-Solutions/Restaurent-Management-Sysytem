@@ -18,7 +18,12 @@
         </div>
         <div>
             <label class="block mb-1 font-medium">Phone</label>
-            <input type="text" name="phone" value="{{ old('phone', $branch->phone) }}" class="w-full border rounded px-3 py-2" required>
+            <input type="text" name="phone" value="{{ old('phone') }}" required pattern="\d{10,15}" maxlength="15"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="0712345678">
+            @if($errors->has('phone'))
+                <span class="text-red-600 text-sm">{{ $errors->first('phone') }}</span>
+            @endif
         </div>
         <div>
             <label class="block mb-1 font-medium">Opening Time</label>
