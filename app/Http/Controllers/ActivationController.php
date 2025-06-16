@@ -15,16 +15,19 @@ class ActivationController extends Controller
         DB::transaction(function () use ($org) {
             $org->update([
                 'is_active' => true,
-                'activated_at' => now(),
+                'activated_at' => now(), 
                 'activation_key' => null
             ]);
-            $org->subscriptions()->create([
-                'plan_id' => 1,
-                'starts_at' => now(),
-                'expires_at' => now()->addYear(),
-                'status' => 'active'
-            ]);
-            $org->branches()->where('type', 'head_office')->update(['is_active' => true]);
+            // Only create a subscription if one does not exist
+            if (!$org->subscriptions()->exists()) {
+                $org->subscriptions()->create([
+                    'plan_id' => 1, // or your default plan id
+                    'start_date' => now(),
+                    'end_date' => now()->addYear(),
+                    'status' => 'active',
+                    'activated_at' => now()
+                ]);
+            }
         });
 
         return response()->json(['status' => 'activated']);
