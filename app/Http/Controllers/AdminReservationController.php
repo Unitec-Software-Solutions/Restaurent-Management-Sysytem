@@ -22,7 +22,7 @@ class AdminReservationController extends Controller
     {
         $admin = auth('admin')->user();
 
-        if ($admin->isSuperAdmin()) { // Use property instead of method
+        if ($admin->is_super_admin) { 
             $reservations = \App\Models\Reservation::with(['branch', 'organization'])->latest()->paginate(20);
         } elseif ($admin->branch_id) {
             $reservations = \App\Models\Reservation::with(['branch', 'organization'])
