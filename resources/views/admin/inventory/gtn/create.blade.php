@@ -225,11 +225,14 @@
                                 `<option value="${item.id}"
                                                       data-code="${item.item_code}"
                                                       data-stock="${item.stock_on_hand}"
+                                                      data-price="${item.buying_price}"
                                                       data-max="${item.max_transfer}">
                                                       ${item.name} (${item.item_code})
                                                 </option>`
                             ).join('')}
                         </select>
+                        <!-- Hidden field for transfer_price, auto-populated from item buying_price -->
+                        <input type="hidden" name="items[${itemCounter}][transfer_price]" class="transfer-price-input" value="0">
                     </td>
                     <td class="px-4 py-3">
                         <div class="text-sm font-medium stock-display text-gray-600">-</div>
@@ -392,10 +395,15 @@
                 const stockDisplay = row.querySelector('.stock-display');
                 const qtyInput = row.querySelector('.quantity');
                 const stockHint = row.querySelector('.stock-hint');
+                const transferPriceInput = row.querySelector('.transfer-price-input');
 
                 if (selectedOption && selectedOption.value) {
                     const stock = parseFloat(selectedOption.dataset.stock);
                     const maxTransfer = parseFloat(selectedOption.dataset.max);
+                    const buyingPrice = parseFloat(selectedOption.dataset.price) || 0;
+
+                    // Auto-populate transfer price from item's buying price
+                    transferPriceInput.value = buyingPrice.toFixed(4);
 
                     // Update the available stock display
                     stockDisplay.textContent = `${stock} available`;
@@ -404,7 +412,6 @@
 
                     qtyInput.max = maxTransfer;
                     qtyInput.placeholder = `Max: ${stock}`;
-                    // stockHint.textContent = `Available: ${stock}, Max with 10% margin: ${maxTransfer.toFixed(2)}`;
 
                     if (stock <= 0) {
                         qtyInput.disabled = true;
@@ -418,6 +425,7 @@
                 } else {
                     stockDisplay.textContent = '-';
                     stockDisplay.className = 'text-sm font-medium text-gray-600 stock-display';
+                    transferPriceInput.value = '0';
                     qtyInput.max = '';
                     qtyInput.placeholder = '0.00';
                     qtyInput.disabled = false;
