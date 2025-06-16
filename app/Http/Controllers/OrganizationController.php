@@ -63,6 +63,14 @@ class OrganizationController extends Controller
             'discount_percentage' => $validated['discount_percentage'],
         ]);
 
+        $plan = \App\Models\SubscriptionPlan::find($validated['subscription_plan_id']);
+
+        $organization->plan_name = $plan->name;
+        $organization->plan_price = $plan->price;
+        $organization->plan_currency = $plan->currency;
+        $organization->plan_modules = json_encode($plan->modules);
+        $organization->save();
+
         return redirect()->route('admin.organizations.index')->with('success', 'Organization created successfully');
     }
 
