@@ -141,7 +141,8 @@ class GoodsTransferNoteController extends Controller
 
         $gtn = GoodsTransferNote::with('items')
             ->where('organization_id', $orgId)
-            ->findOrFail($id);
+            ->where('gtn_id', $id)
+            ->firstOrFail();
 
         return view('admin.inventory.gtn.edit', [
             'gtn' => $gtn,
