@@ -122,7 +122,7 @@
                 </div>
 
                 <!-- Tabs -->
-                <div class="border-b px-6 pt-4 flex space-x-4">
+                <div class="border-b px-6 pt-4 flex space-x-4 justify-center">
                     <button
                         :class="tab === 'outgoing' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'"
                         class="pb-2 px-3 border-b-2 font-medium focus:outline-none" @click="tab = 'outgoing'">
