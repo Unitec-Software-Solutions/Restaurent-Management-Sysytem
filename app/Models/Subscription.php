@@ -9,8 +9,8 @@ class Subscription extends Model
     protected $fillable = [
         'organization_id',
         'plan_id',
-        'start_date',   
-        'end_date',     
+        'start_date',
+        'end_date',
         'status',
         'is_active'
     ];
