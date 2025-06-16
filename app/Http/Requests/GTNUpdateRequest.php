@@ -70,13 +70,25 @@ class GTNUpdateRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             if ($this->has('items') && $this->has('from_branch_id')) {
                 $gtnService = app(GTNService::class);
-                $errors = $gtnService->validateItemStock(
-                    $this->input('items'),
-                    $this->input('from_branch_id')
-                );
+                $fromBranchId = $this->input('from_branch_id');
+                $items = $this->input('items', []);
 
-                foreach ($errors as $field => $message) {
-                    $validator->errors()->add($field, $message);
+                // Validate each item's stock availability
+                foreach ($items as $index => $item) {
+                    if (isset($item['item_id']) && isset($item['transfer_quantity'])) {
+                        try {
+                            $gtnService->validateItemStock(
+                                $item['item_id'],
+                                $fromBranchId,
+                                $item['transfer_quantity']
+                            );
+                        } catch (\Exception $e) {
+                            $validator->errors()->add(
+                                "items.{$index}.transfer_quantity",
+                                $e->getMessage()
+                            );
+                        }
+                    }
                 }
             }
         });
