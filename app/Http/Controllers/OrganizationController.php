@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class OrganizationController extends Controller
 {
@@ -205,7 +206,7 @@ class OrganizationController extends Controller
     {
         $admin = auth('admin')->user();
 
-        if ($admin->isSuperAdmin()) {
+        if ($admin->is_super_admin) {
             $organizations = \App\Models\Organization::all();
             return view('admin.organizations.activate', compact('organizations'));
         } else {
