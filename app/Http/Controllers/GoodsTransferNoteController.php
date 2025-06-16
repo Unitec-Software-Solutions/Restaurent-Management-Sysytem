@@ -227,27 +227,48 @@ class GoodsTransferNoteController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($request, $id, $admin) {
-                $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
-                    ->findOrFail($id);
+            $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
+                                    ->findOrFail($id);
 
-                if (!$this->gtnService->canChangeStatus($gtn, $request->status)) {
-                    throw new Exception('GTN status cannot be changed from current state.');
+            DB::transaction(function () use ($request, $gtn, $admin) {
+                $status = $request->input('status');
+                $notes = $request->input('notes');
+
+                // Use the new workflow methods
+                switch ($status) {
+                    case 'Confirmed':
+                        if ($gtn->isDraft()) {
+                            $this->gtnService->confirmGTN($gtn->gtn_id, $admin->id);
+                        } else {
+                            throw new Exception('GTN can only be confirmed from draft status');
+                        }
+                        break;
+
+                    case 'Approved':
+                        // For backward compatibility, treat as confirmed if draft
+                        if ($gtn->isDraft()) {
+                            $this->gtnService->confirmGTN($gtn->gtn_id, $admin->id);
+                        }
+                        break;
+
+                    case 'Verified':
+                        // For backward compatibility, treat as confirmed if draft
+                        if ($gtn->isDraft()) {
+                            $this->gtnService->confirmGTN($gtn->gtn_id, $admin->id);
+                        }
+                        break;
                 }
 
-                // Update GTN status
+                // Update legacy status field for backward compatibility
                 $gtn->update([
-                    'status' => $request->status,
-                    'approved_by' => $admin->id,
-                    'notes' => $request->notes ?? $gtn->notes
+                    'status' => $status,
+                    'notes' => $notes ? ($gtn->notes . "\n" . $notes) : $gtn->notes,
                 ]);
-
-                // Process stock transactions
-                $this->gtnService->processStockTransfer($gtn);
 
                 Log::info('GTN status changed', [
                     'gtn_id' => $gtn->gtn_id,
-                    'new_status' => $request->status,
+                    'old_status' => $gtn->status,
+                    'new_status' => $status,
                     'user_id' => $admin->id
                 ]);
             });
@@ -256,13 +277,231 @@ class GoodsTransferNoteController extends Controller
                 ->with('success', 'GTN status updated successfully and stock transfer processed.');
         } catch (Exception $e) {
             Log::error('GTN status change failed', [
-                'gtn_id' => $id,
                 'error' => $e->getMessage()
             ]);
 
             return back()->with('error', 'Failed to update GTN status: ' . $e->getMessage());
         }
-    }    /**
+    }
+
+    /**
+     * Confirm GTN and deduct stock from sender (new workflow method)
+     */
+    public function confirm($id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $gtn = $this->gtnService->confirmGTN($id, $admin->id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'GTN confirmed successfully. Stock deducted from sender branch.',
+                'gtn' => $gtn
+            ]);
+        } catch (Exception $e) {
+            Log::error('GTN confirmation failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Mark GTN as received
+     */
+    public function receive(Request $request, $id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            $gtn = $this->gtnService->receiveGTN($id, $admin->id, $request->input('notes'));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'GTN marked as received successfully.',
+                'gtn' => $gtn
+            ]);
+        } catch (Exception $e) {
+            Log::error('GTN receive failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Verify GTN items
+     */
+    public function verify(Request $request, $id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            $gtn = $this->gtnService->verifyGTN($id, $admin->id, $request->input('notes'));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'GTN verified successfully.',
+                'gtn' => $gtn
+            ]);
+        } catch (Exception $e) {
+            Log::error('GTN verify failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Accept/Reject GTN items
+     */
+    public function processAcceptance(Request $request, $id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'acceptance_data' => 'required|array',
+            'acceptance_data.*.quantity_accepted' => 'required|numeric|min:0',
+            'acceptance_data.*.rejection_reason' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $gtn = $this->gtnService->processGTNAcceptance(
+                $id,
+                $request->input('acceptance_data'),
+                $admin->id
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'GTN acceptance processed successfully. Stock updated accordingly.',
+                'gtn' => $gtn
+            ]);
+        } catch (Exception $e) {
+            Log::error('GTN acceptance failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Reject entire GTN
+     */
+    public function reject(Request $request, $id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'rejection_reason' => 'required|string|max:1000'
+        ]);
+
+        try {
+            $gtn = $this->gtnService->rejectGTN(
+                $id,
+                $request->input('rejection_reason'),
+                $admin->id
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'GTN rejected successfully. Stock returned to sender branch.',
+                'gtn' => $gtn
+            ]);
+        } catch (Exception $e) {
+            Log::error('GTN rejection failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Get GTN audit trail
+     */
+    public function auditTrail($id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $auditData = $this->gtnService->getGTNAuditTrail($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $auditData
+            ]);
+        } catch (Exception $e) {
+            Log::error('GTN audit trail failed', [
+                'gtn_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
      * Get items with stock for a specific branch (AJAX endpoint)
      */
     public function getItemsWithStock(Request $request)
