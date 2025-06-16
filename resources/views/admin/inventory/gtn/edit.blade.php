@@ -93,7 +93,7 @@
                 </div>
 
                 <!-- Transfer Info Section -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     <div>
                         <label for="transfer_date" class="block text-sm font-medium text-gray-700 mb-1">Transfer Date
                             *</label>
@@ -118,14 +118,25 @@
                     </div>
 
                     <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <label for="origin_status" class="block text-sm font-medium text-gray-700 mb-1">Origin
+                            Status</label>
                         <div class="relative">
-                            <select id="status" name="status"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                <option value="Pending" {{ $gtn->status == 'Pending' ? 'selected' : '' }}>Pending</option>
-                                <option value="Completed" {{ $gtn->status == 'Completed' ? 'selected' : '' }}>Completed
+                            <select id="origin_status" name="origin_status"
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                {{ $gtn->origin_status !== 'draft' && $gtn->origin_status !== 'confirmed' ? 'disabled' : '' }}>
+                                <option value="draft" {{ ($gtn->origin_status ?? 'draft') == 'draft' ? 'selected' : '' }}>
+                                    Draft</option>
+                                <option value="confirmed"
+                                    {{ ($gtn->origin_status ?? 'draft') == 'confirmed' ? 'selected' : '' }}>Confirmed
                                 </option>
-                                <option value="Cancelled" {{ $gtn->status == 'Cancelled' ? 'selected' : '' }}>Cancelled
+                                <option value="in_delivery"
+                                    {{ ($gtn->origin_status ?? 'draft') == 'in_delivery' ? 'selected' : '' }}>In Delivery
+                                </option>
+                                <option value="delivered"
+                                    {{ ($gtn->origin_status ?? 'draft') == 'delivered' ? 'selected' : '' }}>Delivered
+                                </option>
+                                <option value="cancelled"
+                                    {{ ($gtn->origin_status ?? 'draft') == 'cancelled' ? 'selected' : '' }}>Cancelled
                                 </option>
                             </select>
                             <div
@@ -133,6 +144,40 @@
                                 <i class="fas fa-chevron-down"></i>
                             </div>
                         </div>
+                    </div>
+
+                    <div>
+                        <label for="receiver_status" class="block text-sm font-medium text-gray-700 mb-1">Receiver
+                            Status</label>
+                        <div class="relative">
+                            <select id="receiver_status" name="receiver_status"
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                disabled>
+                                <option value="pending"
+                                    {{ ($gtn->receiver_status ?? 'pending') == 'pending' ? 'selected' : '' }}>Pending
+                                </option>
+                                <option value="received"
+                                    {{ ($gtn->receiver_status ?? 'pending') == 'received' ? 'selected' : '' }}>Received
+                                </option>
+                                <option value="verified"
+                                    {{ ($gtn->receiver_status ?? 'pending') == 'verified' ? 'selected' : '' }}>Verified
+                                </option>
+                                <option value="accepted"
+                                    {{ ($gtn->receiver_status ?? 'pending') == 'accepted' ? 'selected' : '' }}>Accepted
+                                </option>
+                                <option value="rejected"
+                                    {{ ($gtn->receiver_status ?? 'pending') == 'rejected' ? 'selected' : '' }}>Rejected
+                                </option>
+                                <option value="partially_accepted"
+                                    {{ ($gtn->receiver_status ?? 'pending') == 'partially_accepted' ? 'selected' : '' }}>
+                                    Partially Accepted</option>
+                            </select>
+                            <div
+                                class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Receiver status is managed by the receiving branch</p>
                     </div>
                 </div>
 
