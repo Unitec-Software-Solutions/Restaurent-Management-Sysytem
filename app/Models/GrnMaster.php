@@ -173,9 +173,54 @@ class GrnMaster extends Model
         return $this->status === self::STATUS_PARTIAL;
     }
 
+    public function getSubTotalAttribute()
+    {
+        return $this->items->sum(function ($item) {
+            return $item->accepted_quantity * $item->buying_price;
+        });
+    }
+
+    public function getItemDiscountTotalAttribute()
+    {
+        return $this->items->sum(function ($item) {
+            return ($item->accepted_quantity * $item->buying_price) * ($item->discount_received / 100);
+        });
+    }
+
+    public function getGrandDiscountAmountAttribute()
+    {
+        if (!$this->grand_discount) {
+            return 0;
+        }
+        $netAfterItemDiscount = $this->sub_total - $this->item_discount_total;
+        return $netAfterItemDiscount * ($this->grand_discount / 100);
+    }
+
+    public function getFinalTotalAttribute()
+    {
+        return $this->sub_total - $this->item_discount_total - $this->grand_discount_amount;
+    }
+
+    public function getBalanceAmountAttribute()
+    {
+        return $this->final_total - ($this->paid_amount ?? 0);
+    }
+
     public function recalculateTotal()
     {
-        $this->total_amount = $this->items()->sum('line_total');
+        // Recalculate based on accepted quantities and apply discounts
+        $subtotal = $this->items->sum(function ($item) {
+            return $item->accepted_quantity * $item->buying_price;
+        });
+
+        $itemDiscounts = $this->items->sum(function ($item) {
+            return ($item->accepted_quantity * $item->buying_price) * ($item->discount_received / 100);
+        });
+
+        $netAfterItemDiscount = $subtotal - $itemDiscounts;
+        $grandDiscountAmount = $netAfterItemDiscount * (($this->grand_discount ?? 0) / 100);
+
+        $this->total_amount = $netAfterItemDiscount - $grandDiscountAmount;
         $this->save();
         return $this;
     }
