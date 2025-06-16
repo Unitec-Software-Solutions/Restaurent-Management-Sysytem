@@ -72,6 +72,22 @@ class OrganizationController extends Controller
         $organization->plan_modules = json_encode($plan->modules);
         $organization->save();
 
+        $isTrial = $plan->is_trial ? true : false;
+        $trialDays = $plan->trial_period_days ?? 30;
+
+        $startDate = now();
+        $endDate = $isTrial ? now()->addDays($trialDays) : now()->addYear();
+
+        $organization->subscriptions()->create([
+            'plan_id' => $plan->id,
+            'status' => 'active',
+            'is_active' => true,
+            'is_trial' => $isTrial,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            
+        ]);
+
         return redirect()->route('admin.organizations.index')->with('success', 'Organization created successfully');
     }
 
