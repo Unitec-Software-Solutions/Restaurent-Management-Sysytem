@@ -95,6 +95,12 @@
 
         <!-- Page Content -->
         @yield('content')
+
+        @if(session('subscription_alert'))
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+                {{ session('subscription_alert') }}
+            </div>
+        @endif
     </main>
 
     <!-- Logout Modal -->
