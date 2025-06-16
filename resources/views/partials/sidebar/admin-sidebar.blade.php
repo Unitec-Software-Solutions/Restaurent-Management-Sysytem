@@ -79,6 +79,12 @@
                     $navItems[] = $organizationsNav;
                     $navItems[] = $branchesNav;
                     if($admin->isSuperAdmin()) {
+                        $navItems[] = [
+                            'title' => 'Subscription Plans',
+                            'route' => 'admin.subscription-plans.index',
+                            'icon' => 'credit-card', // or any icon you have
+                            'icon_type' => 'svg',
+                        ];
                         $navItems[] = ['title' => 'Roles & Permissions', 'route' => 'admin.roles.index', 'icon' => 'lock', 'icon_type' => 'svg'];
                     }
                 @endphp
