@@ -16,7 +16,7 @@ class CheckSubscriptions extends Command
         // Deactivate expired subscriptions
         Subscription::where('end_date', '<', now())
             ->where('is_active', true)
-            ->update(['is_active' => false]);
+            ->update(['is_active' => false, 'status' => 'expired']);
 
         // Deactivate organizations with no active subscriptions
         Organization::whereDoesntHave('subscriptions', function ($query) {
