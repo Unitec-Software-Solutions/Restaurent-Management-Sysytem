@@ -1,4 +1,5 @@
 {{-- filepath: resources/views/admin/organizations/edit.blade.php --}}
+
 @extends('layouts.admin')
 
 @section('title', 'Edit Organization')
@@ -22,33 +23,67 @@
             @csrf
             @method('PUT')
 
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name <span class="text-red-600">*</span></label>
-                <input type="text" name="name" value="{{ old('name', $organization->name) }}" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
+            @if(auth('admin')->user()->isSuperAdmin())
+                {{-- Super Admin: can edit all fields --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name <span class="text-red-600">*</span></label>
+                    <input type="text" name="name" value="{{ old('name', $organization->name) }}" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-600">*</span></label>
+                    <input type="email" name="email" value="{{ old('email', $organization->email) }}" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status <span class="text-red-600">*</span></label>
+                    <select name="is_active" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="1" {{ old('is_active', $organization->is_active) == 1 ? 'selected' : '' }}>Active</option>
+                        <option value="0" {{ old('is_active', $organization->is_active) == 0 ? 'selected' : '' }}>Inactive</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Subscription Plan <span class="text-red-600">*</span></label>
+                    <select name="subscription_plan_id" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        @foreach($plans as $plan)
+                            <option value="{{ $plan->id }}" {{ old('subscription_plan_id', $organization->subscription_plan_id) == $plan->id ? 'selected' : '' }}>
+                                {{ $plan->name }} ({{ number_format($plan->price/100, 2) }} {{ $plan->currency }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @else
+                {{-- Non-super admin: show as readonly --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
+                    <input type="text" value="{{ $organization->name }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" value="{{ $organization->email }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <input type="text" value="{{ $organization->is_active ? 'Active' : 'Inactive' }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Subscription Plan</label>
+                    <input type="text" value="{{ $organization->plan->name ?? 'N/A' }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
+            @endif
 
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-600">*</span></label>
-                <input type="email" name="email" value="{{ old('email', $organization->email) }}" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-
+            {{-- Editable for all --}}
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-600">*</span></label>
                 <input type="text" name="phone" value="{{ old('phone', $organization->phone) }}" required pattern="\d{10,15}" maxlength="15"
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
-
             <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Address <span class="text-red-600">*</span>
-                </label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-600">*</span></label>
                 <textarea name="address" rows="4" required
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Line 1&#10;Line 2&#10;Line 3&#10;Line 4">{{ old('address', $organization->address ?? '') }}</textarea>
             </div>
-
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person <span class="text-red-600">*</span></label>
                 <input type="text" name="contact_person" value="{{ old('contact_person', $organization->contact_person) }}" required
@@ -65,25 +100,7 @@
                     class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Status <span class="text-red-600">*</span></label>
-                <select name="is_active" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="1" {{ old('is_active', $organization->is_active) == 1 ? 'selected' : '' }}>Active</option>
-                    <option value="0" {{ old('is_active', $organization->is_active) == 0 ? 'selected' : '' }}>Inactive</option>
-                </select>
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Subscription Plan <span class="text-red-600">*</span></label>
-                <select name="subscription_plan_id" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    @foreach($plans as $plan)
-                        <option value="{{ $plan->id }}" {{ old('subscription_plan_id', $organization->subscription_plan_id) == $plan->id ? 'selected' : '' }}>
-                            {{ $plan->name }} ({{ number_format($plan->price/100, 2) }} {{ $plan->currency }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
+            {{-- Password fields --}}
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                     Old Password
