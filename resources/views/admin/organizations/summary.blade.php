@@ -82,6 +82,33 @@
         </ul>
     </div>
 
+    {{-- Payment Info --}}
+    <div class="bg-white rounded-xl shadow p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-indigo-700">Payment Info</h3>
+        <ul class="space-y-2 text-gray-700">
+            <li>
+                <span class="font-semibold">Plan Price:</span>
+                {{ $organization->plan ? number_format($organization->plan->price / 100, 2) . ' ' . $organization->plan->currency : 'N/A' }}
+            </li>
+            <li>
+                <span class="font-semibold">Discount:</span>
+                {{ $organization->discount_percentage ?? 0 }}%
+            </li>
+            <li>
+                <span class="font-semibold">Final Price:</span>
+                @if($organization->plan)
+                    @php
+                        $discount = ($organization->plan->price * ($organization->discount_percentage ?? 0)) / 100;
+                        $final = $organization->plan->price - $discount;
+                    @endphp
+                    {{ number_format($final / 100, 2) . ' ' . $organization->plan->currency }}
+                @else
+                    N/A
+                @endif
+            </li>
+        </ul>
+    </div>
+
     {{-- Branches --}}
     <div class="bg-white rounded-xl shadow p-6 mb-8">
         <div class="flex justify-between items-center mb-4">
