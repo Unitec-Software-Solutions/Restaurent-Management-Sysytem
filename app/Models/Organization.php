@@ -45,4 +45,9 @@ class Organization extends Model
         $this->update(['is_active' => false]);
         $this->branches()->update(['is_active' => false]);
     }
+    
+    public function plan()
+    {
+        return $this->belongsTo(\App\Models\SubscriptionPlan::class, 'subscription_plan_id');
+    }
 }
