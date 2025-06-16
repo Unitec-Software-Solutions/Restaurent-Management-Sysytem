@@ -38,6 +38,7 @@ class GoodsTransferNote extends Model
         'verified_by',
         'received_by',
         'notes',
+        'total_value',
         'is_active',
     ];
 
@@ -49,6 +50,7 @@ class GoodsTransferNote extends Model
         'verified_at' => 'datetime',
         'accepted_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'total_value' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
@@ -442,9 +444,7 @@ class GoodsTransferNote extends Model
     // Utility Methods
     public function getTotalTransferValue()
     {
-        return $this->items->sum(function ($item) {
-            return $item->transfer_quantity * $item->transfer_price;
-        });
+        return $this->total_value ?? $this->items->sum('line_total');
     }
 
     public function getTotalAcceptedValue()
@@ -467,5 +467,12 @@ class GoodsTransferNote extends Model
         $totalAccepted = $this->items->sum('quantity_accepted');
 
         return $totalTransfer > 0 ? ($totalAccepted / $totalTransfer) * 100 : 0;
+    }
+
+    public function recalculateTotalValue()
+    {
+        $totalValue = $this->items->sum('line_total');
+        $this->update(['total_value' => $totalValue]);
+        return $totalValue;
     }
 }
