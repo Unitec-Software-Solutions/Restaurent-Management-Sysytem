@@ -23,7 +23,9 @@ class ItemTransaction extends Model
         'unit_price',
         'source_id',
         'source_type',
+        'gtn_id', // Reference to GTN
         'created_by_user_id',
+        'verified_by', // User who verified the transaction
         'notes',
         'is_active',
     ];
@@ -66,6 +68,16 @@ class ItemTransaction extends Model
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
+    public function verifiedBy()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function gtn()
+    {
+        return $this->belongsTo(GoodsTransferNote::class, 'gtn_id', 'gtn_id');
+    }
+
     /*
      * Scope: Only active transactions
      */
@@ -101,5 +113,55 @@ class ItemTransaction extends Model
         //Log::info('Stock on hand calculated', ['item_id' => $itemId, 'branch_id' => $branchId, 'stock' => $stock]);
 
         return $stock;
+    }
+
+    // GTN-specific helper methods
+    public static function createGTNOutgoingTransaction($data)
+    {
+        return self::create(array_merge($data, [
+            'transaction_type' => 'gtn_outgoing',
+            'quantity' => -abs($data['quantity']), // Ensure negative for outgoing
+            'is_active' => true,
+        ]));
+    }
+
+    public static function createGTNIncomingTransaction($data)
+    {
+        return self::create(array_merge($data, [
+            'transaction_type' => 'gtn_incoming',
+            'quantity' => abs($data['quantity']), // Ensure positive for incoming
+            'is_active' => true,
+        ]));
+    }
+
+    public static function createGTNRejectionTransaction($data)
+    {
+        return self::create(array_merge($data, [
+            'transaction_type' => 'gtn_rejection',
+            'quantity' => abs($data['quantity']), // Positive for return to sender
+            'is_active' => true,
+        ]));
+    }
+
+    // Scope for GTN transactions
+    public function scopeGTNTransactions($query, $gtnId = null)
+    {
+        $query->whereIn('transaction_type', ['gtn_outgoing', 'gtn_incoming', 'gtn_rejection']);
+
+        if ($gtnId) {
+            $query->where('gtn_id', $gtnId);
+        }
+
+        return $query;
+    }
+
+    // Get stock movements for a specific GTN
+    public static function getGTNStockMovements($gtnId)
+    {
+        return self::where('gtn_id', $gtnId)
+                  ->whereIn('transaction_type', ['gtn_outgoing', 'gtn_incoming', 'gtn_rejection'])
+                  ->with(['item', 'branch', 'createdBy'])
+                  ->orderBy('created_at')
+                  ->get();
     }
 }
