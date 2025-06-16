@@ -221,46 +221,63 @@
 
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">{{ $gtn->gtn_number }}</h1>
-                    <p class="text-gray-600">Transfer Date:
-                        {{ \Carbon\Carbon::parse($gtn->transfer_date)->format('F d, Y') }}</p>
-                    <div class="flex items-center gap-4 mt-2">
-                        <span
-                            class="px-3 py-1 text-sm font-medium rounded-full
-                            {{ $gtn->origin_status === 'draft'
-                                ? 'bg-gray-100 text-gray-800'
-                                : ($gtn->origin_status === 'confirmed'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : ($gtn->origin_status === 'in_delivery'
-                                        ? 'bg-yellow-100 text-yellow-800'
-                                        : 'bg-green-100 text-green-800')) }}">
-                            Origin: {{ ucfirst(str_replace('_', ' ', $gtn->origin_status ?? 'draft')) }}
-                        </span>
-                        <span
-                            class="px-3 py-1 text-sm font-medium rounded-full
-                            {{ $gtn->receiver_status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : ($gtn->receiver_status === 'received'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : ($gtn->receiver_status === 'verified'
-                                        ? 'bg-purple-100 text-purple-800'
-                                        : ($gtn->receiver_status === 'accepted'
-                                            ? 'bg-green-100 text-green-800'
-                                            : ($gtn->receiver_status === 'rejected'
-                                                ? 'bg-red-100 text-red-800'
-                                                : 'bg-orange-100 text-orange-800')))) }}">
-                            Receiver: {{ ucfirst(str_replace('_', ' ', $gtn->receiver_status ?? 'pending')) }}
-                        </span>
+                    <div class="flex items-center flex-wrap gap-4 mb-2">
+                        <h1 class="text-2xl font-bold text-gray-900">GTN #{{ $gtn->gtn_number }}</h1>
+                        <div class="flex items-center space-x-2">
+                            <p class="text-sm text-gray-500">Origin Status:</p>
+                            <span
+                                class="px-3 py-1 text-sm font-medium rounded-full
+                                {{ $gtn->origin_status === 'draft'
+                                    ? 'bg-gray-100 text-gray-800'
+                                    : ($gtn->origin_status === 'confirmed'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : ($gtn->origin_status === 'in_delivery'
+                                            ? 'bg-yellow-100 text-yellow-800'
+                                            : 'bg-green-100 text-green-800')) }}">
+                                {{ ucfirst(str_replace('_', ' ', $gtn->origin_status ?? 'draft')) }}
+                            </span>
+                            <p class="text-sm text-gray-500">Receiver Status:</p>
+                            <span
+                                class="px-3 py-1 text-sm font-medium rounded-full
+                                {{ $gtn->receiver_status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : ($gtn->receiver_status === 'received'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : ($gtn->receiver_status === 'verified'
+                                            ? 'bg-purple-100 text-purple-800'
+                                            : ($gtn->receiver_status === 'accepted'
+                                                ? 'bg-green-100 text-green-800'
+                                                : ($gtn->receiver_status === 'rejected'
+                                                    ? 'bg-red-100 text-red-800'
+                                                    : 'bg-orange-100 text-orange-800')))) }}">
+                                {{ ucfirst(str_replace('_', ' ', $gtn->receiver_status ?? 'pending')) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar-day mr-2"></i>
+                            <span>Transfer Date: {{ \Carbon\Carbon::parse($gtn->transfer_date)->format('M d, Y') }}</span>
+                        </div>
+                        @if ($gtn->reference_number)
+                            <div class="flex items-center">
+                                <i class="fas fa-file-alt mr-2"></i>
+                                <span>Ref: {{ $gtn->reference_number }}</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-2xl font-bold text-gray-900">{{ $gtn->items->count() }}</div>
-                    <div class="text-sm text-gray-500">Items</div>
-                    <div class="text-lg font-semibold text-green-600 mt-1">
-                        Rs.
+                <div class="flex flex-col items-end">
+                    <div class="text-3xl font-bold text-indigo-600">Rs.
                         {{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
                     </div>
-                    <div class="text-sm text-gray-500">Total Value</div>
+                    <div class="text-sm text-gray-500 mt-1">Total Value</div>
+                    @if ($gtn->items->sum('quantity_rejected') > 0)
+                        <div class="text-lg font-semibold text-red-600 mt-1">
+                            Rejected: {{ number_format($gtn->items->sum('quantity_rejected'), 2) }} units
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -273,23 +290,24 @@
                 <div class="space-y-3">
                     <div>
                         <p class="text-sm text-gray-500">Branch Name</p>
-                        <p class="font-medium">{{ $gtn->fromBranch->name }}</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->name ?? 'N/A' }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Branch Code</p>
                         <p class="font-medium">{{ $gtn->fromBranch->code ?? 'N/A' }}</p>
                     </div>
                     <div>
-                        <span class="text-sm font-medium text-gray-500">Created By</span>
-                        <p class="text-gray-900">{{ $gtn->createdBy->first_name ?? 'System' }}
-                            {{ $gtn->createdBy->last_name ?? '' }}</p>
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->address ?? 'N/A' }}</p>
                     </div>
-                    @if ($gtn->confirmed_at)
-                        <div>
-                            <span class="text-sm font-medium text-gray-500">Confirmed At</span>
-                            <p class="text-gray-900">{{ $gtn->confirmed_at->format('M d, Y H:i') }}</p>
-                        </div>
-                    @endif
+                    <div>
+                        <p class="text-sm text-gray-500">Contact</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->phone ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Manager</p>
+                        <p class="font-medium">{{ $gtn->fromBranch->manager_name ?? 'N/A' }}</p>
+                    </div>
                 </div>
             </div>
 
@@ -299,60 +317,97 @@
                 <div class="space-y-3">
                     <div>
                         <p class="text-sm text-gray-500">Branch Name</p>
-                        <p class="font-medium">{{ $gtn->toBranch->name }}</p>
+                        <p class="font-medium">{{ $gtn->toBranch->name ?? 'N/A' }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Branch Code</p>
                         <p class="font-medium">{{ $gtn->toBranch->code ?? 'N/A' }}</p>
                     </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Address</p>
+                        <p class="font-medium">{{ $gtn->toBranch->address ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Contact</p>
+                        <p class="font-medium">{{ $gtn->toBranch->phone ?? 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Manager</p>
+                        <p class="font-medium">{{ $gtn->toBranch->manager_name ?? 'N/A' }}</p>
+                    </div>
                     @if ($gtn->received_by)
-                        <div>
-                            <span class="text-sm font-medium text-gray-500">Received By</span>
-                            <p class="text-gray-900">{{ $gtn->receivedBy->first_name ?? 'N/A' }}
+                        <div class="pt-2 border-t">
+                            <p class="text-sm text-gray-500">Received By</p>
+                            <p class="font-medium">{{ $gtn->receivedBy->first_name ?? 'N/A' }}
                                 {{ $gtn->receivedBy->last_name ?? '' }}</p>
                         </div>
                     @endif
                     @if ($gtn->received_at)
                         <div>
-                            <span class="text-sm font-medium text-gray-500">Received At</span>
-                            <p class="text-gray-900">{{ $gtn->received_at->format('M d, Y H:i') }}</p>
+                            <p class="text-sm text-gray-500">Received At</p>
+                            <p class="font-medium">{{ $gtn->received_at->format('M d, Y H:i') }}</p>
                         </div>
                     @endif
                 </div>
             </div>
 
-            <!-- GTN Summary -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h2 class="text-lg font-semibold mb-4">Transfer Summary</h2>
+            <!-- GTN Financial Summary (moved to third column) -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-indigo-500">
+                <h2 class="text-lg font-semibold mb-4 text-indigo-700">Transfer Summary</h2>
                 <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span class="text-sm font-medium text-gray-500">Total Items</span>
-                        <span class="text-gray-900">{{ $gtn->items->count() }}</span>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Total Items:</span>
+                        <span class="font-semibold">{{ $gtn->items->count() }}</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-sm font-medium text-gray-500">Total Quantity</span>
-                        <span class="text-gray-900">{{ number_format($gtn->items->sum('transfer_quantity'), 2) }}</span>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Total Quantity:</span>
+                        <span class="font-semibold">{{ number_format($gtn->items->sum('transfer_quantity'), 2) }}</span>
                     </div>
                     @if ($gtn->items->sum('quantity_accepted') > 0)
-                        <div class="flex justify-between">
-                            <span class="text-sm font-medium text-green-600">Accepted Quantity</span>
+                        <div class="flex justify-between items-center text-green-600">
+                            <span>Accepted Quantity:</span>
                             <span
-                                class="text-green-900">{{ number_format($gtn->items->sum('quantity_accepted'), 2) }}</span>
+                                class="font-semibold">{{ number_format($gtn->items->sum('quantity_accepted'), 2) }}</span>
                         </div>
                     @endif
                     @if ($gtn->items->sum('quantity_rejected') > 0)
-                        <div class="flex justify-between">
-                            <span class="text-sm font-medium text-red-600">Rejected Quantity</span>
+                        <div class="flex justify-between items-center text-red-600">
+                            <span>Rejected Quantity:</span>
                             <span
-                                class="text-red-900">{{ number_format($gtn->items->sum('quantity_rejected'), 2) }}</span>
+                                class="font-semibold">{{ number_format($gtn->items->sum('quantity_rejected'), 2) }}</span>
                         </div>
                     @endif
-                    <div class="flex justify-between border-t pt-2">
-                        <span class="text-sm font-medium text-gray-500">Total Value</span>
-                        <span class="text-gray-900 font-semibold">
-                            Rs.
-                            {{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}
-                        </span>
+                    <div class="border-t pt-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-900 font-semibold">Total Value:</span>
+                            <span class="font-bold text-lg text-indigo-600">Rs.
+                                {{ number_format($gtn->items->sum(function ($item) {return $item->transfer_quantity * $item->transfer_price;}),2) }}</span>
+                        </div>
+                    </div>
+                    @if ($gtn->items->sum('quantity_accepted') > 0)
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Accepted Value:</span>
+                            <span class="font-semibold text-green-600">Rs.
+                                {{ number_format($gtn->items->sum(function ($item) {return ($item->quantity_accepted ?? 0) * $item->transfer_price;}),2) }}</span>
+                        </div>
+                    @endif
+                    <div class="pt-3 border-t">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Created By:</span>
+                            <span class="font-medium">{{ $gtn->createdBy->first_name ?? 'System' }}
+                                {{ $gtn->createdBy->last_name ?? '' }}</span>
+                        </div>
+                        @if ($gtn->confirmed_at)
+                            <div class="flex justify-between text-sm mt-1">
+                                <span class="text-gray-600">Confirmed By:</span>
+                                <span class="font-medium">{{ $gtn->confirmedBy->first_name ?? 'N/A' }}
+                                    {{ $gtn->confirmedBy->last_name ?? '' }}</span>
+                            </div>
+                        @endif
+                        <div class="flex justify-between text-sm mt-1">
+                            <span class="text-gray-600">Created:</span>
+                            <span class="font-medium">{{ $gtn->created_at->format('M d, Y H:i') }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -369,48 +424,80 @@
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Batch</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Transfer Qty</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit
-                                Price</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Line
-                                Total</th>
                             @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Accepted Qty</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Rejected Qty</th>
+                                <th
+                                    class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Accepted</th>
+                                <th
+                                    class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Rejected</th>
                             @endif
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Unit Price</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Line Total</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Expiry</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Notes</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @foreach ($gtn->items as $item)
-                            <tr>
-                                <td class="px-6 py-4">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3">
                                     <div class="font-medium text-gray-900">{{ $item->item_name }}</div>
                                     <div class="text-sm text-gray-500">{{ $item->item_code }}</div>
-                                    @if ($item->batch_no)
-                                        <div class="text-xs text-gray-400">Batch: {{ $item->batch_no }}</div>
-                                    @endif
                                 </td>
-                                <td class="px-6 py-4 text-gray-900">{{ number_format($item->transfer_quantity, 2) }}</td>
-                                <td class="px-6 py-4 text-gray-900">Rs. {{ number_format($item->transfer_price, 2) }}</td>
-                                <td class="px-6 py-4 text-gray-900">Rs. {{ number_format($item->line_total, 2) }}</td>
+                                <td class="px-4 py-3 text-sm">
+                                    {{ $item->batch_no ?? 'N/A' }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-sm">
+                                    <span
+                                        class="font-medium text-indigo-600">{{ number_format($item->transfer_quantity, 2) }}</span>
+                                </td>
                                 @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
-                                    <td class="px-6 py-4 text-green-600 font-medium">
-                                        {{ $item->quantity_accepted ? number_format($item->quantity_accepted, 2) : '-' }}
+                                    <td class="px-4 py-3 text-right text-sm">
+                                        @if ($item->quantity_accepted > 0)
+                                            <span
+                                                class="font-medium text-green-600">{{ number_format($item->quantity_accepted, 2) }}</span>
+                                        @else
+                                            <span class="text-gray-400">0.00</span>
+                                        @endif
                                     </td>
-                                    <td class="px-6 py-4 text-red-600 font-medium">
-                                        {{ $item->quantity_rejected ? number_format($item->quantity_rejected, 2) : '-' }}
+                                    <td class="px-4 py-3 text-right text-sm">
+                                        @if ($item->quantity_rejected > 0)
+                                            <span
+                                                class="text-red-600 font-medium">{{ number_format($item->quantity_rejected, 2) }}</span>
+                                        @else
+                                            <span class="text-gray-400">0.00</span>
+                                        @endif
                                     </td>
                                 @endif
-                                <td class="px-6 py-4">
+                                <td class="px-4 py-3 text-right text-sm">
+                                    Rs. {{ number_format($item->transfer_price, 2) }}
+                                </td>
+                                <td class="px-4 py-3 text-right text-sm">
+                                    <div class="font-semibold">Rs. {{ number_format($item->line_total, 2) }}</div>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    @if ($item->expiry_date)
+                                        <div class="text-gray-600">
+                                            {{ $item->expiry_date->format('M d, Y') }}
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">N/A</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
                                     @php
                                         $itemStatus = $item->item_status ?? 'pending';
                                         $statusColors = [
@@ -425,7 +512,7 @@
                                         {{ ucfirst(str_replace('_', ' ', $itemStatus)) }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4">
+                                <td class="px-4 py-3">
                                     @if ($item->notes)
                                         <div class="text-sm text-gray-600">{{ $item->notes }}</div>
                                     @endif
@@ -437,24 +524,49 @@
                                     @endif
                                 </td>
                             </tr>
+                            @if ($item->quantity_rejected > 0 && $item->item_rejection_reason)
+                                <tr>
+                                    <td colspan="10" class="px-4 py-2 text-sm bg-red-50 border-l-4 border-red-400">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                                            <span class="font-medium text-red-700">Rejection Reason:</span>
+                                            <span class="text-red-600 ml-2">{{ $item->item_rejection_reason }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
                         @endforeach
                     </tbody>
-                    <tfoot class="bg-gray-50">
+                    <tfoot class="bg-gray-50 border-t-2">
                         <tr>
-                            <td colspan="3" class="px-6 py-4 text-right font-medium text-gray-900">Total:</td>
-                            <td class="px-6 py-4 font-bold text-gray-900">
-                                Rs. {{ number_format($gtn->items->sum('line_total'), 2) }}
-                            </td>
-                            @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
-                                <td class="px-6 py-4 font-bold text-green-600">
-                                    {{ number_format($gtn->items->sum('quantity_accepted'), 2) }}
-                                </td>
-                                <td class="px-6 py-4 font-bold text-red-600">
-                                    {{ number_format($gtn->items->sum('quantity_rejected'), 2) }}
-                                </td>
-                            @endif
-                            <td colspan="2"></td>
+                            <td colspan="{{ $gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected() ? '6' : '4' }}"
+                                class="px-4 py-3 text-right font-semibold text-gray-700">Total Value:</td>
+                            <td class="px-4 py-3 text-right font-bold text-lg">Rs.
+                                {{ number_format($gtn->items->sum('line_total'), 2) }}</td>
+                            <td colspan="3"></td>
                         </tr>
+                        @if ($gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected())
+                            @if ($gtn->items->sum('quantity_accepted') > 0)
+                                <tr>
+                                    <td colspan="{{ $gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected() ? '6' : '4' }}"
+                                        class="px-4 py-2 text-right font-medium text-green-600">Accepted Value:</td>
+                                    <td class="px-4 py-2 text-right font-semibold text-green-600">Rs.
+                                        {{ number_format($gtn->items->sum(function ($item) {return ($item->quantity_accepted ?? 0) * $item->transfer_price;}),2) }}
+                                    </td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            @endif
+                            @if ($gtn->items->sum('quantity_rejected') > 0)
+                                <tr>
+                                    <td colspan="{{ $gtn->isVerified() || $gtn->isAccepted() || $gtn->isRejected() ? '6' : '4' }}"
+                                        class="px-4 py-2 text-right font-medium text-red-600">Rejected Value:</td>
+                                    <td class="px-4 py-2 text-right font-semibold text-red-600">Rs.
+                                        {{ number_format($gtn->items->sum(function ($item) {return ($item->quantity_rejected ?? 0) * $item->transfer_price;}),2) }}
+                                    </td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            @endif
+                        @endif
                     </tfoot>
                 </table>
             </div>
