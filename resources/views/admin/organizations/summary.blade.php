@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-6">
     <h1 class="text-3xl font-bold mb-8 text-gray-800">Organization Summary</h1>
 
-    {{-- Organization Details --}}
+    {{-- Organization & Contact Details --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow p-6">
             <h2 class="text-xl font-semibold mb-4 text-indigo-700">Organization Info</h2>
@@ -38,7 +38,6 @@
                 <div class="flex items-center gap-2">
                     <input type="text" id="activation-key" value="{{ $organization->activation_key ?? '-' }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
                     <button type="button" onclick="copyActivationKey()" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Copy</button>
-                    {{-- Regenerate Key Button --}}
                     <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline">
                         @csrf
                         @method('PUT')
@@ -58,31 +57,29 @@
     }
     </script>
 
-    {{-- Subscription Details (moved above branches) --}}
+    {{-- Subscription Details --}}
     <div class="bg-white rounded-xl shadow p-6 mb-8">
         <h3 class="text-lg font-semibold mb-4 text-indigo-700">Subscription Details</h3>
-        @php
-            $subscription = $organization->subscriptions->sortByDesc('start_date')->first();
-        @endphp
-        @if($subscription)
-            <ul class="space-y-2 text-gray-700">
-                <li><span class="font-semibold">Plan:</span> {{ $subscription->plan->name ?? 'N/A' }}</li>
-                <li><span class="font-semibold">Modules:</span>
-                    @php
-                        $modules = $subscription->plan->modules ?? [];
-                        if (is_string($modules)) $modules = json_decode($modules, true);
-                    @endphp
-                    {{ is_array($modules) ? implode(', ', $modules) : 'N/A' }}
-                </li>
-                <li><span class="font-semibold">Status:</span> {{ ucfirst($subscription->status) }}</li>
-                <li><span class="font-semibold">Subscribed (Start Date):</span> {{ $subscription->start_date ?? '-' }}</li>
-                <li><span class="font-semibold">Renewal (End Date):</span> {{ $subscription->end_date ?? '-' }}</li>
-                <li><span class="font-semibold">Activated At:</span> {{ $subscription->activated_at ?? '-' }}</li>
-                <li><span class="font-semibold">Terminating Date:</span> {{ $subscription->terminated_at ?? '-' }}</li>
-            </ul>
-        @else
-            <div class="text-gray-500">No subscription found. Organization may not be activated yet.</div>
-        @endif
+        <ul class="space-y-2 text-gray-700">
+            <li><span class="font-semibold">Plan:</span> {{ $organization->plan->name ?? 'N/A' }}</li>
+            <li><span class="font-semibold">Modules:</span>
+                @if($organization->plan && $organization->plan->modules)
+                    {{ is_array($organization->plan->modules) ? implode(', ', $organization->plan->modules) : (is_string($organization->plan->modules) ? implode(', ', json_decode($organization->plan->modules, true) ?? []) : 'N/A') }}
+                @else
+                    N/A
+                @endif
+            </li>
+            <li><span class="font-semibold">Created At:</span> {{ $organization->created_at }}</li>
+            <li><span class="font-semibold">Updated At:</span> {{ $organization->updated_at }}</li>
+            <li><span class="font-semibold">Activation Key Generated At:</span> {{ $organization->created_at }}</li>
+            <li><span class="font-semibold">Activated At:</span> {{ $organization->activated_at ?? '-' }}</li>
+            <li><span class="font-semibold">Renewal (End Date):</span>
+                {{ $organization->activated_at ? \Carbon\Carbon::parse($organization->activated_at)->addYear()->toDateString() : '-' }}
+            </li>
+            <li><span class="font-semibold">Terminating Date:</span>
+                {{ $organization->activated_at ? \Carbon\Carbon::parse($organization->activated_at)->addYear()->toDateString() : '-' }}
+            </li>
+        </ul>
     </div>
 
     {{-- Branches --}}
