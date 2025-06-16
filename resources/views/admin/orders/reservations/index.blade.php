@@ -6,7 +6,7 @@
             <h1 class="text-2xl font-bold text-gray-800 mb-6">
                 Reservation Orders
                 @php $admin = auth('admin')->user(); @endphp
-                @if($admin->isSuperAdmin())
+                @if($admin->is_super_admin)
                     <span class="text-sm text-gray-500">(All Organizations)</span>
                 @elseif($admin->organization)
                     <span class="text-sm text-gray-500">({{ $admin->organization->name }})</span>
