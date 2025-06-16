@@ -14,7 +14,7 @@
                 <li><span class="font-semibold">ID:</span> {{ $organization->id }}</li>
                 <li><span class="font-semibold">Name:</span> {{ $organization->name }}</li>
                 <li><span class="font-semibold">Email:</span> {{ $organization->email ?? '-' }}</li>
-                <li><span class="font-semibold">Address:</span> {{ $organization->address ?? '-' }}</li>
+                <li><span class="font-semibold">Address:</span> {!! nl2br(e($organization->address)) !!}</li>
                 <li><span class="font-semibold">Phone:</span> {{ $organization->phone ?? '-' }}</li>
                 <li><span class="font-semibold">Status:</span>
                     <span class="inline-block px-2 py-1 rounded {{ $organization->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
