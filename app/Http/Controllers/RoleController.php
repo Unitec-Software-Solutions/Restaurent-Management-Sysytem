@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Gate;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Module;
+use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
@@ -15,6 +16,18 @@ class RoleController extends Controller
     {
         Gate::authorize('viewAny', [Role::class, $organization]);
         return $organization->roles()->with('modules')->get();
+    }
+
+    public function create()
+    {
+        $this->authorize('create', \App\Models\Role::class);
+
+        $modules = \App\Models\Module::all();
+        $branches = \App\Models\Branch::where('organization_id', Auth::user()->organization_id)
+            ->where('is_active', true)
+            ->get();
+
+        return view('admin.roles.create', compact('modules', 'branches'));
     }
 
     public function store(Request $request, Organization $organization)
