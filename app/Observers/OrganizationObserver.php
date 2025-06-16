@@ -26,7 +26,7 @@ class OrganizationObserver
             'reservation_fee' => 0.00, // Default reservation fee
             'cancellation_fee' => 0.00, // Default cancellation fee
             'activation_key' => Str::random(40),
-            'is_active' => true,
+            'is_active' => false,
         ]);
     }
 }
