@@ -81,6 +81,53 @@
                 </select>
             </div>
 
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Old Password
+                </label>
+                <input type="password" value="********" disabled
+                    class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-400">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    New Password
+                </label>
+                <div class="relative">
+                    <input type="password" name="password" id="password" autocomplete="new-password"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10">
+                    <button type="button" onclick="togglePassword('password')" tabindex="-1"
+                        class="absolute right-2 top-2 text-gray-500 focus:outline-none">
+                        <svg id="password-eye" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                </div>
+                <small class="text-gray-500">Leave blank to keep current password.</small>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm New Password
+                </label>
+                <div class="relative">
+                    <input type="password" name="password_confirmation" id="password_confirmation" autocomplete="new-password"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10">
+                    <button type="button" onclick="togglePassword('password_confirmation')" tabindex="-1"
+                        class="absolute right-2 top-2 text-gray-500 focus:outline-none">
+                        <svg id="password_confirmation-eye" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
             <div class="flex justify-end gap-3 mt-6">
                 <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50">Cancel</a>
                 <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update Organization</button>
@@ -88,4 +135,18 @@
         </form>
     </div>
 </div>
+
+<script>
+function togglePassword(id) {
+    const input = document.getElementById(id);
+    const eye = document.getElementById(id + '-eye');
+    if (input.type === "password") {
+        input.type = "text";
+        eye.classList.add('text-indigo-600');
+    } else {
+        input.type = "password";
+        eye.classList.remove('text-indigo-600');
+    }
+}
+</script>
 @endsection
