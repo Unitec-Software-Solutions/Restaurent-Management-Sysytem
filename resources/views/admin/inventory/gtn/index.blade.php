@@ -142,8 +142,8 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     GTN Details</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    From Branch</th>
+                                {{-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    From Branch</th> --}}
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     To Branch</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -169,10 +169,10 @@
                                             {{ \Illuminate\Support\Carbon::parse($gtn->transfer_date)->format('d M Y') }}
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">
+                                    {{-- <td class="px-6 py-4">
                                         <div class="font-medium">{{ $gtn->fromBranch->name ?? 'N/A' }}</div>
                                         <div class="text-sm text-gray-500">{{ $gtn->fromBranch->code ?? '' }}</div>
-                                    </td>
+                                    </td> --}}
                                     <td class="px-6 py-4">
                                         <div class="font-medium">{{ $gtn->toBranch->name ?? 'N/A' }}</div>
                                         <div class="text-sm text-gray-500">{{ $gtn->toBranch->code ?? '' }}</div>
@@ -245,8 +245,8 @@
                                     GTN Details</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     From Branch</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    To Branch</th>
+                                {{-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    To Branch</th> --}}
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Items</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -259,7 +259,7 @@
                         <tbody class="divide-y divide-gray-200">
                             @php
                                 // $userBranchId = request('to_branch_id') ?? (Auth::user()->branch_id ?? null);
-                                // $incomingGtns = $gtns->filter(fn($gtn) => $gtn->to_branch_id == $userBranchId);
+                                //$incomingGtns = $gtns->filter(fn($gtn) => $gtn->to_branch_id == $userBranchId);
                                 $incomingGtns = $gtns; // Show all GTNs as incoming for now
                             @endphp
                             @forelse($incomingGtns as $gtn)
@@ -275,10 +275,10 @@
                                         <div class="font-medium">{{ $gtn->fromBranch->name ?? 'N/A' }}</div>
                                         <div class="text-sm text-gray-500">{{ $gtn->fromBranch->code ?? '' }}</div>
                                     </td>
-                                    <td class="px-6 py-4">
+                                    {{-- <td class="px-6 py-4">
                                         <div class="font-medium">{{ $gtn->toBranch->name ?? 'N/A' }}</div>
                                         <div class="text-sm text-gray-500">{{ $gtn->toBranch->code ?? '' }}</div>
-                                    </td>
+                                    </td> --}}
                                     <td class="px-6 py-4">
                                         <div>{{ $gtn->items->count() }} items</div>
                                         <div class="text-sm text-gray-500">
