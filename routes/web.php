@@ -328,3 +328,33 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
 
         Route::resource('subscriptions', \App\Http\Controllers\SubscriptionController::class)->only(['edit', 'update']);
     });
+
+Route::middleware(['auth:admin', 'subscription.expiry.alert'])->group(function () {
+    // Organizations CRUD
+    Route::resource('organizations', OrganizationController::class)->except(['show']);
+    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
+    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
+
+    // Branches: Organization-specific CRUD
+    Route::prefix('organizations/{organization}')->group(function () {
+        Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+        Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+        Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+        Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+    });
+
+    // Global Branches Index (for Super Admin to see all branches)
+    Route::get('branches', [BranchController::class, 'globalIndex'])->name('branches.global');
+
+    // Users Management
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+
+
+    // Roles & Permissions
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+
+    // Subscription Plans
+    Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+});
