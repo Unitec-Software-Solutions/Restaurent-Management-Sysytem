@@ -61,13 +61,13 @@
     <div class="bg-white rounded-xl shadow p-6 mb-8">
         <h3 class="text-lg font-semibold mb-4 text-indigo-700">Subscription Details</h3>
         <ul class="space-y-2 text-gray-700">
-            <li><span class="font-semibold">Plan:</span> {{ $organization->plan->name ?? 'N/A' }}</li>
+            <li><span class="font-semibold">Plan:</span> {{ $organization->plan_name ?? 'N/A' }}</li>
+            <li><span class="font-semibold">Plan Price:</span> {{ $organization->plan_price ? number_format($organization->plan_price/100,2) . ' ' . $organization->plan_currency : 'N/A' }}</li>
             <li><span class="font-semibold">Modules:</span>
-                @if($organization->plan && $organization->plan->modules)
-                    {{ is_array($organization->plan->modules) ? implode(', ', $organization->plan->modules) : (is_string($organization->plan->modules) ? implode(', ', json_decode($organization->plan->modules, true) ?? []) : 'N/A') }}
-                @else
-                    N/A
-                @endif
+                @php
+                    $modules = $organization->plan_modules ? json_decode($organization->plan_modules, true) : [];
+                @endphp
+                {{ is_array($modules) ? implode(', ', $modules) : 'N/A' }}
             </li>
             <li><span class="font-semibold">Created At:</span> {{ $organization->created_at }}</li>
             <li><span class="font-semibold">Updated At:</span> {{ $organization->updated_at }}</li>
@@ -87,8 +87,12 @@
         <h3 class="text-lg font-semibold mb-4 text-indigo-700">Payment Info</h3>
         <ul class="space-y-2 text-gray-700">
             <li>
+                <span class="font-semibold">Plan:</span>
+                {{ $organization->plan_name ?? 'N/A' }}
+            </li>
+            <li>
                 <span class="font-semibold">Plan Price:</span>
-                {{ $organization->plan ? number_format($organization->plan->price / 100, 2) . ' ' . $organization->plan->currency : 'N/A' }}
+                {{ $organization->plan_price ? number_format($organization->plan_price/100,2) . ' ' . $organization->plan_currency : 'N/A' }}
             </li>
             <li>
                 <span class="font-semibold">Discount:</span>
@@ -96,15 +100,18 @@
             </li>
             <li>
                 <span class="font-semibold">Final Price:</span>
-                @if($organization->plan)
-                    @php
-                        $discount = ($organization->plan->price * ($organization->discount_percentage ?? 0)) / 100;
-                        $final = $organization->plan->price - $discount;
-                    @endphp
-                    {{ number_format($final / 100, 2) . ' ' . $organization->plan->currency }}
-                @else
-                    N/A
-                @endif
+                @php
+                    $discount = ($organization->plan_price * ($organization->discount_percentage ?? 0)) / 100;
+                    $final = $organization->plan_price - $discount;
+                @endphp
+                {{ $organization->plan_price ? number_format($final/100,2) . ' ' . $organization->plan_currency : 'N/A' }}
+            </li>
+            <li>
+                <span class="font-semibold">Modules:</span>
+                @php
+                    $modules = $organization->plan_modules ? json_decode($organization->plan_modules, true) : [];
+                @endphp
+                {{ is_array($modules) ? implode(', ', $modules) : 'N/A' }}
             </li>
         </ul>
     </div>
