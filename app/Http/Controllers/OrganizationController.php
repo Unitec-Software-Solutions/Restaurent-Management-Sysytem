@@ -33,21 +33,29 @@ class OrganizationController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:organizations,email',
+            'email' => 'required|email|unique:organizations,email',
             'phone' => 'required|string|max:20',
             'password' => 'required|string|min:6',
             'address' => 'required|string|max:255',
-            // ... other validation rules ...
+            'contact_person' => 'required|string|max:255',
+            'contact_person_designation' => 'required|string|max:255',
+            'contact_person_phone' => 'required|string|max:20',
+            'is_active' => 'required|boolean',
+            'subscription_plan_id' => 'required|exists:subscription_plans,id',
         ]);
 
         // Create organization
         $organization = Organization::create([
             'name' => $validated['name'],
-            'email' => $validated['email'] ?? null,
+            'email' => $validated['email'],
             'phone' => $validated['phone'],
             'password' => bcrypt($validated['password']),
             'address' => $validated['address'],
-            // ... other fields ...
+            'contact_person' => $validated['contact_person'],
+            'contact_person_designation' => $validated['contact_person_designation'],
+            'contact_person_phone' => $validated['contact_person_phone'],
+            'is_active' => $validated['is_active'],
+            'subscription_plan_id' => $validated['subscription_plan_id'],
         ]);
 
         return redirect()->route('admin.organizations.index')->with('success', 'Organization created successfully');
@@ -57,14 +65,14 @@ class OrganizationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email',
+            'email' => 'required|email|unique:organizations,email,' . $organization->id,
             'phone' => 'required|string|max:20',
-            'address' => 'nullable|string|max:255',
-            'contact_person' => 'nullable|string|max:255',
-            'contact_person_designation' => 'nullable|string|max:255',
-            'contact_person_phone' => 'nullable|string|max:20',
+            'address' => 'required|string|max:255',
+            'contact_person' => 'required|string|max:255',
+            'contact_person_designation' => 'required|string|max:255',
+            'contact_person_phone' => 'required|string|max:20',
             'is_active' => 'required|boolean',
-            
+            'subscription_plan_id' => 'required|exists:subscription_plans,id',
         ]);
 
         $organization->update($validated);
@@ -138,7 +146,7 @@ class OrganizationController extends Controller
 
     public function summary(Organization $organization)
     {
-        $organization->load(['branches', 'subscriptions.plan']);
+        $organization->load(['plan', 'branches']);
         return view('admin.organizations.summary', compact('organization'));
     }
 
