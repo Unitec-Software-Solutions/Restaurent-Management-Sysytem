@@ -334,7 +334,7 @@
                         class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-center">
                         <i class="fas fa-redo mr-2"></i> Reset Form
                     </button>
-                    <button type="button" id="openConfirmModalBtn"
+                    <button type="submit" id="openConfirmModalBtn"
                         class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center justify-center">
                         <i class="fas fa-check-circle mr-2"></i> Create GRN
                     </button>
@@ -344,6 +344,7 @@
     </div>
 
     <!-- Confirm Modal for GRN Creation -->
+    {{--
     <div id="grnConfirmModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
             <div class="flex items-center mb-4">
@@ -367,6 +368,7 @@
             </div>
         </div>
     </div>
+    --}}
 
     @push('scripts')
         <script>
@@ -660,37 +662,39 @@
                 });
                 updateSummaryFooter();
 
-                // Modal logic for GRN confirmation
-                const openConfirmModalBtn = document.getElementById('openConfirmModalBtn');
-                const grnConfirmModal = document.getElementById('grnConfirmModal');
-                const confirmCreateGrnBtn = document.getElementById('confirmCreateGrnBtn');
-                const cancelCreateGrnBtn = document.getElementById('cancelCreateGrnBtn');
+                // Remove modal logic and make the button submit the form directly
+                // const openConfirmModalBtn = document.getElementById('openConfirmModalBtn');
+                // const grnConfirmModal = document.getElementById('grnConfirmModal');
+                // const confirmCreateGrnBtn = document.getElementById('confirmCreateGrnBtn');
+                // const cancelCreateGrnBtn = document.getElementById('cancelCreateGrnBtn');
 
-                openConfirmModalBtn.addEventListener('click', function() {
-                    grnConfirmModal.classList.remove('hidden');
-                });
+                // openConfirmModalBtn.addEventListener('click', function() {
+                //     grnConfirmModal.classList.remove('hidden');
+                // });
 
-                cancelCreateGrnBtn.addEventListener('click', function() {
-                    grnConfirmModal.classList.add('hidden');
-                });
+                // cancelCreateGrnBtn.addEventListener('click', function() {
+                //     grnConfirmModal.classList.add('hidden');
+                // });
 
-                confirmCreateGrnBtn.addEventListener('click', function() {
-                    grnConfirmModal.classList.add('hidden');
-                    grnForm.requestSubmit();
-                });
+                // confirmCreateGrnBtn.addEventListener('click', function() {
+                //     grnConfirmModal.classList.add('hidden');
+                //     grnForm.requestSubmit();
+                // });
 
                 // Override form submit to show modal instead
-                grnForm.addEventListener('submit', function(e) {
-                    if (!grnConfirmModal.classList.contains('hidden')) {
-                        // Modal is already open, allow submit (user confirmed)
-                        return;
-                    }
-                    // Only show modal if submit is triggered by button (not programmatically)
-                    if (document.activeElement === openConfirmModalBtn) {
-                        // Prevent default, modal will handle submit
-                        e.preventDefault();
-                    }
-                });
+                // grnForm.addEventListener('submit', function(e) {
+                //     if (!grnConfirmModal.classList.contains('hidden')) {
+                //         // Modal is already open, allow submit (user confirmed)
+                //         return;
+                //     }
+                //     // Only show modal if submit is triggered by button (not programmatically)
+                //     if (document.activeElement === openConfirmModalBtn) {
+                //         // Prevent default, modal will handle submit
+                //         e.preventDefault();
+                //     }
+                // });
+
+                // No modal, so nothing else needed here
             });
         </script>
     @endpush
