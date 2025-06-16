@@ -8,21 +8,15 @@ class Organization extends Model
 {
     protected $fillable = [
         'name',
-        'trading_name',
-        'registration_number',
-        'description',
         'email',
         'password', 
         'phone',
-        'alternative_phone',
         'address',
-        'website',
-        'logo',
-        'business_hours',
-        'business_type',
-        'status',
+        'contact_person',
+        'contact_person_designation',
+        'contact_person_phone',
         'is_active',
-        'activation_key',
+        
     ];
 
     public function branches()
@@ -37,7 +31,7 @@ class Organization extends Model
 
     public function subscriptions()
     {
-        return $this->hasMany(Subscription::class);
+        return $this->hasMany(\App\Models\Subscription::class);
     }
     
     public function activate()
