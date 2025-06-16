@@ -76,12 +76,20 @@ class OrganizationController extends Controller
             'contact_person_phone' => 'required|regex:/^\d{10,15}$/',
             'is_active' => 'required|boolean',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
+            'password' => 'nullable|string|min:6|confirmed',
         ], [
             'phone.regex' => 'Phone must be 10-15 digits.',
             'contact_person_phone.regex' => 'Contact person phone must be 10-15 digits.',
         ]);
 
-        $organization->update($validated);
+        $data = $validated;
+        if (!empty($validated['password'])) {
+            $data['password'] = bcrypt($validated['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        $organization->update($data);
 
         // Update subscription if a new plan is selected
         if ($request->filled('subscription_plan_id')) {
