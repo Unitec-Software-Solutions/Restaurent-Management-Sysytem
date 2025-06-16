@@ -51,11 +51,18 @@ class GTNService
                 'is_active' => true,
             ]);
 
+            $totalValue = 0;
+
             // Add items to the GTN
             foreach ($data['items'] as $itemData) {
                 $this->validateItemStock($itemData['item_id'], $data['from_branch_id'], $itemData['transfer_quantity']);
 
                 $item = ItemMaster::find($itemData['item_id']);
+
+                // Always use item's buying_price as transfer_price, ignore any provided transfer_price
+                $transferPrice = $item->buying_price ?? 0;
+                $lineTotal = $itemData['transfer_quantity'] * $transferPrice;
+                $totalValue += $lineTotal;
 
                 GoodsTransferItem::create([
                     'gtn_id' => $gtn->gtn_id,
@@ -65,19 +72,23 @@ class GTNService
                     'batch_no' => $itemData['batch_no'] ?? null,
                     'expiry_date' => $itemData['expiry_date'] ?? null,
                     'transfer_quantity' => $itemData['transfer_quantity'],
-                    'transfer_price' => $itemData['transfer_price'] ?? 0,
-                    'line_total' => $itemData['transfer_quantity'] * ($itemData['transfer_price'] ?? 0),
+                    'transfer_price' => $transferPrice,
+                    'line_total' => $lineTotal,
                     'notes' => $itemData['notes'] ?? null,
                     'item_status' => GoodsTransferItem::STATUS_PENDING,
                 ]);
             }
+
+            // Update GTN with total value
+            $gtn->update(['total_value' => $totalValue]);
 
             Log::info('GTN created successfully', [
                 'gtn_id' => $gtn->gtn_id,
                 'gtn_number' => $gtn->gtn_number,
                 'from_branch' => $data['from_branch_id'],
                 'to_branch' => $data['to_branch_id'],
-                'items_count' => count($data['items'])
+                'items_count' => count($data['items']),
+                'total_value' => $totalValue
             ]);
 
             return $gtn;
@@ -105,12 +116,13 @@ class GTNService
 
             // Update GTN details
             $gtn->update([
-                'gtn_number' => $data['gtn_number'] ?? $gtn->gtn_number,
                 'from_branch_id' => $data['from_branch_id'] ?? $gtn->from_branch_id,
                 'to_branch_id' => $data['to_branch_id'] ?? $gtn->to_branch_id,
                 'transfer_date' => $data['transfer_date'] ?? $gtn->transfer_date,
                 'notes' => $data['notes'] ?? $gtn->notes,
             ]);
+
+            $totalValue = 0;
 
             // Update items if provided
             if (isset($data['items'])) {
@@ -123,6 +135,11 @@ class GTNService
 
                     $item = ItemMaster::find($itemData['item_id']);
 
+                    // Always use item's buying_price as transfer_price, ignore any provided transfer_price
+                    $transferPrice = $item->buying_price ?? 0;
+                    $lineTotal = $itemData['transfer_quantity'] * $transferPrice;
+                    $totalValue += $lineTotal;
+
                     GoodsTransferItem::create([
                         'gtn_id' => $gtn->gtn_id,
                         'item_id' => $itemData['item_id'],
@@ -131,17 +148,21 @@ class GTNService
                         'batch_no' => $itemData['batch_no'] ?? null,
                         'expiry_date' => $itemData['expiry_date'] ?? null,
                         'transfer_quantity' => $itemData['transfer_quantity'],
-                        'transfer_price' => $itemData['transfer_price'] ?? 0,
-                        'line_total' => $itemData['transfer_quantity'] * ($itemData['transfer_price'] ?? 0),
+                        'transfer_price' => $transferPrice,
+                        'line_total' => $lineTotal,
                         'notes' => $itemData['notes'] ?? null,
                         'item_status' => GoodsTransferItem::STATUS_PENDING,
                     ]);
                 }
+
+                // Update GTN with total value
+                $gtn->update(['total_value' => $totalValue]);
             }
 
             Log::info('GTN updated successfully', [
                 'gtn_id' => $gtn->gtn_id,
-                'gtn_number' => $gtn->gtn_number
+                'gtn_number' => $gtn->gtn_number,
+                'total_value' => $totalValue
             ]);
 
             return $gtn;
