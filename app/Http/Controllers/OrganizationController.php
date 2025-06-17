@@ -22,10 +22,13 @@ class OrganizationController extends Controller
     // Add create method for organization registration
     public function create()
     {
-        Gate::authorize('create', Organization::class);
-        $plans = \App\Models\SubscriptionPlan::all();
+        $organizations = \App\Models\Organization::all();
+        $modules = \App\Models\Module::all();
+        $branches = \App\Models\Branch::all();
+        $plans = \App\Models\SubscriptionPlan::all(); 
         $noPlans = $plans->isEmpty();
-        return view('admin.organizations.create', compact('plans', 'noPlans'));
+
+        return view('admin.organizations.create', compact('organizations', 'modules', 'branches', 'plans', 'noPlans'));
     }
 
     // Add store method for organization registration
