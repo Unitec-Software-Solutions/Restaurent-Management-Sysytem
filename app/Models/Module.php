@@ -6,10 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Module extends Model
 {
-    protected $fillable = ['name', 'description'];
+    protected $fillable = ['name', 'slug', 'description', 'permissions', 'is_active'];
 
-    public function permissions()
+    protected $casts = [
+        'permissions' => 'array',
+    ];
+
+    public function roles()
     {
-        return $this->belongsToMany(\Spatie\Permission\Models\Permission::class, 'module_permission');
+        return $this->belongsToMany(Role::class, 'role_module')
+                    ->withPivot('permissions');
     }
 }
