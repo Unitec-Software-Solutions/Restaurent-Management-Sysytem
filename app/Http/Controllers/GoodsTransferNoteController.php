@@ -175,7 +175,7 @@ class GoodsTransferNoteController extends Controller
     {
         try {
             $this->gtnService->updateGTN($id, $request->validated());
-            return redirect()->route('admin.inventory.gtn.index')->with('success', 'GTN Updated Successfully');
+            return redirect()->route('admin.inventory.gtn.show', $id)->with('success', 'GTN Updated Successfully');
         } catch (Exception $e) {
             Log::error('GTN update failed', [
                 'message' => $e->getMessage(),
