@@ -17,7 +17,7 @@ class SuperAdmin
 
     {
         $user = auth('admin')->user();
-        if (!$user || !$user->is_superadmin) {
+        if (!$user || !$user->is_super_admin) {
             abort(403, 'Unauthorized - Super Admin access required');
         }
         return $next($request);
