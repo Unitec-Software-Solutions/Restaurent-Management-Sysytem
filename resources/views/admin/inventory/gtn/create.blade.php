@@ -392,12 +392,12 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                                                      data-code="${item.item_code}"
-                                                                      data-stock="${item.stock_on_hand}"
-                                                                      data-price="${item.buying_price}"
-                                                                      data-max="${item.max_transfer}">
-                                                                      ${item.name} (${item.item_code})
-                                                                </option>`
+                                                                          data-code="${item.item_code}"
+                                                                          data-stock="${item.stock_on_hand}"
+                                                                          data-price="${item.buying_price}"
+                                                                          data-max="${item.max_transfer}">
+                                                                         ${item.item_code} - ${item.name}
+                                                                    </option>`
                             ).join('')}
                         </select>
                         <!-- Hidden field for transfer_price, auto-populated from item buying_price -->
