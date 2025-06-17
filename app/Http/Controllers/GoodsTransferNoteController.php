@@ -638,4 +638,30 @@ class GoodsTransferNoteController extends Controller
             return response()->json(['error' => 'Failed to fetch stock'], 500);
         }
     }
+
+    /**
+     * Print GTN as invoice-style document
+     */
+    public function print($id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $gtn = GoodsTransferNote::with([
+            'fromBranch', 
+            'toBranch', 
+            'items', 
+            'createdBy', 
+            'receivedBy', 
+            'verifiedBy',
+            'organization'
+        ])
+        ->where('organization_id', $admin->organization_id)
+        ->findOrFail($id);
+
+        return view('admin.inventory.gtn.print', compact('gtn'));
+    }
 }
