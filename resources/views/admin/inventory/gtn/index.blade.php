@@ -291,16 +291,16 @@
                                         <td class="px-6 py-4 text-right">
                                             <div class="flex justify-end space-x-3">
                                                 <a href="{{ route('admin.inventory.gtn.show', $gtn->gtn_id) }}"
-                                                    class="text-blue-600 hover:text-blue-800" title="View Details">
+                                                    class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 <a href="{{ route('admin.inventory.gtn.print', $gtn->gtn_id) }}"
-                                                    class="text-green-600 hover:text-green-800" title="Print">
+                                                    class="text-blue-600 hover:text-blue-800" title="Print">
                                                     <i class="fas fa-print"></i>
                                                 </a>
                                                 @if ($gtn->isDraft())
                                                     <a href="{{ route('admin.inventory.gtn.edit', $gtn->gtn_id) }}"
-                                                        class="text-indigo-600 hover:text-indigo-800" title="Edit">
+                                                        class="text-green-600 hover:text-green-800" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                 @endif
