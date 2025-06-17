@@ -154,7 +154,7 @@
                                         <th class="px-4 py-3">Available Stock</th>
                                         <th class="px-4 py-3">Transfer Quantity*</th>
                                         {{-- <th class="px-4 py-3">Batch No</th> --}}
-                                        <th class="px-4 py-3">Expiry Date</th>
+                                        {{-- <th class="px-4 py-3">Expiry Date</th> --}}
                                         <th class="px-4 py-3">Notes</th>
                                         <th class="px-4 py-3">Action</th>
                                     </tr>
@@ -223,12 +223,12 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                                      data-code="${item.item_code}"
-                                                      data-stock="${item.stock_on_hand}"
-                                                      data-price="${item.buying_price}"
-                                                      data-max="${item.max_transfer}">
-                                                      ${item.name} (${item.item_code})
-                                                </option>`
+                                                              data-code="${item.item_code}"
+                                                              data-stock="${item.stock_on_hand}"
+                                                              data-price="${item.buying_price}"
+                                                              data-max="${item.max_transfer}">
+                                                              ${item.name} (${item.item_code})
+                                                        </option>`
                             ).join('')}
                         </select>
                         <!-- Hidden field for transfer_price, auto-populated from item buying_price -->
@@ -243,10 +243,7 @@
                             min="0.01" max="" placeholder="0.00">
                         <div class="text-xs text-gray-500 mt-1 stock-hint"></div>
                     </td>
-                    <td class="px-4 py-3">
-                        <input type="date" name="items[${itemCounter}][expiry_date]"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                    </td>
+
                     <td class="px-4 py-3">
                         <input type="text" name="items[${itemCounter}][notes]"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg"
