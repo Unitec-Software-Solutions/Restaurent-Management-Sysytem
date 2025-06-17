@@ -103,6 +103,32 @@ document.addEventListener('DOMContentLoaded', function () {
             slugInput.value = slug;
         }
     });
+
+    // Permission field logic
+    const permissionsContainer = document.getElementById('permissions-container');
+    const addPermissionBtn = document.getElementById('add-permission');
+
+    addPermissionBtn.addEventListener('click', function () {
+        const div = document.createElement('div');
+        div.className = 'flex items-center mb-2 permission-item';
+        div.innerHTML = `
+            <input type="text" name="permissions[]" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <button type="button" class="ml-2 text-red-600 remove-permission">&times;</button>
+        `;
+        permissionsContainer.appendChild(div);
+
+        // Add remove event
+        div.querySelector('.remove-permission').addEventListener('click', function () {
+            div.remove();
+        });
+    });
+
+    // Remove permission field
+    permissionsContainer.querySelectorAll('.remove-permission').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            btn.closest('.permission-item').remove();
+        });
+    });
 });
 </script>
 @endsection
