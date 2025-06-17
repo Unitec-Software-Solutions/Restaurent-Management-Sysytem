@@ -195,7 +195,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->whereNumber('gtn')->name('edit');
                 Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->whereNumber('gtn')->name('update');
                 Route::delete('/{gtn}', [GoodsTransferNoteController::class, 'destroy'])->whereNumber('gtn')->name('destroy');
-                Route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('print');
+                Route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'print'])->name('print');
 
                 // Enhanced workflow routes for unified GTN system
                 Route::post('/{gtn}/confirm', [GoodsTransferNoteController::class, 'confirm'])->whereNumber('gtn')->name('confirm');
@@ -316,3 +316,5 @@ Route::put('admin/orders/reservations/{reservation}/orders/{order}', [AdminOrder
 // Additional Order Routes
 Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
 Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
+
+
