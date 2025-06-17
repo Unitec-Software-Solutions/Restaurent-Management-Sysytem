@@ -27,4 +27,8 @@ class RolePolicy
     {       
         return $user->is_super_admin || $user->organization_id === $role->organization_id;
     }
+    public function delete($user, $role)
+    {
+        return $user->is_super_admin || $user->organization_id === $role->organization_id;
+    }
 }
