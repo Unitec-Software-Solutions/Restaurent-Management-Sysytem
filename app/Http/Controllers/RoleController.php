@@ -58,8 +58,9 @@ class RoleController extends Controller
                 }),
             ],
             'branch_id' => 'nullable|exists:branches,id',
-            'modules' => 'array|exists:modules,id',
             'organization_id' => 'required|exists:organizations,id',
+            'permissions' => 'array',
+            'permissions.*' => 'string'
         ]);
 
         $role = \App\Models\Role::create([
@@ -69,20 +70,8 @@ class RoleController extends Controller
             'guard_name' => 'admin',
         ]);
 
-        // Sync modules
-        $role->modules()->sync($request->modules);
-
-        // Get all permissions for the selected modules (as strings)
-        $permissionNames = \App\Models\Module::whereIn('id', $request->modules)
-            ->get()
-            ->pluck('permissions')
-            ->flatten()
-            ->unique()
-            ->toArray();
-
-        $permissionIds = \App\Models\Permission::whereIn('name', $permissionNames)->pluck('id')->toArray();
-
-        // Sync permissions to the role
+        // Sync permissions (by name)
+        $permissionIds = \App\Models\Permission::whereIn('name', $request->permissions ?? [])->pluck('id')->toArray();
         $role->permissions()->sync($permissionIds);
 
         return redirect()->route('admin.roles.index')->with('success', 'Role created for organization.');
@@ -93,12 +82,15 @@ class RoleController extends Controller
         Gate::authorize('update', $role);
         $request->validate([
             'name' => 'sometimes|string|max:255',
-            'modules' => 'array|exists:modules,id'
+            'permissions' => 'array',
+            'permissions.*' => 'string'
         ]);
         $role->update($request->only('name'));
-        if ($request->has('modules')) {
-            $role->modules()->sync($request->modules);
-        }
+
+        // Sync permissions (by name)
+        $permissionIds = \App\Models\Permission::whereIn('name', $request->permissions ?? [])->pluck('id')->toArray();
+        $role->permissions()->sync($permissionIds);
+
         return redirect()->route('admin.roles.index')->with('success', 'Role updated successfully.');
     }
 
@@ -151,11 +143,7 @@ class RoleController extends Controller
         return view('admin.roles.permissions', compact('role', 'modules'));
     }
 
-    public function permissions(\App\Models\Role $role)
-    {
-        $modules = \App\Models\Module::all();
-        return view('admin.roles.permissions', compact('role', 'modules'));
-    }
+    
 
     public function updatePermissions(Request $request, \App\Models\Role $role)
     {
