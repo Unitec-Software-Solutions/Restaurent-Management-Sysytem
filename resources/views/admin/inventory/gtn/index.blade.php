@@ -20,16 +20,30 @@
             <!-- Move x-data to wrap both filter and GTN list/tabs -->
             <div x-data="{
                 tab: '{{ request('tab', 'outgoing') }}',
-                setTab(t) { this.tab = t;
-                    document.getElementById('tab-input').value = t; }
+                setTab(t) {
+                    this.tab = t;
+                    document.getElementById('tab-input').value = t;
+                }
             }">
                 <!-- Search and Filter -->
                 <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                     <form method="GET" action="{{ route('admin.inventory.gtn.index') }}"
-                        class="grid grid-cols-1 md:grid-cols-6 gap-4"
+                        class="grid grid-cols-1 md:grid-cols-4 gap-4"
                         @submit="document.getElementById('tab-input').value = tab">
                         <!-- Hidden input to keep track of tab -->
                         <input type="hidden" name="tab" id="tab-input" :value="tab">
+                        <!-- Search Input -->
+                        <div>
+                            <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search GTN</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" name="search" id="search" value="{{ request('search') }}"
+                                    placeholder="Enter GTN number" aria-label="Search GTN" autocomplete="off"
+                                    class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
                         <!-- From Branch Filter -->
                         <div>
                             <label for="from_branch_id" class="block text-sm font-medium text-gray-700 mb-1">From
@@ -59,6 +73,33 @@
                                 @endforeach
                             </select>
                         </div>
+                        <!-- Date Range -->
+                        <div>
+                            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="date" name="start_date" id="start_date"
+                                    value="{{ request('start_date', $startDate ?? \Carbon\Carbon::now()->subDays(30)->format('Y-m-d')) }}"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <input type="date" name="end_date" id="end_date"
+                                    value="{{ request('end_date', $endDate ?? \Carbon\Carbon::now()->format('Y-m-d')) }}"
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+
+
+                        <!-- Filter Buttons -->
+                        <div class="flex items-end space-x-2 col-span-full md:col-span-1">
+                            <button type="submit"
+                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-filter mr-2"></i> Filter
+                            </button>
+                            <a href="{{ route('admin.inventory.gtn.index') }}"
+                                class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-redo mr-2"></i> Reset
+                            </a>
+                        </div>
+
                         <!-- Origin Status Filter -->
                         <div>
                             <label for="origin_status" class="block text-sm font-medium text-gray-700 mb-1">Origin
@@ -78,6 +119,7 @@
                                     Delivered</option>
                             </select>
                         </div>
+
                         <!-- Receiver Status Filter -->
                         <div>
                             <label for="receiver_status" class="block text-sm font-medium text-gray-700 mb-1">Receiver
@@ -101,41 +143,10 @@
                                     Accepted</option>
                             </select>
                         </div>
-                        <!-- Search Input -->
-                        <div>
-                            <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search GTN</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" name="search" id="search" value="{{ request('search') }}"
-                                    placeholder="Enter GTN number" aria-label="Search GTN" autocomplete="on"
-                                    class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            </div>
-                        </div>
-                        <!-- Date Range -->
-                        <div>
-                            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <input type="date" name="start_date" id="start_date"
-                                    value="{{ request('start_date', $startDate ?? \Carbon\Carbon::now()->subDays(30)->format('Y-m-d')) }}"
-                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <input type="date" name="end_date" id="end_date"
-                                    value="{{ request('end_date', $endDate ?? \Carbon\Carbon::now()->format('Y-m-d')) }}"
-                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            </div>
-                        </div>
-                        <!-- Filter Buttons -->
-                        <div class="flex items-end space-x-2 col-span-full md:col-span-1">
-                            <button type="submit"
-                                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-filter mr-2"></i> Filter
-                            </button>
-                            <a href="{{ route('admin.inventory.gtn.index') }}"
-                                class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
-                                <i class="fas fa-redo mr-2"></i> Reset
-                            </a>
-                        </div>
+
+
+
+
                     </form>
                 </div>
 
