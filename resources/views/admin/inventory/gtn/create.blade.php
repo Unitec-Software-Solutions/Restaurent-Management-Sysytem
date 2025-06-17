@@ -213,6 +213,175 @@
             addItemBtn.disabled = true;
             addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
+            // Function to calculate cumulative quantities and remaining stock for all items
+            function updateAllRemainingStock() {
+                const itemQuantities = new Map(); // item_id -> total quantity used
+                const itemStocks = new Map(); // item_id -> available stock
+
+                // First pass: collect all item selections and their available stock
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    if (selectInput && selectInput.value) {
+                        const selectedOption = selectInput.selectedOptions[0];
+                        const itemId = selectInput.value;
+                        const availableStock = parseFloat(selectedOption.dataset.stock) || 0;
+
+                        if (!itemStocks.has(itemId)) {
+                            itemStocks.set(itemId, availableStock);
+                            itemQuantities.set(itemId, 0);
+                        }
+                    }
+                });
+
+                // Second pass: calculate cumulative quantities
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
+
+                    if (selectInput && selectInput.value && qtyInput && qtyInput.value) {
+                        const itemId = selectInput.value;
+                        const quantity = parseFloat(qtyInput.value) || 0;
+
+                        if (itemQuantities.has(itemId)) {
+                            itemQuantities.set(itemId, itemQuantities.get(itemId) + quantity);
+                        }
+                    }
+                });
+
+                // Third pass: update remaining stock displays and validation
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
+                    const stockHint = row.querySelector('.stock-hint');
+
+                    if (selectInput && selectInput.value && stockHint) {
+                        const itemId = selectInput.value;
+                        const currentQty = parseFloat(qtyInput.value) || 0;
+                        const totalQtyUsed = itemQuantities.get(itemId) || 0;
+                        const availableStock = itemStocks.get(itemId) || 0;
+                        const remainingStock = availableStock - totalQtyUsed;
+
+                        // Clear previous error states
+                        qtyInput.classList.remove('border-red-500');
+
+                        if (totalQtyUsed > availableStock) {
+                            // Error state
+                            qtyInput.classList.add('border-red-500');
+                            stockHint.textContent =
+                                `Error: Total quantity for this item (${totalQtyUsed.toFixed(2)}) exceeds available stock (${availableStock.toFixed(2)})`;
+                            stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                        } else {
+                            // Normal state - show remaining stock after this transfer
+                            stockHint.textContent =
+                                `Remaining stock after transfer: ${remainingStock.toFixed(2)}`;
+                            stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
+                        }
+                    }
+                });
+            }
+
+            // Enhanced quantity validation with real-time remaining stock updates
+            function validateQuantity(qtyInput) {
+                const max = parseFloat(qtyInput.max);
+                const value = parseFloat(qtyInput.value);
+
+                // Individual quantity validation
+                if (value > max) {
+                    qtyInput.setCustomValidity(`Quantity cannot exceed ${max.toFixed(2)}`);
+                } else {
+                    qtyInput.setCustomValidity('');
+                }
+
+                // Update all remaining stock displays
+                updateAllRemainingStock();
+            }
+
+            // Function to validate cumulative quantities (for form submission)
+            function validateCumulativeQuantities() {
+                const itemQuantities = new Map();
+                const itemStocks = new Map();
+                let hasErrors = false;
+
+                // Calculate cumulative quantities
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
+
+                    if (selectInput && selectInput.value && qtyInput && qtyInput.value) {
+                        const itemId = selectInput.value;
+                        const quantity = parseFloat(qtyInput.value) || 0;
+                        const selectedOption = selectInput.selectedOptions[0];
+                        const availableStock = parseFloat(selectedOption.dataset.stock) || 0;
+
+                        itemStocks.set(itemId, availableStock);
+
+                        if (itemQuantities.has(itemId)) {
+                            itemQuantities.set(itemId, itemQuantities.get(itemId) + quantity);
+                        } else {
+                            itemQuantities.set(itemId, quantity);
+                        }
+                    }
+                });
+
+                // Check for violations
+                itemQuantities.forEach((totalQty, itemId) => {
+                    const availableStock = itemStocks.get(itemId) || 0;
+                    if (totalQty > availableStock) {
+                        hasErrors = true;
+                    }
+                });
+
+                return !hasErrors;
+            }
+
+            // Enhanced item change handler
+            function handleItemChange(selectElement) {
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
+                const row = selectElement.closest('.item-row');
+                const stockDisplay = row.querySelector('.stock-display');
+                const qtyInput = row.querySelector('.quantity');
+                const stockHint = row.querySelector('.stock-hint');
+                const transferPriceInput = row.querySelector('.transfer-price-input');
+
+                if (selectedOption && selectedOption.value) {
+                    const stock = parseFloat(selectedOption.dataset.stock);
+                    const maxTransfer = parseFloat(selectedOption.dataset.max);
+                    const buyingPrice = parseFloat(selectedOption.dataset.price) || 0;
+
+                    // Auto-populate transfer price from item's buying price
+                    transferPriceInput.value = buyingPrice.toFixed(4);
+
+                    // Update the available stock display
+                    stockDisplay.textContent = `${stock} available`;
+                    stockDisplay.className = stock > 0 ? 'text-sm font-medium text-green-600 stock-display' :
+                        'text-sm font-medium text-red-600 stock-display';
+
+                    qtyInput.max = maxTransfer;
+                    qtyInput.placeholder = `Max: ${stock}`;
+
+                    if (stock <= 0) {
+                        qtyInput.disabled = true;
+                        qtyInput.value = '';
+                        stockHint.textContent = 'No stock available for this item';
+                        stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                    } else {
+                        qtyInput.disabled = false;
+                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
+                    }
+                } else {
+                    stockDisplay.textContent = '-';
+                    stockDisplay.className = 'text-sm font-medium text-gray-600 stock-display';
+                    transferPriceInput.value = '0';
+                    qtyInput.max = '';
+                    qtyInput.placeholder = '0.00';
+                    qtyInput.disabled = false;
+                    stockHint.textContent = '';
+                }
+
+                // Update all remaining stock displays after item change
+                updateAllRemainingStock();
+            }
+
             // --- Helper to create a placeholder item row ---
             function createPlaceholderRow() {
                 const newRow = document.createElement('tr');
@@ -223,12 +392,12 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                                              data-code="${item.item_code}"
-                                                              data-stock="${item.stock_on_hand}"
-                                                              data-price="${item.buying_price}"
-                                                              data-max="${item.max_transfer}">
-                                                              ${item.name} (${item.item_code})
-                                                        </option>`
+                                                                      data-code="${item.item_code}"
+                                                                      data-stock="${item.stock_on_hand}"
+                                                                      data-price="${item.buying_price}"
+                                                                      data-max="${item.max_transfer}">
+                                                                      ${item.name} (${item.item_code})
+                                                                </option>`
                             ).join('')}
                         </select>
                         <!-- Hidden field for transfer_price, auto-populated from item buying_price -->
@@ -243,7 +412,6 @@
                             min="0.01" max="" placeholder="0.00">
                         <div class="text-xs text-gray-500 mt-1 stock-hint"></div>
                     </td>
-
                     <td class="px-4 py-3">
                         <input type="text" name="items[${itemCounter}][notes]"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -271,13 +439,13 @@
 
                 removeBtn.addEventListener('click', function() {
                     newRow.remove();
+                    // Update remaining stock displays after row removal
+                    updateAllRemainingStock();
                 });
 
                 itemsContainer.appendChild(newRow);
                 itemCounter++;
             }
-
-            // --- End Helper ---
 
             // Handle origin branch selection
             fromBranchSelect.addEventListener('change', function() {
@@ -385,113 +553,72 @@
                 createPlaceholderRow();
             });
 
-            // Handle item selection change
-            function handleItemChange(selectElement) {
-                const selectedOption = selectElement.options[selectElement.selectedIndex];
-                const row = selectElement.closest('.item-row');
-                const stockDisplay = row.querySelector('.stock-display');
-                const qtyInput = row.querySelector('.quantity');
-                const stockHint = row.querySelector('.stock-hint');
-                const transferPriceInput = row.querySelector('.transfer-price-input');
-
-                if (selectedOption && selectedOption.value) {
-                    const stock = parseFloat(selectedOption.dataset.stock);
-                    const maxTransfer = parseFloat(selectedOption.dataset.max);
-                    const buyingPrice = parseFloat(selectedOption.dataset.price) || 0;
-
-                    // Auto-populate transfer price from item's buying price
-                    transferPriceInput.value = buyingPrice.toFixed(4);
-
-                    // Update the available stock display
-                    stockDisplay.textContent = `${stock} available`;
-                    stockDisplay.className = stock > 0 ? 'text-sm font-medium text-green-600 stock-display' :
-                        'text-sm font-medium text-red-600 stock-display';
-
-                    qtyInput.max = maxTransfer;
-                    qtyInput.placeholder = `Max: ${stock}`;
-
-                    if (stock <= 0) {
-                        qtyInput.disabled = true;
-                        qtyInput.value = '';
-                        stockHint.textContent = 'No stock available for this item';
-                        stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
-                    } else {
-                        qtyInput.disabled = false;
-                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
-                    }
-                } else {
-                    stockDisplay.textContent = '-';
-                    stockDisplay.className = 'text-sm font-medium text-gray-600 stock-display';
-                    transferPriceInput.value = '0';
-                    qtyInput.max = '';
-                    qtyInput.placeholder = '0.00';
-                    qtyInput.disabled = false;
-                    stockHint.textContent = '';
-                }
-            }
-
-            // Validate quantity input
-            function validateQuantity(qtyInput) {
-                const max = parseFloat(qtyInput.max);
-                const value = parseFloat(qtyInput.value);
-                const row = qtyInput.closest('.item-row');
-                const stockHint = row.querySelector('.stock-hint');
-
-                if (value > max) {
-                    qtyInput.setCustomValidity(`Quantity cannot exceed ${max.toFixed(2)}`);
-                    stockHint.textContent = `Error: Maximum allowed is ${max.toFixed(2)}`;
-                    stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
-                } else {
-                    qtyInput.setCustomValidity('');
-                    const selectedOption = row.querySelector('.item-select').selectedOptions[0];
-                    if (selectedOption) {
-                        const stock = parseFloat(selectedOption.dataset.stock);
-                        const remainingStock = stock - value;
-                        stockHint.textContent = `Remaining stock after transfer: ${remainingStock.toFixed(2)}`;
-                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
-                    }
-                }
-            }
-
-            // Form submission validation
-            gtnForm.addEventListener('submit', function(e) {
-                // Simplified validation - no modal confirmation
-                const itemRows = document.querySelectorAll('.item-row');
-                const validRows = Array.from(itemRows).filter(row => {
-                    const selectInput = row.querySelector('.item-select');
-                    return selectInput && selectInput.value;
-                });
-
-                if (validRows.length === 0) {
-                    e.preventDefault();
-                    alert('Please add at least one item to transfer');
-                    return false;
-                }
-
+            // Add cumulative stock validation
+            function validateCumulativeQuantities() {
+                const itemQuantities = new Map(); // item_id -> total quantity
+                const itemStocks = new Map(); // item_id -> available stock
                 let hasErrors = false;
-                validRows.forEach(row => {
-                    const qtyInput = row.querySelector('.quantity');
-                    const selectInput = row.querySelector('.item-select');
-                    if (!selectInput.value) {
-                        hasErrors = true;
-                        selectInput.focus();
-                        return;
-                    }
-                    if (!qtyInput.value || parseFloat(qtyInput.value) <= 0) {
-                        hasErrors = true;
-                        qtyInput.focus();
-                        return;
+
+                // Reset all error states first
+                document.querySelectorAll('.quantity').forEach(input => {
+                    input.classList.remove('border-red-500');
+                    const hint = input.closest('tr').querySelector('.stock-hint');
+                    if (hint && hint.classList.contains('text-red-500')) {
+                        hint.classList.remove('text-red-500');
+                        hint.classList.add('text-gray-500');
                     }
                 });
 
-                if (hasErrors) {
-                    e.preventDefault();
-                    alert('Please fill in all required fields correctly');
-                    return false;
-                }
+                // Calculate cumulative quantities for each item
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
 
-                // Form will submit normally without modal confirmation
-            });
+                    if (selectInput && selectInput.value && qtyInput && qtyInput.value) {
+                        const itemId = selectInput.value;
+                        const quantity = parseFloat(qtyInput.value) || 0;
+                        const selectedOption = selectInput.selectedOptions[0];
+                        const availableStock = parseFloat(selectedOption.dataset.stock) || 0;
+
+                        // Store available stock for this item
+                        itemStocks.set(itemId, availableStock);
+
+                        // Add to cumulative quantity
+                        if (itemQuantities.has(itemId)) {
+                            itemQuantities.set(itemId, itemQuantities.get(itemId) + quantity);
+                        } else {
+                            itemQuantities.set(itemId, quantity);
+                        }
+                    }
+                });
+
+                // Check for violations and mark errors
+                itemQuantities.forEach((totalQty, itemId) => {
+                    const availableStock = itemStocks.get(itemId) || 0;
+
+                    if (totalQty > availableStock) {
+                        hasErrors = true;
+
+                        // Mark all rows with this item as having errors
+                        document.querySelectorAll('.item-row').forEach(row => {
+                            const selectInput = row.querySelector('.item-select');
+                            const qtyInput = row.querySelector('.quantity');
+                            const hint = row.querySelector('.stock-hint');
+
+                            if (selectInput && selectInput.value === itemId) {
+                                qtyInput.classList.add('border-red-500');
+                                if (hint) {
+                                    hint.textContent =
+                                        `Error: Total quantity for this item (${totalQty.toFixed(2)}) exceeds available stock (${availableStock.toFixed(2)})`;
+                                    hint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                                }
+                            }
+                        });
+                    }
+                });
+
+                return !hasErrors;
+            }
 
             // On page load, always show a placeholder row
             resetItemsContainer();

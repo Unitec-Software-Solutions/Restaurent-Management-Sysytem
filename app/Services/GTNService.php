@@ -23,6 +23,40 @@ class GTNService
     }
 
     /**
+     * Validate cumulative item stock availability (enhanced version)
+     */
+    public function validateCumulativeItemStock($items, $branchId)
+    {
+        $itemQuantities = [];
+
+        // Calculate cumulative quantities for each item
+        foreach ($items as $item) {
+            $itemId = $item['item_id'];
+            $quantity = $item['transfer_quantity'];
+
+            if (isset($itemQuantities[$itemId])) {
+                $itemQuantities[$itemId] += $quantity;
+            } else {
+                $itemQuantities[$itemId] = $quantity;
+            }
+        }
+
+        // Validate each unique item's cumulative quantity against available stock
+        foreach ($itemQuantities as $itemId => $totalQuantity) {
+            $currentStock = ItemTransaction::stockOnHand($itemId, $branchId);
+
+            if ($currentStock < $totalQuantity) {
+                $item = ItemMaster::find($itemId);
+                throw new Exception(
+                    "Insufficient stock for item '{$item->name}'. Available: {$currentStock}, Total Required: {$totalQuantity}"
+                );
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Create a new GTN with items
      */
     public function createGTN(array $data)
@@ -32,6 +66,9 @@ class GTNService
             if (!$user || !$user->organization_id) {
                 throw new Exception('Unauthorized access - organization not set');
             }
+
+            // Validate cumulative stock for all items
+            $this->validateCumulativeItemStock($data['items'], $data['from_branch_id']);
 
             // Get or create employee record
             $employee = $this->employeeRepository->findOrCreateForUser($user, $data['from_branch_id']);
@@ -126,6 +163,9 @@ class GTNService
 
             // Update items if provided
             if (isset($data['items'])) {
+                // Validate cumulative stock for all items
+                $this->validateCumulativeItemStock($data['items'], $gtn->from_branch_id);
+
                 // Delete existing items
                 $gtn->items()->delete();
 

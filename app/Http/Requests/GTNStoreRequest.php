@@ -69,7 +69,14 @@ class GTNStoreRequest extends FormRequest
                 $fromBranchId = $this->input('from_branch_id');
                 $items = $this->input('items', []);
 
-                // Validate each item's stock availability
+                // Validate cumulative stock for all items
+                try {
+                    $gtnService->validateCumulativeItemStock($items, $fromBranchId);
+                } catch (\Exception $e) {
+                    $validator->errors()->add('items', $e->getMessage());
+                }
+
+                // Individual item stock validation (keep existing)
                 foreach ($items as $index => $item) {
                     if (isset($item['item_id']) && isset($item['transfer_quantity'])) {
                         try {
@@ -79,10 +86,13 @@ class GTNStoreRequest extends FormRequest
                                 $item['transfer_quantity']
                             );
                         } catch (\Exception $e) {
-                            $validator->errors()->add(
-                                "items.{$index}.transfer_quantity",
-                                $e->getMessage()
-                            );
+                            // Only add individual errors if cumulative validation passed
+                            if (!$validator->errors()->has('items')) {
+                                $validator->errors()->add(
+                                    "items.{$index}.transfer_quantity",
+                                    $e->getMessage()
+                                );
+                            }
                         }
                     }
                 }
