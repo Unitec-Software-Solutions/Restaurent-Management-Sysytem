@@ -42,7 +42,7 @@ class GoodsTransferNoteController extends Controller
         $endDate = request('end_date', now()->format('Y-m-d'));
 
         // Apply filters from request
-        $query = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy'])
+        $query = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy', 'items'])
             ->where('organization_id', $orgId);
 
         if ($from = request('from_branch_id')) {
@@ -53,6 +53,24 @@ class GoodsTransferNoteController extends Controller
         }
         if (($status = request('status')) && $status !== 'all') {
             $query->where('status', $status);
+        }
+        // Add origin_status filter
+        if ($originStatus = request('origin_status')) {
+            $query->where('origin_status', $originStatus);
+        }
+        // Add receiver_status filter
+        if ($receiverStatus = request('receiver_status')) {
+            $query->where('receiver_status', $receiverStatus);
+        }
+        // Add search filter for GTN number or GTN name (case-insensitive)
+        if ($search = request('search')) {
+            $search = strtolower($search);
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(gtn_number) LIKE ?', ['%' . $search . '%'])
+                  ->orWhereRaw('LOWER(gtn_number) LIKE ?', ['%' . $search . '%']);
+                // If you have a GTN name field, add it here:
+                // $q->orWhereRaw('LOWER(gtn_name) LIKE ?', ['%' . $search . '%']);
+            });
         }
 
         // Always apply date range filter
