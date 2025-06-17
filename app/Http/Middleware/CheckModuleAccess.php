@@ -13,10 +13,10 @@ class CheckModuleAccess
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, $module): Response
+    public function handle(Request $request, Closure $next, $moduleSlug): Response
     {
         $user = $request->user();
-        if (!$user || !$user->role || !$user->role->modules->contains('name', $module)) {
+        if (!$user || !$user->role || !$user->role->modules->contains('slug', $moduleSlug)) {
             abort(403, 'Unauthorized access to this module');
         }
         return $next($request);
