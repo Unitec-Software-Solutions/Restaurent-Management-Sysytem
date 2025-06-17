@@ -12,10 +12,24 @@ use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
-    public function index(Organization $organization)
+    public function index(Request $request)
     {
-        Gate::authorize('viewAny', [Role::class, $organization]);
-        return $organization->roles()->with('modules')->get();
+        $organizations = \App\Models\Organization::with('branches')->get();
+
+        $selectedOrgId = $request->query('organization_id');
+        $selectedBranchId = $request->query('branch_id');
+
+        $rolesQuery = \App\Models\Role::query();
+
+        if ($selectedBranchId) {
+            $rolesQuery->where('branch_id', $selectedBranchId);
+        } elseif ($selectedOrgId) {
+            $rolesQuery->where('organization_id', $selectedOrgId)->whereNull('branch_id');
+        }
+
+        $roles = $rolesQuery->with('organization', 'branch')->get();
+
+        return view('admin.roles.index', compact('organizations', 'roles', 'selectedOrgId', 'selectedBranchId'));
     }
 
     public function create()
@@ -26,24 +40,53 @@ class RoleController extends Controller
         $branches = \App\Models\Branch::where('organization_id', Auth::user()->organization_id)
             ->where('is_active', true)
             ->get();
+        $organizations = \App\Models\Organization::all(); // <-- Add this line
 
-        return view('admin.roles.create', compact('modules', 'branches'));
+        return view('admin.roles.create', compact('modules', 'branches', 'organizations'));
     }
 
-    public function store(Request $request, Organization $organization)
+    public function store(Request $request)
     {
-        Gate::authorize('create', [Role::class, $organization]);
         $request->validate([
-            'name' => 'required|string|max:255',
-            'branch_id' => 'nullable|exists:branches,id,organization_id,'.$organization->id,
-            'modules' => 'array|exists:modules,id'
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('roles')->where(function ($query) use ($request) {
+                    return $query->where('guard_name', 'admin')
+                                 ->where('organization_id', $request->organization_id);
+                }),
+            ],
+            'branch_id' => 'nullable|exists:branches,id',
+            'modules' => 'array|exists:modules,id',
+            'organization_id' => 'required|exists:organizations,id',
         ]);
-        $role = $organization->roles()->create([
+
+        $role = \App\Models\Role::create([
             'name' => $request->name,
-            'branch_id' => $request->branch_id
+            'branch_id' => $request->branch_id,
+            'organization_id' => $request->organization_id,
+            'guard_name' => 'admin',
         ]);
+
+        // Sync modules
         $role->modules()->sync($request->modules);
-        return response()->json($role->load('modules'), 201);
+
+        // Get all permissions for the selected modules (as strings)
+        $permissionNames = \App\Models\Module::whereIn('id', $request->modules)
+            ->get()
+            ->pluck('permissions')
+            ->flatten()
+            ->unique()
+            ->toArray();
+
+        // If you have a Permission model and want to sync by ID:
+        $permissionIds = \App\Models\Permission::whereIn('name', $permissionNames)->pluck('id')->toArray();
+
+        // Sync permissions to the role
+        $role->permissions()->sync($permissionIds);
+
+        return redirect()->route('admin.roles.index')->with('success', 'Role created for organization.');
     }
 
     public function update(Request $request, Role $role)
@@ -57,7 +100,7 @@ class RoleController extends Controller
         if ($request->has('modules')) {
             $role->modules()->sync($request->modules);
         }
-        return response()->json($role->load('modules'));
+        return redirect()->route('admin.roles.index')->with('success', 'Role updated successfully.');
     }
 
     public function destroy(Role $role)
@@ -109,10 +152,25 @@ class RoleController extends Controller
         return view('admin.roles.permissions', compact('role', 'modules'));
     }
 
-    public function updatePermissions(Request $request, Role $role)
+    public function permissions(\App\Models\Role $role)
+    {
+        $modules = \App\Models\Module::all();
+        return view('admin.roles.permissions', compact('role', 'modules'));
+    }
+
+    public function updatePermissions(Request $request, \App\Models\Role $role)
     {
         $role->syncPermissions($request->input('permissions', []));
         return redirect()->route('admin.roles.index')
             ->with('success', 'Permissions updated successfully');
+    }
+    public function edit(\App\Models\Role $role)
+    {
+        $modules = \App\Models\Module::all();
+        $branches = \App\Models\Branch::where('organization_id', $role->organization_id)
+            ->where('is_active', true)
+            ->get();
+
+        return view('admin.roles.edit', compact('role', 'modules', 'branches'));
     }
 }
