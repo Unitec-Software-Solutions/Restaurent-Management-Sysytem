@@ -13,7 +13,7 @@ class BranchPolicy
      */
     public function before($user, $ability)
     {
-        if (isset($user->is_superadmin) && $user->is_superadmin) {
+        if (isset($user->is_super_admin) && $user->is_super_admin) {
             return true;
         }
     }
@@ -41,7 +41,7 @@ class BranchPolicy
     public function create($user, Organization $organization)
     {
         // Allow super admin
-        if (isset($user->is_superadmin) && $user->is_superadmin) {
+        if (isset($user->is_super_admin) && $user->is_super_admin) {
             return true;
         }
         // Allow org admin for their own org
