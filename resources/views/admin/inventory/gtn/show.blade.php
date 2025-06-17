@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'GTN Details - Unified System')
+@section('header-title', 'GTN Details')
 
 @section('content')
     <div class="p-4 rounded-lg">
