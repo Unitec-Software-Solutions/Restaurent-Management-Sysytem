@@ -85,7 +85,18 @@
                             'icon' => 'credit-card', // or any icon you have
                             'icon_type' => 'svg',
                         ];
-                        $navItems[] = ['title' => 'Roles & Permissions', 'route' => 'admin.roles.index', 'icon' => 'lock', 'icon_type' => 'svg'];
+                        $navItems[] = [
+                            'title' => 'Roles & Permissions',
+                            'route' => 'admin.roles.index',
+                            'icon' => 'lock',
+                            'icon_type' => 'svg',
+                        ];
+                        $navItems[] = [
+                            'title' => 'Modules Management',
+                            'route' => 'admin.modules.index',
+                            'icon' => 'settings',
+                            'icon_type' => 'svg',
+                        ];
                     }
                 @endphp
 
@@ -131,6 +142,18 @@
                         </li>
                     @endforeach
                 </ul>
+
+                {{-- resources/views/partials/sidebar.blade.php --}}
+                <nav class="mt-6">
+                    @if(auth()->user()->role && auth()->user()->role->modules)
+                        @foreach(auth()->user()->role->modules as $module)
+                            <a href="{{ route($module->name.'.index') }}"
+                               class="block px-4 py-2 text-gray-600 hover:bg-gray-100 {{ request()->routeIs($module->name.'.*') ? 'bg-gray-100' : '' }}">
+                                {{ ucfirst(str_replace('_', ' ', $module->name)) }}
+                            </a>
+                        @endforeach
+                    @endif
+                </nav>
             </div>
         </div>
 
