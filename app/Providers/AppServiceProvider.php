@@ -9,6 +9,8 @@ use App\Observers\OrganizationObserver;
 use Illuminate\Support\Facades\Gate;
 use App\Policies\RolePolicy;
 use App\Models\Role;
+use App\Models\Module;
+use App\Policies\ModulePolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
         
         // Register policy
         Gate::policy(Role::class, RolePolicy::class);
+        Gate::policy(Module::class, ModulePolicy::class);
 
         $this->registerPolicies();
     }
@@ -55,5 +58,6 @@ class AppServiceProvider extends ServiceProvider
      */
     protected $policies = [
         \App\Models\Branch::class => \App\Policies\BranchPolicy::class,
+        \App\Models\Module::class => \App\Policies\ModulePolicy::class,
     ];
 }
