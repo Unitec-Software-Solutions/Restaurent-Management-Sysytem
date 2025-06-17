@@ -207,10 +207,10 @@
                             </th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Batch</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {{-- <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Ordered</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Received</th>
+                                Received</th> --}}
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Accepted</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -240,12 +240,12 @@
                                 <td class="px-4 py-3 text-sm">
                                     {{ $item->batch_no ?? 'N/A' }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-sm">
+                                {{-- <td class="px-4 py-3 text-right text-sm">
                                     {{ number_format($item->ordered_quantity, 2) }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-sm">
                                     {{ number_format($item->received_quantity, 2) }}
-                                </td>
+                                </td> --}}
                                 <td class="px-4 py-3 text-right text-sm">
                                     <span
                                         class="font-medium text-green-600">{{ number_format($item->accepted_quantity, 2) }}</span>
