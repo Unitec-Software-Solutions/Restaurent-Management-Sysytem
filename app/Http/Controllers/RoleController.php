@@ -80,7 +80,6 @@ class RoleController extends Controller
             ->unique()
             ->toArray();
 
-        // If you have a Permission model and want to sync by ID:
         $permissionIds = \App\Models\Permission::whereIn('name', $permissionNames)->pluck('id')->toArray();
 
         // Sync permissions to the role
