@@ -26,8 +26,7 @@
                     <td class="px-6 py-4">{{ $role->organization->name ?? '-' }}</td>
                     <td class="px-6 py-4">{{ $role->branch->name ?? 'Organization-wide' }}</td>
                     <td class="px-6 py-4 flex gap-2">
-                        <a href="{{ route('admin.roles.edit', $role) }}" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Edit</a>
-                        <a href="{{ route('admin.roles.permissions', $role) }}" class="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600">Permissions</a>
+                        <a href="{{ route('admin.roles.edit', $role) }}" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Edit</a>          
                         <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" onsubmit="return confirm('Are you sure?')" class="inline">
                             @csrf
                             @method('DELETE')
