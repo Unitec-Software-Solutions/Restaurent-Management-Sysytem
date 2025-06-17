@@ -32,6 +32,5 @@ class Kernel extends HttpKernel
         'superadmin' => \App\Http\Middleware\SuperAdmin::class,
         'subscription.active' => \App\Http\Middleware\SubscriptionActive::class,
         'subscription.expiry.alert' => \App\Http\Middleware\SubscriptionExpiryAlert::class,
-        'module' => \App\Http\Middleware\CheckModuleAccess::class,
     ];
 }
