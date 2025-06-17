@@ -319,7 +319,6 @@ class GoodsTransferNoteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'GTN confirmed successfully. Stock deducted from sender branch.',
                 'gtn' => $gtn
             ]);
         } catch (Exception $e) {
@@ -391,7 +390,7 @@ class GoodsTransferNoteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'GTN verified successfully.',
+                'message' => '', // Prevent undefined message
                 'gtn' => $gtn
             ]);
         } catch (Exception $e) {
@@ -433,7 +432,7 @@ class GoodsTransferNoteController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'GTN acceptance processed successfully. Stock updated accordingly.',
+                'message' => '', // Prevent undefined message
                 'gtn' => $gtn
             ]);
         } catch (Exception $e) {
@@ -651,11 +650,11 @@ class GoodsTransferNoteController extends Controller
         }
 
         $gtn = GoodsTransferNote::with([
-            'fromBranch', 
-            'toBranch', 
-            'items', 
-            'createdBy', 
-            'receivedBy', 
+            'fromBranch',
+            'toBranch',
+            'items',
+            'createdBy',
+            'receivedBy',
             'verifiedBy',
             'organization'
         ])

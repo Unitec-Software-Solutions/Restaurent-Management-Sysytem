@@ -197,10 +197,10 @@
                     </button>
                 @endif
 
-                <button onclick="viewAuditTrail()"
+                {{-- <button onclick="viewAuditTrail()"
                     class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-history mr-2"></i> Audit Trail
-                </button>
+                </button> --}}
             </div>
         </div>
 
@@ -741,42 +741,35 @@
     <script>
         // Workflow action functions
         function confirmGTN() {
-            if (confirm('Are you sure you want to confirm this GTN? This will deduct stock from the sender branch.')) {
-                fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/confirm`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            location.reload();
-                        } else {
-                            alert('Error: ' + data.error);
-                        }
-                    });
-            }
+            // Removed confirmation prompt
+            fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/confirm`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                });
         }
 
         function receiveGTN() {
-            const notes = prompt('Any notes about the receipt?');
             fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/receive`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({
-                        notes: notes
-                    })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message);
                         location.reload();
                     } else {
                         alert('Error: ' + data.error);
@@ -785,21 +778,16 @@
         }
 
         function verifyGTN() {
-            const notes = prompt('Any verification notes?');
             fetch(`/admin/inventory/gtn/{{ $gtn->gtn_id }}/verify`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({
-                        notes: notes
-                    })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message);
                         location.reload();
                     } else {
                         alert('Error: ' + data.error);
@@ -842,7 +830,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message);
                         location.reload();
                     } else {
                         alert('Error: ' + data.error);
@@ -880,7 +867,6 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message);
                         location.reload();
                     } else {
                         alert('Error: ' + data.error);
