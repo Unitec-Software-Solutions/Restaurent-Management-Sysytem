@@ -154,7 +154,7 @@
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                            <h2 class="text-xl font-semibold text-gray-900">Goods Transfer Notes - Unified System</h2>
+                            <h2 class="text-xl font-semibold text-gray-900">Goods Transfer Notes</h2>
                             <p class="text-sm text-gray-500">
                                 @if ($gtns instanceof \Illuminate\Pagination\LengthAwarePaginator || $gtns instanceof \Illuminate\Pagination\Paginator)
                                     Showing {{ $gtns->firstItem() ?? 0 }} to {{ $gtns->lastItem() ?? 0 }} of
