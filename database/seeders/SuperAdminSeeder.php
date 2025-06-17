@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\Admin;
 use Illuminate\Support\Facades\Hash;
 
 class SuperAdminSeeder extends Seeder
@@ -13,19 +13,13 @@ class SuperAdminSeeder extends Seeder
      */
     public function run(): void
     {
-        $superAdmin = \App\Models\User::create([
-            'name' => 'Super Admin',
-            'email' => 'superadmin@rms.com', 
-            'user_type' => 'superadmin',
-            'password' => Hash::make('password'),
-        ]);
-        $superAdminRole = \Spatie\Permission\Models\Role::create([
-            'name' => 'Super Admin',
-            'organization_id' => null,
-            'branch_id' => null
-        ]);
-        $superAdmin->assignRole($superAdminRole);
-        $permissions = \Spatie\Permission\Models\Permission::all();
-        $superAdminRole->syncPermissions($permissions);
+        Admin::updateOrCreate(
+            ['email' => 'superadmin@rms.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'), // Always hash the password!
+                'is_super_admin' => true, // or 'is_super_admin' if that's your column name
+            ]
+        );
     }
 }
