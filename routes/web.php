@@ -24,7 +24,8 @@ use App\Http\Controllers\{
     RoleController,
     BranchController,
     SubscriptionController,
-    UserController
+    UserController,
+    ModuleController
 };
 use App\Http\Middleware\SuperAdmin;
 
@@ -32,6 +33,7 @@ use App\Http\Middleware\SuperAdmin;
 /*-------------------------------------------------------------------------
 | Public Routes
 |------------------------------------------------------------------------*/
+
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
@@ -69,7 +71,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('edit');
         Route::delete('/{order}', [OrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
         Route::put('/{order}', [OrderController::class, 'update'])->whereNumber('order')->name('update');
-        
+
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function () {
             Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
@@ -180,7 +182,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
-            
+
             // Categories
             Route::resource('categories', ItemCategoryController::class);
         });
@@ -235,15 +237,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
 
         // Additional Admin Routes
-        Route::get('/testpage', function () { return view('admin.testpage'); })->name('testpage');
-        Route::get('/reports', function () { return view('admin.reports.index'); })->name('reports.index');
-        Route::get('/customers', function () { return view('admin.customers.index'); })->name('customers.index');
-        Route::get('/digital-menu', function () { return view('admin.digital-menu.index'); })->name('digital-menu.index');
-        Route::get('/settings', function () { return view('admin.settings.index'); })->name('settings.index');
+        Route::get('/testpage', function () {
+            return view('admin.testpage');
+        })->name('testpage');
+        Route::get('/reports', function () {
+            return view('admin.reports.index');
+        })->name('reports.index');
+        Route::get('/customers', function () {
+            return view('admin.customers.index');
+        })->name('customers.index');
+        Route::get('/digital-menu', function () {
+            return view('admin.digital-menu.index');
+        })->name('digital-menu.index');
+        Route::get('/settings', function () {
+            return view('admin.settings.index');
+        })->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
 
-        // Users Management
-        
     });
 });
 
@@ -369,3 +379,17 @@ Route::middleware(['auth:admin', 'module:inventory'])->group(function () {
     });
 });
 // Repeat for other modules
+Route::middleware(['auth:admin', 'module:reservation_management'])->group(function () {
+    // Reservation management routes
+});
+
+Route::middleware(['auth:admin', SuperAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('roles', \App\Http\Controllers\RoleController::class)->except(['show']);
+        Route::resource('modules', \App\Http\Controllers\ModuleController::class)->except(['show']);
+        Route::get('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'permissions'])->name('roles.permissions');
+        Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
+    });
+
