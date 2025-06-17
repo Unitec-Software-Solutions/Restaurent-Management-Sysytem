@@ -31,8 +31,9 @@ class DatabaseSeeder extends Seeder
             // SupplierPaymentSeeder::class,
             // ItemTransactionSeeder::class,
             //EmployeeSeeder::class,
-            ModulePermissionSeeder::class,
+            // ModulePermissionSeeder::class,
             SuperAdminSeeder::class,
+            ModulesTableSeeder::class,
 
         ]);
     }
