@@ -34,18 +34,19 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Module Permissions</label>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 @foreach($modules as $module)
-                    <div class="flex items-start">
-                        <div class="flex items-center h-5">
-                            <input id="module_{{ $module->id }}" name="modules[]"
-                                   type="checkbox" value="{{ $module->id }}"
-                                   {{ in_array($module->id, old('modules', [])) ? 'checked' : '' }}
-                                   class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
-                        </div>
-                        <div class="ml-3 text-sm">
-                            <label for="module_{{ $module->id }}" class="font-medium text-gray-700">
-                                {{ $module->name }}
-                            </label>
-                            <p class="text-gray-500">{{ $module->description }}</p>
+                    <div class="mb-4 border rounded p-3">
+                        <div class="font-semibold mb-2">{{ $module->name }}</div>
+                        <div class="text-gray-500 mb-2">{{ $module->description }}</div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach(is_array($module->permissions) ? $module->permissions : [] as $permission)
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox"
+                                        name="permissions[]"
+                                        value="{{ $permission }}"
+                                        {{ (isset($role) && $role->permissions->pluck('name')->contains($permission)) ? 'checked' : '' }}>
+                                    <span class="text-xs">{{ $permission }}</span>
+                                </label>
+                            @endforeach
                         </div>
                     </div>
                 @endforeach
