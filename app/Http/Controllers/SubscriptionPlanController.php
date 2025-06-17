@@ -12,8 +12,8 @@ class SubscriptionPlanController extends Controller
      */
     public function index()
     {
-        $plans = SubscriptionPlan::all();
-        return view('admin.subscription_plans.index', compact('plans'));
+        $plans = \App\Models\SubscriptionPlan::all();
+        return view('admin.subscription-plans.index', compact('plans'));
     }
 
     /**
@@ -21,7 +21,8 @@ class SubscriptionPlanController extends Controller
      */
     public function create()
     {
-        return view('admin.subscription_plans.create');
+        $modules = \App\Models\Module::all();
+        return view('admin.subscription-plans.create', compact('modules'));
     }
 
     /**
@@ -29,9 +30,6 @@ class SubscriptionPlanController extends Controller
      */
     public function store(Request $request)
     {
-        // Convert modules string to array
-        $modules = array_map('trim', explode(',', $request->input('modules')));
-
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
             'price'       => 'required|integer|min:0',
@@ -41,7 +39,8 @@ class SubscriptionPlanController extends Controller
             'trial_period_days' => 'nullable|integer|min:1|max:365',
         ]);
 
-        $validated['modules'] = json_encode($modules);
+        // modules is now an array from checkboxes
+        $validated['modules'] = json_encode($request->input('modules', []));
         $validated['is_trial'] = $request->has('is_trial') ? 1 : 0;
         $validated['trial_period_days'] = $request->input('trial_period_days', 30);
 
@@ -55,7 +54,7 @@ class SubscriptionPlanController extends Controller
      */
     public function show(SubscriptionPlan $subscriptionPlan)
     {
-        return view('admin.subscription_plans.summary', compact('subscriptionPlan'));
+        return view('admin.subscription-plans.summary', compact('subscriptionPlan'));
     }
 
     /**
@@ -63,7 +62,7 @@ class SubscriptionPlanController extends Controller
      */
     public function edit(SubscriptionPlan $subscriptionPlan)
     {
-        return view('admin.subscription_plans.edit', compact('subscriptionPlan'));
+        return view('admin.subscription-plans.edit', compact('subscriptionPlan'));
     }
 
     /**
