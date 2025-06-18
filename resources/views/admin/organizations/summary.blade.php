@@ -184,5 +184,54 @@
             </table>
         </div>
     </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-2xl shadow p-8 mb-10">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-indigo-700">Users</h3>
+            <a href="{{ route('admin.users.create', ['organization' => $organization->id]) }}"
+               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold">
+                + Create User
+            </a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left">#</th>
+                        <th class="px-4 py-2 text-left">Name</th>
+                        <th class="px-4 py-2 text-left">Email</th>
+                        <th class="px-4 py-2 text-left">Phone</th>
+                        <th class="px-4 py-2 text-left">Role</th>
+                        <th class="px-4 py-2 text-left">Status</th>
+                        <th class="px-4 py-2 text-left">Created</th>
+                        <th class="px-4 py-2 text-left">Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($organization->users as $user)
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-2">{{ $loop->iteration }}</td>
+                            <td class="px-4 py-2">{{ $user->name }}</td>
+                            <td class="px-4 py-2">{{ $user->email }}</td>
+                            <td class="px-4 py-2">{{ $user->phone ?? '-' }}</td>
+                            <td class="px-4 py-2">{{ $user->role }}</td>
+                            <td class="px-4 py-2">
+                                <span class="inline-block px-2 py-1 rounded {{ $user->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                    {{ $user->is_active ? 'Active' : 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-2">{{ $user->created_at }}</td>
+                            <td class="px-4 py-2">{{ $user->updated_at }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="px-4 py-2 text-center text-gray-500">No users found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection
