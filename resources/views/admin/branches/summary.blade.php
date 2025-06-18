@@ -48,6 +48,10 @@
                     Edit Branch
                 </a>
             @endcan
+            <a href="{{ route('admin.users.create', ['organization' => $branch->organization_id, 'branch' => $branch->id]) }}"
+               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold">
+                + Create User
+            </a>
         </div>
     </div>
 
@@ -75,5 +79,86 @@
         alert('Activation key copied!');
     }
     </script>
+
+    {{-- Users Section --}}
+    <div class="bg-white rounded-2xl shadow p-8 mb-8">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-indigo-700">Users</h3>
+            <a href="{{ route('admin.branch.users.create', ['organization' => $branch->organization_id, 'branch' => $branch->id]) }}"
+               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold">
+                + Create User
+            </a>
+        </div>
+        @if($branch->users->count() > 0)
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Name
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Role
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th scope="col" class="px-6 py-3">
+                                <span class="sr-only">Actions</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach($branch->users as $user)
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ $user->name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ $user->email }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ $user->getRoleNames()->implode(', ') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <span class="inline-block px-2 py-1 rounded {{ $user->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }} text-xs">
+                                        {{ $user->is_active ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex gap-2">
+                                        @can('view', $user)
+                                            <a href="{{ route('admin.users.show', $user->id) }}" class="text-blue-600 hover:text-blue-700">
+                                                View
+                                            </a>
+                                        @endcan
+                                        @can('update', $user)
+                                            <a href="{{ route('admin.users.edit', $user->id) }}" class="text-blue-600 hover:text-blue-700">
+                                                Edit
+                                            </a>
+                                        @endcan
+                                        @can('delete', $user)
+                                            <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-700">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <p class="text-gray-500 text-sm py-4">No users found for this branch.</p>
+        @endif
+    </div>
 </div>
 @endsection
