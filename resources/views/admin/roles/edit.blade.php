@@ -16,15 +16,84 @@
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
             </div>
-            <div>
-                <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch (Optional)</label>
-                <select id="branch_id" name="branch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    <option value="">Organization-wide</option>
-                    @foreach($branches as $branch)
-                        <option value="{{ $branch->id }}" {{ $role->branch_id == $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+            @if(auth('admin')->user()->isSuperAdmin())
+                <div>
+                    <label for="organization_id" class="block text-sm font-medium text-gray-700">Organization</label>
+                    <select name="organization_id" id="organization_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="">Select Organization</option>
+                        @foreach($organizations as $organization)
+                            <option value="{{ $organization->id }}"
+                                {{ old('organization_id', $role->organization_id ?? '') == $organization->id ? 'selected' : '' }}>
+                                {{ $organization->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch (Optional)</label>
+                    <select name="branch_id" id="branch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="">Organization-wide</option>
+                        @foreach($branches as $branch)
+                            <option value="{{ $branch->id }}"
+                                {{ old('branch_id', $role->branch_id ?? '') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }} ({{ $branch->organization->name }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Role Scope</label>
+                    <div class="flex gap-4 mt-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="scope" value="organization"
+                                {{ old('scope', $role->scope ?? 'organization') == 'organization' ? 'checked' : '' }}>
+                            <span class="ml-2">Organization-wide</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="scope" value="branch"
+                                {{ old('scope', $role->scope ?? '') == 'branch' ? 'checked' : '' }}>
+                            <span class="ml-2">Branch-specific</span>
+                        </label>
+                    </div>
+                </div>
+            @elseif(auth('admin')->user()->isAdmin())
+                <input type="hidden" name="organization_id" value="{{ $organizations->first()->id }}">
+                <div>
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch (Optional)</label>
+                    <select name="branch_id" id="branch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="">Organization-wide</option>
+                        @foreach($branches as $branch)
+                            <option value="{{ $branch->id }}"
+                                {{ old('branch_id', $role->branch_id ?? '') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Role Scope</label>
+                    <div class="flex gap-4 mt-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="scope" value="organization"
+                                {{ old('scope', $role->scope ?? 'organization') == 'organization' ? 'checked' : '' }}>
+                            <span class="ml-2">Organization-wide</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="scope" value="branch"
+                                {{ old('scope', $role->scope ?? '') == 'branch' ? 'checked' : '' }}>
+                            <span class="ml-2">Branch-specific</span>
+                        </label>
+                    </div>
+                </div>
+            @else
+                <input type="hidden" name="organization_id" value="{{ $organizations->first()->id }}">
+                <input type="hidden" name="branch_id" value="{{ $branches->first()->id }}">
+                <input type="hidden" name="scope" value="branch">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Branch</label>
+                    <input type="text" value="{{ $branches->first()->name }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100" readonly>
+                </div>
+            @endif
         </div>
         <div class="mt-6">
             <label class="block text-sm font-medium text-gray-700 mb-2">Module Permissions</label>
@@ -33,12 +102,21 @@
                     <div class="mb-4 border rounded p-3">
                         <div class="font-semibold mb-2">{{ $module->name }}</div>
                         <div class="text-gray-500 mb-2">{{ $module->description }}</div>
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox"
+                                id="select_all_{{ $module->id }}"
+                                onclick="toggleModulePermissions('{{ $module->id }}', this.checked)">
+                            <label for="select_all_{{ $module->id }}" class="ml-2 text-xs font-semibold text-blue-700 cursor-pointer">
+                                Select All
+                            </label>
+                        </div>
                         <div class="flex flex-wrap gap-2">
                             @foreach(is_array($module->permissions) ? $module->permissions : [] as $permission)
                                 <label class="flex items-center space-x-2">
                                     <input type="checkbox"
                                         name="permissions[]"
                                         value="{{ $permission }}"
+                                        class="module-permission-{{ $module->id }}"
                                         {{ (isset($role) && $role->permissions->pluck('name')->contains($permission)) ? 'checked' : '' }}>
                                     <span class="text-xs">{{ $permission }}</span>
                                 </label>
@@ -54,4 +132,42 @@
         </div>
     </form>
 </div>
+<script>
+function toggleModulePermissions(moduleId, checked) {
+    document.querySelectorAll('.module-permission-' + moduleId).forEach(function(cb) {
+        cb.checked = checked;
+    });
+}
+
+// Attach listeners after DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // For each "Select All" checkbox
+    document.querySelectorAll('[id^="select_all_"]').forEach(function(selectAllCheckbox) {
+        const moduleId = selectAllCheckbox.id.replace('select_all_', '');
+        // For each permission checkbox in this module
+        document.querySelectorAll('.module-permission-' + moduleId).forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                // If any permission is unchecked, uncheck "Select All"
+                if (!this.checked) {
+                    selectAllCheckbox.checked = false;
+                } else {
+                    // If all permissions are checked, check "Select All"
+                    let allChecked = true;
+                    document.querySelectorAll('.module-permission-' + moduleId).forEach(function(box) {
+                        if (!box.checked) allChecked = false;
+                    });
+                    selectAllCheckbox.checked = allChecked;
+                }
+            });
+        });
+        // On page load, set "Select All" if all permissions are checked
+        let allChecked = true;
+        const boxes = document.querySelectorAll('.module-permission-' + moduleId);
+        boxes.forEach(function(box) {
+            if (!box.checked) allChecked = false;
+        });
+        selectAllCheckbox.checked = boxes.length > 0 && allChecked;
+    });
+});
+</script>
 @endsection
