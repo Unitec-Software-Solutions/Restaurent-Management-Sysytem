@@ -405,5 +405,8 @@ Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('/users/{user}/assign-role', [UserController::class, 'assignRoleForm'])->name('users.assign-role');
         Route::post('/users/{user}/assign-role', [UserController::class, 'assignRole'])->name('users.assign-role.store');
-    });
+        Route::get('admin/organizations/{organization}/users/create', [UserController::class, 'create'])->name('admin.users.create');
+        Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('admin.branch.users.create');
+});
+
 
