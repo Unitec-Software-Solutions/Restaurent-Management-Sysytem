@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Models\Branch;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class BranchController extends Controller
 {
@@ -18,6 +19,8 @@ class BranchController extends Controller
 
 public function store(Request $request, Organization $organization)
 {
+    $isHeadOffice = $organization->branches()->count() === 0; // or use a flag
+
     $validated = $request->validate([
         'name' => 'required|string|max:255',
         'address' => 'required|string|max:255',
@@ -27,7 +30,16 @@ public function store(Request $request, Organization $organization)
         'total_capacity' => 'required|integer|min:1',
         'reservation_fee' => 'required|numeric|min:0',
         'cancellation_fee' => 'required|numeric|min:0',
+        'contact_person' => $isHeadOffice ? 'nullable' : 'required|string|max:255',
+        'contact_person_designation' => $isHeadOffice ? 'nullable' : 'required|string|max:255',
+        'contact_person_phone' => $isHeadOffice ? 'nullable' : 'required|string|max:15',
     ]);
+
+    if ($isHeadOffice) {
+        $validated['contact_person'] = $organization->contact_person;
+        $validated['contact_person_designation'] = $organization->contact_person_designation;
+        $validated['contact_person_phone'] = $organization->contact_person_phone;
+    }
 
     $branch = $organization->branches()->create(array_merge($validated, [
         'activation_key' => Str::random(40),
@@ -42,19 +54,33 @@ public function update(Request $request, Organization $organization, Branch $bra
 {
     $this->authorize('update', $branch);
 
-    $request->validate([
+    $isHeadOffice = $branch->id == optional($organization->branches->sortBy('id')->first())->id;
+
+    $validated = $request->validate([
         'name' => 'required|string|max:255',
         'address' => 'required|string|max:255',
         'phone' => 'required|string|max:20',
         'opening_time' => 'required',
         'closing_time' => 'required',
-        'total_capacity' => 'required|integer',
+        'total_capacity' => 'required|integer|min:1',
         'reservation_fee' => 'required|numeric',
         'cancellation_fee' => 'required|numeric',
         'is_active' => 'required|boolean',
+        'contact_person' => 'nullable|string|max:255',
+        'contact_person_designation' => 'nullable|string|max:255',
+        'contact_person_phone' => 'nullable|string|max:20',
     ]);
 
-    $branch->update($request->all());
+    // For head office, default contact person fields to organization if not set
+    if ($isHeadOffice) {
+        $validated['contact_person'] = $organization->contact_person;
+        $validated['contact_person_designation'] = $organization->contact_person_designation;
+        $validated['contact_person_phone'] = $organization->contact_person_phone;
+    }
+
+    Log::info('Branch update data', $validated);
+
+    $branch->update($validated);
 
     return redirect()->route('admin.branches.index', ['organization' => $organization->id])
         ->with('success', 'Branch updated successfully.');
@@ -68,8 +94,8 @@ public function deactivate(Branch $branch)
 }
 public function create(Organization $organization)
 {
-    $this->authorize('create', [Branch::class, $organization]);
-    return view('admin.branches.create', compact('organization'));
+    $isHeadOffice = $organization->branches()->count() === 0; // or use a flag
+    return view('admin.branches.create', compact('organization', 'isHeadOffice'));
 }
 public function activateAll(Organization $organization)
 {
@@ -119,15 +145,20 @@ public function activateBranch(Request $request)
         'branch_id' => 'required|exists:branches,id'
     ]);
 
-    $branch = Branch::find($request->branch_id);
+    $branch = Branch::with('organization')->find($request->branch_id);
 
-    if (!$branch || $branch->activation_key !== $request->activation_key) {
+    // Only allow activation if organization is active
+    if (!$branch->organization->is_active) {
+        return back()->with('error', 'Cannot activate branch. The parent organization is not active.');
+    }
+
+    if ($branch->activation_key !== $request->activation_key) {
         return back()->with('error', 'Invalid activation key.');
     }
 
     $branch->is_active = true;
     $branch->activated_at = now();
-    $branch->activation_key = null; // Optionally clear the key after activation
+    $branch->activation_key = null;
     $branch->save();
 
     return back()->with('success', 'Branch activated successfully!');
