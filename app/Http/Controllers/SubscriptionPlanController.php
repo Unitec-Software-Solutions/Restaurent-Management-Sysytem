@@ -32,6 +32,8 @@ class SubscriptionPlanController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
+            'modules'     => 'required|array|min:1',
+            'modules.*'   => 'exists:modules,id',
             'price'       => 'required|integer|min:0',
             'currency'    => 'required|string|max:10',
             'description' => 'nullable|string',
@@ -39,7 +41,6 @@ class SubscriptionPlanController extends Controller
             'trial_period_days' => 'nullable|integer|min:1|max:365',
         ]);
 
-        // modules is now an array from checkboxes
         $validated['modules'] = json_encode($request->input('modules', []));
         $validated['is_trial'] = $request->has('is_trial') ? 1 : 0;
         $validated['trial_period_days'] = $request->input('trial_period_days', 30);
