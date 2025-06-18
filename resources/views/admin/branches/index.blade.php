@@ -13,6 +13,7 @@
                     + Add Branch
                 </a>
             @endif
+            {{-- Remove the button if $branches is set (global index) --}}
         @endcan
     </div>
 
