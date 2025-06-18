@@ -3,12 +3,16 @@
 @section('title', 'Organization Summary')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <h1 class="text-3xl font-bold mb-8 text-gray-800">Organization Summary</h1>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-extrabold mb-8 text-gray-900 tracking-tight">Organization Summary</h1>
+    <a href="{{ route('admin.organizations.index') }}"
+       class="inline-block mb-6 bg-gray-200 text-gray-800 px-5 py-2 rounded hover:bg-gray-300 transition font-semibold">
+        ← Back to Organizations
+    </a>
 
-    {{-- Organization & Contact Details --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+        <!-- Organization Info -->
+        <div class="bg-white rounded-2xl shadow p-8">
             <h2 class="text-xl font-semibold mb-4 text-indigo-700">Organization Info</h2>
             <ul class="space-y-2 text-gray-700">
                 <li><span class="font-semibold">ID:</span> {{ $organization->id }}</li>
@@ -16,7 +20,8 @@
                 <li><span class="font-semibold">Email:</span> {{ $organization->email ?? '-' }}</li>
                 <li><span class="font-semibold">Address:</span> {!! nl2br(e($organization->address)) !!}</li>
                 <li><span class="font-semibold">Phone:</span> {{ $organization->phone ?? '-' }}</li>
-                <li><span class="font-semibold">Status:</span>
+                <li>
+                    <span class="font-semibold">Status:</span>
                     <span class="inline-block px-2 py-1 rounded {{ $organization->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                         {{ $organization->is_active ? 'Active' : 'Inactive' }}
                     </span>
@@ -26,7 +31,8 @@
                 <li><span class="font-semibold">Activated At:</span> {{ $organization->activated_at ?? '-' }}</li>
             </ul>
         </div>
-        <div class="bg-white rounded-xl shadow p-6">
+        <!-- Contact Person & Activation Key -->
+        <div class="bg-white rounded-2xl shadow p-8">
             <h2 class="text-xl font-semibold mb-4 text-indigo-700">Contact Person</h2>
             <ul class="space-y-2 text-gray-700">
                 <li><span class="font-semibold">Name:</span> {{ $organization->contact_person ?? '-' }}</li>
@@ -57,25 +63,38 @@
     }
     </script>
 
-    {{-- Subscription Details --}}
-    <div class="bg-white rounded-xl shadow p-6 mb-8">
+    <!-- Subscription Details -->
+    <div class="bg-white rounded-2xl shadow p-8 mb-10">
         <h3 class="text-lg font-semibold mb-4 text-indigo-700">Subscription Details</h3>
         <ul class="space-y-2 text-gray-700">
-            <li><span class="font-semibold">Plan:</span> {{ $organization->plan_name ?? 'N/A' }}</li>
-            <li><span class="font-semibold">Plan Price:</span> {{ $organization->plan_price ? number_format($organization->plan_price/100,2) . ' ' . $organization->plan_currency : 'N/A' }}</li>
-            <li><span class="font-semibold">Modules:</span>
-                @php
-                    $modules = $organization->plan_modules ? json_decode($organization->plan_modules, true) : [];
-                @endphp
-                {{ is_array($modules) ? implode(', ', $modules) : 'N/A' }}
+            <li>
+                <span class="font-semibold">Plan:</span>
+                {{ optional($organization->plan)->name ?? 'N/A' }}
+            </li>
+            <li>
+                <span class="font-semibold">Plan Price:</span>
+                {{ optional($organization->plan) ? number_format($organization->plan->price, 2) . ' ' . $organization->plan->currency : 'N/A' }}
+            </li>
+            <li>
+                <span class="font-semibold">Modules:</span>
+                <span>
+                    @php
+                        $moduleIds = optional($organization->plan) ? (is_array($organization->plan->modules) ? $organization->plan->modules : json_decode($organization->plan->modules, true) ?? []) : [];
+                        $moduleNames = \App\Models\Module::whereIn('id', $moduleIds)->pluck('name')->toArray();
+                    @endphp
+                    @if(count($moduleNames))
+                        @foreach($moduleNames as $mod)
+                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">{{ $mod }}</span>
+                        @endforeach
+                    @else
+                        N/A
+                    @endif
+                </span>
             </li>
             <li><span class="font-semibold">Created At:</span> {{ $organization->created_at }}</li>
             <li><span class="font-semibold">Updated At:</span> {{ $organization->updated_at }}</li>
             <li><span class="font-semibold">Activation Key Generated At:</span> {{ $organization->created_at }}</li>
             <li><span class="font-semibold">Activated At:</span> {{ $organization->activated_at ?? '-' }}</li>
-            <li><span class="font-semibold">Renewal (End Date):</span>
-                {{ $organization->activated_at ? \Carbon\Carbon::parse($organization->activated_at)->addYear()->toDateString() : '-' }}
-            </li>
             <li><span class="font-semibold">Terminating Date:</span>
                 {{ $organization->activated_at ? \Carbon\Carbon::parse($organization->activated_at)->addYear()->toDateString() : '-' }}
             </li>
@@ -83,21 +102,21 @@
                 <span class="font-semibold">Trial:</span>
                 {{ optional($organization->subscriptions->last())->is_trial ? 'Yes' : 'No' }}
             </li>
-            
         </ul>
     </div>
 
-    {{-- Payment Info --}}
-    <div class="bg-white rounded-xl shadow p-6 mb-8">
+    <!-- Payment Info: Super Admin Only, modules row removed -->
+    @if(auth('admin')->user() && method_exists(auth('admin')->user(), 'isSuperAdmin') && auth('admin')->user()->isSuperAdmin())
+    <div class="bg-white rounded-2xl shadow p-8 mb-10">
         <h3 class="text-lg font-semibold mb-4 text-indigo-700">Payment Info</h3>
         <ul class="space-y-2 text-gray-700">
             <li>
                 <span class="font-semibold">Plan:</span>
-                {{ $organization->plan_name ?? 'N/A' }}
+                {{ optional($organization->plan)->name ?? 'N/A' }}
             </li>
             <li>
                 <span class="font-semibold">Plan Price:</span>
-                {{ $organization->plan_price ? number_format($organization->plan_price/100,2) . ' ' . $organization->plan_currency : 'N/A' }}
+                {{ optional($organization->plan) ? number_format($organization->plan->price, 2) . ' ' . $organization->plan->currency : 'N/A' }}
             </li>
             <li>
                 <span class="font-semibold">Discount:</span>
@@ -106,27 +125,23 @@
             <li>
                 <span class="font-semibold">Final Price:</span>
                 @php
-                    $discount = ($organization->plan_price * ($organization->discount_percentage ?? 0)) / 100;
-                    $final = $organization->plan_price - $discount;
+                    $discount = (optional($organization->plan) && $organization->discount_percentage)
+                        ? ($organization->plan->price * $organization->discount_percentage / 100)
+                        : 0;
+                    $final = optional($organization->plan) ? $organization->plan->price - $discount : 0;
                 @endphp
-                {{ $organization->plan_price ? number_format($final/100,2) . ' ' . $organization->plan_currency : 'N/A' }}
-            </li>
-            <li>
-                <span class="font-semibold">Modules:</span>
-                @php
-                    $modules = $organization->plan_modules ? json_decode($organization->plan_modules, true) : [];
-                @endphp
-                {{ is_array($modules) ? implode(', ', $modules) : 'N/A' }}
+                {{ optional($organization->plan) ? number_format($final, 2) . ' ' . $organization->plan->currency : 'N/A' }}
             </li>
         </ul>
     </div>
+    @endif
 
-    {{-- Branches --}}
-    <div class="bg-white rounded-xl shadow p-6 mb-8">
+    <!-- Branches Table -->
+    <div class="bg-white rounded-2xl shadow p-8 mb-10">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold text-indigo-700">Branches</h3>
             <a href="{{ route('admin.branches.create', ['organization' => $organization->id]) }}"
-               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold">
                 + Add Branch
             </a>
         </div>
