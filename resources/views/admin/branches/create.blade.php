@@ -14,54 +14,87 @@
 
         <div>
             <label class="block mb-1 font-medium">Branch Name</label>
-            <input type="text" name="name" class="w-full border rounded px-3 py-2" required>
+            <input type="text" name="name" value="{{ old('name') }}" placeholder="e.g. Main Branch" class="w-full border rounded px-3 py-2" required>
+            @error('name')
+                <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+            @enderror
         </div>
         <div>
             <label class="block mb-1 font-medium">Address</label>
-            <input type="text" name="address" class="w-full border rounded px-3 py-2" required>
+            <input type="text" name="address" value="{{ old('address') }}" placeholder="e.g. 123 Main St, City" class="w-full border rounded px-3 py-2" required>
+            @error('address')
+                <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+            @enderror
         </div>
         <div>
             <label class="block mb-1 font-medium">Phone</label>
-            <input type="text" name="phone" class="w-full border rounded px-3 py-2" required>
+            <input type="text" name="phone" value="{{ old('phone') }}" placeholder="e.g. 0712345678" class="w-full border rounded px-3 py-2" required>
+            @error('phone')
+                <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+            @enderror
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label class="block mb-1 font-medium">Opening Time</label>
-                <input type="time" name="opening_time" class="w-full border rounded px-3 py-2" required>
+                <input type="time" name="opening_time" value="{{ old('opening_time') }}" class="w-full border rounded px-3 py-2" required>
+                @error('opening_time')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
             <div>
                 <label class="block mb-1 font-medium">Closing Time</label>
-                <input type="time" name="closing_time" class="w-full border rounded px-3 py-2" required>
+                <input type="time" name="closing_time" value="{{ old('closing_time') }}" class="w-full border rounded px-3 py-2" required>
+                @error('closing_time')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label class="block mb-1 font-medium">Total Capacity</label>
-                <input type="number" name="total_capacity" class="w-full border rounded px-3 py-2" required>
+                <input type="number" name="total_capacity" value="{{ old('total_capacity') }}" min="1" placeholder="e.g. 50" class="w-full border rounded px-3 py-2" required>
+                @error('total_capacity')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
             <div>
                 <label class="block mb-1 font-medium">Reservation Fee</label>
-                <input type="number" step="0.01" name="reservation_fee" class="w-full border rounded px-3 py-2" required>
+                <input type="number" step="0.01" name="reservation_fee" value="{{ old('reservation_fee') }}" min="0" placeholder="e.g. 100.00" class="w-full border rounded px-3 py-2" required>
+                @error('reservation_fee')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
         </div>
         <div>
             <label class="block mb-1 font-medium">Cancellation Fee</label>
-            <input type="number" step="0.01" name="cancellation_fee" class="w-full border rounded px-3 py-2" required>
+            <input type="number" step="0.01" name="cancellation_fee" value="{{ old('cancellation_fee') }}" min="0" placeholder="e.g. 50.00" class="w-full border rounded px-3 py-2" required>
+            @error('cancellation_fee')
+                <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+            @enderror
         </div>
 
         @if(!$isHeadOffice)
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label class="block mb-1 font-medium">Contact Person</label>
-                <input type="text" name="contact_person" class="w-full border rounded px-3 py-2" required>
+                <input type="text" name="contact_person" value="{{ old('contact_person') }}" placeholder="e.g. John Doe" class="w-full border rounded px-3 py-2" required>
+                @error('contact_person')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
             <div>
                 <label class="block mb-1 font-medium">Contact Person Designation</label>
-                <input type="text" name="contact_person_designation" class="w-full border rounded px-3 py-2" required>
+                <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation') }}" placeholder="e.g. Manager" class="w-full border rounded px-3 py-2" required>
+                @error('contact_person_designation')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
             <div>
                 <label class="block mb-1 font-medium">Contact Person Phone</label>
-                <input type="text" name="contact_person_phone" class="w-full border rounded px-3 py-2" required>
+                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone') }}" placeholder="e.g. 0712345678" class="w-full border rounded px-3 py-2" required>
+                @error('contact_person_phone')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
         </div>
         @else
