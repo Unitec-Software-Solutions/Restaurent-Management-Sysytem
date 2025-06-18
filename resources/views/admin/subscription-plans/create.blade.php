@@ -3,6 +3,15 @@
 @section('content')
 <div class="container mx-auto px-4 py-6 max-w-lg">
     <h1 class="text-2xl font-bold mb-6">Add Subscription Plan</h1>
+    @if($errors->any())
+        <div class="bg-red-100 text-red-700 p-2 rounded mb-4">
+            <ul>
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
     <form action="{{ route('admin.subscription-plans.store') }}" method="POST" class="space-y-4">
         @csrf
         <div>
@@ -15,20 +24,20 @@
             </label>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 @foreach($modules as $module)
-                    <label class="flex items-center space-x-2">
+                    <label>
                         <input type="checkbox" name="modules[]" value="{{ $module->id }}">
-                        <span>{{ $module->name }}</span>
+                        {{ $module->name }}
                     </label>
                 @endforeach
             </div>
         </div>
         <div>
             <label class="block mb-1 font-medium">Price (in cents)</label>
-            <input type="number" name="price" class="w-full border rounded px-3 py-2" required>
+            <input type="number" name="price" step="0.01" class="w-full border rounded px-3 py-2" required>
         </div>
         <div>
             <label class="block mb-1 font-medium">Currency</label>
-            <input type="text" name="currency" class="w-full border rounded px-3 py-2" value="USD" required>
+            <input type="text" name="currency" class="w-full border rounded px-3 py-2" value="LKR" required>
         </div>
         <div>
             <label class="block mb-1 font-medium">Description</label>
