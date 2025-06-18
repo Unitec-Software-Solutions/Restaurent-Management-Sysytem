@@ -18,6 +18,8 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->rememberToken()->nullable();
+            $table->boolean('is_admin')->default(false)->after('organization_id');
+            $table->foreignId('created_by')->nullable()->constrained('users')->after('is_admin');
             $table->timestamps();
         });
 
