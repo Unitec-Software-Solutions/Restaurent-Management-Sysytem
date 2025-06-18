@@ -3,63 +3,74 @@
 @section('title', 'Organizations')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Organizations</h1>
-        <a href="{{ route('admin.organizations.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organizations</h1>
+        <a href="{{ route('admin.organizations.create') }}"
+           class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 transition font-semibold">
             + Add Organization
         </a>
     </div>
 
     @if(session('success'))
-        <div class="mb-4 p-3 bg-green-100 text-green-800 rounded">
+        <div class="mb-6 bg-green-100 text-green-800 p-4 rounded-lg border border-green-200 shadow">
             {{ session('success') }}
         </div>
     @endif
 
-    <div class="bg-white shadow rounded overflow-x-auto">
-        <table class="min-w-full table-auto">
-            <thead>
-                <tr class="bg-gray-100">
-                    <th class="px-4 py-2 text-left">#</th>
-                    <th class="px-4 py-2 text-left">Name</th>
-                    <th class="px-4 py-2 text-left">Email</th>
-                    <th class="px-4 py-2 text-left">Contact Person</th>
-                    <th class="px-4 py-2 text-left">Designation</th>
-                    <th class="px-4 py-2 text-left">Contact Phone</th>
-                    <th class="px-4 py-2 text-left">Status</th>
-                    <th class="px-4 py-2 text-left">Actions</th>
+    <div class="bg-white shadow rounded-lg overflow-x-auto">
+        <table class="min-w-full table-auto divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">#</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Name</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Email</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Contact Person</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Designation</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Contact Phone</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-gray-100">
                 @forelse($organizations as $org)
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-2">{{ $loop->iteration }}</td>
-                        <td class="px-4 py-2">{{ $org->name }}</td>
-                        <td class="px-4 py-2">{{ $org->email ?? '-' }}</td>
-                        <td class="px-4 py-2">{{ $org->contact_person ?? '-' }}</td>
-                        <td class="px-4 py-2">{{ $org->contact_person_designation ?? '-' }}</td>
-                        <td class="px-4 py-2">{{ $org->contact_person_phone ?? '-' }}</td>
-                        <td class="px-4 py-2">
-                            @if($org->is_active)
-                                <span class="text-green-600 font-semibold">Active</span>
-                            @else
-                                <span class="text-red-600 font-semibold">Inactive</span>
-                            @endif
+                    <tr class="hover:bg-blue-50 transition">
+                        <td class="px-4 py-3">{{ $loop->iteration }}</td>
+                        <td class="px-4 py-3 font-semibold text-gray-900">{{ $org->name }}</td>
+                        <td class="px-4 py-3">{{ $org->email ?? '-' }}</td>
+                        <td class="px-4 py-3">{{ $org->contact_person ?? '-' }}</td>
+                        <td class="px-4 py-3">{{ $org->contact_person_designation ?? '-' }}</td>
+                        <td class="px-4 py-3">{{ $org->contact_person_phone ?? '-' }}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-block px-2 py-1 rounded {{ $org->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                {{ $org->is_active ? 'Active' : 'Inactive' }}
+                            </span>
                         </td>
-                        <td class="px-4 py-2 flex gap-2">
-                            <a href="{{ route('admin.organizations.edit', $org) }}" class="text-blue-600 hover:underline">Edit</a>
-                            <a href="{{ route('admin.organizations.summary', $org) }}" class="text-green-600 hover:underline">View</a>
-                            <form action="{{ route('admin.organizations.destroy', $org) }}" method="POST" onsubmit="return confirm('Are you sure?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:underline">Delete</button>
-                            </form>
+                        <td class="px-4 py-3">
+                            <div class="flex gap-2">
+                                <a href="{{ route('admin.organizations.summary', $org) }}"
+                                   class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded hover:bg-green-200 transition text-xs font-semibold">
+                                    View
+                                </a>
+                                <a href="{{ route('admin.organizations.edit', $org) }}"
+                                   class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded hover:bg-blue-200 transition text-xs font-semibold">
+                                    Edit
+                                </a>
+                                <form action="{{ route('admin.organizations.destroy', $org) }}" method="POST" class="inline"
+                                      onsubmit="return confirm('Are you sure?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="inline-block bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition text-xs font-semibold">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">No organizations found.</td>
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">No organizations found.</td>
                     </tr>
                 @endforelse
             </tbody>
