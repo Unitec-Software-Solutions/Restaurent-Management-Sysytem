@@ -4,15 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Reservation;
 use App\Models\Payment;
-use App\Models\Branch;
 use App\Models\Table;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ReservationConfirmed;
 use App\Mail\ReservationRejected;
-use App\Mail\ReservationConfirmationMail;
-use App\Mail\ReservationCancellationMail;
-use App\Services\SmsService;
 use App\Models\Employee;
 use Illuminate\Support\Facades\DB;
 
