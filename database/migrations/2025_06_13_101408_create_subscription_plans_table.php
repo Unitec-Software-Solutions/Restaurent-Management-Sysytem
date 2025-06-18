@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('subscription_plans', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->json('modules'); // e.g. ["reservations","orders","inventory"]
-            $table->integer('price'); // in cents
-            $table->string('currency')->default('USD');
+            $table->json('modules'); 
+            $table->decimal('price', 10, 2); 
+            $table->string('currency')->default('LKR');
             $table->text('description')->nullable();
             $table->timestamps();
         });
