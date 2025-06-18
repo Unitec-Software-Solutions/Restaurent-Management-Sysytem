@@ -13,16 +13,17 @@ class Branch extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'organization_id',
         'name',
         'address',
         'phone',
-        'email',
         'opening_time',
         'closing_time',
         'total_capacity',
         'reservation_fee',
         'cancellation_fee',
+        'contact_person',
+        'contact_person_designation',
+        'contact_person_phone',
         'is_active',
         'activation_key',
         'activated_at',
