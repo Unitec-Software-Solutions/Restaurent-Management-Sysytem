@@ -61,9 +61,12 @@ class SubscriptionPlanController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(SubscriptionPlan $subscriptionPlan)
+    public function edit($id)
     {
-        return view('admin.subscription-plans.edit', compact('subscriptionPlan'));
+        $subscriptionPlan = SubscriptionPlan::findOrFail($id);
+        $modules = \App\Models\Module::all(); // Fetch all modules
+
+        return view('admin.subscription-plans.edit', compact('subscriptionPlan', 'modules'));
     }
 
     /**
@@ -71,19 +74,18 @@ class SubscriptionPlanController extends Controller
      */
     public function update(Request $request, SubscriptionPlan $subscriptionPlan)
     {
-        // Convert modules string to array
-        $modules = array_map('trim', explode(',', $request->input('modules')));
-
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
-            'price'       => 'required|integer|min:0',
+            'modules'     => 'required|array|min:1',
+            'modules.*'   => 'exists:modules,id',
+            'price'       => 'required|numeric|min:0',
             'currency'    => 'required|string|max:10',
             'description' => 'nullable|string',
             'is_trial'    => 'nullable|boolean',
             'trial_period_days' => 'nullable|integer|min:1|max:365',
         ]);
 
-        $validated['modules'] = json_encode($modules);
+        $validated['modules'] = json_encode($request->input('modules', []));
         $validated['is_trial'] = $request->has('is_trial') ? 1 : 0;
         $validated['trial_period_days'] = $request->input('trial_period_days', 30);
 
