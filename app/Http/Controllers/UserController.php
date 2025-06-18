@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -30,20 +31,22 @@ class UserController extends Controller
     }
 
     // Show form to create a new user
-    public function create()
+    public function create(Request $request, $organizationId = null, $branchId = null)
     {
         $admin = auth('admin')->user();
 
-        // For super admin, show all organizations; for org admin, only their org
-        if ($admin->is_super_admin) {
-            $organizations = \App\Models\Organization::where('is_active', true)->get();
-            $branches = \App\Models\Branch::where('is_active', true)->get();
-        } else {
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->get();
-            $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
+        // Only show roles for this organization (and branch if set)
+        $rolesQuery = \App\Models\Role::where('organization_id', $organizationId ?? $admin->organization_id);
+        if ($branchId) {
+            $rolesQuery->where(function($q) use ($branchId) {
+                $q->whereNull('branch_id')->orWhere('branch_id', $branchId);
+            });
         }
+        $roles = $rolesQuery->get();
 
-        return view('admin.users.create', compact('organizations', 'branches'));
+        $branches = \App\Models\Branch::where('organization_id', $organizationId ?? $admin->organization_id)->get();
+
+        return view('admin.users.create', compact('roles', 'branches', 'organizationId', 'branchId'));
     }
 
     // Store a new user
@@ -53,30 +56,32 @@ class UserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => [
+            'email' => 'required|email|max:255|unique:users,email',
+            'phone_number' => 'nullable|string|max:20',
+            'user_type' => 'nullable|string|max:50',
+            'password' => 'required|string|min:8|confirmed',
+            'role_id' => [
                 'required',
-                'email',
-                'max:255',
-                'unique:users,email',
-            ],
-            'branch_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('branches', 'id')->where(function ($query) {
+                Rule::exists('roles', 'id')->where(function ($query) {
                     $query->where('organization_id', Auth::user()->organization_id);
                 }),
             ],
-            'password' => 'required|string|min:8|confirmed',
         ]);
 
-        User::create([
+        Log::info('User create request', $request->all());
+
+        $user = User::create([
             'organization_id' => Auth::user()->organization_id,
             'name' => $request->name,
             'email' => $request->email,
+            'phone_number' => $request->phone_number,
+            'user_type' => $request->user_type,
             'password' => Hash::make($request->password),
             'branch_id' => $request->branch_id,
+            'role_id' => $request->role_id,
             'created_by' => Auth::id(),
         ]);
+        Log::info('User created', $user->toArray());
 
         return redirect()->route('admin.users.index')->with('success', 'User created successfully');
     }
