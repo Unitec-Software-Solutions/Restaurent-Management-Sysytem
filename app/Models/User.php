@@ -26,7 +26,11 @@ class User extends Authenticatable
         'password',
         'user_type',
         'is_registered',
-        
+        'organization_id', 
+        'branch_id', 
+        'role_id', 
+        'is_admin', 
+        'created_by'
     ];
 
     /**
@@ -50,6 +54,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_registered' => 'boolean',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -75,5 +80,19 @@ class User extends Authenticatable
     public function isSuperAdmin()
     {
         return $this->hasRole('Super Admin'); 
+    }
+
+    public function canAssignRoles()
+    {
+        return $this->is_admin || $this->hasPermission('users.assign_roles');
+    }
+
+    public function hasPermission($permission)
+    {
+        if ($this->is_superadmin) return true;
+        if ($this->role && $this->role->permissions) {
+            return $this->role->permissions->pluck('name')->contains($permission);
+        }
+        return false;
     }
 }
