@@ -195,3 +195,9 @@
         </div>
     </div>
 </aside>
+
+@can('create', App\Models\Role::class)
+    <a href="{{ route('admin.roles.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        + Add Role
+    </a>
+@endcan
