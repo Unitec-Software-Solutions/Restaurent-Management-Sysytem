@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Module;
-use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
@@ -32,17 +32,27 @@ class RoleController extends Controller
         return view('admin.roles.index', compact('organizations', 'roles', 'selectedOrgId', 'selectedBranchId'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $this->authorize('create', \App\Models\Role::class);
+        $admin = auth('admin')->user();
+
+        if ($admin->is_super_admin) {
+            // Super admin: can select any organization and branch
+            $organizations = \App\Models\Organization::with('branches')->get();
+            $branches = \App\Models\Branch::all();
+        } elseif ($admin->admin) {
+            // Organization admin: only their org and its branches
+            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->with('branches')->get();
+            $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
+        } else {
+            // Branch admin: only their branch
+            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->with('branches')->get();
+            $branches = \App\Models\Branch::where('id', $admin->branch_id)->get();
+        }
 
         $modules = \App\Models\Module::all();
-        $branches = \App\Models\Branch::where('organization_id', Auth::user()->organization_id)
-            ->where('is_active', true)
-            ->get();
-        $organizations = \App\Models\Organization::all(); // <-- Add this line
 
-        return view('admin.roles.create', compact('modules', 'branches', 'organizations'));
+        return view('admin.roles.create', compact('organizations', 'branches', 'modules'));
     }
 
     public function store(Request $request)
