@@ -9,7 +9,6 @@
             <div class="border-b border-gray-200">
                 <nav class="flex -mb-px" id="settings-tabs">
                     <button data-tab="general" class="tab-btn border-b-2 border-[#515DEF] text-[#515DEF] px-4 py-4 text-sm font-medium focus:outline-none">General</button>
-                    <button data-tab="staff" class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-4 py-4 text-sm font-medium focus:outline-none">Staff</button>
                     <button data-tab="notifications" class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-4 py-4 text-sm font-medium focus:outline-none">Notifications</button>
                     <button data-tab="integrations" class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-4 py-4 text-sm font-medium focus:outline-none">Integrations</button>
                 </nav>
@@ -43,17 +42,6 @@
                             </div>
                         </div>
                     </form>
-                </div>
-
-                {{-- Staff Tab --}}
-                <div id="tab-staff" class="tab-content hidden">
-                    <h2 class="text-lg font-medium text-gray-900 mb-4">Staff Management</h2>
-                    <p class="text-sm text-gray-600 mb-2">Manage your team members here.</p>
-                    <ul class="list-disc pl-5 text-sm text-gray-700">
-                        <li>John Doe – Admin</li>
-                        <li>Jane Smith – Manager</li>
-                        <li>Emily Johnson – Cashier</li>
-                    </ul>
                 </div>
 
                 {{-- Notifications Tab --}}

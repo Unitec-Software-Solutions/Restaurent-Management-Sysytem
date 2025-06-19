@@ -19,8 +19,6 @@ use App\Models\GoodsTransferItem;
 use App\Models\GrnMaster;
 use App\Models\GrnItem;
 use App\Models\ItemMaster;
-use App\Models\CustomerAuthenticationMethod;
-use App\Models\CustomerPreference;
 use App\Models\AuditLog;
 use App\Models\NotificationProvider;
 use App\Models\Permission;
@@ -104,7 +102,6 @@ class DatabaseSeeder extends Seeder
                 GrnItem::factory(3)->create(['grn_id' => $grn->grn_id]);
             });
             ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            CustomerAuthenticationMethod::factory(2)->create();
             AuditLog::factory(2)->create();
             NotificationProvider::factory(1)->create();
             Permission::factory(2)->create();

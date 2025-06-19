@@ -73,19 +73,6 @@ class ModulesTableSeeder extends Seeder
                 'description' => 'Access system reports'
             ],
             [
-                'name' => 'Customer Management',
-                'slug' => 'customers',
-                'permissions' => [
-                    'customers.view',
-                    'customers.manage',
-                    'customers.create',
-                    'customers.edit',
-                    'customers.delete',
-                    'customers.export',
-                ],
-                'description' => 'Manage customer information'
-            ],
-            [
                 'name' => 'Suppliers',
                 'slug' => 'suppliers',
                 'permissions' => [
