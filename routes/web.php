@@ -86,6 +86,7 @@ Route::middleware(['web'])->group(function () {
     });
 });
 
+
 /*-------------------------------------------------------------------------
 | Authentication Routes
 |------------------------------------------------------------------------*/
@@ -170,7 +171,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Stock
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
-                Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
+               // Route::get('/create', [ItemTransactionController::class, 'create'])->name('create'); removed admin.inventory.stock.create route
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
                 Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
                 Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->whereNumber(['item_id', 'branch_id'])->name('edit');
@@ -185,6 +186,35 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Categories
             Route::resource('categories', ItemCategoryController::class);
+
+            // GTN (Goods Transfer Note) Management
+            Route::prefix('gtn')->name('gtn.')->group(function () {
+                // AJAX endpoints must come before parameterized routes
+                Route::get('/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->name('items-with-stock');
+                Route::get('/search-items', [GoodsTransferNoteController::class, 'searchItems'])->name('search-items');
+                Route::get('/item-stock', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock');
+
+                // Standard CRUD routes
+                Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
+                Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
+                Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
+                Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('show');
+                Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->whereNumber('gtn')->name('edit');
+                Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->whereNumber('gtn')->name('update');
+                Route::delete('/{gtn}', [GoodsTransferNoteController::class, 'destroy'])->whereNumber('gtn')->name('destroy');
+                Route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'print'])->name('print');
+
+                // Enhanced workflow routes for unified GTN system
+                Route::post('/{gtn}/confirm', [GoodsTransferNoteController::class, 'confirm'])->whereNumber('gtn')->name('confirm');
+                Route::post('/{gtn}/receive', [GoodsTransferNoteController::class, 'receive'])->whereNumber('gtn')->name('receive');
+                Route::post('/{gtn}/verify', [GoodsTransferNoteController::class, 'verify'])->whereNumber('gtn')->name('verify');
+                Route::post('/{gtn}/accept', [GoodsTransferNoteController::class, 'processAcceptance'])->whereNumber('gtn')->name('accept');
+                Route::post('/{gtn}/reject', [GoodsTransferNoteController::class, 'reject'])->whereNumber('gtn')->name('reject');
+                Route::get('/{gtn}/audit-trail', [GoodsTransferNoteController::class, 'auditTrail'])->whereNumber('gtn')->name('audit-trail');
+
+                // Legacy status management (for backward compatibility)
+                Route::post('/{gtn}/change-status', [GoodsTransferNoteController::class, 'changeStatus'])->whereNumber('gtn')->name('change-status');
+            });
         });
 
         // Suppliers Management
@@ -192,12 +222,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [SupplierController::class, 'index'])->name('index');
             Route::get('/create', [SupplierController::class, 'create'])->name('create');
             Route::post('/', [SupplierController::class, 'store'])->name('store');
-            Route::get('/{supplier}', [SupplierController::class, 'show'])->whereNumber('supplier')->name('show');
-            Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->whereNumber('supplier')->name('edit');
-            Route::put('/{supplier}', [SupplierController::class, 'update'])->whereNumber('supplier')->name('update');
-            Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->whereNumber('supplier')->name('destroy');
-            Route::get('/{supplier}/purchase-orders', [SupplierController::class, 'purchaseOrders'])->whereNumber('supplier')->name('purchase-orders');
-            Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->whereNumber('supplier')->name('grns');
+            Route::get('/{supplier}', [SupplierController::class, 'show'])->name('show');
+            Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit');
+            Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
+            Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+            Route::get('/{supplier}/purchase-orders', [SupplierController::class, 'purchaseOrders'])->name('purchase-orders');
+            Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->name('grns');
+
+            //  Supplier json (remove  later | only for testing)
+            Route::get('/{supplier}/pending-grns', [SupplierController::class, 'pendingGrns']);
+            Route::get('/{supplier}/pending-pos', [SupplierController::class, 'pendingPos']);
+
+            // Route::get('/{supplier}/pending-grns-pay', [SupplierPaymentController::class, 'getPendingGrns'])->name('pending-grns-pay');
+            // Route::get('/{supplier}/pending-pos-pay', [SupplierPaymentController::class, 'getPendingPos'])->name('pending-pos-pay');
         });
 
         // GRN Management
@@ -210,7 +247,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
             Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->whereNumber('grn')->name('verify');
             Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
-            Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->whereNumber('grn')->name('print');
+            Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
         });
 
         // Payments
@@ -218,11 +255,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [SupplierPaymentController::class, 'index'])->name('index');
             Route::get('/create', [SupplierPaymentController::class, 'create'])->name('create');
             Route::post('/', [SupplierPaymentController::class, 'store'])->name('store');
-            Route::get('/{payment}', [SupplierPaymentController::class, 'show'])->whereNumber('payment')->name('show');
-            Route::get('/{payment}/edit', [SupplierPaymentController::class, 'edit'])->whereNumber('payment')->name('edit');
-            Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->whereNumber('payment')->name('update');
-            Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->whereNumber('payment')->name('destroy');
-            Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->whereNumber('payment')->name('print');
+            Route::get('/{payment}', [SupplierPaymentController::class, 'show'])->name('show');
+            Route::get('/{payment}/edit', [SupplierPaymentController::class, 'edit'])->name('edit');
+            Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
+            Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
+            Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
+            // AJAX routes for pending GRNs and POs
         });
 
         // Purchase Orders
@@ -230,10 +268,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
             Route::get('/create', [PurchaseOrderController::class, 'create'])->name('create');
             Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
-            Route::get('/{po}', [PurchaseOrderController::class, 'show'])->whereNumber('po')->name('show');
-            Route::get('/{po}/edit', [PurchaseOrderController::class, 'edit'])->whereNumber('po')->name('edit');
-            Route::post('/{po}/approve', [PurchaseOrderController::class, 'approve'])->whereNumber('po')->name('approve');
-            Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->whereNumber('id')->name('print');
+            Route::get('/{po}', [PurchaseOrderController::class, 'show'])->name('show');
+            Route::get('/{po}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
+            Route::post('/{po}/approve', [PurchaseOrderController::class, 'approve'])->name('approve');
+            Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
         });
 
         // Additional Admin Routes
@@ -255,6 +293,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
 
     });
+
 });
 
 
@@ -367,6 +406,7 @@ Route::middleware(['auth:admin'])->group(function () {
 
     // Subscription Plans
     Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+
 });
 
 Route::middleware(['auth:admin', 'module:reservation'])->group(function () {
@@ -409,5 +449,3 @@ Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('admin.branch.users.create');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 });
-
-

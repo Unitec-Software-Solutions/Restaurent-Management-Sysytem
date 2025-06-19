@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class ItemTransaction extends Model
 {
@@ -13,16 +14,18 @@ class ItemTransaction extends Model
         'branch_id',
         'inventory_item_id',
         'transaction_type',
-        'transfer_to_branch_id',
+        'incoming_branch_id',
         'receiver_user_id',
-        'quantity',
+        'quantity', // Can be positive (stock in) or negative (stock out)
         'received_quantity',
         'damaged_quantity',
         'cost_price',
         'unit_price',
         'source_id',
         'source_type',
+        'gtn_id', // Reference to GTN
         'created_by_user_id',
+        'verified_by', // User who verified the transaction
         'notes',
         'is_active',
     ];
@@ -34,6 +37,7 @@ class ItemTransaction extends Model
         'cost_price' => 'decimal:4',
         'unit_price' => 'decimal:4',
         'is_active' => 'boolean',
+        'source_id' => 'string', // Ensure source_id is always treated as a string
     ];
 
     /*
@@ -64,6 +68,16 @@ class ItemTransaction extends Model
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
+    public function verifiedBy()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function gtn()
+    {
+        return $this->belongsTo(GoodsTransferNote::class, 'gtn_id', 'gtn_id');
+    }
+
     /*
      * Scope: Only active transactions
      */
@@ -85,6 +99,8 @@ class ItemTransaction extends Model
      */
     public static function stockOnHand($itemId, $branchId = null)
     {
+        //Log::info('Calculating stock on hand', ['item_id' => $itemId, 'branch_id' => $branchId]);
+
         $query = self::where('inventory_item_id', $itemId)->where('is_active', true);
 
         if ($branchId) {
@@ -93,7 +109,59 @@ class ItemTransaction extends Model
 
         $transactions = $query->get();
 
-        // Sum all quantities directly, positive for stock in, negative for stock out
-        return $transactions->sum('quantity');
+        $stock = $transactions->sum('quantity');
+        //Log::info('Stock on hand calculated', ['item_id' => $itemId, 'branch_id' => $branchId, 'stock' => $stock]);
+
+        return $stock;
+    }
+
+    // GTN-specific helper methods
+    public static function createGTNOutgoingTransaction($data)
+    {
+        return self::create(array_merge($data, [
+            'transaction_type' => 'gtn_outgoing',
+            'quantity' => -abs($data['quantity']), // Ensure negative for outgoing
+            'is_active' => true,
+        ]));
+    }
+
+    public static function createGTNIncomingTransaction($data)
+    {
+        return self::create(array_merge($data, [
+            'transaction_type' => 'gtn_incoming',
+            'quantity' => abs($data['quantity']), // Ensure positive for incoming
+            'is_active' => true,
+        ]));
+    }
+
+    public static function createGTNRejectionTransaction($data)
+    {
+        return self::create(array_merge($data, [
+            'transaction_type' => 'gtn_rejection',
+            'quantity' => abs($data['quantity']), // Positive for return to sender
+            'is_active' => true,
+        ]));
+    }
+
+    // Scope for GTN transactions
+    public function scopeGTNTransactions($query, $gtnId = null)
+    {
+        $query->whereIn('transaction_type', ['gtn_outgoing', 'gtn_incoming', 'gtn_rejection']);
+
+        if ($gtnId) {
+            $query->where('gtn_id', $gtnId);
+        }
+
+        return $query;
+    }
+
+    // Get stock movements for a specific GTN
+    public static function getGTNStockMovements($gtnId)
+    {
+        return self::where('gtn_id', $gtnId)
+                  ->whereIn('transaction_type', ['gtn_outgoing', 'gtn_incoming', 'gtn_rejection'])
+                  ->with(['item', 'branch', 'createdBy'])
+                  ->orderBy('created_at')
+                  ->get();
     }
 }

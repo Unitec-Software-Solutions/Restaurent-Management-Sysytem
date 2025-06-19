@@ -22,7 +22,7 @@ class GRNSeeder extends Seeder
         foreach ($purchaseOrders as $po) {
             // Create GRN
             $grn = GrnMaster::create([
-                'grn_number' => 'GRN-' . $po->order_date->format('Ymd') . '-' . Str::random(4),
+                'grn_number' => GrnMaster::generateGRNNumber($po->organization_id),
                 'po_id' => $po->po_id,
                 'branch_id' => $po->branch_id,
                 'organization_id' => $po->organization_id,
@@ -53,6 +53,7 @@ class GRNSeeder extends Seeder
 
                 $receivedQty = $this->calculateReceivedQuantity($poItem->quantity);
                 $acceptedQty = $this->calculateAcceptedQuantity($receivedQty);
+                $freeQty = rand(0, 1) ? rand(0, 2) : 0; // Random free items
                 $rejectedQty = $receivedQty - $acceptedQty;
                 $lineTotal = $acceptedQty * $poItem->buying_price;
                 $total += $lineTotal;
@@ -62,10 +63,12 @@ class GRNSeeder extends Seeder
                     'po_detail_id' => $poItem->po_detail_id,
                     'item_id' => $item->id, // Add the item_id from item_master
                     'item_code' => $poItem->item_code,
-                    'batch_no' => 'BTH-' . Str::random(6),
+                    'batch_no' => $item['batch_no'] ?? (date('Y') . '-' . str_pad(\App\Models\GrnItem::max('id') + 1, 4, '0', STR_PAD_LEFT)),
                     'ordered_quantity' => $poItem->quantity,
                     'received_quantity' => $receivedQty,
                     'accepted_quantity' => $acceptedQty,
+                    'free_received_quantity' => $freeQty, // NEW
+                    'discount_received' => rand(0, 1) ? rand(5, 20) : 0, // NEW: random discount
                     'rejected_quantity' => $rejectedQty,
                     'buying_price' => $poItem->buying_price,
                     'line_total' => $lineTotal,

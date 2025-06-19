@@ -75,6 +75,7 @@
                                 <option value="adjustment" {{ old('transaction_type') == 'adjustment' ? 'selected' : '' }}>Adjustment</option>
                                 <option value="audit" {{ old('transaction_type') == 'audit' ? 'selected' : '' }}>Audit</option>
                                 <option value="transfer_in" {{ old('transaction_type') == 'transfer_in' ? 'selected' : '' }}>Transfer In</option>
+                                <option value="transfer_in" {{ old('transaction_type') == 'transfer_in' ? 'selected' : '' }}>Transfer In</option>
                             </optgroup>
                             {{-- <optgroup label="Stock Out">
                                 <option value="sales_order" {{ old('transaction_type') == 'sales_order' ? 'selected' : '' }}>Sales Order</option>
@@ -112,11 +113,11 @@
 
                 <!-- Form Actions -->
                 <div class="flex justify-between items-center pt-6 border-t">
-                    <a href="{{ route('admin.inventory.stock.index') }}" 
+                    <a href="{{ route('admin.inventory.stock.index') }}"
                        class="text-indigo-600 hover:text-indigo-800 flex items-center">
                         <i class="fas fa-arrow-left mr-2"></i> Back to Stock
                     </a>
-                    <button type="submit" 
+                    <button type="submit"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg flex items-center">
                         <i class="fas fa-plus-circle mr-2"></i> Create Transaction
                     </button>

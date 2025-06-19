@@ -17,14 +17,14 @@ return new class extends Migration
             $table->foreignId('branch_id')->constrained('branches');
             $table->foreignId('inventory_item_id')->constrained('item_master');
             $table->string('transaction_type', 50);
-            $table->foreignId('transfer_to_branch_id')->nullable()->constrained('branches');
+            $table->foreignId('incoming_branch_id')->nullable()->constrained('branches');
             $table->foreignId('receiver_user_id')->nullable()->constrained('users');
             $table->decimal('quantity', 12, 2);
             $table->decimal('received_quantity', 12, 2)->default(0);
             $table->decimal('damaged_quantity', 12, 2)->default(0);
             $table->decimal('cost_price', 12, 4)->default(0.0000);
             $table->decimal('unit_price', 12, 4)->default(0.0000);
-            $table->unsignedBigInteger('source_id')->nullable();
+            $table->string('source_id')->nullable(); // Only define once as string
             $table->string('source_type', 50)->nullable();
             $table->foreignId('created_by_user_id')->constrained('users');
             $table->text('notes')->nullable();
