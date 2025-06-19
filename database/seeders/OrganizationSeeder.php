@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Organizations;
+use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -141,17 +141,35 @@ class OrganizationSeeder extends Seeder
                 'status' => 'active',
                 'is_active' => true,
                 'activation_key' => Str::random(40),
-            ]
+            ],
+            [
+                'name' => 'Olu cafe and restaurent',
+                'email' => 'olu@cafe.com',
+                'password' => Hash::make('defaultpassword'),
+                'phone' => '+94 11 123 4567',
+                'address' => '123 Main St, Colombo',
+                'is_active' => true,
+                'subscription_plan_id' => 1,
+            ],
+            [
+                'name' => 'Urban Cafe',
+                'email' => 'urban@cafe.com',
+                'password' => Hash::make('defaultpassword'),
+                'phone' => '+94 11 987 6543',
+                'address' => '456 High St, Kandy',
+                'is_active' => false,
+                'subscription_plan_id' => 2,
+            ],
         ];
 
         foreach ($organizations as $org) {
-            Organizations::firstOrCreate(
+            Organization::firstOrCreate(
                 ['name' => $org['name']],
                 $org
             );
         }
 
-        $this->command->info('  Total Organizations in the database: ' . Organizations::count());
+        $this->command->info('  Total Organizations in the database: ' . Organization::count());
         $this->command->info('  ✅ Organizations seeded successfully.');
     }
 }
