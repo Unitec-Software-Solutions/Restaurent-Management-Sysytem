@@ -23,8 +23,8 @@
             </div>
             
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-gray-500 text-sm font-medium">Active Orders</h3>
-                <p class="text-2xl font-bold mt-2">18</p>
+                <h3 class="text-gray-500 text-sm font-medium">Registered Customers</h3>
+                <p class="text-2xl font-bold mt-2">432</p>
             </div>
         </div>
         

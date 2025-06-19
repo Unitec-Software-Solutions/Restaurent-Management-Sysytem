@@ -6,7 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Admin;
 use App\Models\Branch;
-use App\Models\Organization;
+use App\Models\Organizations;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
@@ -17,7 +17,7 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        // $organizations = Organization::all();
+        // $organizations = Organizations::all();
 
         // if ($organizations->count() < 5) {
         //     $this->command->warn('🚨 Not enough organizations found. Ensure 5 organizations exist before seeding admins.');

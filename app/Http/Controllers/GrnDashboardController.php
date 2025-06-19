@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-use App\Models\Organization;
+use App\Models\Organizations;
 
 class GrnDashboardController extends Controller
 {
@@ -396,7 +396,7 @@ class GrnDashboardController extends Controller
             'createdByUser'
         ]);
 
-        $organization = Organization::find($orgId);
+        $organization = Organizations::find($orgId);
         $printedDate = now()->format('M d, Y h:i A');
 
         return view('admin.suppliers.grn.print', compact(
