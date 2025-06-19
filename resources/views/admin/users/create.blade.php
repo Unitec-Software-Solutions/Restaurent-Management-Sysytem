@@ -28,65 +28,104 @@
     @else
         <form action="{{ route('admin.users.store') }}" method="POST">
             @csrf
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input type="text" id="name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                </div>
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                </div>
-                <div>
-                    <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
-                    <select id="branch_id" name="branch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        <option value="">Select Branch</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}">{{ $branch->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label for="role_id" class="block text-sm font-medium text-gray-700">Role</label>
-                    <select id="role_id" name="role_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        <option value="">Select Role</option>
-                        @foreach($roles as $role)
-                            @if($role->name === 'Super Admin' && !auth('admin')->user()->isSuperAdmin())
-                                @continue
-                            @endif
-                            <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
-                                {{ $role->name }}
+
+            @if(auth('admin')->user()->isSuperAdmin())
+                <div class="mb-4">
+                    <label for="organization_id" class="block text-sm font-medium text-gray-700">Organization</label>
+                    <select id="organization_id" name="organization_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="">Select Organization</option>
+                        @foreach($organizations as $organization)
+                            <option value="{{ $organization->id }}" {{ old('organization_id') == $organization->id ? 'selected' : '' }}>
+                                {{ $organization->name }}
                             </option>
                         @endforeach
                     </select>
-                    @error('role_id')
-                        <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-                    @enderror
                 </div>
-                <div>
-                    <label class="block mb-1 font-medium">Password</label>
-                    <div class="relative">
-                        <input type="password" name="password" id="password" placeholder="Enter password"
-                               class="w-full border rounded px-3 py-2 pr-10" required>
-                        <button type="button" onclick="togglePassword('password')" class="absolute right-2 top-2 text-gray-500">
-                            👁️
-                        </button>
-                    </div>
-                    @error('password')
-                        <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-                    @enderror
+                <div class="mb-4">
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch (Optional)</label>
+                    <select id="branch_id" name="branch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="">Select Branch</option>
+                        {{-- Branches will be populated by JS --}}
+                    </select>
                 </div>
-                <div>
-                    <label class="block mb-1 font-medium">Confirm Password</label>
-                    <div class="relative">
-                        <input type="password" name="password_confirmation" id="password_confirmation" placeholder="Re-enter password"
-                               class="w-full border rounded px-3 py-2 pr-10" required>
-                        <button type="button" onclick="togglePassword('password_confirmation')" class="absolute right-2 top-2 text-gray-500">
-                            👁️
-                        </button>
-                    </div>
+            @elseif(auth('admin')->user()->isAdmin())
+                <input type="hidden" name="organization_id" value="{{ $organizations->first()->id }}">
+                <div class="mb-4">
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch (Optional)</label>
+                    <select id="branch_id" name="branch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="">Select Branch</option>
+                        @foreach($branches as $branch)
+                            <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
+            @else
+                <input type="hidden" name="organization_id" value="{{ $organizations->first()->id }}">
+                <input type="hidden" name="branch_id" value="{{ $branches->first()->id }}">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Branch</label>
+                    <input type="text" value="{{ $branches->first()->name }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100" readonly>
+                </div>
+            @endif
+
+            <div class="mb-4">
+                <label for="role_id" class="block text-sm font-medium text-gray-700">Role</label>
+                <select id="role_id" name="role_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    <option value="">Select Role</option>
+                    @foreach($roles as $role)
+                        @if($role->name === 'Super Admin' && !auth('admin')->user()->isSuperAdmin())
+                            @continue
+                        @endif
+                        <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
+                            {{ $role->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('role_id')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
             </div>
+
+            <div class="mb-4">
+                <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                <input type="text" id="name" name="name" value="{{ old('name') }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                @error('name')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="email" name="email" value="{{ old('email') }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                @error('email')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="mb-4">
+                <label class="block mb-1 font-medium">Password</label>
+                <input type="password" name="password" id="password" placeholder="Enter password"
+                       class="w-full border rounded px-3 py-2" required>
+                @error('password')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
+            </div>
+            <div class="mb-4">
+                <label class="block mb-1 font-medium">Confirm Password</label>
+                <input type="password" name="password_confirmation" id="password_confirmation" placeholder="Re-enter password"
+                       class="w-full border rounded px-3 py-2" required>
+            </div>
+
+            <div class="mb-4">
+                <strong>Created By:</strong>
+                <span>
+                    {{ auth('admin')->user()->name }}
+                    @if(auth('admin')->user()->isSuperAdmin())
+                        (Super Admin)
+                    @endif
+                </span>
+            </div>
+
             <div class="mt-6 flex justify-end">
                 <a href="{{ route('admin.users.index') }}" class="mr-3 bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300">Cancel</a>
                 <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Create User</button>
@@ -94,10 +133,55 @@
         </form>
     @endif
 </div>
+
+@php
+    $branchesArray = [];
+    foreach($allBranches as $b) {
+        $branchesArray[] = [
+            'id' => $b->id,
+            'name' => $b->name,
+            'org_id' => $b->organization_id,
+        ];
+    }
+@endphp
+
+@if(auth('admin')->user()->isSuperAdmin())
 <script>
-function togglePassword(id) {
-    const input = document.getElementById(id);
-    input.type = input.type === 'password' ? 'text' : 'password';
-}
+// @ts-nocheck
+document.addEventListener('DOMContentLoaded', function() {
+    const branchesData = @json($branchesArray);
+    const orgSelect = document.getElementById('organization_id');
+    const branchSelect = document.getElementById('branch_id');
+
+    // Exit if elements not found
+    if (!orgSelect || !branchSelect) return;
+
+    orgSelect.addEventListener('change', function() {
+        const orgId = this.value;
+        branchSelect.innerHTML = '<option value="">Select Branch</option>';
+
+        if (orgId) {
+            const orgBranches = branchesData.filter(b => b.org_id == orgId);
+            orgBranches.forEach(branch => {
+                const option = new Option(branch.name, branch.id);
+                branchSelect.appendChild(option);
+            });
+            
+            // Preselect if there was a previous selection
+            const oldBranchId = "{{ old('branch_id') }}";
+            if (oldBranchId) {
+                branchSelect.value = oldBranchId;
+            }
+        }
+    });
+
+    // Trigger on page load if organization is pre-selected
+    const oldOrgId = "{{ old('organization_id') }}";
+    if (oldOrgId) {
+        orgSelect.value = oldOrgId;
+        orgSelect.dispatchEvent(new Event('change'));
+    }
+});
 </script>
+@endif
 @endsection
