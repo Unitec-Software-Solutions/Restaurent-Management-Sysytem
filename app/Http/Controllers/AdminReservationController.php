@@ -4,17 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Reservation;
 use App\Models\Payment;
-use App\Models\Branch;
 use App\Models\Table;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ReservationConfirmed;
 use App\Mail\ReservationRejected;
-use App\Mail\ReservationConfirmationMail;
-use App\Mail\ReservationCancellationMail;
-use App\Services\SmsService;
-use Illuminate\Support\Facades\DB;
 use App\Models\Employee;
+use Illuminate\Support\Facades\DB;
 
 class AdminReservationController extends Controller
 {
@@ -22,22 +18,19 @@ class AdminReservationController extends Controller
     {
         $admin = auth('admin')->user();
 
-        if (!$admin) {
-            return redirect()->route('admin.login')->with('error', 'You must be logged in to access this page.');
+        if ($admin->is_super_admin) { 
+            $reservations = \App\Models\Reservation::with(['branch', 'organization'])->latest()->paginate(20);
+        } elseif ($admin->branch_id) {
+            $reservations = \App\Models\Reservation::with(['branch', 'organization'])
+                ->where('branch_id', $admin->branch_id)
+                ->latest()->paginate(20);
+        } elseif ($admin->organization_id) {
+            $reservations = \App\Models\Reservation::with(['branch', 'organization'])
+                ->where('organization_id', $admin->organization_id)
+                ->latest()->paginate(20);
+        } else {
+            $reservations = collect();
         }
-
-        if (!$admin->branch || !$admin->branch->id) {
-            return redirect()->route('admin.dashboard')->with('error', 'Branch information is missing for this user.');
-        }
-
-        $query = Reservation::with(['tables', 'branch', 'user'])
-            ->where('branch_id', $admin->branch->id);
-
-        if (request('phone')) {
-            $query->where('phone', request('phone'));
-        }
-
-        $reservations = $query->get();
 
         return view('admin.reservations.index', compact('reservations'));
     }
@@ -105,7 +98,7 @@ class AdminReservationController extends Controller
     public function edit(Reservation $reservation)
     {
         $admin = auth('admin')->user();
-        $reservation->load(['branch', 'tables', 'employee']); // Load relationships
+        $reservation->load(['branch', 'tables', 'employee']); 
 
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
@@ -360,7 +353,7 @@ public function update(Request $request, Reservation $reservation)
         $start_time = $now->format('H:i');
         $end_time = $now->copy()->addHours(2)->format('H:i');
 
-        $nextId = \DB::table('reservations')->max('id') + 1;
+        $nextId = DB::table('reservations')->max('id') + 1;
         $defaultName = 'customer ' . $nextId . '';
 
         $stewards = Employee::where('branch_id', $admin->branch->id)->get();

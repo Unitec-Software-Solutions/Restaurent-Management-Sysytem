@@ -115,7 +115,10 @@
                                     </div>
                                     
                                     <div class="menu-items-container border border-gray-200 rounded-xl p-2" style="max-height: 400px; overflow-y: auto;">
-                                        @foreach($items as $item)
+                                        @foreach($menuItems as $item)
+                                        @php
+                                            $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
+                                        @endphp
                                         <div class="menu-item-card bg-white border border-gray-200 rounded-lg p-4 mb-3 hover:shadow-md transition-all duration-300">
                                             <div class="flex items-start">
                                                 <!-- Item Image Placeholder -->
@@ -130,7 +133,8 @@
                                                                     name="items[{{ $item->id }}][item_id]" 
                                                                     value="{{ $item->id }}" 
                                                                     id="item_{{ $item->id }}"
-                                                                    class="mt-1 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded item-check">
+                                                                    class="mt-1 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded item-check"
+                                                                    @if($existing) checked @endif>
                                                                 <label for="item_{{ $item->id }}" class="font-semibold text-gray-800">{{ $item->name }}</label>
                                                             </div>
                                                             @if($item->description)
@@ -143,7 +147,7 @@
                                                         <input type="number" 
                                                             name="items[{{ $item->id }}][quantity]" 
                                                             min="1" 
-                                                            value="1" 
+                                                            value="{{ $existing ? $existing->quantity : 1 }}" 
                                                             class="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 quantity-input"
                                                             disabled>
                                                     </div>
@@ -203,6 +207,7 @@
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     .quantity-input {
+        appearance: textfield;
         -moz-appearance: textfield;
     }
     .quantity-input::-webkit-outer-spin-button,
@@ -242,7 +247,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth('admin')->check());
 
     // Initialize datetime picker
     const orderTimeInput = document.querySelector('input[name="order_time"]');
@@ -360,6 +364,61 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial summary update
     updateSummary();
+});
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.item-check').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const itemId = this.getAttribute('data-item-id');
+            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
+            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
+            if (this.checked) {
+                qtyInput.disabled = false;
+                plusBtn.disabled = false;
+                minusBtn.disabled = false;
+                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+            } else {
+                qtyInput.disabled = true;
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
+                qtyInput.removeAttribute('name');
+                qtyInput.value = 1;
+            }
+        });
+    });
+
+    document.querySelectorAll('.item-qty').forEach(function(input) {
+        input.addEventListener('input', function() {
+            if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
+                this.value = 1;
+            }
+        });
+    });
+
+    document.querySelectorAll('.qty-increase').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                input.value = parseInt(input.value) + 1;
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+
+    document.querySelectorAll('.qty-decrease').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                const currentValue = parseInt(input.value);
+                if (currentValue > 1) {
+                    input.value = currentValue - 1;
+                    input.dispatchEvent(new Event('input'));
+                }
+            }
+        });
+    });
 });
 </script>
 @endsection

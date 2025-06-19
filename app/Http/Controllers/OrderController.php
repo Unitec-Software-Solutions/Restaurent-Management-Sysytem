@@ -74,24 +74,14 @@ class OrderController extends Controller
     // Show order creation form (dine-in, under reservation)
     public function create(Request $request)
     {
-        $reservationId = $request->input('reservation_id');
-        $menuItems = ItemMaster::where('is_menu_item', true)->get();
-        $branches = Branch::all();
-
+        $reservationId = $request->query('reservation');
         $reservation = null;
         if ($reservationId) {
-            $reservation = Reservation::find($reservationId);
+            $reservation = \App\Models\Reservation::find($reservationId);
         }
+        $menuItems = \App\Models\ItemMaster::where('is_menu_item', true)->get();
 
-        // Initialize cart data
-        $cart = [
-            'items' => [],
-            'subtotal' => 0,
-            'tax' => 0,
-            'total' => 0
-        ];
-
-        return view('orders.create', compact('reservationId', 'menuItems', 'branches', 'reservation', 'cart'));
+        return view('orders.create', compact('reservation', 'menuItems'));
     }
 
     // Store new order (dine-in, under reservation)
