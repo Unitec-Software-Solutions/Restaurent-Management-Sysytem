@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             ModulesTableSeeder::class,
             RoleSeeder::class,
+            UserSeeder::class,
 
         ]);
     }
