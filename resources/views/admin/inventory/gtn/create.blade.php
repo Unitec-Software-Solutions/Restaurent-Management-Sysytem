@@ -91,7 +91,7 @@
                 </div>
 
                 <!-- Transfer Info Section -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                         <label for="transfer_date" class="block text-sm font-medium text-gray-700 mb-1">Transfer Date
                             *</label>
@@ -113,6 +113,28 @@
                     </div>
                 </div>
 
+                {{-- <!-- Unified Status Info -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                        <span class="text-sm text-blue-800 font-medium">Unified GTN System Status Information</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+                        <div>
+                            <p class="font-medium">Origin Status Workflow:</p>
+                            <p>Draft → Confirmed → In Delivery → Delivered</p>
+                        </div>
+                        <div>
+                            <p class="font-medium">Receiver Status Workflow:</p>
+                            <p>Pending → Received → Verified → Accepted/Rejected</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-blue-700 mt-2">
+                        This GTN will be created with "Draft" origin status and "Pending" receiver status.
+                        After creation, you can confirm the GTN to deduct stock and begin the transfer workflow.
+                    </p>
+                </div> --}}
+
                 <!-- Items Section -->
                 <div class="mb-8">
                     <div class="flex justify-between items-center mb-4">
@@ -132,7 +154,7 @@
                                         <th class="px-4 py-3">Available Stock</th>
                                         <th class="px-4 py-3">Transfer Quantity*</th>
                                         {{-- <th class="px-4 py-3">Batch No</th> --}}
-                                        <th class="px-4 py-3">Expiry Date</th>
+                                        {{-- <th class="px-4 py-3">Expiry Date</th> --}}
                                         <th class="px-4 py-3">Notes</th>
                                         <th class="px-4 py-3">Action</th>
                                     </tr>
@@ -173,49 +195,14 @@
             </form>
         </div>
     </div>
-
-    <!-- Status Change Modal -->
-    <div id="statusChangeModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <div class="flex items-center mb-4">
-                <div class="bg-green-100 p-3 rounded-xl mr-3">
-                    <i class="fas fa-exclamation-triangle text-green-600"></i>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800" id="modalTitle">Confirm GTN Creation</h2>
-            </div>
-            <p class="mb-6 text-gray-700" id="modalMessage">
-                Are you sure you want to create this GTN? This action will process the goods transfer.
-            </p>
-            <div class="flex gap-3 mt-6">
-                <button id="confirmStatusBtn"
-                    class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                    Yes, Create GTN
-                </button>
-                <button type="button" onclick="closeModal()"
-                    class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @push('scripts')
     <script>
-        // Modal logic
-        function openModal() {
-            document.getElementById('statusChangeModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('statusChangeModal').classList.add('hidden');
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             let itemCounter = 0;
             let availableItems = [];
             let selectedBranchId = null;
-            let formSubmitAllowed = false;
 
             const fromBranchSelect = document.getElementById('from_branch_id');
             const toBranchSelect = document.getElementById('to_branch_id');
@@ -225,6 +212,175 @@
             // Initially disable the add item button
             addItemBtn.disabled = true;
             addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Function to calculate cumulative quantities and remaining stock for all items
+            function updateAllRemainingStock() {
+                const itemQuantities = new Map(); // item_id -> total quantity used
+                const itemStocks = new Map(); // item_id -> available stock
+
+                // First pass: collect all item selections and their available stock
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    if (selectInput && selectInput.value) {
+                        const selectedOption = selectInput.selectedOptions[0];
+                        const itemId = selectInput.value;
+                        const availableStock = parseFloat(selectedOption.dataset.stock) || 0;
+
+                        if (!itemStocks.has(itemId)) {
+                            itemStocks.set(itemId, availableStock);
+                            itemQuantities.set(itemId, 0);
+                        }
+                    }
+                });
+
+                // Second pass: calculate cumulative quantities
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
+
+                    if (selectInput && selectInput.value && qtyInput && qtyInput.value) {
+                        const itemId = selectInput.value;
+                        const quantity = parseFloat(qtyInput.value) || 0;
+
+                        if (itemQuantities.has(itemId)) {
+                            itemQuantities.set(itemId, itemQuantities.get(itemId) + quantity);
+                        }
+                    }
+                });
+
+                // Third pass: update remaining stock displays and validation
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
+                    const stockHint = row.querySelector('.stock-hint');
+
+                    if (selectInput && selectInput.value && stockHint) {
+                        const itemId = selectInput.value;
+                        const currentQty = parseFloat(qtyInput.value) || 0;
+                        const totalQtyUsed = itemQuantities.get(itemId) || 0;
+                        const availableStock = itemStocks.get(itemId) || 0;
+                        const remainingStock = availableStock - totalQtyUsed;
+
+                        // Clear previous error states
+                        qtyInput.classList.remove('border-red-500');
+
+                        if (totalQtyUsed > availableStock) {
+                            // Error state
+                            qtyInput.classList.add('border-red-500');
+                            stockHint.textContent =
+                                `Error: Total quantity for this item (${totalQtyUsed.toFixed(2)}) exceeds available stock (${availableStock.toFixed(2)})`;
+                            stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                        } else {
+                            // Normal state - show remaining stock after this transfer
+                            stockHint.textContent =
+                                `Remaining stock after transfer: ${remainingStock.toFixed(2)}`;
+                            stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
+                        }
+                    }
+                });
+            }
+
+            // Enhanced quantity validation with real-time remaining stock updates
+            function validateQuantity(qtyInput) {
+                const max = parseFloat(qtyInput.max);
+                const value = parseFloat(qtyInput.value);
+
+                // Individual quantity validation
+                if (value > max) {
+                    qtyInput.setCustomValidity(`Quantity cannot exceed ${max.toFixed(2)}`);
+                } else {
+                    qtyInput.setCustomValidity('');
+                }
+
+                // Update all remaining stock displays
+                updateAllRemainingStock();
+            }
+
+            // Function to validate cumulative quantities (for form submission)
+            function validateCumulativeQuantities() {
+                const itemQuantities = new Map();
+                const itemStocks = new Map();
+                let hasErrors = false;
+
+                // Calculate cumulative quantities
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
+
+                    if (selectInput && selectInput.value && qtyInput && qtyInput.value) {
+                        const itemId = selectInput.value;
+                        const quantity = parseFloat(qtyInput.value) || 0;
+                        const selectedOption = selectInput.selectedOptions[0];
+                        const availableStock = parseFloat(selectedOption.dataset.stock) || 0;
+
+                        itemStocks.set(itemId, availableStock);
+
+                        if (itemQuantities.has(itemId)) {
+                            itemQuantities.set(itemId, itemQuantities.get(itemId) + quantity);
+                        } else {
+                            itemQuantities.set(itemId, quantity);
+                        }
+                    }
+                });
+
+                // Check for violations
+                itemQuantities.forEach((totalQty, itemId) => {
+                    const availableStock = itemStocks.get(itemId) || 0;
+                    if (totalQty > availableStock) {
+                        hasErrors = true;
+                    }
+                });
+
+                return !hasErrors;
+            }
+
+            // Enhanced item change handler
+            function handleItemChange(selectElement) {
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
+                const row = selectElement.closest('.item-row');
+                const stockDisplay = row.querySelector('.stock-display');
+                const qtyInput = row.querySelector('.quantity');
+                const stockHint = row.querySelector('.stock-hint');
+                const transferPriceInput = row.querySelector('.transfer-price-input');
+
+                if (selectedOption && selectedOption.value) {
+                    const stock = parseFloat(selectedOption.dataset.stock);
+                    const maxTransfer = parseFloat(selectedOption.dataset.max);
+                    const buyingPrice = parseFloat(selectedOption.dataset.price) || 0;
+
+                    // Auto-populate transfer price from item's buying price
+                    transferPriceInput.value = buyingPrice.toFixed(4);
+
+                    // Update the available stock display
+                    stockDisplay.textContent = `${stock} available`;
+                    stockDisplay.className = stock > 0 ? 'text-sm font-medium text-green-600 stock-display' :
+                        'text-sm font-medium text-red-600 stock-display';
+
+                    qtyInput.max = maxTransfer;
+                    qtyInput.placeholder = `Max: ${stock}`;
+
+                    if (stock <= 0) {
+                        qtyInput.disabled = true;
+                        qtyInput.value = '';
+                        stockHint.textContent = 'No stock available for this item';
+                        stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                    } else {
+                        qtyInput.disabled = false;
+                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
+                    }
+                } else {
+                    stockDisplay.textContent = '-';
+                    stockDisplay.className = 'text-sm font-medium text-gray-600 stock-display';
+                    transferPriceInput.value = '0';
+                    qtyInput.max = '';
+                    qtyInput.placeholder = '0.00';
+                    qtyInput.disabled = false;
+                    stockHint.textContent = '';
+                }
+
+                // Update all remaining stock displays after item change
+                updateAllRemainingStock();
+            }
 
             // --- Helper to create a placeholder item row ---
             function createPlaceholderRow() {
@@ -236,13 +392,16 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                                  data-code="${item.item_code}"
-                                                  data-stock="${item.stock_on_hand}"
-                                                  data-max="${item.max_transfer}">
-                                                  ${item.item_code} - ${item.name}
-                                            </option>`
+                                                                          data-code="${item.item_code}"
+                                                                          data-stock="${item.stock_on_hand}"
+                                                                          data-price="${item.buying_price}"
+                                                                          data-max="${item.max_transfer}">
+                                                                         ${item.item_code} - ${item.name}
+                                                                    </option>`
                             ).join('')}
                         </select>
+                        <!-- Hidden field for transfer_price, auto-populated from item buying_price -->
+                        <input type="hidden" name="items[${itemCounter}][transfer_price]" class="transfer-price-input" value="0">
                     </td>
                     <td class="px-4 py-3">
                         <div class="text-sm font-medium stock-display text-gray-600">-</div>
@@ -252,10 +411,6 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg quantity" required
                             min="0.01" max="" placeholder="0.00">
                         <div class="text-xs text-gray-500 mt-1 stock-hint"></div>
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="date" name="items[${itemCounter}][expiry_date]"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                     </td>
                     <td class="px-4 py-3">
                         <input type="text" name="items[${itemCounter}][notes]"
@@ -284,18 +439,13 @@
 
                 removeBtn.addEventListener('click', function() {
                     newRow.remove();
-                    // If no item rows left, always add a new placeholder row
-                    if (itemsContainer.querySelectorAll('.item-row').length === 0) {
-                        itemCounter++;
-                        createPlaceholderRow();
-                    }
+                    // Update remaining stock displays after row removal
+                    updateAllRemainingStock();
                 });
 
                 itemsContainer.appendChild(newRow);
                 itemCounter++;
             }
-
-            // --- End Helper ---
 
             // Handle origin branch selection
             fromBranchSelect.addEventListener('change', function() {
@@ -403,118 +553,72 @@
                 createPlaceholderRow();
             });
 
-            // Handle item selection change
-            function handleItemChange(selectElement) {
-                const selectedOption = selectElement.options[selectElement.selectedIndex];
-                const row = selectElement.closest('.item-row');
-                const stockDisplay = row.querySelector('.stock-display');
-                const qtyInput = row.querySelector('.quantity');
-                const stockHint = row.querySelector('.stock-hint');
+            // Add cumulative stock validation
+            function validateCumulativeQuantities() {
+                const itemQuantities = new Map(); // item_id -> total quantity
+                const itemStocks = new Map(); // item_id -> available stock
+                let hasErrors = false;
 
-                if (selectedOption && selectedOption.value) {
-                    const stock = parseFloat(selectedOption.dataset.stock);
-                    const maxTransfer = parseFloat(selectedOption.dataset.max);
-
-                    // Update the available stock display
-                    stockDisplay.textContent = `${stock} available`;
-                    stockDisplay.className = stock > 0 ? 'text-sm font-medium text-green-600 stock-display' :
-                        'text-sm font-medium text-red-600 stock-display';
-
-                    qtyInput.max = maxTransfer;
-                    qtyInput.placeholder = `Max: ${stock}`;
-                    // stockHint.textContent = `Available: ${stock}, Max with 10% margin: ${maxTransfer.toFixed(2)}`;
-
-                    if (stock <= 0) {
-                        qtyInput.disabled = true;
-                        qtyInput.value = '';
-                        stockHint.textContent = 'No stock available for this item';
-                        stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
-                    } else {
-                        qtyInput.disabled = false;
-                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
+                // Reset all error states first
+                document.querySelectorAll('.quantity').forEach(input => {
+                    input.classList.remove('border-red-500');
+                    const hint = input.closest('tr').querySelector('.stock-hint');
+                    if (hint && hint.classList.contains('text-red-500')) {
+                        hint.classList.remove('text-red-500');
+                        hint.classList.add('text-gray-500');
                     }
-                } else {
-                    stockDisplay.textContent = '-';
-                    stockDisplay.className = 'text-sm font-medium text-gray-600 stock-display';
-                    qtyInput.max = '';
-                    qtyInput.placeholder = '0.00';
-                    qtyInput.disabled = false;
-                    stockHint.textContent = '';
-                }
-            }
+                });
 
-            // Validate quantity input
-            function validateQuantity(qtyInput) {
-                const max = parseFloat(qtyInput.max);
-                const value = parseFloat(qtyInput.value);
-                const row = qtyInput.closest('.item-row');
-                const stockHint = row.querySelector('.stock-hint');
+                // Calculate cumulative quantities for each item
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const selectInput = row.querySelector('.item-select');
+                    const qtyInput = row.querySelector('.quantity');
 
-                if (value > max) {
-                    qtyInput.setCustomValidity(`Quantity cannot exceed ${max.toFixed(2)}`);
-                    stockHint.textContent = `Error: Maximum allowed is ${max.toFixed(2)}`;
-                    stockHint.className = 'text-xs text-red-500 mt-1 stock-hint';
-                } else {
-                    qtyInput.setCustomValidity('');
-                    const selectedOption = row.querySelector('.item-select').selectedOptions[0];
-                    if (selectedOption) {
-                        const stock = parseFloat(selectedOption.dataset.stock);
-                        const remainingStock = stock - value;
-                        stockHint.textContent = `Remaining stock after transfer: ${remainingStock.toFixed(2)}`;
-                        stockHint.className = 'text-xs text-gray-500 mt-1 stock-hint';
-                    }
-                }
-            }
+                    if (selectInput && selectInput.value && qtyInput && qtyInput.value) {
+                        const itemId = selectInput.value;
+                        const quantity = parseFloat(qtyInput.value) || 0;
+                        const selectedOption = selectInput.selectedOptions[0];
+                        const availableStock = parseFloat(selectedOption.dataset.stock) || 0;
 
-            // Form submission validation
-            gtnForm.addEventListener('submit', function(e) {
-                if (!formSubmitAllowed) {
-                    e.preventDefault();
+                        // Store available stock for this item
+                        itemStocks.set(itemId, availableStock);
 
-                    // Existing validation logic
-                    const itemRows = document.querySelectorAll('.item-row');
-                    const validRows = Array.from(itemRows).filter(row => {
-                        const selectInput = row.querySelector('.item-select');
-                        return selectInput && selectInput.value;
-                    });
-
-                    if (validRows.length === 0) {
-                        alert('Please add at least one item to transfer');
-                        return false;
-                    }
-
-                    let hasErrors = false;
-                    validRows.forEach(row => {
-                        const qtyInput = row.querySelector('.quantity');
-                        const selectInput = row.querySelector('.item-select');
-                        if (!selectInput.value) {
-                            hasErrors = true;
-                            selectInput.focus();
-                            return;
+                        // Add to cumulative quantity
+                        if (itemQuantities.has(itemId)) {
+                            itemQuantities.set(itemId, itemQuantities.get(itemId) + quantity);
+                        } else {
+                            itemQuantities.set(itemId, quantity);
                         }
-                        if (!qtyInput.value || parseFloat(qtyInput.value) <= 0) {
-                            hasErrors = true;
-                            qtyInput.focus();
-                            return;
-                        }
-                    });
-
-                    if (hasErrors) {
-                        alert('Please fill in all required fields correctly');
-                        return false;
                     }
+                });
 
-                    // Show confirmation modal
-                    openModal();
-                }
-            });
+                // Check for violations and mark errors
+                itemQuantities.forEach((totalQty, itemId) => {
+                    const availableStock = itemStocks.get(itemId) || 0;
 
-            // Modal confirm button
-            document.getElementById('confirmStatusBtn').addEventListener('click', function(e) {
-                formSubmitAllowed = true;
-                closeModal();
-                gtnForm.submit();
-            });
+                    if (totalQty > availableStock) {
+                        hasErrors = true;
+
+                        // Mark all rows with this item as having errors
+                        document.querySelectorAll('.item-row').forEach(row => {
+                            const selectInput = row.querySelector('.item-select');
+                            const qtyInput = row.querySelector('.quantity');
+                            const hint = row.querySelector('.stock-hint');
+
+                            if (selectInput && selectInput.value === itemId) {
+                                qtyInput.classList.add('border-red-500');
+                                if (hint) {
+                                    hint.textContent =
+                                        `Error: Total quantity for this item (${totalQty.toFixed(2)}) exceeds available stock (${availableStock.toFixed(2)})`;
+                                    hint.className = 'text-xs text-red-500 mt-1 stock-hint';
+                                }
+                            }
+                        });
+                    }
+                });
+
+                return !hasErrors;
+            }
 
             // On page load, always show a placeholder row
             resetItemsContainer();

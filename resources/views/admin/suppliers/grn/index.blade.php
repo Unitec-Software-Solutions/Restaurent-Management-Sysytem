@@ -12,8 +12,8 @@
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                 ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
                 ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
-                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                 ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                 ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
             ]" active="Goods Received Notes" />
         </div>
@@ -21,16 +21,68 @@
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <form method="GET" action="{{ route('admin.grn.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {{-- <!-- Search -->
+                <!-- Search Input -->
                 <div>
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search GRN</label>
                     <div class="relative">
-                        <input type="text" name="search" id="search" placeholder="GRN No, PO No, Supplier"
-                            value="{{ request('search') }}"
+                        <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" id="search" value="{{ request('search') }}"
+                            placeholder="Enter GRN number" aria-label="Search GRN" autocomplete="off"
                             class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                     </div>
-                </div> --}}
+                </div>
+
+                <!-- PO Number Filter (Disabled) -->
+                <div>
+                    <label for="po_number" class="block text-sm font-medium text-gray-400 mb-1">PO Number</label>
+                    <input type="text" name="po_number" id="po_number" placeholder="PO Number"
+                        value="{{ request('po_number') }}"
+                        class="w-full px-4 py-2 border rounded-lg bg-gray-100  focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        disabled>
+                </div>
+
+
+
+                <!-- Branch Filter -->
+                <div>
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                    <select name="branch_id" id="branch_id"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Branches</option>
+                        @foreach ($branches as $branch)
+                            <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Date Range -->
+                <div>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" name="start_date" id="start_date"
+                            value="{{ request('start_date', $startDate ?? \Carbon\Carbon::now()->subDays(30)->format('Y-m-d')) }}"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="date" name="end_date" id="end_date"
+                            value="{{ request('end_date', $endDate ?? \Carbon\Carbon::now()->format('Y-m-d')) }}"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Filter Buttons -->
+                <div class="flex items-end space-x-2">
+                    <button type="submit"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-filter mr-2"></i> Filter
+                    </button>
+                    <a href="{{ route('admin.grn.index') }}"
+                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-redo mr-2"></i> Reset
+                    </a>
+                </div>
 
                 <!-- Supplier Filter -->
                 <div>
@@ -42,20 +94,6 @@
                             <option value="{{ $supplier->id }}"
                                 {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>
                                 {{ $supplier->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Branch Filter -->
-                <div>
-                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <select name="branch_id" id="branch_id"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Branches</option>
-                        @foreach ($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
                             </option>
                         @endforeach
                     </select>
@@ -73,27 +111,12 @@
                     </select>
                 </div>
 
-                <!-- Date Range -->
-                <div>
-                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="date" name="start_date" id="start_date"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <input type="date" name="end_date" id="end_date"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                </div>
 
-                {{-- <!-- PO Number Filter -->
-                <div>
-                    <label for="po_number" class="block text-sm font-medium text-gray-700 mb-1">PO Number</label>
-                    <input type="text" name="po_number" id="po_number" placeholder="PO Number"
-                        value="{{ request('po_number') }}"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
+
+
 
                 <!-- Sort By -->
-                <div>
+                {{-- <div>
                     <label for="sort_by" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
                     <select name="sort_by" id="sort_by"
                         class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -116,17 +139,7 @@
                     </select>
                 </div> --}}
 
-                <!-- Filter Buttons -->
-                <div class="flex items-end space-x-2">
-                    <button type="submit"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-filter mr-2"></i> Filter
-                    </button>
-                    <a href="{{ route('admin.grn.index') }}"
-                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-redo mr-2"></i> Reset
-                    </a>
-                </div>
+
             </form>
         </div>
 
@@ -163,8 +176,8 @@
                                 Details</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Supplier</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PO
-                                Reference</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref
+                                No</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

@@ -315,7 +315,7 @@ class ItemTransactionController extends Controller
 
     public function isStockOut($type)
     {
-        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'gtn_stock_out'];
+        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'gtn_outgoing'];
         return in_array($type, $outTypes);
     }
 }

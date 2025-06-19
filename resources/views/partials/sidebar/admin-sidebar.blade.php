@@ -22,16 +22,56 @@
             <div class="px-4 py-4">
                 @php
                     $navItems = [
-                        ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'icon_type' => 'svg'],
-                        ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package', 'icon_type' => 'svg'],
-                        ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock', 'icon_type' => 'svg'],
-                        ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart', 'icon_type' => 'svg'],
-                        ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3', 'icon_type' => 'svg'],
-                        ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users', 'icon_type' => 'svg'],
-                        ['title' => 'Suppliers', 'route' => 'admin.suppliers.index', 'icon' => 'fas fa-truck', 'icon_type' => 'fa'],
+                        [
+                            'title' => 'Dashboard',
+                            'route' => 'admin.dashboard',
+                            'icon' => 'layout-dashboard',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Inventory Management',
+                            'route' => 'admin.inventory.index',
+                            'icon' => 'package',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Reservation Management',
+                            'route' => 'admin.reservations.index',
+                            'icon' => 'calendar-clock',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Order Management',
+                            'route' => 'admin.orders.index',
+                            'icon' => 'shopping-cart',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Reports',
+                            'route' => 'admin.reports.index',
+                            'icon' => 'bar-chart-3',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Customers',
+                            'route' => 'admin.customers.index',
+                            'icon' => 'users',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Suppliers',
+                            'route' => 'admin.suppliers.index',
+                            'icon' => 'fa-solid fa-truck-fast',
+                            'icon_type' => 'fa',
+                        ],
+                        [
+                            'title' => 'Production',
+                            'route' => 'admin.suppliers.index',
+                            'icon' => 'fa-solid fa-kitchen-set',
+                            'icon_type' => 'fa',
+                        ],
                         // ['title' => 'Purchase Orders', 'route' => 'admin.purchase-orders.index', 'icon' => 'fas fa-file-invoice-dollar', 'icon_type' => 'fa'],
                         // ['title' => 'GRN Management', 'route' => 'admin.grn.index', 'icon' => 'fas fa-clipboard-check', 'icon_type' => 'fa'],
-
                     ];
                 @endphp
 
@@ -43,7 +83,7 @@
                                 {{ request()->routeIs($item['route'])
                                     ? 'bg-white text-gray-700 border-white'
                                     : 'bg-transparent text-white border-white hover:bg-white/10' }}">
-                                @if($item['icon_type'] === 'svg')
+                                @if ($item['icon_type'] === 'svg')
                                     @include('partials.icons.' . $item['icon'])
                                 @else
                                     <i class="{{ $item['icon'] }} w-5 text-center"></i>
@@ -60,8 +100,18 @@
         <div class="px-4 py-4 border-t border-[#6A71F0]">
             @php
                 $bottomNavItems = [
-                    ['title' => 'Digital Menu', 'route' => 'admin.digital-menu.index', 'icon' => 'menu', 'icon_type' => 'svg'],
-                    ['title' => 'Settings', 'route' => 'admin.settings.index', 'icon' => 'settings', 'icon_type' => 'svg'],
+                    [
+                        'title' => 'Digital Menu',
+                        'route' => 'admin.digital-menu.index',
+                        'icon' => 'menu',
+                        'icon_type' => 'svg',
+                    ],
+                    [
+                        'title' => 'Settings',
+                        'route' => 'admin.settings.index',
+                        'icon' => 'settings',
+                        'icon_type' => 'svg',
+                    ],
                 ];
             @endphp
 
@@ -73,7 +123,7 @@
                             {{ request()->routeIs($item['route'])
                                 ? 'bg-white text-gray-700 border-white'
                                 : 'bg-transparent text-white border-white hover:bg-white/10' }}">
-                            @if($item['icon_type'] === 'svg')
+                            @if ($item['icon_type'] === 'svg')
                                 @include('partials.icons.' . $item['icon'])
                             @else
                                 <i class="{{ $item['icon'] }} w-5 text-center"></i>

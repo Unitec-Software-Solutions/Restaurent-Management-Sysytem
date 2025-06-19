@@ -134,9 +134,21 @@ class GrnItem extends Model
 
     public function calculateLineTotal()
     {
-        $this->line_total = $this->accepted_quantity * $this->buying_price;
+        $baseAmount = $this->accepted_quantity * $this->buying_price;
+        $discountAmount = $baseAmount * (($this->discount_received ?? 0) / 100);
+        $this->line_total = $baseAmount - $discountAmount;
         $this->save();
         return $this;
+    }
+
+    public function getLineTotalBeforeDiscountAttribute()
+    {
+        return $this->accepted_quantity * $this->buying_price;
+    }
+
+    public function getLineDiscountAmountAttribute()
+    {
+        return $this->line_total_before_discount * (($this->discount_received ?? 0) / 100);
     }
 
     public function acceptQuantity($quantity, $updateGrnTotal = true)

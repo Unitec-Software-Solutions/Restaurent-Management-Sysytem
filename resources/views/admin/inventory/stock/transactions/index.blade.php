@@ -20,8 +20,8 @@
                     ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                     ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
                     ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
-                    ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                     ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
+                    ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                     ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
                 ]" active="Transactions" />
             </div>
@@ -65,9 +65,15 @@
                                 <option value="">All Types</option>
                                 @foreach ([
             'purchase_order' => 'Purchase Order',
-            'grn_stock_in' => 'GRN Stock In',
-            'gtn_stock_in' => 'GTN Stock In',
-            'gtn_stock_out' => 'GTN Stock Out', // 'return' => 'Return','adjustment' => 'Adjustment', // 'audit' => 'Audit',            // 'sales_order' => 'Sales Order',            // 'write_off' => 'Write Off',            // 'transfer' => 'Transfer',            // 'usage' => 'Usage',
+            'sales_order' => 'Sales Order',
+            'adjustment' => 'Adjustment',
+            'audit' => 'Audit',
+            'gtn_outgoing' => 'GTN Outgoing',
+            'gtn_incoming' => 'GTN Incoming',
+            'gtn_rejection' => 'GTN Rejection',
+            'write_off' => 'Write Off',
+            'transfer' => 'Transfer',
+            'usage' => 'Usage',
         ] as $value => $label)
                                     <option value="{{ $value }}"
                                         {{ request('transaction_type') == $value ? 'selected' : '' }}>
@@ -88,20 +94,15 @@
                         </div>
                     </div>
 
-                    <div class="md:col-span-4 flex justify-between items-center space-x-3">
-                        <div class="flex space-x-3">
-                            <button type="submit"
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg flex items-center">
-                                <i class="fas fa-filter mr-2"></i> Apply Filters
-                            </button>
-                            @if (request()->anyFilled(['search', 'branch_id', 'transaction_type', 'date_from', 'date_to']))
-                                <a href="{{ route('admin.inventory.stock.transactions.index') }}"
-                                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center">
-                                    Clear
-                                </a>
-                            @endif
-                        </div>
-
+                    <div class="flex items-end space-x-2">
+                        <button type="submit"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-filter mr-2"></i> Filter
+                        </button>
+                        <a href="{{ route('admin.inventory.stock.transactions.index') }}"
+                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-redo mr-2"></i> Reset
+                        </a>
                     </div>
                 </form>
             </div>
@@ -173,6 +174,22 @@
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 @forelse ($transactions as $tx)
+                                    @php
+                                        $typeColors = [
+                                            'purchase_order' => 'bg-blue-100 text-blue-800',
+                                            'sales_order' => 'bg-purple-100 text-purple-800',
+                                            'adjustment' => 'bg-yellow-100 text-yellow-800',
+                                            'audit' => 'bg-gray-100 text-gray-800',
+                                            'gtn_outgoing' => 'bg-red-100 text-red-800',
+                                            'gtn_incoming' => 'bg-green-100 text-green-800',
+                                            'gtn_rejection' => 'bg-orange-100 text-orange-800',
+                                            'write_off' => 'bg-red-100 text-red-800',
+                                            'transfer' => 'bg-indigo-100 text-indigo-800',
+                                            'usage' => 'bg-purple-100 text-purple-800',
+                                        ];
+                                        $isIn = !$controller->isStockOut($tx->transaction_type);
+                                    @endphp
+
                                     <tr class="hover:bg-gray-50 cursor-pointer"
                                         onclick="window.location='{{ route('admin.inventory.stock.show', $tx->id) }}'">
                                         <td class="px-6 py-4 whitespace-nowrap">
@@ -194,21 +211,18 @@
                                             {{ optional($tx->branch)->name ?? '-' }}
                                         </td>
 
-                                        @php
-                                            $isIn = !$controller->isStockOut($tx->transaction_type);
-                                        @endphp
-
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <x-partials.badges.status-badge :status="$isIn ? 'success' : 'danger'" :text="ucwords(str_replace('_', ' ', $tx->transaction_type))" />
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full {{ $typeColors[$tx->transaction_type] ?? ($isIn ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') }}">
+                                                {{ ucwords(str_replace('_', ' ', $tx->transaction_type)) }}
+                                            </span>
                                         </td>
 
                                         <td class="px-6 py-4 whitespace-nowrap text-right">
                                             <div class="{{ $isIn ? 'text-green-600' : 'text-red-600' }}">
                                                 @php
-                                                    // Determine the sign based on transaction type
-                                                    $sign = $isIn ? '+' : '-';
-                                                    // Ensure we don't get double signs or incorrect combinations
-                                                    $quantity = $sign . number_format(abs($tx->quantity), 2);
+                                                    // Ensure the correct sign for outgoing transactions
+                                                    $quantity = number_format($tx->quantity, 2);
                                                 @endphp
                                                 {{ $quantity }}
                                                 <span
@@ -265,4 +279,5 @@
         </div>
     </div>
 
+    </div>
 @endsection

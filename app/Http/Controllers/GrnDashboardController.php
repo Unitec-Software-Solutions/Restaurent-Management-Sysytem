@@ -32,8 +32,9 @@ class GrnDashboardController extends Controller
     {
         $orgId = $this->getOrganizationId();
 
-        $startDate = $request->input('start_date', Carbon::now()->subMonth()->format('Y-m-d'));
-        $endDate = $request->input('end_date', Carbon::now()->format('Y-m-d'));
+        // Set default date range: 30 days back to today
+        $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
         $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder'])
             ->where('organization_id', $orgId);
@@ -54,9 +55,8 @@ class GrnDashboardController extends Controller
             });
         }
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('received_date', [$request->start_date, $request->end_date]);
-        }
+        // Always apply date range filter
+        $query->whereBetween('received_date', [$startDate, $endDate]);
 
         if ($request->filled('status') && $request->status != 'all') {
             $query->where('status', $request->status);
@@ -78,9 +78,8 @@ class GrnDashboardController extends Controller
 
         $statsQuery = GrnMaster::where('organization_id', $orgId);
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $statsQuery->whereBetween('received_date', [$request->start_date, $request->end_date]);
-        }
+        // Always apply date range filter for stats
+        $statsQuery->whereBetween('received_date', [$startDate, $endDate]);
 
         $stats = [
             'total_grns' => $statsQuery->count(),
@@ -199,6 +198,7 @@ class GrnDashboardController extends Controller
                     }
                 },
             ],
+            'grand_discount' => 'nullable|numeric|min:0',
         ]);
 
         Log::info('GRN Data Validated', ['grn_id' => $grn->grn_id, 'validated' => $validated]);
@@ -212,6 +212,7 @@ class GrnDashboardController extends Controller
                 'delivery_note_number' => $validated['delivery_note_number'],
                 'invoice_number' => $validated['invoice_number'],
                 'notes' => $validated['notes'],
+                'grand_discount' => $validated['grand_discount'] ?? 0,
             ]);
 
             Log::info('GRN Master Updated', ['grn_id' => $grn->grn_id]);
@@ -247,7 +248,7 @@ class GrnDashboardController extends Controller
 
             Log::info('GRN Items Created', ['grn_id' => $grn->grn_id, 'item_count' => count($validated['items'])]);
 
-            $grn->update(['total_amount' => $total]);
+            $grn->update(['total_amount' => $total, 'grand_discount' => $validated['grand_discount'] ?? 0]);
 
             DB::commit();
             Log::info('GRN Update Committed', ['grn_id' => $grn->grn_id]);
@@ -301,6 +302,7 @@ class GrnDashboardController extends Controller
             'items.*.buying_price' => 'required|numeric|min:0',
             'items.*.discount_received' => 'nullable|numeric|min:0',
             'items.*.free_received_quantity' => 'nullable|numeric|min:0',
+            'grand_discount' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
@@ -317,7 +319,8 @@ class GrnDashboardController extends Controller
                 'notes' => $validated['notes'],
                 'status' => GrnMaster::STATUS_PENDING,
                 'is_active' => true,
-                'created_by' => optional(Auth::user())->id
+                'created_by' => optional(Auth::user())->id,
+                'grand_discount' => $validated['grand_discount'] ?? 0,
             ]);
 
             $total = 0;
@@ -343,7 +346,7 @@ class GrnDashboardController extends Controller
                 ]);
             }
 
-            $grn->update(['total_amount' => $total]);
+            $grn->update(['total_amount' => $total, 'grand_discount' => $validated['grand_discount'] ?? 0]);
 
             DB::commit();
             return redirect()->route('admin.grn.show', $grn)
@@ -433,26 +436,80 @@ class GrnDashboardController extends Controller
             $grn->save();
 
             if ($validated['status'] === GrnMaster::STATUS_VERIFIED) {
+                // Check if this GRN was created from a GTN
+                $isFromGTN = (strpos($grn->notes ?? '', 'Internal transfer from GTN #') === 0) ||
+                             (strpos($grn->delivery_note_number ?? '', 'GTN-') === 0);
+
+                $transactionType = $isFromGTN ? 'gtn_stock_in' : 'grn_stock_in';
+                $sourceType = $isFromGTN ? 'App\\Models\\GoodsTransferNote' : 'supplier';
+
+                Log::info('Determining GRN source', [
+                    'grn_id' => $grn->grn_id,
+                    'is_from_gtn' => $isFromGTN,
+                    'transaction_type' => $transactionType,
+                    'notes' => $grn->notes,
+                    'delivery_note' => $grn->delivery_note_number
+                ]);
+
                 foreach ($grn->items as $grnItem) {
-                    $qty = $grnItem->accepted_quantity + $grnItem->free_received_quantity;
+                    $qty = $grnItem->accepted_quantity + ($grnItem->free_received_quantity ?? 0);
+
+                    // Always use a positive value for quantity for stock in
+                    $qty = abs($qty);
+
                     if ($qty > 0) {
-                        ItemTransaction::create([
+                        // For GTN-based GRNs, ensure accepted_quantity is set
+                        if ($isFromGTN && $grnItem->accepted_quantity <= 0) {
+                            // If we're verifying a GTN-based GRN and accepted_quantity is 0,
+                            // update it to the received_quantity
+                            $grnItem->accepted_quantity = $grnItem->received_quantity;
+                            $grnItem->save();
+
+                            // Recalculate qty with the updated accepted_quantity
+                            $qty = $grnItem->accepted_quantity + ($grnItem->free_received_quantity ?? 0);
+                            Log::info('Updated GTN-based GRN item accepted quantity', [
+                                'grn_id' => $grn->grn_id,
+                                'item_id' => $grnItem->item_id,
+                                'accepted_quantity' => $grnItem->accepted_quantity,
+                                'new_qty' => $qty
+                            ]);
+                        }
+
+                        // Create the item transaction with appropriate values
+                        $transaction = ItemTransaction::create([
                             'organization_id' => $grn->organization_id,
                             'branch_id' => $grn->branch_id,
                             'inventory_item_id' => $grnItem->item_id,
-                            'transaction_type' => 'grn_stock_in',
-                            'incoming_branch_id' => $grn->branch_id,
-                            'receiver_user_id' => $grn->received_by_user_id,
-                            'quantity' => $qty,
+                            'transaction_type' => $transactionType,
+                            'quantity' => $qty, // Always positive for incoming stock
                             'received_quantity' => $grnItem->received_quantity,
-                            'damaged_quantity' => $grnItem->rejected_quantity,
-                            'cost_price' => $grnItem->line_total,
-                            'unit_price' => $grnItem->buying_price,
-                            'source_id' => (string) $grnItem->batch_no,
-                            'source_type' => 'supplier',
+                            'damaged_quantity' => $grnItem->rejected_quantity ?? 0,
+                            // Use item buying_price even if 0 for GTN transfers
+                            'cost_price' => $isFromGTN ? 0 : $grnItem->line_total,
+                            'unit_price' => $isFromGTN ? 0 : $grnItem->buying_price,
+                            'source_id' => $isFromGTN ? (string) $grn->delivery_note_number : (string) $grnItem->batch_no,
+                            'source_type' => $sourceType,
                             'created_by_user_id' => Auth::id(),
-                            'notes' => 'Stock added from GRN #' . $grn->grn_number,
+                            'notes' => $isFromGTN
+                                ? 'Stock received from GTN #' . $grn->delivery_note_number
+                                : 'Stock added from GRN #' . $grn->grn_number,
                             'is_active' => true,
+                        ]);
+
+                        Log::info('Created stock transaction', [
+                            'transaction_id' => $transaction->id,
+                            'grn_id' => $grn->grn_id,
+                            'item_id' => $grnItem->item_id,
+                            'qty' => $qty,
+                            'transaction_type' => $transactionType,
+                            'is_from_gtn' => $isFromGTN
+                        ]);
+                    } else {
+                        Log::warning('Skipped creating transaction for zero quantity item', [
+                            'grn_id' => $grn->grn_id,
+                            'item_id' => $grnItem->item_id,
+                            'accepted_quantity' => $grnItem->accepted_quantity,
+                            'free_received_quantity' => $grnItem->free_received_quantity ?? 0
                         ]);
                     }
                 }
@@ -470,7 +527,8 @@ class GrnDashboardController extends Controller
             DB::rollBack();
             Log::error('Error during GRN verification', [
                 'grn_id' => $grn->grn_id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             return back()->with('error', 'Error verifying GRN: ' . $e->getMessage());
         }
@@ -517,3 +575,4 @@ class GrnDashboardController extends Controller
         }
     }
 }
+

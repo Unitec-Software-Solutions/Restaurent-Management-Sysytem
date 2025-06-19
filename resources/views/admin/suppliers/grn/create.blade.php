@@ -110,6 +110,7 @@
                         </button>
                     </div>
 
+
                     <div class="rounded-lg border border-gray-200 overflow-hidden">
                         <table class="w-full text-sm text-left text-gray-700">
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -158,85 +159,90 @@
                                         ->toArray();
                                 @endphp
 
-                                @foreach ($oldItems as $index => $item)
-                                    <tr class="item-row border-b bg-white hover:bg-gray-50"
-                                        data-index="{{ $index }}">
-                                        <td class="px-4 py-3">
-                                            <select name="items[{{ $index }}][item_id]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select"
-                                                required>
-                                                <option value="">Select Item</option>
-                                                @foreach ($items as $itemOption)
-                                                    <option value="{{ $itemOption->id }}"
-                                                        {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}
-                                                        data-price="{{ $itemOption->buying_price }}">
-                                                        {{ $itemOption->item_code }} - {{ $itemOption->name }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            <input type="hidden" name="items[{{ $index }}][item_code]"
-                                                value="{{ $item['item_code'] ?? '' }}">
+                                @if (count($oldItems) === 0)
+                                    <tr class="placeholder-row">
+                                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                            <i class="fas fa-info-circle mr-2"></i>
+                                            Please add at least one item to the GRN.
                                         </td>
-                                        {{-- <td class="px-4 py-3">
-                                    <input type="text" name="items[{{ $index }}][batch_no]"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no"
-                                        value="{{ $item['batch_no'] }}">
-                                </td> --}}
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][received_quantity]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
-                                                min="0.01" step="0.01" value="{{ $item['received_quantity'] }}"
-                                                required>
-                                            <input type="hidden" name="items[{{ $index }}][ordered_quantity]"
-                                                class="ordered-qty" value="{{ $item['received_quantity'] }}">
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][free_received_quantity]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent free-qty"
-                                                min="0" step="0.01"
-                                                value="{{ $item['free_received_quantity'] ?? 0 }}">
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][buying_price]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-price"
-                                                min="0" step="0.01" value="{{ $item['buying_price'] }}"
-                                                required>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <input type="number" name="items[{{ $index }}][discount_received]"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent discount-received"
-                                                min="0" max="100" step="0.01"
-                                                value="{{ $item['discount_received'] ?? 0 }}">
-                                        </td>
-                                        <td class="px-4 py-3 font-medium item-total">
-                                            @php
-                                                $quantity = is_numeric($item['received_quantity'] ?? 0)
-                                                    ? (float) $item['received_quantity']
-                                                    : 0;
-                                                $price = is_numeric($item['buying_price'] ?? 0)
-                                                    ? (float) $item['buying_price']
-                                                    : 0;
-                                                $discountPercent = is_numeric($item['discount_received'] ?? 0)
-                                                    ? (float) $item['discount_received']
-                                                    : 0;
-                                                $discountAmount = $quantity * $price * ($discountPercent / 100);
-                                                echo number_format($quantity * $price - $discountAmount, 2);
-                                            @endphp
-                                        </td>
-                                        <td class="px-4 py-3 text-center">
-                                            @if ($index === 0)
-                                                <button type="button" class="text-gray-500 hover:text-gray-700">
-                                                    <i class=" "></i>
-                                                </button>
-                                            @else
+                                    </tr>
+                                @else
+                                    @foreach ($oldItems as $index => $item)
+                                        <tr class="item-row border-b bg-white hover:bg-gray-50"
+                                            data-index="{{ $index }}">
+                                            <td class="px-4 py-3">
+                                                <select name="items[{{ $index }}][item_id]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select"
+                                                    required>
+                                                    <option value="">Select Item</option>
+                                                    @foreach ($items as $itemOption)
+                                                        <option value="{{ $itemOption->id }}"
+                                                            {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}
+                                                            data-price="{{ $itemOption->buying_price }}">
+                                                            {{ $itemOption->item_code }} - {{ $itemOption->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="items[{{ $index }}][item_code]"
+                                                    value="{{ $item['item_code'] ?? '' }}">
+                                            </td>
+                                            {{-- <td class="px-4 py-3">
+                                        <input type="text" name="items[{{ $index }}][batch_no]"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent batch-no"
+                                            value="{{ $item['batch_no'] }}">
+                                    </td> --}}
+                                            <td class="px-4 py-3">
+                                                <input type="number" name="items[{{ $index }}][received_quantity]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
+                                                    min="0.01" step="0.01" value="{{ $item['received_quantity'] }}"
+                                                    required>
+                                                <input type="hidden" name="items[{{ $index }}][ordered_quantity]"
+                                                    class="ordered-qty" value="{{ $item['received_quantity'] }}">
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="number"
+                                                    name="items[{{ $index }}][free_received_quantity]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent free-qty"
+                                                    min="0" step="0.01"
+                                                    value="{{ $item['free_received_quantity'] ?? 0 }}">
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="number" name="items[{{ $index }}][buying_price]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-price"
+                                                    min="0" step="0.01" value="{{ $item['buying_price'] }}"
+                                                    required>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="number"
+                                                    name="items[{{ $index }}][discount_received]"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent discount-received"
+                                                    min="0" max="100" step="0.01"
+                                                    value="{{ $item['discount_received'] ?? 0 }}">
+                                            </td>
+                                            <td class="px-4 py-3 font-medium item-total">
+                                                @php
+                                                    $quantity = is_numeric($item['received_quantity'] ?? 0)
+                                                        ? (float) $item['received_quantity']
+                                                        : 0;
+                                                    $price = is_numeric($item['buying_price'] ?? 0)
+                                                        ? (float) $item['buying_price']
+                                                        : 0;
+                                                    $discountPercent = is_numeric($item['discount_received'] ?? 0)
+                                                        ? (float) $item['discount_received']
+                                                        : 0;
+                                                    $discountAmount = $quantity * $price * ($discountPercent / 100);
+                                                    echo number_format($quantity * $price - $discountAmount, 2);
+                                                @endphp
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
                                                 <button type="button"
                                                     class="remove-item-btn text-red-500 hover:text-red-700">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @endif
                             </tbody>
                             <tfoot class="bg-gray-50 font-semibold text-gray-900">
                                 <tr>
@@ -328,7 +334,7 @@
                         class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 flex items-center justify-center">
                         <i class="fas fa-redo mr-2"></i> Reset Form
                     </button>
-                    <button type="submit"
+                    <button type="submit" id="openConfirmModalBtn"
                         class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center justify-center">
                         <i class="fas fa-check-circle mr-2"></i> Create GRN
                     </button>
@@ -336,6 +342,33 @@
             </form>
         </div>
     </div>
+
+    <!-- Confirm Modal for GRN Creation -->
+    {{--
+    <div id="grnConfirmModal" class="fixed inset-0 z-50 hidden bg-black/50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div class="flex items-center mb-4">
+                <div class="bg-green-100 p-3 rounded-xl mr-3">
+                    <i class="fas fa-exclamation-triangle text-green-600"></i>
+                </div>
+                <h2 class="text-xl font-semibold text-gray-800">Confirm GRN Creation</h2>
+            </div>
+            <p class="mb-6 text-gray-700">
+                Are you sure you want to create this GRN? This action will record the goods received.
+            </p>
+            <div class="flex gap-3 mt-6">
+                <button id="confirmCreateGrnBtn"
+                    class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                    Yes, Create GRN
+                </button>
+                <button type="button" id="cancelCreateGrnBtn"
+                    class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    --}}
 
     @push('scripts')
         <script>
@@ -369,6 +402,23 @@
                     }
                 }
 
+                function addPlaceholderRow() {
+                    if (!itemsContainer.querySelector('.placeholder-row')) {
+                        const row = document.createElement('tr');
+                        row.className = 'placeholder-row';
+                        row.innerHTML = `<td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Please add at least one item to the GRN.
+                        </td>`;
+                        itemsContainer.appendChild(row);
+                    }
+                }
+
+                function removePlaceholderRow() {
+                    const placeholder = itemsContainer.querySelector('.placeholder-row');
+                    if (placeholder) placeholder.remove();
+                }
+
                 // Attach event to existing item selects
                 document.querySelectorAll('.item-select').forEach(select => {
                     select.addEventListener('change', handleItemChange);
@@ -376,6 +426,7 @@
 
                 // Add new item row
                 addItemBtn.addEventListener('click', function() {
+                    removePlaceholderRow();
                     const newRow = document.createElement('tr');
                     newRow.className = 'item-row border-b bg-white hover:bg-gray-50';
                     newRow.dataset.index = itemCount;
@@ -387,7 +438,7 @@
                         <option value="">Select Item</option>
                         @foreach ($items as $item)
                             <option value="{{ $item->id }}" data-price="{{ $item->buying_price }}">
-                                {{ $item->name }} ({{ $item->item_code }})
+                                                                 {{ $item->item_code }} - {{ $item->name }}
                             </option>
                         @endforeach
                     </select>
@@ -463,11 +514,41 @@
                     // Add remove button handler
                     removeBtn.addEventListener('click', function() {
                         newRow.remove();
+                        if (itemsContainer.querySelectorAll('.item-row').length === 0) {
+                            addPlaceholderRow();
+                        }
                         updateGrandTotal();
                     });
 
                     itemCount++;
                 });
+
+                // Add remove button handler to dynamically added rows
+                function attachRemoveHandler(row) {
+                    const removeBtn = row.querySelector('.remove-item-btn');
+                    if (removeBtn) {
+                        removeBtn.addEventListener('click', function() {
+                            row.remove();
+                            if (itemsContainer.querySelectorAll('.item-row').length === 0) {
+                                addPlaceholderRow();
+                            }
+                            updateGrandTotal();
+                        });
+                    }
+                }
+
+                // Attach remove handler to existing rows
+                document.querySelectorAll('.item-row').forEach(row => {
+                    attachRemoveHandler(row);
+                });
+
+                // Add event listeners to remove buttons for dynamically added rows
+                // (already handled in addItemBtn click above)
+
+                // When page loads, if no item-row exists, show placeholder
+                if (itemsContainer.querySelectorAll('.item-row').length === 0) {
+                    addPlaceholderRow();
+                }
 
                 function updateSummaryFooter() {
                     let totalItems = 0;
@@ -533,14 +614,6 @@
 
                 document.getElementById('grand-discount-input').addEventListener('input', updateSummaryFooter);
 
-                // Add event listeners to remove buttons
-                document.querySelectorAll('.remove-item-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        this.closest('tr').remove();
-                        updateGrandTotal();
-                    });
-                });
-
                 // Form validation
                 document.getElementById('grnForm').addEventListener('submit', function(e) {
                     const itemRows = document.querySelectorAll('.item-row');
@@ -588,6 +661,40 @@
                         .toFixed(2);
                 });
                 updateSummaryFooter();
+
+                // Remove modal logic and make the button submit the form directly
+                // const openConfirmModalBtn = document.getElementById('openConfirmModalBtn');
+                // const grnConfirmModal = document.getElementById('grnConfirmModal');
+                // const confirmCreateGrnBtn = document.getElementById('confirmCreateGrnBtn');
+                // const cancelCreateGrnBtn = document.getElementById('cancelCreateGrnBtn');
+
+                // openConfirmModalBtn.addEventListener('click', function() {
+                //     grnConfirmModal.classList.remove('hidden');
+                // });
+
+                // cancelCreateGrnBtn.addEventListener('click', function() {
+                //     grnConfirmModal.classList.add('hidden');
+                // });
+
+                // confirmCreateGrnBtn.addEventListener('click', function() {
+                //     grnConfirmModal.classList.add('hidden');
+                //     grnForm.requestSubmit();
+                // });
+
+                // Override form submit to show modal instead
+                // grnForm.addEventListener('submit', function(e) {
+                //     if (!grnConfirmModal.classList.contains('hidden')) {
+                //         // Modal is already open, allow submit (user confirmed)
+                //         return;
+                //     }
+                //     // Only show modal if submit is triggered by button (not programmatically)
+                //     if (document.activeElement === openConfirmModalBtn) {
+                //         // Prevent default, modal will handle submit
+                //         e.preventDefault();
+                //     }
+                // });
+
+                // No modal, so nothing else needed here
             });
         </script>
     @endpush

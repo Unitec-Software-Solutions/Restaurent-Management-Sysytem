@@ -110,8 +110,11 @@ class ItemDashboardController extends Controller
         $items = ItemMaster::with('category')
             ->where('organization_id', $orgId)
             ->when(request('search'), function ($query) {
-                return $query->where('name', 'like', '%' . request('search') . '%')
-                    ->orWhere('item_code', 'like', '%' . request('search') . '%');
+                $search = strtolower(request('search'));
+                $query->where(function ($q) use ($search) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ['%' . $search . '%'])
+                        ->orWhereRaw('LOWER(item_code) LIKE ?', ['%' . $search . '%']);
+                });
             })
             ->when(request('category'), function ($query) {
                 return $query->where('item_category_id', request('category'));

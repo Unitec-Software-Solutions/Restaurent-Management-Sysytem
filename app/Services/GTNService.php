@@ -5,15 +5,13 @@ namespace App\Services;
 use App\Models\GoodsTransferNote;
 use App\Models\GoodsTransferItem;
 use App\Models\ItemTransaction;
-use App\Models\GrnMaster;
-use App\Models\GrnItem;
 use App\Models\ItemMaster;
-use App\Models\Employee;
 use App\Models\Branch;
 use App\Repositories\EmployeeRepository;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Exception;
 
 class GTNService
 {
@@ -25,138 +23,502 @@ class GTNService
     }
 
     /**
-     * Process stock transfer when GTN status changes to confirmed/approved/verified
+     * Validate cumulative item stock availability (enhanced version)
      */
-    public function processStockTransfer(GoodsTransferNote $gtn): void
+    public function validateCumulativeItemStock($items, $branchId)
     {
-        DB::transaction(function () use ($gtn) {
-            // Create stock reduction transactions for origin branch
-            $this->createOutgoingTransactions($gtn);
+        $itemQuantities = [];
 
-            // Create GRN for receiving branch
-            $this->createReceivingGRN($gtn);
+        // Calculate cumulative quantities for each item
+        foreach ($items as $item) {
+            $itemId = $item['item_id'];
+            $quantity = $item['transfer_quantity'];
 
-            Log::info('Stock transfer processed', [
-                'gtn_id' => $gtn->gtn_id,
-                'from_branch' => $gtn->from_branch_id,
-                'to_branch' => $gtn->to_branch_id
+            if (isset($itemQuantities[$itemId])) {
+                $itemQuantities[$itemId] += $quantity;
+            } else {
+                $itemQuantities[$itemId] = $quantity;
+            }
+        }
+
+        // Validate each unique item's cumulative quantity against available stock
+        foreach ($itemQuantities as $itemId => $totalQuantity) {
+            $currentStock = ItemTransaction::stockOnHand($itemId, $branchId);
+
+            if ($currentStock < $totalQuantity) {
+                $item = ItemMaster::find($itemId);
+                throw new Exception(
+                    "Insufficient stock for item '{$item->name}'. Available: {$currentStock}, Total Required: {$totalQuantity}"
+                );
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Create a new GTN with items
+     */
+    public function createGTN(array $data)
+    {
+        return DB::transaction(function () use ($data) {
+            $user = Auth::user();
+            if (!$user || !$user->organization_id) {
+                throw new Exception('Unauthorized access - organization not set');
+            }
+
+            // Validate cumulative stock for all items
+            $this->validateCumulativeItemStock($data['items'], $data['from_branch_id']);
+
+            // Get or create employee record
+            $employee = $this->employeeRepository->findOrCreateForUser($user, $data['from_branch_id']);
+
+            // Create the GTN record
+            $gtn = GoodsTransferNote::create([
+                'gtn_number' => $data['gtn_number'] ?? $this->generateGTNNumber(),
+                'from_branch_id' => $data['from_branch_id'],
+                'to_branch_id' => $data['to_branch_id'],
+                'created_by' => $employee->id,
+                'organization_id' => $user->organization_id,
+                'transfer_date' => $data['transfer_date'] ?? now(),
+                'origin_status' => GoodsTransferNote::ORIGIN_STATUS_DRAFT,
+                'receiver_status' => GoodsTransferNote::RECEIVER_STATUS_PENDING,
+                'status' => 'Pending', // Keep for backward compatibility
+                'notes' => $data['notes'] ?? null,
+                'is_active' => true,
             ]);
+
+            $totalValue = 0;
+
+            // Add items to the GTN
+            foreach ($data['items'] as $itemData) {
+                $this->validateItemStock($itemData['item_id'], $data['from_branch_id'], $itemData['transfer_quantity']);
+
+                $item = ItemMaster::find($itemData['item_id']);
+
+                // Always use item's buying_price as transfer_price, ignore any provided transfer_price
+                $transferPrice = $item->buying_price ?? 0;
+                $lineTotal = $itemData['transfer_quantity'] * $transferPrice;
+                $totalValue += $lineTotal;
+
+                GoodsTransferItem::create([
+                    'gtn_id' => $gtn->gtn_id,
+                    'item_id' => $itemData['item_id'],
+                    'item_code' => $item->item_code,
+                    'item_name' => $item->name,
+                    'batch_no' => $itemData['batch_no'] ?? null,
+                    'expiry_date' => $itemData['expiry_date'] ?? null,
+                    'transfer_quantity' => $itemData['transfer_quantity'],
+                    'transfer_price' => $transferPrice,
+                    'line_total' => $lineTotal,
+                    'notes' => $itemData['notes'] ?? null,
+                    'item_status' => GoodsTransferItem::STATUS_PENDING,
+                ]);
+            }
+
+            // Update GTN with total value
+            $gtn->update(['total_value' => $totalValue]);
+
+            Log::info('GTN created successfully', [
+                'gtn_id' => $gtn->gtn_id,
+                'gtn_number' => $gtn->gtn_number,
+                'from_branch' => $data['from_branch_id'],
+                'to_branch' => $data['to_branch_id'],
+                'items_count' => count($data['items']),
+                'total_value' => $totalValue
+            ]);
+
+            return $gtn;
         });
     }
 
     /**
-     * Create outgoing stock transactions for origin branch
+     * Update an existing GTN (only in draft status)
      */
-    private function createOutgoingTransactions(GoodsTransferNote $gtn): void
+    public function updateGTN($gtnId, array $data)
     {
+        return DB::transaction(function () use ($gtnId, $data) {
+            $admin = Auth::user();
+
+            if (!$admin || !$admin->organization_id) {
+                throw new Exception('Unauthorized access - organization not set');
+            }
+
+            $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
+                ->findOrFail($gtnId);
+
+            if (!$gtn->isDraft()) {
+                throw new Exception('GTN can only be updated in draft status');
+            }
+
+            // Update GTN details
+            $gtn->update([
+                'from_branch_id' => $data['from_branch_id'] ?? $gtn->from_branch_id,
+                'to_branch_id' => $data['to_branch_id'] ?? $gtn->to_branch_id,
+                'transfer_date' => $data['transfer_date'] ?? $gtn->transfer_date,
+                'notes' => $data['notes'] ?? $gtn->notes,
+            ]);
+
+            $totalValue = 0;
+
+            // Update items if provided
+            if (isset($data['items'])) {
+                // Validate cumulative stock for all items
+                $this->validateCumulativeItemStock($data['items'], $gtn->from_branch_id);
+
+                // Delete existing items
+                $gtn->items()->delete();
+
+                // Add new items
+                foreach ($data['items'] as $itemData) {
+                    $this->validateItemStock($itemData['item_id'], $gtn->from_branch_id, $itemData['transfer_quantity']);
+
+                    $item = ItemMaster::find($itemData['item_id']);
+
+                    // Always use item's buying_price as transfer_price, ignore any provided transfer_price
+                    $transferPrice = $item->buying_price ?? 0;
+                    $lineTotal = $itemData['transfer_quantity'] * $transferPrice;
+                    $totalValue += $lineTotal;
+
+                    GoodsTransferItem::create([
+                        'gtn_id' => $gtn->gtn_id,
+                        'item_id' => $itemData['item_id'],
+                        'item_code' => $item->item_code,
+                        'item_name' => $item->name,
+                        'batch_no' => $itemData['batch_no'] ?? null,
+                        'expiry_date' => $itemData['expiry_date'] ?? null,
+                        'transfer_quantity' => $itemData['transfer_quantity'],
+                        'transfer_price' => $transferPrice,
+                        'line_total' => $lineTotal,
+                        'notes' => $itemData['notes'] ?? null,
+                        'item_status' => GoodsTransferItem::STATUS_PENDING,
+                    ]);
+                }
+
+                // Update GTN with total value
+                $gtn->update(['total_value' => $totalValue]);
+            }
+
+            Log::info('GTN updated successfully', [
+                'gtn_id' => $gtn->gtn_id,
+                'gtn_number' => $gtn->gtn_number,
+                'total_value' => $totalValue
+            ]);
+
+            return $gtn;
+        });
+    }
+
+    /**
+     * Confirm GTN and deduct stock from sender
+     */
+    public function confirmGTN($gtnId, $userId = null)
+    {
+        $userId = $userId ?? Auth::id();
+        $gtn = GoodsTransferNote::findOrFail($gtnId);
+
+        if (!$gtn->isDraft()) {
+            throw new Exception('GTN can only be confirmed from draft status');
+        }
+
+        // Validate stock availability before confirmation
         foreach ($gtn->items as $item) {
-            ItemTransaction::create([
-                'organization_id' => $gtn->organization_id,
-                'branch_id' => $gtn->from_branch_id,
-                'inventory_item_id' => $item->item_id,
-                'transaction_type' => 'gtn_stock_out',
-                'quantity' => -$item->transfer_quantity, // Negative for outgoing
-                'cost_price' => 0, // Internal transfer
-                'unit_price' => 0, // Internal transfer
-                'source_id' => (string) $gtn->gtn_id,
-                'source_type' => GoodsTransferNote::class,
-                'created_by_user_id' => Auth::id(),
-                'notes' => "Stock transferred out via GTN #{$gtn->gtn_number} to {$gtn->toBranch->name}",
-                'is_active' => true,
-            ]);
-        }
-    }
-
-    /**
-     * Create a GRN for the receiving branch
-     */
-    private function createReceivingGRN(GoodsTransferNote $gtn): GrnMaster
-    {
-        $grn = GrnMaster::create([
-            'grn_number' => $this->generateInternalGRNNumber($gtn->organization_id),
-            'branch_id' => $gtn->to_branch_id,
-            'organization_id' => $gtn->organization_id,
-            'supplier_id' => null, // Internal transfer
-            'received_by_user_id' => Auth::id(),
-            'received_date' => now()->toDateString(),
-            'delivery_note_number' => $gtn->gtn_number,
-            'invoice_number' => null,
-            'notes' => "Internal transfer from GTN #{$gtn->gtn_number} from {$gtn->fromBranch->name}",
-            'status' => 'Pending', // Receiving branch needs to confirm
-            'is_active' => true,
-            'created_by' => Auth::id(),
-            'total_amount' => 0 // Internal transfer
-        ]);
-
-        // Create GRN items
-        foreach ($gtn->items as $gtnItem) {
-            GrnItem::create([
-                'grn_id' => $grn->grn_id,
-                'item_id' => $gtnItem->item_id,
-                'item_code' => $gtnItem->item_code,
-                'item_name' => $gtnItem->item_name,
-                'batch_no' => $gtnItem->batch_no,
-                'ordered_quantity' => $gtnItem->transfer_quantity,
-                'received_quantity' => $gtnItem->transfer_quantity,
-                'accepted_quantity' => 0, // To be confirmed by receiving branch
-                'rejected_quantity' => 0,
-                'buying_price' => 0, // Internal transfer
-                'line_total' => 0, // Internal transfer
-                'manufacturing_date' => null,
-                'expiry_date' => $gtnItem->expiry_date,
-                'rejection_reason' => null,
-                'discount_received' => 0,
-                'free_received_quantity' => 0
-            ]);
+            $this->validateItemStock($item->item_id, $gtn->from_branch_id, $item->transfer_quantity);
         }
 
-        return $grn;
+        return $gtn->confirmTransfer($userId);
     }
 
     /**
-     * Generate GRN number for internal transfers
+     * Mark GTN as received
      */
-    private function generateInternalGRNNumber(int $organizationId): string
+    public function receiveGTN($gtnId, $userId = null, $notes = null)
     {
-        $latest = GrnMaster::where('organization_id', $organizationId)
-            ->where('grn_number', 'LIKE', 'GRN-INT-%')
-            ->latest('grn_id')
-            ->first();
+        $userId = $userId ?? Auth::id();
+        $gtn = GoodsTransferNote::findOrFail($gtnId);
 
-        $nextId = $latest ? (int)substr($latest->grn_number, -4) + 1 : 1;
-        return 'GRN-INT-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        return $gtn->receiveTransfer($userId, $notes);
     }
 
     /**
-     * Get items with available stock for a specific branch
+     * Verify GTN items
      */
-    public function getItemsWithStock(int $branchId, int $organizationId): array
+    public function verifyGTN($gtnId, $userId = null, $notes = null)
+    {
+        $userId = $userId ?? Auth::id();
+        $gtn = GoodsTransferNote::findOrFail($gtnId);
+
+        return $gtn->verifyTransfer($userId, $notes);
+    }
+
+    /**
+     * Accept/Reject GTN items
+     */
+    public function processGTNAcceptance($gtnId, array $acceptanceData, $userId = null)
+    {
+        $userId = $userId ?? Auth::id();
+        $gtn = GoodsTransferNote::findOrFail($gtnId);
+
+        return $gtn->acceptTransfer($userId, $acceptanceData);
+    }
+
+    /**
+     * Fully reject GTN
+     */
+    public function rejectGTN($gtnId, $rejectionReason, $userId = null)
+    {
+        $userId = $userId ?? Auth::id();
+        $gtn = GoodsTransferNote::findOrFail($gtnId);
+
+        return $gtn->rejectTransfer($userId, $rejectionReason);
+    }
+
+    /**
+     * Get items with current stock for a branch
+     */
+    public function getItemsWithStock($branchId, $organizationId)
     {
         $items = ItemMaster::where('organization_id', $organizationId)
-            ->active()
-            ->get()
-            ->map(function ($item) use ($branchId) {
-                $stock = ItemTransaction::stockOnHand($item->id, $branchId);
-                return [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    'item_code' => $item->item_code,
-                    'unit_of_measurement' => $item->unit_of_measurement,
-                    'stock_on_hand' => $stock,
-                    'max_transfer' => $stock * 1.1 // Include 10% margin
-                ];
-            })
-            ->filter(function ($item) {
-                return $item['stock_on_hand'] > 0; // Only show items with stock
-            })
-            ->values()
-            ->toArray();
+                          ->where('is_active', true)
+                          ->with('category')
+                          ->get();
 
-        return $items;
+        return $items->map(function ($item) use ($branchId) {
+            $currentStock = ItemTransaction::stockOnHand($item->id, $branchId);
+
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'item_code' => $item->item_code,
+                'category' => $item->category->name ?? 'Uncategorized',
+                'unit_of_measurement' => $item->unit_of_measurement,
+                'current_stock' => $currentStock,
+                'stock_on_hand' => $currentStock, // For backward compatibility
+                'buying_price' => $item->buying_price,
+                'selling_price' => $item->selling_price,
+                'reorder_level' => $item->reorder_level,
+                'is_low_stock' => $currentStock <= $item->reorder_level,
+                'can_transfer' => $currentStock > 0,
+                'max_transfer' => $currentStock,
+            ];
+        })->filter(function ($item) {
+            return $item['can_transfer']; // Only return items with stock
+        })->values();
     }
 
     /**
-     * Validate GTN status change
+     * Search items with stock
+     */
+    public function searchItemsWithStock($branchId, $organizationId, $search = '')
+    {
+        $query = ItemMaster::where('organization_id', $organizationId)
+                          ->where('is_active', true)
+                          ->with('category');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('item_code', 'like', "%{$search}%");
+            });
+        }
+
+        $items = $query->limit(20)->get();
+
+        return $items->map(function ($item) use ($branchId) {
+            $currentStock = ItemTransaction::stockOnHand($item->id, $branchId);
+
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'item_code' => $item->item_code,
+                'category' => $item->category->name ?? 'Uncategorized',
+                'unit_of_measurement' => $item->unit_of_measurement,
+                'current_stock' => $currentStock,
+                'stock_on_hand' => $currentStock, // For backward compatibility
+                'buying_price' => $item->buying_price,
+                'display_text' => "{$item->name} ({$item->item_code}) - Stock: {$currentStock}",
+                'max_transfer' => $currentStock,
+            ];
+        })->filter(function ($item) {
+            return $item['current_stock'] > 0; // Only return items with stock
+        })->values();
+    }
+
+    /**
+     * Get stock for a specific item and branch
+     */
+    public function getItemStock($itemId, $branchId, $organizationId)
+    {
+        // Verify item belongs to organization
+        $item = ItemMaster::where('id', $itemId)
+            ->where('organization_id', $organizationId)
+            ->firstOrFail();
+
+        // Verify branch belongs to organization
+        $branch = Branch::where('id', $branchId)
+            ->where('organization_id', $organizationId)
+            ->firstOrFail();
+
+        return ItemTransaction::stockOnHand($itemId, $branchId);
+    }
+
+    /**
+     * Get GTN status summary
+     */
+    public function getGTNStatusSummary($organizationId, $dateRange = null)
+    {
+        $query = GoodsTransferNote::where('organization_id', $organizationId);
+
+        if ($dateRange) {
+            $query->whereBetween('transfer_date', [$dateRange['start'], $dateRange['end']]);
+        }
+
+        $gtns = $query->get();
+
+        return [
+            'total' => $gtns->count(),
+            'draft' => $gtns->where('origin_status', GoodsTransferNote::ORIGIN_STATUS_DRAFT)->count(),
+            'confirmed' => $gtns->where('origin_status', GoodsTransferNote::ORIGIN_STATUS_CONFIRMED)->count(),
+            'in_delivery' => $gtns->where('origin_status', GoodsTransferNote::ORIGIN_STATUS_IN_DELIVERY)->count(),
+            'delivered' => $gtns->where('origin_status', GoodsTransferNote::ORIGIN_STATUS_DELIVERED)->count(),
+            'pending_receipt' => $gtns->where('receiver_status', GoodsTransferNote::RECEIVER_STATUS_PENDING)->count(),
+            'received' => $gtns->where('receiver_status', GoodsTransferNote::RECEIVER_STATUS_RECEIVED)->count(),
+            'verified' => $gtns->where('receiver_status', GoodsTransferNote::RECEIVER_STATUS_VERIFIED)->count(),
+            'accepted' => $gtns->where('receiver_status', GoodsTransferNote::RECEIVER_STATUS_ACCEPTED)->count(),
+            'rejected' => $gtns->where('receiver_status', GoodsTransferNote::RECEIVER_STATUS_REJECTED)->count(),
+            'partially_accepted' => $gtns->where('receiver_status', GoodsTransferNote::RECEIVER_STATUS_PARTIALLY_ACCEPTED)->count(),
+        ];
+    }
+
+    /**
+     * Validate item stock availability (enhanced version)
+     */
+    public function validateItemStock($itemId, $branchId, $requiredQuantity)
+    {
+        $currentStock = ItemTransaction::stockOnHand($itemId, $branchId);
+
+        if ($currentStock < $requiredQuantity) {
+            $item = ItemMaster::find($itemId);
+            throw new Exception(
+                "Insufficient stock for item '{$item->name}'. Available: {$currentStock}, Required: {$requiredQuantity}"
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Get GTN audit trail
+     */
+    public function getGTNAuditTrail($gtnId)
+    {
+        $gtn = GoodsTransferNote::with([
+            'createdBy', 'approvedBy', 'receivedBy', 'verifiedBy', 'rejectedBy'
+        ])->findOrFail($gtnId);
+
+        $inventoryTransactions = ItemTransaction::getGTNStockMovements($gtnId);
+
+        return [
+            'gtn' => $gtn,
+            'inventory_transactions' => $inventoryTransactions,
+            'timeline' => $this->buildGTNTimeline($gtn),
+        ];
+    }
+
+    /**
+     * Build GTN timeline for audit
+     */
+    protected function buildGTNTimeline($gtn)
+    {
+        $timeline = [];
+
+        $timeline[] = [
+            'action' => 'Created',
+            'timestamp' => $gtn->created_at,
+            'user' => $gtn->createdBy,
+            'status' => 'Draft',
+        ];
+
+        if ($gtn->confirmed_at) {
+            $timeline[] = [
+                'action' => 'Confirmed',
+                'timestamp' => $gtn->confirmed_at,
+                'user' => $gtn->approvedBy,
+                'status' => 'Confirmed',
+                'note' => 'Stock deducted from sender branch',
+            ];
+        }
+
+        if ($gtn->received_at) {
+            $timeline[] = [
+                'action' => 'Received',
+                'timestamp' => $gtn->received_at,
+                'user' => $gtn->receivedBy,
+                'status' => 'Received',
+            ];
+        }
+
+        if ($gtn->verified_at) {
+            $timeline[] = [
+                'action' => 'Verified',
+                'timestamp' => $gtn->verified_at,
+                'user' => $gtn->verifiedBy,
+                'status' => 'Verified',
+            ];
+        }
+
+        if ($gtn->accepted_at) {
+            $timeline[] = [
+                'action' => 'Accepted',
+                'timestamp' => $gtn->accepted_at,
+                'user' => $gtn->verifiedBy,
+                'status' => ucfirst($gtn->receiver_status),
+                'note' => 'Stock added to receiver branch',
+            ];
+        }
+
+        if ($gtn->rejected_at) {
+            $timeline[] = [
+                'action' => 'Rejected',
+                'timestamp' => $gtn->rejected_at,
+                'user' => $gtn->rejectedBy,
+                'status' => 'Rejected',
+                'note' => $gtn->rejection_reason,
+            ];
+        }
+
+        return collect($timeline)->sortBy('timestamp');
+    }
+
+    /**
+     * Generate unique GTN number
+     */
+    protected function generateGTNNumber()
+    {
+        $user = Auth::user();
+        $orgId = $user ? $user->organization_id : null;
+
+        if (!$orgId) {
+            throw new Exception('Organization ID not found');
+        }
+
+        $datePrefix = now()->format('Ymd');
+
+        $lastGtn = GoodsTransferNote::where('organization_id', $orgId)
+                                   ->where('gtn_number', 'like', "GTN-{$datePrefix}-%")
+                                   ->orderByDesc('gtn_id')
+                                   ->first();
+
+        $nextSeq = 1;
+        if ($lastGtn && preg_match('/GTN-\d{8}-(\d{3})/', $lastGtn->gtn_number, $matches)) {
+            $nextSeq = intval($matches[1]) + 1;
+        }
+
+        return 'GTN-' . $datePrefix . '-' . str_pad($nextSeq, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Backward compatibility methods for existing functionality
      */
     public function canChangeStatus(GoodsTransferNote $gtn, string $newStatus): bool
     {
@@ -170,183 +532,11 @@ class GTNService
         return in_array($newStatus, $validStatuses);
     }
 
-    /**
-     * Check if items have sufficient stock for transfer
-     */
-    public function validateItemStock(array $items, int $fromBranchId): array
+    public function processStockTransfer(GoodsTransferNote $gtn): void
     {
-        $errors = [];
-
-        foreach ($items as $index => $item) {
-            if (!isset($item['item_id']) || !isset($item['transfer_quantity'])) {
-                continue;
-            }
-
-            $availableStock = ItemTransaction::stockOnHand($item['item_id'], $fromBranchId);
-            $requestedQuantity = (float) $item['transfer_quantity'];
-            $maxAllowed = $availableStock * 1; // ONLY 100% of available stock change if margin of error is needed
-
-            // if ($requestedQuantity > $maxAllowed) {
-            //     $errors["items.{$index}.transfer_quantity"] =
-            //         "Transfer quantity ({$requestedQuantity}) exceeds available stock ({$availableStock}) plus 10% margin ({$maxAllowed}).";
-            // }
-
-            if ($requestedQuantity > $maxAllowed) {
-                $errors["items.{$index}.transfer_quantity"] =
-                    "Transfer quantity ({$requestedQuantity}) exceeds available stock ({$availableStock}) .";
-            }
+        // Use the new workflow methods
+        if ($gtn->isDraft()) {
+            $this->confirmGTN($gtn->gtn_id);
         }
-
-        return $errors;
-    }
-
-    /**
-     * Create a new GTN
-     */
-    public function createGTN(array $data): GoodsTransferNote
-    {
-        return DB::transaction(function () use ($data) {
-            $user = Auth::user();
-            if (!$user || !$user->organization_id) {
-                throw new \Exception('Unauthorized access - organization not set');
-            }
-
-            $organizationId = $user->organization_id;
-
-            // Get or create employee record
-            $employee = $this->employeeRepository->findOrCreateForUser($user, $data['from_branch_id']);
-
-            $gtn = GoodsTransferNote::create([
-                'gtn_number' => $data['gtn_number'],
-                'from_branch_id' => $data['from_branch_id'],
-                'to_branch_id' => $data['to_branch_id'],
-                'created_by' => $employee->id,
-                'organization_id' => $organizationId,
-                'transfer_date' => $data['transfer_date'],
-                'status' => 'Pending',
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            $this->createGTNItems($gtn, $data['items']);
-
-            Log::info('GTN created', ['gtn_id' => $gtn->gtn_id, 'user_id' => $user->id]);
-
-            return $gtn;
-        });
-    }
-
-    /**
-     * Update an existing GTN
-     */
-    public function updateGTN(int $gtnId, array $data): GoodsTransferNote
-    {
-        return DB::transaction(function () use ($gtnId, $data) {
-            $admin = Auth::user();
-
-            if (!$admin || !$admin->organization_id) {
-                throw new \Exception('Unauthorized access - organization not set');
-            }
-
-            $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
-                ->findOrFail($gtnId);
-
-            if ($gtn->status !== 'Pending') {
-                throw new \Exception('Only pending GTNs can be updated.');
-            }
-
-            $gtn->update([
-                'gtn_number' => $data['gtn_number'],
-                'from_branch_id' => $data['from_branch_id'],
-                'to_branch_id' => $data['to_branch_id'],
-                'transfer_date' => $data['transfer_date'],
-                'notes' => $data['notes'] ?? null,
-            ]);
-
-            $gtn->items()->delete();
-            $this->createGTNItems($gtn, $data['items']);
-
-            Log::info('GTN updated', ['gtn_id' => $gtn->gtn_id, 'user_id' => $admin->id]);
-
-            return $gtn;
-        });
-    }
-
-    /**
-     * Create GTN items
-     */
-    private function createGTNItems(GoodsTransferNote $gtn, array $items): void
-    {
-        foreach ($items as $item) {
-            $itemModel = ItemMaster::findOrFail($item['item_id']);
-
-            GoodsTransferItem::create([
-                'gtn_id' => $gtn->gtn_id,
-                'item_id' => $itemModel->id,
-                'item_code' => $itemModel->item_code,
-                'item_name' => $itemModel->name,
-                'batch_no' => $item['batch_no'] ?? null,
-                'expiry_date' => $item['expiry_date'] ?? null,
-                'transfer_quantity' => $item['transfer_quantity'],
-                'transfer_price' => 0,
-                'line_total' => 0,
-                'notes' => $item['notes'] ?? null,
-            ]);
-        }
-    }
-
-    /**
-     * Search items with stock for autocomplete
-     */
-    public function searchItemsWithStock(int $branchId, int $organizationId, string $search = ''): array
-    {
-        $query = ItemMaster::where('organization_id', $organizationId)
-            ->where('is_active', true);
-
-        if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ILIKE', "%{$search}%")
-                  ->orWhere('item_code', 'ILIKE', "%{$search}%");
-            });
-        }
-
-        $items = $query->limit(20)
-            ->get()
-            ->map(function ($item) use ($branchId) {
-                $stock = ItemTransaction::stockOnHand($item->id, $branchId);
-                return [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    'item_code' => $item->item_code,
-                    'unit_of_measurement' => $item->unit_of_measurement,
-                    'stock_on_hand' => $stock,
-                    'max_transfer' => $stock * 1.1,
-                    'display_text' => "{$item->name} ({$item->item_code}) - Stock: {$stock}"
-                ];
-            })
-            ->filter(function ($item) {
-                return $item['stock_on_hand'] > 0;
-            })
-            ->values()
-            ->toArray();
-
-        return $items;
-    }
-
-    /**
-     * Get stock for a specific item and branch
-     */
-    public function getItemStock(int $itemId, int $branchId, int $organizationId): float
-    {
-        // Verify item belongs to organization
-        $item = ItemMaster::where('id', $itemId)
-            ->where('organization_id', $organizationId)
-            ->firstOrFail();
-
-        // Verify branch belongs to organization
-        $branch = Branch::where('id', $branchId)
-            ->where('organization_id', $organizationId)
-            ->firstOrFail();
-
-        return ItemTransaction::stockOnHand($itemId, $branchId);
     }
 }
