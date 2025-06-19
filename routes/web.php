@@ -339,7 +339,7 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::resource('subscriptions', \App\Http\Controllers\SubscriptionController::class)->only(['edit', 'update']);
     });
 
-Route::middleware(['auth:admin', 'subscription.expiry.alert'])->group(function () {
+Route::middleware(['auth:admin'])->group(function () {
     // Organizations CRUD
     Route::resource('organizations', OrganizationController::class)->except(['show']);
     Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
@@ -407,6 +407,7 @@ Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::post('/users/{user}/assign-role', [UserController::class, 'assignRole'])->name('users.assign-role.store');
         Route::get('admin/organizations/{organization}/users/create', [UserController::class, 'create'])->name('admin.users.create');
         Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('admin.branch.users.create');
+        Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 });
 
 
