@@ -24,7 +24,6 @@ class User extends Authenticatable
         'email',
         'phone_number',
         'password',
-        'user_type',
         'is_registered',
         'organization_id', 
         'branch_id', 
@@ -57,14 +56,14 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
         ];
     }
-
-    public function isAdmin()
-    {
-        return $this->user_type === 'admin';
-    }
     public function organization()
     {
         return $this->belongsTo(Organization::class, 'organization_id');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(\App\Models\Branch::class, 'branch_id');
     }
 
     public function hasBranchPermission($branchId, $permission)
@@ -92,7 +91,7 @@ class User extends Authenticatable
         return $this->hasRole('branch_admin');
     }
 
-    public function hasRole($roleName)
+    public function hasCustomRole($roleName)
     {
         return $this->role && $this->role->name === $roleName;
     }
@@ -109,5 +108,15 @@ class User extends Authenticatable
             return $this->role->permissions->pluck('name')->contains($permission);
         }
         return false;
+    }
+
+    public function userRole()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+    
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }
