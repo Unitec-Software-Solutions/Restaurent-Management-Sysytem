@@ -30,19 +30,19 @@
                             'icon_type' => 'svg',
                         ],
                         [
-                            'title' => 'Inventory Management',
+                            'title' => 'Inventory',
                             'route' => 'admin.inventory.index',
                             'icon' => 'package',
                             'icon_type' => 'svg',
                         ],
                         [
-                            'title' => 'Reservation Management',
+                            'title' => 'Reservation',
                             'route' => 'admin.reservations.index',
                             'icon' => 'calendar-clock',
                             'icon_type' => 'svg',
                         ],
                         [
-                            'title' => 'Order Management',
+                            'title' => 'Orders',
                             'route' => 'admin.orders.index',
                             'icon' => 'shopping-cart',
                             'icon_type' => 'svg',
@@ -54,10 +54,10 @@
                             'icon_type' => 'svg',
                         ],
                         [
-                            'title' => 'Customer Management',
+                            'title' => 'Customers',
                             'route' => 'admin.customers.index',
-                            'icon' => 'users',
-                            'icon_type' => 'svg',
+                            'icon' => 'fa-solid fa-user',
+                            'icon_type' => 'fa',
                         ],
                         [
                             'title' => 'Suppliers',
@@ -65,7 +65,12 @@
                             'icon' => 'fas fa-truck',
                             'icon_type' => 'fa',
                         ],
-                        ['title' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'icon_type' => 'svg'],
+                        [
+                            'title' => 'Users',
+                            'route' => 'admin.users.index',
+                            'icon' => 'fa-solid fa-users',
+                            'icon_type' => 'fa',
+                        ],
                     ];
 
                     // Organizations nav with sub-item for activation
