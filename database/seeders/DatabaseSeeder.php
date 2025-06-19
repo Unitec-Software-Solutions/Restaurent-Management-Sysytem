@@ -2,8 +2,32 @@
 
 namespace Database\Seeders;
 
+use App\Models\Organization;
+use App\Models\Branch;
+use App\Models\Admin;
+use App\Models\CustomRole;
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Employee;
+use App\Models\MenuCategory;
+use App\Models\MenuItem;
+use App\Models\Table;
+use App\Models\Reservation;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\GoodsTransferNote;
+use App\Models\GoodsTransferItem;
+use App\Models\GrnMaster;
+use App\Models\GrnItem;
+use App\Models\ItemMaster;
+use App\Models\CustomerAuthenticationMethod;
+use App\Models\CustomerPreference;
+use App\Models\AuditLog;
+use App\Models\NotificationProvider;
+use App\Models\Permission;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -14,30 +38,41 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
-
-        $this->call([
-            SubscriptionPlanSeeder::class, // <-- Move this to the top
-            OrganizationSeeder::class,
-            BranchSeeder::class,
-            // TableSeeder::class,
-            LoginSeeder::class,
-            // SupplierSeeder::class,
-            // ItemCategorySeeder::class,
-            // ItemMasterSeeder::class,
-            AdminSeeder::class,
-            // ReservationSeeder::class,
-            // PurchaseOrderSeeder::class,
-            // GRNSeeder::class,
-            // SupplierPaymentSeeder::class,
-            // ItemTransactionSeeder::class,
-            //EmployeeSeeder::class,
-            // ModulePermissionSeeder::class,
-            SuperAdminSeeder::class,
-            ModulesTableSeeder::class,
-            RoleSeeder::class,
-            UserSeeder::class,
-
-        ]);
+        // Sample data seeding using factories
+        Organization::factory(5)->create()->each(function ($organization) {
+            $branches = Branch::factory(3)->create(['organization_id' => $organization->id]);
+            Admin::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            CustomRole::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            Employee::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            $menuCategories = MenuCategory::factory(3)->create();
+            MenuItem::factory(10)->create(['menu_category_id' => $menuCategories->random()->id]);
+            Table::factory(5)->create(['branch_id' => $branches->random()->id]);
+            User::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            Reservation::factory(5)->create(['branch_id' => $branches->random()->id]);
+            $orders = Order::factory(5)->create(['branch_id' => $branches->random()->id]);
+            $orders->each(function ($order) {
+                OrderItem::factory(3)->create(['order_id' => $order->id]);
+            });
+            $gtns = GoodsTransferNote::factory(2)->create(['organization_id' => $organization->id, 'from_branch_id' => $branches->random()->id, 'to_branch_id' => $branches->random()->id]);
+            $gtns->each(function ($gtn) {
+                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->id]);
+            });
+            $grns = GrnMaster::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            $grns->each(function ($grn) {
+                GrnItem::factory(3)->create(['grn_id' => $grn->id]);
+            });
+            ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            CustomerAuthenticationMethod::factory(2)->create();
+            CustomerPreference::factory(2)->create();
+            AuditLog::factory(2)->create();
+            NotificationProvider::factory(1)->create();
+            Permission::factory(2)->create();
+            $pos = PurchaseOrder::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            $pos->each(function ($po) {
+                PurchaseOrderItem::factory(3)->create(['po_id' => $po->id]);
+            });
+            Payment::factory(2)->create();
+            PaymentAllocation::factory(2)->create();
+        });
     }
 }
