@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             // OrganizationSeeder::class,
             // BranchSeeder::class,
             // TableSeeder::class,
-            // LoginSeeder::class,
+            LoginSeeder::class,
             // SupplierSeeder::class,
             // ItemCategorySeeder::class,
             // ItemMasterSeeder::class,
