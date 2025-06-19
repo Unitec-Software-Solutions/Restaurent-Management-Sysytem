@@ -1,9 +1,9 @@
 {{-- filepath: resources/views/orders/payment.blade.php --}}
 @extends('layouts.app')
 @section('content')
-<h2>Payment for Order #{{ $order->id }}</h2>
-<p>Total Amount: {{ $order->total }}</p>
-<form method="POST" action="{{ route('payments.process', $order->id) }}">
+<h2>Payment for Order #{{ $order->id ?? '' }}</h2>
+<p>Total Amount: {{ $order->total ?? '' }}</p>
+<form method="POST" action="{{ route('payments.process', $order->id ?? 0) }}">
     @csrf
     <label>Payment Method:</label>
     <select name="payment_method" required>

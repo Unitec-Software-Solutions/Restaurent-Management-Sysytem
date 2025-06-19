@@ -19,14 +19,14 @@
                     <div class="mt-2 text-gray-600">
                         <p>
                             <span class="font-medium">Customer:</span>
-                            {{ optional($reservation->customer)->name ?? 'Not Provided' }}
+                            {{ optional($reservation?->customer)->name ?? 'Not Provided' }}
                         </p>
                         <p>
                             <span class="font-medium">Table:</span>
-                            {{ optional($reservation->table)->name ?? 'Not Provided' }}
-                            ({{ optional($reservation->table)->capacity ?? 'N/A' }} people)
+                            {{ optional($reservation?->table)->name ?? 'Not Provided' }}
+                            ({{ optional($reservation?->table)->capacity ?? 'N/A' }} people)
                         </p>
-                        <p><span class="font-medium">Time:</span> {{ ($reservation->start_time) }} - {{ ($reservation->end_time) }}</p>
+                        <p><span class="font-medium">Time:</span> {{ $reservation?->start_time ?? '' }} - {{ $reservation?->end_time ?? '' }}</p>
                     </div>
                     @endif
                 </div>

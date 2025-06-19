@@ -23,17 +23,17 @@
         <div class="mb-6">
             <h2 class="text-lg font-semibold mb-2">Reservation Details:</h2>
             @php
-                $reservation = $orders->first()->reservation ?? null;
+                $reservation = $orders->first()?->reservation ?? null;
             @endphp
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <p class="text-gray-600">Customer Name:</p>
-                    <p class="font-medium">{{ $reservation->name ?? 'N/A' }}</p>
+                    <p class="font-medium">{{ $reservation?->name ?? 'N/A' }}</p>
                 </div>
                 <div>
                     <p class="text-gray-600">Scheduled Time:</p>
                     <p class="font-medium">
-                        @if($reservation && $reservation->scheduled_time)
+                        @if($reservation && $reservation?->scheduled_time)
                             {{ $reservation->scheduled_time->format('M j, Y H:i') }}
                         @else
                             Not scheduled
@@ -42,12 +42,12 @@
                 </div>
                 <div>
                     <p class="text-gray-600">Total Orders:</p>
-                    <p class="font-medium">{{ $orders->count() }}</p>
+                    <p class="font-medium">{{ $orders?->count() ?? 0 }}</p>
                 </div>
                 <div>
                     <p class="text-gray-600">Grand Total:</p>
                     <p class="font-medium text-green-600">
-                        LKR  {{ number_format($grandTotals['total'], 2) }}
+                        LKR  {{ number_format($grandTotals['total'] ?? 0, 2) }}
                     </p>
                 </div>
             </div>
@@ -80,14 +80,14 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse($orders as $order)
+                @forelse($orders ?? [] as $order)
                 <tr class="border-t hover:bg-gray-50">
                     <td class="px-4 py-3">{{ $order->id }}</td>
                     <td class="px-4 py-3 text-right">
-                        {{ $order->items->sum('quantity') }}
+                        {{ $order->items?->sum('quantity') ?? 0 }}
                     </td>
                     <td class="px-4 py-3 text-right">
-                        LKR  {{ number_format($order->total, 2) }}
+                        LKR  {{ number_format($order->total ?? 0, 2) }}
                     </td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex justify-center space-x-2">
