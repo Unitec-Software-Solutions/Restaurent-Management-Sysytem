@@ -25,7 +25,8 @@ use App\Http\Controllers\{
     BranchController,
     SubscriptionController,
     UserController,
-    ModuleController
+    ModuleController,
+    GoodsTransferNoteController
 };
 use App\Http\Middleware\SuperAdmin;
 
