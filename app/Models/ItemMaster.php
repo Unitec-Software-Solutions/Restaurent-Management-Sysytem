@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Organizations;
+use App\Models\Organization;
 use App\Models\ItemCategory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -39,7 +39,7 @@ class ItemMaster extends Model
         'buying_price'    => 'decimal:2',
         'selling_price'   => 'decimal:2',
     ];
-    
+
     /**
      * Relationships
      */
@@ -55,7 +55,7 @@ class ItemMaster extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organizations::class, 'organization_id');
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     /**
@@ -76,7 +76,7 @@ class ItemMaster extends Model
 
     /**
      * Accessor Example: Get Image if available in attributes
-     */    
+     */
     public function getImageUrlAttribute()
     {
         if (isset($this->attributes['attributes']['img'])) {

@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
             // TableSeeder::class,
             LoginSeeder::class,
             // SupplierSeeder::class,
-            // ItemCategorySeeder::class,
+            ItemCategorySeeder::class,
             // ItemMasterSeeder::class,
             AdminSeeder::class,
             // ReservationSeeder::class,

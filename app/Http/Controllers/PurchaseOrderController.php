@@ -7,7 +7,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\ItemMaster;
 use App\Models\Branch;
-use App\Models\organizations;
+use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -96,11 +96,11 @@ class PurchaseOrderController extends Controller
         $orgId = $this->getOrganizationId();
 
         $items = ItemMaster::where('organization_id', $orgId)->get();
-        
+
         $branches = Branch::where('organization_id', $orgId)
             ->where('is_active', true)
             ->get();
-        
+
 
         $suppliers = Supplier::where('organization_id', $orgId)
             ->where('is_active', true)
@@ -246,14 +246,14 @@ class PurchaseOrderController extends Controller
         DB::beginTransaction();
         try {
             $purchaseOrder->update([
-                'supplier_id' => $validated['supplier_id'] ?? null,                
+                'supplier_id' => $validated['supplier_id'] ?? null,
                 'expected_delivery_date' => $validated['expected_delivery_date'],
                 'notes' => $validated['notes'] ?? null,
             ]);
 
             // Keep track of existing items to preserve received quantities
             $existingItems = $purchaseOrder->items->keyBy('po_detail_id');
-            
+
             $total = 0;
             $newItems = [];
 
@@ -297,19 +297,19 @@ class PurchaseOrderController extends Controller
                 ->pluck('po_detail_id')
                 ->filter()
                 ->toArray();
-                
+
             $itemsToDelete = $existingItems->keys()->diff($requestItemIds);
             if ($itemsToDelete->isNotEmpty()) {
                 PurchaseOrderItem::whereIn('po_detail_id', $itemsToDelete)->delete();
             }
 
             $purchaseOrder->update(['total_amount' => $total]);
-            
+
             DB::commit();
-            
+
             return redirect()->route('admin.purchase-orders.show', $purchaseOrder)
                 ->with('success', 'Purchase Order updated successfully.');
-                
+
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Failed to update Purchase Order: ' . $e->getMessage());
@@ -330,7 +330,7 @@ class PurchaseOrderController extends Controller
             $purchaseOrder->items()->delete();
             $purchaseOrder->delete();
         });
-        
+
         return redirect()->route('admin.purchase-orders.index')
             ->with('success', 'Purchase Order deleted successfully.');
     }
@@ -346,7 +346,7 @@ class PurchaseOrderController extends Controller
         }
 
         $purchaseOrder->markAsApproved();
-        
+
         return back()->with('success', 'Purchase Order approved successfully.');
     }
 

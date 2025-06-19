@@ -23,25 +23,65 @@
                 @php
                     $admin = auth()->user();
                     $navItems = [
-                        ['title' => 'Dashboard', 'route' => 'admin.dashboard', 'icon' => 'layout-dashboard', 'icon_type' => 'svg'],
-                        ['title' => 'Inventory Management', 'route' => 'admin.inventory.index', 'icon' => 'package', 'icon_type' => 'svg'],
-                        ['title' => 'Reservation Management','route' => 'admin.reservations.index','icon' => 'calendar-clock', 'icon_type' => 'svg'],
-                        ['title' => 'Order Management', 'route' => 'admin.orders.index', 'icon' => 'shopping-cart', 'icon_type' => 'svg'],
-                        ['title' => 'Reports', 'route' => 'admin.reports.index', 'icon' => 'bar-chart-3', 'icon_type' => 'svg'],
-                        ['title' => 'Customer Management', 'route' => 'admin.customers.index', 'icon' => 'users', 'icon_type' => 'svg'],
-                        ['title' => 'Suppliers', 'route' => 'admin.suppliers.index', 'icon' => 'fas fa-truck', 'icon_type' => 'fa'],
-                        ['title' => 'Users', 'route' => 'admin.users.index', 'icon' => 'users', 'icon_type' => 'svg'],
+                        [
+                            'title' => 'Dashboard',
+                            'route' => 'admin.dashboard',
+                            'icon' => 'layout-dashboard',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Inventory',
+                            'route' => 'admin.inventory.index',
+                            'icon' => 'package',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Reservation',
+                            'route' => 'admin.reservations.index',
+                            'icon' => 'calendar-clock',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Orders',
+                            'route' => 'admin.orders.index',
+                            'icon' => 'shopping-cart',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Reports',
+                            'route' => 'admin.reports.index',
+                            'icon' => 'bar-chart-3',
+                            'icon_type' => 'svg',
+                        ],
+                        [
+                            'title' => 'Customers',
+                            'route' => 'admin.customers.index',
+                            'icon' => 'fa-solid fa-user',
+                            'icon_type' => 'fa',
+                        ],
+                        [
+                            'title' => 'Suppliers',
+                            'route' => 'admin.suppliers.index',
+                            'icon' => 'fas fa-truck',
+                            'icon_type' => 'fa',
+                        ],
+                        [
+                            'title' => 'Users',
+                            'route' => 'admin.users.index',
+                            'icon' => 'fa-solid fa-users',
+                            'icon_type' => 'fa',
+                        ],
                     ];
 
                     // Organizations nav with sub-item for activation
                     $organizationsNav = [
                         'title' => 'Organizations',
                         'route' => 'admin.organizations.index',
-                        'icon' => 'building',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-building',
+                        'icon_type' => 'fa',
                         'sub_items' => [],
                     ];
-                    if($admin->is_super_admin) {
+                    if ($admin->is_super_admin) {
                         $organizationsNav['sub_items'][] = [
                             'title' => 'Activate Organization',
                             'route' => 'admin.organizations.activate.form',
@@ -53,8 +93,8 @@
                     // Branches nav with correct route and sub-item for activation
                     $branchesNav = [
                         'title' => 'Branches',
-                        'icon' => 'store',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-store',
+                        'icon_type' => 'fa',
                         'sub_items' => [
                             [
                                 'title' => 'Activate Branch',
@@ -63,12 +103,11 @@
                                 'icon_type' => 'fa',
                             ],
                         ],
-
                     ];
-                    if($admin->is_super_admin) {
+                    if ($admin->is_super_admin) {
                         $branchesNav['route'] = 'admin.branches.global';
                         $branchesNav['route_params'] = [];
-                    } elseif($admin->organization_id) {
+                    } elseif ($admin->organization_id) {
                         $branchesNav['route'] = 'admin.branches.index';
                         $branchesNav['route_params'] = ['organization' => $admin->organization_id];
                     } else {
@@ -79,24 +118,24 @@
                     // Add to nav
                     $navItems[] = $organizationsNav;
                     $navItems[] = $branchesNav;
-                    if($admin->is_super_admin) {
+                    if ($admin->is_super_admin) {
                         $navItems[] = [
                             'title' => 'Subscription Plans',
                             'route' => 'admin.subscription-plans.index',
-                            'icon' => 'credit-card', // or any icon you have
-                            'icon_type' => 'svg',
+                            'icon' => 'fa-solid fa-credit-card',
+                            'icon_type' => 'fa',
                         ];
                         $navItems[] = [
                             'title' => 'Roles & Permissions',
                             'route' => 'admin.roles.index',
-                            'icon' => 'lock',
-                            'icon_type' => 'svg',
+                            'icon' => 'fa-solid fa-lock',
+                            'icon_type' => 'fa',
                         ];
                         $navItems[] = [
                             'title' => 'Modules Management',
                             'route' => 'admin.modules.index',
-                            'icon' => 'settings',
-                            'icon_type' => 'svg',
+                            'icon' => 'fa-solid fa-cogs',
+                            'icon_type' => 'fa',
                         ];
                     }
                 @endphp
@@ -117,16 +156,16 @@
                                 @endif
                                 <span class="font-medium">{{ $item['title'] }}</span>
                             </a>
-                            @if(isset($item['sub_items']) && count($item['sub_items']))
+                            @if (isset($item['sub_items']) && count($item['sub_items']))
                                 <ul class="ml-8 mt-1 space-y-1">
-                                    @foreach($item['sub_items'] as $sub)
+                                    @foreach ($item['sub_items'] as $sub)
                                         <li>
                                             <a href="{{ route($sub['route']) }}"
                                                 class="flex items-center gap-2 px-3 py-1 rounded border transition-colors text-sm
                                                 {{ request()->routeIs($sub['route'])
                                                     ? 'bg-white text-gray-700 border-white'
                                                     : 'bg-transparent text-white border-white hover:bg-white/10' }}">
-                                                @if($sub['icon_type'] === 'svg')
+                                                @if ($sub['icon_type'] === 'svg')
                                                     @includeIf('partials.icons.' . $sub['icon'])
                                                 @else
                                                     <i class="{{ $sub['icon'] }} w-4 text-center"></i>
@@ -143,10 +182,10 @@
 
                 {{-- resources/views/partials/sidebar.blade.php --}}
                 <nav class="mt-6">
-                    @if(auth()->user()->role && auth()->user()->role->modules)
-                        @foreach(auth()->user()->role->modules as $module)
-                            <a href="{{ route($module->name.'.index') }}"
-                               class="block px-4 py-2 text-gray-600 hover:bg-gray-100 {{ request()->routeIs($module->name.'.*') ? 'bg-gray-100' : '' }}">
+                    @if (auth()->user()->role && auth()->user()->role->modules)
+                        @foreach (auth()->user()->role->modules as $module)
+                            <a href="{{ route($module->name . '.index') }}"
+                                class="block px-4 py-2 text-gray-600 hover:bg-gray-100 {{ request()->routeIs($module->name . '.*') ? 'bg-gray-100' : '' }}">
                                 {{ ucfirst(str_replace('_', ' ', $module->name)) }}
                             </a>
                         @endforeach
@@ -209,4 +248,3 @@
         + Add Role
     </a>
 @endcan
-
