@@ -97,11 +97,11 @@ class DatabaseSeeder extends Seeder
             });
             $gtns = GoodsTransferNote::factory(2)->create(['organization_id' => $organization->id, 'from_branch_id' => $branches->random()->id, 'to_branch_id' => $branches->random()->id]);
             $gtns->each(function ($gtn) {
-                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->gtn_id]);
+                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->id]);
             });
             $grns = GrnMaster::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $grns->each(function ($grn) {
-                GrnItem::factory(3)->create(['grn_id' => $grn->grn_id]);
+                GrnItem::factory(3)->create(['grn_id' => $grn->id]);
             });
             ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             CustomerAuthenticationMethod::factory(2)->create();
@@ -110,7 +110,7 @@ class DatabaseSeeder extends Seeder
             Permission::factory(2)->create();
             $pos = PurchaseOrder::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $pos->each(function ($po) {
-                PurchaseOrderItem::factory(3)->create(['po_id' => $po->po_id]);
+                PurchaseOrderItem::factory(3)->create(['po_id' => $po->id]);
             });
             Payment::factory(2)->create();
             PaymentAllocation::factory(2)->create();

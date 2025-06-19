@@ -27,7 +27,7 @@ class PurchaseOrderItemFactory extends Factory
         $unitPrice = $this->faker->randomFloat(2, 1, 1000);
         
         return [
-            'po_id' => PurchaseOrder::factory(),
+            'purchase_order_id' => PurchaseOrder::factory(),
             'inventory_item_id' => InventoryItem::factory(),
             'quantity' => $quantity,
             'received_quantity' => $this->faker->randomFloat(3, 0, $quantity),

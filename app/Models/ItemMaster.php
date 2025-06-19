@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Organization;
+use App\Models\Organizations;
 use App\Models\ItemCategory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
