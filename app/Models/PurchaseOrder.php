@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Branch;
-use App\Models\Organizations;
+use App\Models\Organization;
 use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -73,7 +73,7 @@ class PurchaseOrder extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organizations::class);
+        return $this->belongsTo(Organization::class);
     }
 
     public function user()

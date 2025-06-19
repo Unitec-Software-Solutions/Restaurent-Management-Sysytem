@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Faker\Factory as Faker;
 use Carbon\Carbon;
-use App\Models\Organizations;
+use App\Models\Organization;
 use App\Models\Branch;
 
 class EmployeeSeeder extends Seeder
@@ -97,7 +97,7 @@ class EmployeeSeeder extends Seeder
 
     protected function hasEnoughOrganizations(int $minimum): bool
     {
-        return Organizations::count() >= $minimum;
+        return Organization::count() >= $minimum;
     }
 
     protected function createEmployee($faker, int $orgId, int $branchId, int $empIndex, string $role): array

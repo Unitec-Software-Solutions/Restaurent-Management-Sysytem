@@ -28,6 +28,7 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
+use App\Models\SubscriptionPlan;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -38,8 +39,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Seed subscription plans first
+        $plans = SubscriptionPlan::factory()->count(3)->create([
+            ['name' => 'Basic', 'price' => 0, 'currency' => 'LKR', 'modules' => [], 'description' => 'Basic free plan', 'is_trial' => true, 'trial_period_days' => 30],
+            ['name' => 'Pro', 'price' => 5000, 'currency' => 'LKR', 'modules' => [], 'description' => 'Pro annual plan', 'is_trial' => false, 'trial_period_days' => null],
+            ['name' => 'Legacy', 'price' => 1000, 'currency' => 'LKR', 'modules' => [], 'description' => 'Legacy plan', 'is_trial' => false, 'trial_period_days' => null],
+        ]);
+
         // Sample data seeding using factories
         Organization::factory(5)->create()->each(function ($organization) {
+            if (!$organization->subscription_plan_id || !SubscriptionPlan::find($organization->subscription_plan_id)) {
+                echo "[ERROR] Organization ID {$organization->id} has invalid subscription_plan_id: {$organization->subscription_plan_id}\n";
+            }
             $branches = Branch::factory(3)->create(['organization_id' => $organization->id]);
             Admin::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             CustomRole::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
@@ -63,7 +74,6 @@ class DatabaseSeeder extends Seeder
             });
             ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             CustomerAuthenticationMethod::factory(2)->create();
-            CustomerPreference::factory(2)->create();
             AuditLog::factory(2)->create();
             NotificationProvider::factory(1)->create();
             Permission::factory(2)->create();

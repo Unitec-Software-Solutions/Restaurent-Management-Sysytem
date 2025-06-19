@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ItemCategory;
-use App\Models\Organizations;
+use App\Models\Organization;
 use Illuminate\Database\Seeder;
 
 class ItemCategorySeeder extends Seeder
@@ -13,7 +13,7 @@ class ItemCategorySeeder extends Seeder
      */
     public function run(): void
     {
-        $organizations = Organizations::where('is_active', true)->take(5)->get();
+        $organizations = Organization::where('is_active', true)->take(5)->get();
 
         if ($organizations->isEmpty()) {
             $this->command->error('❌ No active organizations found to seed item categories.');

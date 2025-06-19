@@ -86,7 +86,7 @@ class GoodsTransferNote extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organizations::class, 'organization_id');
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     public function createdBy()

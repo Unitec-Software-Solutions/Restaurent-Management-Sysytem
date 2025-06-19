@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Organization;
+use App\Models\SubscriptionPlan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -12,6 +13,7 @@ class OrganizationFactory extends Factory
 
     public function definition()
     {
+        $plan = SubscriptionPlan::inRandomOrder()->first();
         return [
             'name' => $this->faker->company(),
             'email' => $this->faker->unique()->companyEmail(),
@@ -22,7 +24,7 @@ class OrganizationFactory extends Factory
             'contact_person_designation' => $this->faker->jobTitle(),
             'contact_person_phone' => $this->faker->phoneNumber(),
             'is_active' => $this->faker->boolean(),
-            'subscription_plan_id' => $this->faker->randomNumber(),
+            'subscription_plan_id' => $plan ? $plan->id : null,
             'discount_percentage' => $this->faker->randomFloat(2, 0, 100),
         ];
     }
