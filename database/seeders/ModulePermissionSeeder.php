@@ -24,7 +24,7 @@ class ModulePermissionSeeder extends Seeder
             foreach ($actions as $action) {
                 $permission = Permission::firstOrCreate([
                     'name' => "{$action}_{$moduleName}",
-                    'guard_name' => 'web'
+                    'guard_name' => 'admin' 
                 ]);
                 $module->permissions()->attach($permission);
             }
