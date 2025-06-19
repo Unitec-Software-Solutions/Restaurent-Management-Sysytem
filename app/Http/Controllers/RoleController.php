@@ -120,7 +120,7 @@ class RoleController extends Controller
         $user = User::findOrFail($userId);
         $user->roles()->sync([$validated['role_id']]);
 
-        return redirect()->route('users.show', $userId)->with('success', 'Role assigned successfully.');
+        return redirect()->route('admin.users.show', $userId)->with('success', 'Role assigned successfully.');
     }
 
     public function assignModules(Request $request, Organization $org, Role $role)
@@ -140,21 +140,7 @@ class RoleController extends Controller
             'message' => 'Permissions updated',
             'permissions' => $role->permissions
         ]);
-    }
-    public function showAssignModulesForm(Role $role)
-    {
-        $this->authorize('assign_modules', $role);
-        $modules = Module::with('permissions')->get();
-        return view('admin.roles.assign-modules', compact('role', 'modules'));
-    }
-    public function editPermissions(Role $role)
-    {
-        $modules = Module::with('permissions')->get();
-        return view('admin.roles.permissions', compact('role', 'modules'));
-    }
-
-    
-
+    }     
     public function updatePermissions(Request $request, \App\Models\Role $role)
     {
         $role->syncPermissions($request->input('permissions', []));
@@ -168,6 +154,9 @@ class RoleController extends Controller
             ->where('is_active', true)
             ->get();
 
-        return view('admin.roles.edit', compact('role', 'modules', 'branches'));
+        // Add this line to get organizations
+        $organizations = \App\Models\Organization::all();
+
+        return view('admin.roles.edit', compact('role', 'modules', 'branches', 'organizations'));
     }
 }
