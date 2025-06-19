@@ -17,8 +17,9 @@ class DatabaseSeeder extends Seeder
         DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
 
         $this->call([
-            // OrganizationSeeder::class,
-            // BranchSeeder::class,
+            SubscriptionPlanSeeder::class, // <-- Move this to the top
+            OrganizationSeeder::class,
+            BranchSeeder::class,
             // TableSeeder::class,
             LoginSeeder::class,
             // SupplierSeeder::class,
@@ -34,6 +35,7 @@ class DatabaseSeeder extends Seeder
             // ModulePermissionSeeder::class,
             SuperAdminSeeder::class,
             ModulesTableSeeder::class,
+            RoleSeeder::class,
 
         ]);
     }
