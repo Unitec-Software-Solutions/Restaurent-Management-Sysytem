@@ -24,7 +24,7 @@ class OrganizationFactory extends Factory
             'contact_person_designation' => $this->faker->jobTitle(),
             'contact_person_phone' => $this->faker->phoneNumber(),
             'is_active' => $this->faker->boolean(),
-            'subscription_plan_id' => $plan ? $plan->id : null,
+            'subscription_plan_id' => $plan ? $plan->id : null, // nullable if no plans
             'discount_percentage' => $this->faker->randomFloat(2, 0, 100),
         ];
     }

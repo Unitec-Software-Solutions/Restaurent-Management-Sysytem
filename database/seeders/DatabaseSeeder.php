@@ -40,15 +40,20 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Seed subscription plans first
-        $plans = SubscriptionPlan::factory()->count(3)->create([
+        $plans = \App\Models\SubscriptionPlan::factory()->count(3)->create([
             ['name' => 'Basic', 'price' => 0, 'currency' => 'LKR', 'modules' => [], 'description' => 'Basic free plan', 'is_trial' => true, 'trial_period_days' => 30],
             ['name' => 'Pro', 'price' => 5000, 'currency' => 'LKR', 'modules' => [], 'description' => 'Pro annual plan', 'is_trial' => false, 'trial_period_days' => null],
             ['name' => 'Legacy', 'price' => 1000, 'currency' => 'LKR', 'modules' => [], 'description' => 'Legacy plan', 'is_trial' => false, 'trial_period_days' => null],
         ]);
 
+        // Get all plan IDs for use in OrganizationFactory
+        $planIds = $plans->pluck('id')->toArray();
+
         // Sample data seeding using factories
-        Organization::factory(5)->create()->each(function ($organization) {
-            if (!$organization->subscription_plan_id || !SubscriptionPlan::find($organization->subscription_plan_id)) {
+        Organization::factory(5)->create([
+            'subscription_plan_id' => $planIds[array_rand($planIds)]
+        ])->each(function ($organization) use ($planIds) {
+            if (!$organization->subscription_plan_id || !in_array($organization->subscription_plan_id, $planIds)) {
                 echo "[ERROR] Organization ID {$organization->id} has invalid subscription_plan_id: {$organization->subscription_plan_id}\n";
             }
             $branches = Branch::factory(3)->create(['organization_id' => $organization->id]);
