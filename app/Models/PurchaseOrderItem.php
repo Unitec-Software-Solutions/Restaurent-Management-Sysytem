@@ -43,7 +43,6 @@ class PurchaseOrderItem extends Model
         'buying_price',
         'previous_buying_price', // Added
         'quantity',
-        'quantity_received',
         'line_total',
         'po_status'
     ];
@@ -56,7 +55,6 @@ class PurchaseOrderItem extends Model
     protected $casts = [
         'buying_price' => 'decimal:4',
         'quantity' => 'decimal:2',
-        'quantity_received' => 'decimal:2',
         'line_total' => 'decimal:2',
         'previous_buying_price' => 'decimal:4',
     ];

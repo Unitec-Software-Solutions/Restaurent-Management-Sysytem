@@ -27,8 +27,7 @@ class OrderFactory extends Factory
                 Order::TYPE_DINEIN_INCALL,
                 Order::TYPE_DINEIN_WALKIN_SCHEDULED,
                 Order::TYPE_DINEIN_WALKIN_DEMAND,
-            ]),
-            'status' => $this->faker->randomElement([
+            ]),            'status' => $this->faker->randomElement([
                 Order::STATUS_ACTIVE,
                 Order::STATUS_SUBMITTED,
                 Order::STATUS_PREPARING,
@@ -36,7 +35,11 @@ class OrderFactory extends Factory
                 Order::STATUS_COMPLETED,
                 Order::STATUS_CANCELLED,
             ]),
-            'total_amount' => $this->faker->randomFloat(2, 10, 500),
+            'subtotal' => $this->faker->randomFloat(2, 10, 400),
+            'tax' => $this->faker->randomFloat(2, 0, 50),
+            'service_charge' => $this->faker->randomFloat(2, 0, 30),
+            'discount' => $this->faker->randomFloat(2, 0, 50),
+            'total' => $this->faker->randomFloat(2, 10, 500),
             'notes' => $this->faker->sentence(),
         ];
     }

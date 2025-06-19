@@ -7,14 +7,11 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PermissionFactory extends Factory
 {
-    protected $model = Permission::class;
-
-    public function definition()
+    protected $model = Permission::class;    public function definition()
     {
         return [
-            'name' => $this->faker->word(),
-            'description' => $this->faker->sentence(),
-            'module' => $this->faker->word(),
+            'name' => $this->faker->unique()->word(),
+            'guard_name' => 'web',
         ];
     }
 }

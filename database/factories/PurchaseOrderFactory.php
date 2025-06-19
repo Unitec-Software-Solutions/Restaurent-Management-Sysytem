@@ -6,7 +6,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\Supplier;
-use App\Models\Admin;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PurchaseOrderFactory extends Factory
@@ -17,9 +17,8 @@ class PurchaseOrderFactory extends Factory
     {
         return [
             'branch_id' => Branch::factory(),
-            'organization_id' => Organization::factory(),
-            'supplier_id' => $this->faker->randomNumber(),
-            'user_id' => Admin::factory(),
+            'organization_id' => Organization::factory(),            'supplier_id' => Supplier::factory(),
+            'user_id' => User::factory(),
             'po_number' => $this->faker->unique()->numerify('PO####'),
             'order_date' => $this->faker->date(),
             'expected_delivery_date' => $this->faker->date(),

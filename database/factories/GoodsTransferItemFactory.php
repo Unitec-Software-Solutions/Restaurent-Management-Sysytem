@@ -4,6 +4,8 @@ namespace Database\Factories;
 
 use App\Models\GoodsTransferItem;
 use App\Models\GoodsTransferNote;
+use App\Models\Employee;
+use App\Models\ItemMaster;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class GoodsTransferItemFactory extends Factory
@@ -14,7 +16,7 @@ class GoodsTransferItemFactory extends Factory
     {
         return [
             'gtn_id' => GoodsTransferNote::factory(),
-            'item_id' => $this->faker->randomNumber(),
+            'item_id' => ItemMaster::factory(),
             'item_code' => $this->faker->bothify('ITEM-####'),
             'item_name' => $this->faker->word(),
             'batch_no' => $this->faker->bothify('BATCH-####'),
@@ -30,7 +32,7 @@ class GoodsTransferItemFactory extends Factory
             'item_rejection_reason' => $this->faker->optional()->sentence(),
             'item_status' => $this->faker->randomElement(['pending','accepted','rejected']),
             'quality_notes' => $this->faker->optional()->sentence(),
-            'inspected_by' => $this->faker->name(),
+            'inspected_by' => Employee::factory(),
             'inspected_at' => $this->faker->optional()->dateTime(),
         ];
     }

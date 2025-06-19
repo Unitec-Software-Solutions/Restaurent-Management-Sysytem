@@ -21,7 +21,7 @@ class MenuItemFactory extends Factory
             'is_available' => $this->faker->boolean(),
             'requires_preparation' => $this->faker->boolean(),
             'preparation_time' => $this->faker->numberBetween(5, 60),
-            'station' => $this->faker->word(),
+            'station' => $this->faker->randomElement(['kitchen', 'bar']),
             'is_vegetarian' => $this->faker->boolean(),
             'contains_alcohol' => $this->faker->boolean(),
             'allergens' => $this->faker->randomElements(['nuts','gluten','dairy','soy','eggs'], $this->faker->numberBetween(0,3)),

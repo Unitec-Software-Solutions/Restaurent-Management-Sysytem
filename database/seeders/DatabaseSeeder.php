@@ -88,29 +88,44 @@ class DatabaseSeeder extends Seeder
             Employee::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $menuCategories = MenuCategory::factory(3)->create();
             MenuItem::factory(10)->create(['menu_category_id' => $menuCategories->random()->id]);
-            Table::factory(5)->create(['branch_id' => $branches->random()->id]);
+            // Create tables with unique numbers per branch
+            $branches->each(function ($branch, $index) {
+                for ($tableNum = 1; $tableNum <= 5; $tableNum++) {
+                    Table::factory()->create([
+                        'branch_id' => $branch->id,
+                        'number' => $tableNum
+                    ]);
+                }
+            });
             User::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             Reservation::factory(5)->create(['branch_id' => $branches->random()->id]);
+            
+            // Create ItemMaster records first
+            $itemMasters = ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+            
             $orders = Order::factory(5)->create(['branch_id' => $branches->random()->id]);
-            $orders->each(function ($order) {
-                OrderItem::factory(3)->create(['order_id' => $order->id]);
+            $orders->each(function ($order) use ($itemMasters) {
+                OrderItem::factory(3)->create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $itemMasters->random()->id,
+                    'inventory_item_id' => $itemMasters->random()->id
+                ]);
             });
             $gtns = GoodsTransferNote::factory(2)->create(['organization_id' => $organization->id, 'from_branch_id' => $branches->random()->id, 'to_branch_id' => $branches->random()->id]);
             $gtns->each(function ($gtn) {
-                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->id]);
+                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->gtn_id]);
             });
             $grns = GrnMaster::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $grns->each(function ($grn) {
-                GrnItem::factory(3)->create(['grn_id' => $grn->id]);
+                GrnItem::factory(3)->create(['grn_id' => $grn->grn_id]);
             });
-            ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            CustomerAuthenticationMethod::factory(2)->create();
-            AuditLog::factory(2)->create();
-            NotificationProvider::factory(1)->create();
+            // CustomerAuthenticationMethod::factory(2)->create(); // Table doesn't exist
+            // AuditLog::factory(2)->create(); // Table doesn't exist
+            // NotificationProvider::factory(1)->create(); // Table doesn't exist
             Permission::factory(2)->create();
             $pos = PurchaseOrder::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $pos->each(function ($po) {
-                PurchaseOrderItem::factory(3)->create(['po_id' => $po->id]);
+                PurchaseOrderItem::factory(3)->create(['po_id' => $po->po_id]);
             });
             Payment::factory(2)->create();
             PaymentAllocation::factory(2)->create();

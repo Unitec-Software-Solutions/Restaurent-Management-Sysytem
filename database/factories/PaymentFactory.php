@@ -7,9 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class PaymentFactory extends Factory
 {
-    protected $model = Payment::class;
-
-    public function definition()
+    protected $model = Payment::class;    public function definition()
     {
         return [
             'payable_type' => $this->faker->randomElement(['App\\Models\\Order','App\\Models\\Reservation']),
@@ -18,7 +16,6 @@ class PaymentFactory extends Factory
             'payment_method' => $this->faker->randomElement(['cash','card','bank']),
             'status' => $this->faker->randomElement(['pending','completed','failed']),
             'payment_reference' => $this->faker->uuid(),
-            'is_active' => $this->faker->boolean(),
             'notes' => $this->faker->optional()->sentence(),
         ];
     }

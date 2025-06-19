@@ -6,7 +6,8 @@ use App\Models\GrnMaster;
 use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\Supplier;
-use App\Models\Admin;
+use App\Models\PurchaseOrder;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class GrnMasterFactory extends Factory
@@ -16,19 +17,18 @@ class GrnMasterFactory extends Factory
     public function definition()
     {
         return [
-            'grn_number' => $this->faker->unique()->numerify('GRN####'),
-            'po_id' => $this->faker->randomNumber(),
+            'grn_number' => $this->faker->unique()->numerify('GRN####'),            'po_id' => PurchaseOrder::factory(),
             'branch_id' => Branch::factory(),
             'organization_id' => Organization::factory(),
-            'supplier_id' => $this->faker->randomNumber(),
-            'received_by_user_id' => Admin::factory(),
+            'supplier_id' => Supplier::factory(),
+            'received_by_user_id' => User::factory(),
             'received_date' => $this->faker->date(),
             'delivery_note_number' => $this->faker->bothify('DN-####'),
             'invoice_number' => $this->faker->bothify('INV-####'),
             'notes' => $this->faker->optional()->sentence(),
             'status' => $this->faker->randomElement(['pending','approved','rejected','completed']),
             'is_active' => $this->faker->boolean(),
-            'created_by' => Admin::factory(),
+            'created_by' => User::factory(),
             'total_amount' => $this->faker->randomFloat(2, 10, 10000),
             'grand_discount' => $this->faker->randomFloat(2, 0, 1000),
         ];
