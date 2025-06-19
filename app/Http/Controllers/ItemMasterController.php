@@ -26,9 +26,10 @@ class ItemMasterController extends Controller
         $items = ItemMaster::with('category')
             ->where('organization_id', $orgId)
             ->when(request('search'), function ($query) {
-                return $query->where(function ($q) {
-                    $q->where('name', 'like', '%' . request('search') . '%')
-                        ->orWhere('item_code', 'like', '%' . request('search') . '%');
+                $search = strtolower(request('search'));
+                $query->where(function ($q) use ($search) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ['%' . $search . '%'])
+                        ->orWhereRaw('LOWER(item_code) LIKE ?', ['%' . $search . '%']);
                 });
             })
             ->when(request('category'), function ($query) {
@@ -215,7 +216,7 @@ class ItemMasterController extends Controller
             ->take(10)
             ->get();
 
-       
+
 
         return view('admin.inventory.items.added', compact(
             'items',

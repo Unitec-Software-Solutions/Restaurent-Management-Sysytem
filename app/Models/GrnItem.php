@@ -21,30 +21,37 @@ class GrnItem extends Model
         'ordered_quantity',
         'received_quantity',
         'accepted_quantity',
+        'free_received_quantity',
+        'total_to_stock',
         'rejected_quantity',
         'buying_price',
         'line_total',
         'manufacturing_date',
         'expiry_date',
         'rejection_reason',
+        'discount_received',
     ];
 
     protected $casts = [
         'ordered_quantity' => 'decimal:2',
         'received_quantity' => 'decimal:2',
         'accepted_quantity' => 'decimal:2',
+        'free_received_quantity' => 'decimal:2',
+        'total_to_stock' => 'decimal:2',
         'rejected_quantity' => 'decimal:2',
         'buying_price' => 'decimal:4',
         'line_total' => 'decimal:2',
         'manufacturing_date' => 'date',
-        'expiry_date' => 'date'
+        'expiry_date' => 'date',
+        'discount_received' => 'decimal:2',
     ];
 
     protected $appends = [
         'is_complete',
         'is_partial',
         'remaining_quantity',
-        'days_until_expiry'
+        'days_until_expiry',
+        'total_to_stock',
     ];
 
     public function grn()
@@ -117,9 +124,9 @@ class GrnItem extends Model
     public function getExpiryStatusAttribute()
     {
         if (!$this->expiry_date) return 'N/A';
-        
+
         $days = $this->days_until_expiry;
-        
+
         if ($days < 0) return 'Expired';
         if ($days < 30) return 'Expiring Soon';
         return 'Good';
@@ -127,9 +134,21 @@ class GrnItem extends Model
 
     public function calculateLineTotal()
     {
-        $this->line_total = $this->accepted_quantity * $this->buying_price;
+        $baseAmount = $this->accepted_quantity * $this->buying_price;
+        $discountAmount = $baseAmount * (($this->discount_received ?? 0) / 100);
+        $this->line_total = $baseAmount - $discountAmount;
         $this->save();
         return $this;
+    }
+
+    public function getLineTotalBeforeDiscountAttribute()
+    {
+        return $this->accepted_quantity * $this->buying_price;
+    }
+
+    public function getLineDiscountAmountAttribute()
+    {
+        return $this->line_total_before_discount * (($this->discount_received ?? 0) / 100);
     }
 
     public function acceptQuantity($quantity, $updateGrnTotal = true)
@@ -137,11 +156,11 @@ class GrnItem extends Model
         $this->accepted_quantity = $quantity;
         $this->rejected_quantity = $this->received_quantity - $quantity;
         $this->calculateLineTotal();
-        
+
         if ($updateGrnTotal) {
             $this->grn->recalculateTotal();
         }
-        
+
         return $this;
     }
 
@@ -152,7 +171,12 @@ class GrnItem extends Model
         $this->rejection_reason = $reason;
         $this->calculateLineTotal();
         $this->grn->recalculateTotal();
-        
+
         return $this;
+    }
+
+    public function getTotalToStockAttribute()
+    {
+        return (float) $this->accepted_quantity + (float) $this->free_received_quantity;
     }
 }

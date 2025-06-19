@@ -116,7 +116,7 @@
             </div>
 
             <!-- Recent Activities -->
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-2">
+            {{-- <div class="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-2">
                 <!-- Purchase Orders Tab -->
                 <div x-show="activeTab === 'purchaseOrders'">
                     <div class="p-6 border-b flex justify-between items-center">
@@ -195,7 +195,7 @@
                         @endforelse
                     </div>
                 </div>
-            </div>
+            </div> --}}
         </div>
     </div>
 </div>

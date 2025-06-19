@@ -45,7 +45,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <!-- Payment Number -->
                     <div>
-                        <label for="payment_number" class="block text-sm font-medium text-gray-700 mb-1">Payment Number</label>
+                        <label for="payment_number" class="block text-sm font-medium text-gray-700 mb-1">Payment
+                            Number</label>
                         <input type="text" id="payment_number" name="payment_number"
                             value="PAY-{{ strtoupper(uniqid()) }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100"
                             readonly>
@@ -396,10 +397,14 @@
 
                 if (this.value) {
                     // Show supplier details
-                    document.getElementById('supplierContact').textContent = selectedOption.getAttribute('data-contact') || '-';
-                    document.getElementById('supplierPhone').textContent = selectedOption.getAttribute('data-phone') || '-';
-                    document.getElementById('supplierEmail').textContent = selectedOption.getAttribute('data-email') || '-';
-                    document.getElementById('supplierTotalDue').textContent = '$' + parseFloat(selectedOption.getAttribute('data-due')).toFixed(2);
+                    document.getElementById('supplierContact').textContent = selectedOption.getAttribute(
+                        'data-contact') || '-';
+                    document.getElementById('supplierPhone').textContent = selectedOption.getAttribute(
+                        'data-phone') || '-';
+                    document.getElementById('supplierEmail').textContent = selectedOption.getAttribute(
+                        'data-email') || '-';
+                    document.getElementById('supplierTotalDue').textContent = '$' + parseFloat(
+                        selectedOption.getAttribute('data-due')).toFixed(2);
                     supplierDetails.classList.remove('hidden');
 
                     // Show load buttons
@@ -446,38 +451,39 @@
 
                 // AJAX call to fetch GRNs
                 fetch(`/admin/suppliers/${supplierId}/pending-grns`, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    grnsTableBody.innerHTML = '';
-                    if (data.length === 0) {
-                        grnsTableBody.innerHTML = `
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .getAttribute('content')
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        grnsTableBody.innerHTML = '';
+                        if (data.length === 0) {
+                            grnsTableBody.innerHTML = `
                             <tr>
                                 <td colspan="10" class="px-4 py-4 text-center text-gray-500">
                                     No pending GRNs found for this supplier
                                 </td>
                             </tr>
                         `;
-                        return;
-                    }
+                            return;
+                        }
 
-                    // Populate GRNs table
-                    data.forEach(grn => {
-                        const row = document.createElement('tr');
-                        row.className = 'hover:bg-gray-50';
-                        row.innerHTML = `
+                        // Populate GRNs table
+                        data.forEach(grn => {
+                            const row = document.createElement('tr');
+                            row.className = 'hover:bg-gray-50';
+                            row.innerHTML = `
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <input type="checkbox" class="document-checkbox rounded" 
-                                       data-type="grn" data-id="${grn.grn_id}" 
+                                <input type="checkbox" class="document-checkbox rounded"
+                                       data-type="grn" data-id="${grn.grn_id}"
                                        data-number="${grn.grn_number}" data-due-amount="${grn.due_amount}">
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${grn.grn_number}</td>
@@ -487,8 +493,8 @@
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.paid_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(grn.due_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <input type="number" step="0.01" class="allocate-amount w-24 px-2 py-1 border rounded-lg" 
-                                       data-type="grn" data-id="${grn.grn_id}" 
+                                <input type="number" step="0.01" class="allocate-amount w-24 px-2 py-1 border rounded-lg"
+                                       data-type="grn" data-id="${grn.grn_id}"
                                        value="${parseFloat(grn.due_amount).toFixed(2)}" min="0" max="${grn.due_amount}">
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(grn.due_date) ? 'text-red-500' : 'text-gray-500'}">
@@ -500,22 +506,22 @@
                                 </span>
                             </td>
                         `;
-                        grnsTableBody.appendChild(row);
-                    });
+                            grnsTableBody.appendChild(row);
+                        });
 
-                    addDocumentCheckboxListeners();
-                    paymentAllocationSection.classList.remove('hidden');
-                })
-                .catch(error => {
-                    console.error('Error loading GRNs:', error);
-                    grnsTableBody.innerHTML = `
+                        addDocumentCheckboxListeners();
+                        paymentAllocationSection.classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Error loading GRNs:', error);
+                        grnsTableBody.innerHTML = `
                         <tr>
                             <td colspan="10" class="px-4 py-4 text-center text-red-500">
                             Error loading GRNs: ${error.message}. Please try again.
                         </td>
                         </tr>
                     `;
-                });
+                    });
             });
 
             // Load POs button handler
@@ -539,38 +545,39 @@
 
                 // AJAX call to fetch POs
                 fetch(`/admin/suppliers/${supplierId}/pending-pos`, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    posTableBody.innerHTML = '';
-                    if (data.length === 0) {
-                        posTableBody.innerHTML = `
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                .getAttribute('content')
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        posTableBody.innerHTML = '';
+                        if (data.length === 0) {
+                            posTableBody.innerHTML = `
                             <tr>
                                 <td colspan="9" class="px-4 py-4 text-center text-gray-500">
                                     No pending POs found for this supplier
                                 </td>
                             </tr>
                         `;
-                        return;
-                    }
+                            return;
+                        }
 
-                    // Populate POs table
-                    data.forEach(po => {
-                        const row = document.createElement('tr');
-                        row.className = 'hover:bg-gray-50';
-                        row.innerHTML = `
+                        // Populate POs table
+                        data.forEach(po => {
+                            const row = document.createElement('tr');
+                            row.className = 'hover:bg-gray-50';
+                            row.innerHTML = `
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <input type="checkbox" class="document-checkbox rounded" 
-                                       data-type="po" data-id="${po.po_id}" 
+                                <input type="checkbox" class="document-checkbox rounded"
+                                       data-type="po" data-id="${po.po_id}"
                                        data-number="${po.po_number}" data-due-amount="${po.due_amount}">
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${po.po_number}</td>
@@ -579,8 +586,8 @@
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.paid_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">$${parseFloat(po.due_amount).toFixed(2)}</td>
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <input type="number" step="0.01" class="allocate-amount w-24 px-2 py-1 border rounded-lg" 
-                                       data-type="po" data-id="${po.po_id}" 
+                                <input type="number" step="0.01" class="allocate-amount w-24 px-2 py-1 border rounded-lg"
+                                       data-type="po" data-id="${po.po_id}"
                                        value="${parseFloat(po.due_amount).toFixed(2)}" min="0" max="${po.due_amount}">
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap text-sm ${isOverdue(po.due_date) ? 'text-red-500' : 'text-gray-500'}">
@@ -592,22 +599,22 @@
                                 </span>
                             </td>
                         `;
-                        posTableBody.appendChild(row);
-                    });
+                            posTableBody.appendChild(row);
+                        });
 
-                    addDocumentCheckboxListeners();
-                    paymentAllocationSection.classList.remove('hidden');
-                })
-                .catch(error => {
-                    console.error('Error loading POs:', error);
-                    posTableBody.innerHTML = `
+                        addDocumentCheckboxListeners();
+                        paymentAllocationSection.classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Error loading POs:', error);
+                        posTableBody.innerHTML = `
                         <tr>
                             <td colspan="9" class="px-4 py-4 text-center text-red-500">
                                 Error loading POs: ${error.message}. Please try again.
                             </td>
                         </tr>
                     `;
-                });
+                    });
             });
 
             // Add event listeners to document checkboxes
@@ -631,7 +638,8 @@
                             });
                             allocateInput.disabled = false;
                         } else {
-                            selectedDocuments = selectedDocuments.filter(doc => !(doc.type === type && doc.id === id));
+                            selectedDocuments = selectedDocuments.filter(doc => !(doc.type ===
+                                type && doc.id === id));
                             allocateInput.disabled = true;
                             allocateInput.value = dueAmount.toFixed(2);
                         }
@@ -656,7 +664,8 @@
                         }
 
                         // Update selected document
-                        const doc = selectedDocuments.find(doc => doc.type === type && doc.id === id);
+                        const doc = selectedDocuments.find(doc => doc.type === type && doc.id ===
+                            id);
                         if (doc) {
                             doc.allocated_amount = value;
                             updateSelectedDocumentsList();

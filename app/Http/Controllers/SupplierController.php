@@ -108,43 +108,43 @@ public function show(Supplier $supplier)
 
     $orgId = $user->organization_id;
 
-       
-        // Load relationships with organization scope
- $supplier->load([
+    // Load relationships with organization scope
+    $supplier->load([
         'organization',
-        'purchaseOrders' => function($query) use ($orgId) {
+        'purchaseOrders' => function ($query) use ($orgId) {
             $query->where('organization_id', $orgId)
-                  ->with(['branch']) // Add this to load branch info
+                  ->with(['branch'])
                   ->latest()
                   ->take(5);
         },
-        'transactions' => function($query) use ($orgId) {
+        'transactions' => function ($query) use ($orgId, $supplier) {
             $query->where('organization_id', $orgId)
+                  ->whereRaw('CAST(source_id AS TEXT) = ?', [(string) $supplier->getKey()]) // Explicit cast
                   ->latest()
                   ->take(5);
         }
     ]);
 
-        // Calculate stats with organization scope
-        $totalPurchases = $supplier->purchaseOrders()
-            ->where('organization_id', $orgId)
-            ->sum('total_amount');
+    // Calculate stats with organization scope
+    $totalPurchases = $supplier->purchaseOrders()
+        ->where('organization_id', $orgId)
+        ->sum('total_amount');
 
-        $totalPaid = $supplier->purchaseOrders()
-            ->where('organization_id', $orgId)
-            ->sum('paid_amount');
+    $totalPaid = $supplier->purchaseOrders()
+        ->where('organization_id', $orgId)
+        ->sum('paid_amount');
 
-        $pendingPayment = $totalPurchases - $totalPaid;
+    $pendingPayment = $totalPurchases - $totalPaid;
 
-        $stats = [
-            'total_orders' => $supplier->purchaseOrders()->where('organization_id', $orgId)->count(),
-            'total_purchases' => $totalPurchases,
-            'total_paid' => $totalPaid,
-            'pending_payment' => $pendingPayment
-        ];
+    $stats = [
+        'total_orders' => $supplier->purchaseOrders()->where('organization_id', $orgId)->count(),
+        'total_purchases' => $totalPurchases,
+        'total_paid' => $totalPaid,
+        'pending_payment' => $pendingPayment
+    ];
 
-        return view('admin.suppliers.show', compact('supplier', 'stats'));
-    }
+    return view('admin.suppliers.show', compact('supplier', 'stats'));
+}
     
 
     public function edit(Supplier $supplier)

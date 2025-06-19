@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('phone');
             $table->enum('role', ['steward', 'manager', 'chef', 'waiter', 'cashier'])->default('waiter');
             $table->foreignId('branch_id')->constrained()->onDelete('cascade');
+            $table->foreignId('organization_id')->constrained()->onDelete('cascade');
             $table->boolean('is_active')->default(true);
             $table->timestamp('joined_date')->nullable();
             $table->text('address')->nullable();

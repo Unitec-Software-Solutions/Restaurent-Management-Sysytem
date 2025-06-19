@@ -27,7 +27,8 @@ class GrnMaster extends Model
         'status',
         'is_active',
         'created_by',
-        'total_amount'
+        'total_amount',
+        'grand_discount'
     ];
 
     protected $casts = [
@@ -149,7 +150,7 @@ class GrnMaster extends Model
 
     public function grnItems()
     {
-        return $this->hasMany(GrnItem::class, 'grn_id', 'id');
+        return $this->hasMany(GrnItem::class, 'grn_id', 'grn_id');
     }
 
     public function isPending()
@@ -172,9 +173,54 @@ class GrnMaster extends Model
         return $this->status === self::STATUS_PARTIAL;
     }
 
+    public function getSubTotalAttribute()
+    {
+        return $this->items->sum(function ($item) {
+            return $item->accepted_quantity * $item->buying_price;
+        });
+    }
+
+    public function getItemDiscountTotalAttribute()
+    {
+        return $this->items->sum(function ($item) {
+            return ($item->accepted_quantity * $item->buying_price) * ($item->discount_received / 100);
+        });
+    }
+
+    public function getGrandDiscountAmountAttribute()
+    {
+        if (!$this->grand_discount) {
+            return 0;
+        }
+        $netAfterItemDiscount = $this->sub_total - $this->item_discount_total;
+        return $netAfterItemDiscount * ($this->grand_discount / 100);
+    }
+
+    public function getFinalTotalAttribute()
+    {
+        return $this->sub_total - $this->item_discount_total - $this->grand_discount_amount;
+    }
+
+    public function getBalanceAmountAttribute()
+    {
+        return $this->final_total - ($this->paid_amount ?? 0);
+    }
+
     public function recalculateTotal()
     {
-        $this->total_amount = $this->items()->sum('line_total');
+        // Recalculate based on accepted quantities and apply discounts
+        $subtotal = $this->items->sum(function ($item) {
+            return $item->accepted_quantity * $item->buying_price;
+        });
+
+        $itemDiscounts = $this->items->sum(function ($item) {
+            return ($item->accepted_quantity * $item->buying_price) * ($item->discount_received / 100);
+        });
+
+        $netAfterItemDiscount = $subtotal - $itemDiscounts;
+        $grandDiscountAmount = $netAfterItemDiscount * (($this->grand_discount ?? 0) / 100);
+
+        $this->total_amount = $netAfterItemDiscount - $grandDiscountAmount;
         $this->save();
         return $this;
     }
@@ -206,5 +252,23 @@ class GrnMaster extends Model
             $this->payment_status = self::PAYMENT_STATUS_PENDING;
         }
         $this->save();
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->grn_number)) {
+                $model->grn_number = static::generateGRNNumber($model->organization_id);
+            }
+        });
+    }
+
+    public static function generateGRNNumber($organizationId)
+    {
+        $latest = static::where('organization_id', $organizationId)->latest('grn_id')->first();
+        $nextId = $latest ? $latest->grn_id + 1 : 1;
+        return 'GRN-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
     }
 }

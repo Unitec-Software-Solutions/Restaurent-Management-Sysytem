@@ -63,6 +63,7 @@
                                 'icon_type' => 'fa',
                             ],
                         ],
+
                     ];
                     if($admin->is_super_admin) {
                         $branchesNav['route'] = 'admin.branches.global';
@@ -108,12 +109,9 @@
                                 {{ request()->routeIs($item['route'])
                                     ? 'bg-white text-gray-700 border-white'
                                     : 'bg-transparent text-white border-white hover:bg-white/10' }}">
-                                @if($item['icon_type'] === 'svg')
-                                    @if(View::exists('partials.icons.' . $item['icon']))
-                                        @include('partials.icons.' . $item['icon'])
-                                    @else
-                                        <svg class="w-5 h-5" fill="none"><rect width="100%" height="100%" fill="#ccc"/></svg>
-                                    @endif
+
+                                @if ($item['icon_type'] === 'svg')
+                                    @include('partials.icons.' . $item['icon'])
                                 @else
                                     <i class="{{ $item['icon'] }} w-5 text-center"></i>
                                 @endif
@@ -161,8 +159,18 @@
         <div class="px-4 py-4 border-t border-[#6A71F0]">
             @php
                 $bottomNavItems = [
-                    ['title' => 'Digital Menu', 'route' => 'admin.digital-menu.index', 'icon' => 'menu', 'icon_type' => 'svg'],
-                    ['title' => 'Settings', 'route' => 'admin.settings.index', 'icon' => 'settings', 'icon_type' => 'svg'],
+                    [
+                        'title' => 'Digital Menu',
+                        'route' => 'admin.digital-menu.index',
+                        'icon' => 'menu',
+                        'icon_type' => 'svg',
+                    ],
+                    [
+                        'title' => 'Settings',
+                        'route' => 'admin.settings.index',
+                        'icon' => 'settings',
+                        'icon_type' => 'svg',
+                    ],
                 ];
             @endphp
 
@@ -174,7 +182,7 @@
                             {{ request()->routeIs($item['route'])
                                 ? 'bg-white text-gray-700 border-white'
                                 : 'bg-transparent text-white border-white hover:bg-white/10' }}">
-                            @if($item['icon_type'] === 'svg')
+                            @if ($item['icon_type'] === 'svg')
                                 @include('partials.icons.' . $item['icon'])
                             @else
                                 <i class="{{ $item['icon'] }} w-5 text-center"></i>
@@ -201,3 +209,4 @@
         + Add Role
     </a>
 @endcan
+

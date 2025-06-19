@@ -11,19 +11,7 @@
         @media print {
             @page {
                 size: A4;
-                margin: 10mm;
-            }
-
-            .p-6,
-            .px-6,
-            .py-3,
-            .py-4 {
-                padding: 4px !important;
-            }
-
-            h1,
-            h3 {
-                font-size: 16px !important;
+                margin: 0;
             }
 
             html,
@@ -34,7 +22,8 @@
                 margin: 0;
                 background: white;
                 font-size: 11px;
-                line-height: 1.3;
+                line-height: 1.4;
+                color: #000;
             }
 
             .no-print {
@@ -47,20 +36,62 @@
                 break-inside: avoid;
             }
 
+            .avoid-break {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
             .print-container {
                 box-shadow: none !important;
                 border: none !important;
-            }
-
-            body {
-                padding: 0;
                 margin: 0;
-                background: white;
+                padding: 0;
+                width: 100%;
+                height: auto;
             }
 
             .grn-table th,
             .grn-table td {
-                padding: 6px !important;
+                padding: 4px 6px !important;
+                font-size: 10px !important;
+                border: 1px solid #ddd !important;
+            }
+
+            .grn-table {
+                border-collapse: collapse !important;
+                width: 100% !important;
+            }
+
+            h1 {
+                font-size: 18px !important;
+            }
+
+            h2 {
+                font-size: 16px !important;
+            }
+
+            h3 {
+                font-size: 14px !important;
+            }
+
+            h4 {
+                font-size: 12px !important;
+            }
+
+            .header-section {
+                margin-bottom: 8px !important;
+            }
+
+            .details-section {
+                margin-bottom: 6px !important;
+            }
+
+            .footer-section {
+                position: fixed;
+                bottom: 10mm;
+                left: 0;
+                right: 0;
+                width: 100%;
             }
         }
 
@@ -78,6 +109,10 @@
 
         .status-rejected {
             @apply bg-red-100 text-red-800;
+        }
+
+        .status-approved {
+            @apply bg-blue-100 text-blue-800;
         }
 
         .status-default {
@@ -103,272 +138,365 @@
         </div>
     </div>
 
-    <!-- Back and Action Buttons -->
-
-
     <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm print-container">
-        <!-- Header with logo and GRN details -->
-        <div class="p-6 border-b border-gray-200">
+        <!-- Header with Organization and GRN Details -->
+        <div class="header-section p-6 border-b border-gray-200">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
                 <div class="mb-4 md:mb-0">
-                    <div class="text-2xl font-bold mb-1">{{ $organization->name }}</div>
-                    <div class="text-gray-600">{{ $organization->address }}</div>
-                    <div class="text-gray-600">
-                        {{ $organization->city }}, {{ $organization->country }}
-                    </div>
+                    <div class="text-2xl font-bold mb-1 text-gray-900">
+                        {{ $organization->name ?? 'Organization Name' }}</div>
+                    @if ($organization)
+                        <div class="text-gray-600">{{ $organization->address ?? '' }}</div>
+                        <div class="text-gray-600">
+                            @if ($organization->city)
+                                {{ $organization->city }},
+                            @endif
+                            {{ $organization->country ?? '' }}
+                        </div>
+                        @if ($organization->phone)
+                            <div class="text-gray-600">Phone: {{ $organization->phone }}</div>
+                        @endif
+                        @if ($organization->email)
+                            <div class="text-gray-600">Email: {{ $organization->email }}</div>
+                        @endif
+                    @endif
                 </div>
                 <div class="text-right">
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">GOODS RECEIVED NOTE</h1>
                     <div class="text-lg font-medium">GRN #{{ $grn->grn_number }}</div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        Date: {{ \Carbon\Carbon::parse($grn->received_date)->format('d M Y') }}
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- GRN Summary -->
-        <div class="p-6 border-b border-gray-200">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <!-- GRN Status and Summary -->
+        <div class="details-section p-6 border-b border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                 <div>
-                    <h3 class="text-sm font-medium text-gray-500">Received Date</h3>
-                    <p class="font-medium">{{ \Carbon\Carbon::parse($grn->received_date)->format('M d, Y') }}</p>
+                    <h4 class="text-sm font-medium text-gray-500">Received Date</h4>
+                    <p class="font-medium">{{ \Carbon\Carbon::parse($grn->received_date)->format('d M Y') }}</p>
                 </div>
                 <div>
-                    <h3 class="text-sm font-medium text-gray-500">Delivery Note</h3>
+                    <h4 class="text-sm font-medium text-gray-500">Delivery Note</h4>
                     <p class="font-medium">{{ $grn->delivery_note_number ?? 'N/A' }}</p>
                 </div>
                 <div>
-                    <h3 class="text-sm font-medium text-gray-500">Invoice Number</h3>
+                    <h4 class="text-sm font-medium text-gray-500">Invoice Number</h4>
                     <p class="font-medium">{{ $grn->invoice_number ?? 'N/A' }}</p>
                 </div>
                 <div>
-                    <h3 class="text-sm font-medium text-gray-500">Status</h3>
-                    @if ($grn->status === 'pending')
-                        <span class="status-badge status-pending">Pending</span>
-                    @elseif($grn->status === 'verified')
-                        <span class="status-badge status-verified">Verified</span>
-                    @elseif($grn->status === 'rejected')
-                        <span class="status-badge status-rejected">Rejected</span>
-                    @else
-                        <span class="status-badge status-default">{{ $grn->status }}</span>
-                    @endif
+                    <h4 class="text-sm font-medium text-gray-500">Status</h4>
+                    @php
+                        $status = $grn->status ?? 'pending';
+                        $statusClass = 'status-' . str_replace('_', '-', $status);
+                    @endphp
+                    <span class="status-badge {{ $statusClass }}">
+                        {{ ucfirst(str_replace('_', ' ', $status)) }}
+                    </span>
                 </div>
                 <div>
-                    <h3 class="text-sm font-medium text-gray-500">Total Amount</h3>
-                    <p class="font-bold">Rs. {{ number_format($grn->total_amount, 2) }}</p>
+                    <h4 class="text-sm font-medium text-gray-500">Total Amount</h4>
+                    <p class="font-bold text-lg">Rs. {{ number_format($grn->total_amount, 2) }}</p>
                 </div>
             </div>
+
+            @if ($grn->verified_at)
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-600">
+                    <div>
+                        <span class="font-medium">Received:</span>
+                        {{ \Carbon\Carbon::parse($grn->received_date)->format('d M Y H:i') }}
+                    </div>
+                    <div>
+                        <span class="font-medium">Verified:</span>
+                        {{ \Carbon\Carbon::parse($grn->verified_at)->format('d M Y H:i') }}
+                    </div>
+                    <div>
+                        <span class="font-medium">Verified By:</span>
+                        {{ $grn->verifiedByUser->name ?? 'N/A' }}
+                    </div>
+                </div>
+            @endif
         </div>
 
-        <!-- Supplier and Branch Info -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+        <!-- Supplier and Branch Information -->
+        <div class="details-section grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-gray-200">
             <!-- Supplier Info -->
             <div>
-                <h3 class="text-lg font-semibold mb-2 border-b pb-2">Supplier Information</h3>
-                <div class="space-y-3">
-                    <p class="font-bold">{{ $grn->supplier->name }}</p>
-                    <p>{{ $grn->supplier->address }}</p>
-                    <p>Phone: {{ $grn->supplier->phone }}</p>
+                <h3 class="text-lg font-semibold mb-3 border-b pb-2">Supplier Information</h3>
+                <div class="space-y-2">
+                    <p class="font-bold text-gray-900">{{ $grn->supplier->name }}</p>
+                    @if ($grn->supplier->address)
+                        <p class="text-gray-700">{{ $grn->supplier->address }}</p>
+                    @endif
+                    @if ($grn->supplier->phone)
+                        <p class="text-gray-700">Phone: {{ $grn->supplier->phone }}</p>
+                    @endif
                     @if ($grn->supplier->email)
-                        <p>Email: {{ $grn->supplier->email }}</p>
+                        <p class="text-gray-700">Email: {{ $grn->supplier->email }}</p>
                     @endif
                     @if ($grn->supplier->contact_person)
-                        <p>Contact: {{ $grn->supplier->contact_person }}</p>
+                        <p class="text-gray-700">Contact: {{ $grn->supplier->contact_person }}</p>
                     @endif
                 </div>
             </div>
 
             <!-- Branch Info -->
             <div>
-                <h3 class="text-lg font-semibold mb-2 border-b pb-2">Branch Information</h3>
-                <div class="space-y-3">
-                    <p class="font-bold">{{ $grn->branch->name }}</p>
-                    <p>{{ $grn->branch->address }}</p>
-                    <p>Phone: {{ $grn->branch->phone }}</p>
+                <h3 class="text-lg font-semibold mb-3 border-b pb-2">Branch Information</h3>
+                <div class="space-y-2">
+                    <p class="font-bold text-gray-900">{{ $grn->branch->name }}</p>
+                    @if ($grn->branch->address)
+                        <p class="text-gray-700">{{ $grn->branch->address }}</p>
+                    @endif
+                    @if ($grn->branch->phone)
+                        <p class="text-gray-700">Phone: {{ $grn->branch->phone }}</p>
+                    @endif
+                    @if ($grn->branch->manager_name)
+                        <p class="text-gray-700">Manager: {{ $grn->branch->manager_name }}</p>
+                    @endif
+                    <p class="text-sm text-gray-600">
+                        <span class="font-medium">Received by:</span>
+                        {{ $grn->receivedByUser->name ?? 'N/A' }}
+                    </p>
                 </div>
             </div>
         </div>
 
         <!-- Related Purchase Order -->
         @if ($grn->purchaseOrder)
-            <div class="p-6 border-t border-gray-200">
-                <h3 class="text-lg font-semibold mb-2">Related Purchase Order</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="details-section p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold mb-3">Related Purchase Order</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <h3 class="text-sm font-medium text-gray-500">PO Number</h3>
+                        <h4 class="text-sm font-medium text-gray-500">PO Number</h4>
                         <p class="font-medium">{{ $grn->purchaseOrder->po_number }}</p>
                     </div>
                     <div>
-                        <h3 class="text-sm font-medium text-gray-500">PO Date</h3>
+                        <h4 class="text-sm font-medium text-gray-500">PO Date</h4>
                         <p class="font-medium">
-                            {{ \Carbon\Carbon::parse($grn->purchaseOrder->order_date)->format('M d, Y') }}</p>
+                            {{ \Carbon\Carbon::parse($grn->purchaseOrder->order_date)->format('d M Y') }}</p>
                     </div>
                     <div>
-                        <h3 class="text-sm font-medium text-gray-500">PO Status</h3>
+                        <h4 class="text-sm font-medium text-gray-500">PO Status</h4>
                         <p class="font-medium capitalize">{{ $grn->purchaseOrder->status }}</p>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-500">PO Value</h4>
+                        <p class="font-medium">Rs. {{ number_format($grn->purchaseOrder->total_amount ?? 0, 2) }}</p>
                     </div>
                 </div>
             </div>
         @endif
 
         <!-- Items Table -->
-        <div class="p-6 avoid-break">
-            <table class="min-w-full divide-y divide-gray-200 grn-table">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#
-                        </th>
-                        <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item
-                        </th>
-                        <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code
-                        </th>
-                        <th scope="col"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Batch
-                        </th>
-                        <th scope="col"
-                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Ordered</th>
-                        <th scope="col"
-                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Received</th>
-                        <th scope="col"
-                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Accepted</th>
-                        <th scope="col"
-                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Rejected</th>
-                        <th scope="col"
-                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unit
-                            Price</th>
-                        <th scope="col"
-                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach ($grn->items as $index => $item)
+        <div class="avoid-break">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-4">Received Items</h3>
+                <table class="min-w-full grn-table">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $index + 1 }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="font-medium">{{ $item->item->name }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $item->item->item_code }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ $item->batch_no ?? 'N/A' }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                {{ number_format($item->ordered_quantity, 2) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                {{ number_format($item->received_quantity, 2) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                <span class="font-medium">{{ number_format($item->accepted_quantity, 2) }}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                @if ($item->rejected_quantity > 0)
-                                    <span class="text-red-600">{{ number_format($item->rejected_quantity, 2) }}</span>
-                                @else
-                                    {{ number_format($item->rejected_quantity, 2) }}
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                Rs. {{ number_format($item->buying_price, 2) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                                Rs. {{ number_format($item->line_total, 2) }}
-                            </td>
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                #
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Item Code
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Item Description
+                            </th>
+                            <th
+                                class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Ordered
+                            </th>
+                            <th
+                                class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Received
+                            </th>
+                            <th
+                                class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Accepted
+                            </th>
+                            <th
+                                class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Rejected
+                            </th>
+                            <th
+                                class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Unit Price
+                            </th>
+                            <th
+                                class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border">
+                                Line Total
+                            </th>
                         </tr>
-                        @if ($item->rejected_quantity > 0)
-                            <tr>
-                                <td colspan="10" class="px-6 py-2 text-sm text-gray-500">
-                                    <div class="bg-red-50 p-2 rounded">
-                                        <span class="font-medium">Rejection Reason:</span>
-                                        {{ $item->rejection_reason ?? 'No reason provided' }}
-                                    </div>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach ($grn->items as $index => $item)
+                            <tr class="{{ $index % 20 == 19 ? 'page-break' : '' }}">
+                                <td class="px-4 py-3 text-sm border">{{ $index + 1 }}</td>
+                                <td class="px-4 py-3 text-sm font-medium border">{{ $item->item->item_code }}</td>
+                                <td class="px-4 py-3 text-sm border">
+                                    <div class="font-medium">{{ $item->item->name }}</div>
+                                    @if ($item->batch_no)
+                                        <div class="text-xs text-gray-500">Batch: {{ $item->batch_no }}</div>
+                                    @endif
+                                    @if ($item->expiry_date)
+                                        <div class="text-xs text-gray-500">Exp:
+                                            {{ \Carbon\Carbon::parse($item->expiry_date)->format('d M Y') }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-sm text-center border">
+                                    {{ number_format($item->ordered_quantity, 2) }}
+                                </td>
+                                <td class="px-4 py-3 text-sm text-center border">
+                                    {{ number_format($item->received_quantity, 2) }}
+                                </td>
+                                <td class="px-4 py-3 text-sm text-center border">
+                                    <span
+                                        class="font-medium text-green-600">{{ number_format($item->accepted_quantity, 2) }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-center border">
+                                    @if ($item->rejected_quantity > 0)
+                                        <span
+                                            class="text-red-600 font-medium">{{ number_format($item->rejected_quantity, 2) }}</span>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-sm text-right border">
+                                    Rs. {{ number_format($item->buying_price, 2) }}
+                                </td>
+                                <td class="px-4 py-3 text-sm text-right font-medium border">
+                                    Rs. {{ number_format($item->line_total, 2) }}
                                 </td>
                             </tr>
+                            @if ($item->rejected_quantity > 0 && $item->rejection_reason)
+                                <tr>
+                                    <td colspan="9" class="px-4 py-2 text-xs bg-red-50 border text-red-700">
+                                        <strong>Rejection Reason:</strong> {{ $item->rejection_reason }}
+                                    </td>
+                                </tr>
+                            @endif
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-gray-50">
+                        <tr>
+                            <th colspan="8" class="px-4 py-3 text-right font-semibold border">
+                                Total Amount:
+                            </th>
+                            <th class="px-4 py-3 text-right font-bold text-lg border">
+                                Rs. {{ number_format($grn->total_amount, 2) }}
+                            </th>
+                        </tr>
+                        @php
+                            $totalAccepted = $grn->items->sum(function ($item) {
+                                return $item->accepted_quantity * $item->buying_price;
+                            });
+                            $totalRejected = $grn->items->sum(function ($item) {
+                                return $item->rejected_quantity * $item->buying_price;
+                            });
+                        @endphp
+                        @if ($totalAccepted > 0)
+                            <tr>
+                                <th colspan="8" class="px-4 py-2 text-right font-medium text-green-600 border">
+                                    Accepted Value:
+                                </th>
+                                <th class="px-4 py-2 text-right font-semibold text-green-600 border">
+                                    Rs. {{ number_format($totalAccepted, 2) }}
+                                </th>
+                            </tr>
                         @endif
-                    @endforeach
-                </tbody>
-                <tfoot class="bg-gray-50">
-                    <tr>
-                        <th colspan="9" class="px-6 py-3 text-right text-sm font-medium">Total:</th>
-                        <td class="px-6 py-3 text-right text-sm font-bold">Rs.
-                            {{ number_format($grn->total_amount, 2) }}</td>
-                    </tr>
-                </tfoot>
-            </table>
+                        @if ($totalRejected > 0)
+                            <tr>
+                                <th colspan="8" class="px-4 py-2 text-right font-medium text-red-600 border">
+                                    Rejected Value:
+                                </th>
+                                <th class="px-4 py-2 text-right font-semibold text-red-600 border">
+                                    Rs. {{ number_format($totalRejected, 2) }}
+                                </th>
+                            </tr>
+                        @endif
+                    </tfoot>
+                </table>
+            </div>
         </div>
 
-        <!-- Notes and Verification -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-t border-gray-200">
-            <div>
-                <h3 class="text-lg font-semibold mb-2 border-b pb-2">Notes</h3>
-                <div class="text-sm">
-                    {!! $grn->notes ? nl2br(e($grn->notes)) : 'No additional notes' !!}
+        <!-- Notes Section -->
+        @if ($grn->notes)
+            <div class="avoid-break p-6 border-t border-gray-200">
+                <h3 class="text-lg font-semibold mb-3">Notes</h3>
+                <div class="text-sm text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded">
+                    {{ $grn->notes }}
                 </div>
             </div>
-            <div>
-                <h3 class="text-lg font-semibold mb-2 border-b pb-2">Verification</h3>
-                <div class="space-y-3">
-                    @if ($grn->verified_at)
-                        <p><span class="font-medium">Status:</span>
-                            <span class="font-bold uppercase">{{ $grn->status }}</span>
+        @endif
+
+        <!-- Signatures Section -->
+        <div class="footer-section p-6 border-t border-gray-200 bg-gray-50 mt-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div class="border-t-2 border-black pt-4 mt-12">
+                        <p class="font-medium">Received By</p>
+                        <p class="text-sm text-gray-600 mt-1">
+                            {{ $grn->receivedByUser->name ?? '________________________' }}
                         </p>
-                        <p><span class="font-medium">Verified By:</span> {{ $grn->verifiedByUser->name ?? 'N/A' }}</p>
-                        <p><span class="font-medium">Verified At:</span>
-                            {{ \Carbon\Carbon::parse($grn->verified_at)->format('M d, Y h:i A') }}</p>
-                    @else
-                        <p class="text-yellow-600 font-medium">Pending verification</p>
-                    @endif
-                    <p><span class="font-medium">Received By:</span> {{ $grn->receivedByUser->name ?? 'N/A' }}</p>
-                    <p><span class="font-medium">Received At:</span>
-                        {{ \Carbon\Carbon::parse($grn->received_date)->format('M d, Y h:i A') }}</p>
+                        <p class="text-xs text-gray-500">{{ $grn->branch->name ?? 'Branch' }}</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="border-t-2 border-black pt-4 mt-12">
+                        <p class="font-medium">Verified By</p>
+                        <p class="text-sm text-gray-600 mt-1">
+                            @if ($grn->verifiedByUser)
+                                {{ $grn->verifiedByUser->name }}
+                            @else
+                                _________________________
+                            @endif
+                        </p>
+                        <p class="text-xs text-gray-500">Quality Control</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="border-t-2 border-black pt-4 mt-12">
+                        <p class="font-medium">Supplier Representative</p>
+                        <p class="text-sm text-gray-600 mt-1">
+                            _________________________
+                        </p>
+                        <p class="text-xs text-gray-500">{{ $grn->supplier->name ?? 'Supplier' }}</p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Signatures and Footer -->
-        <div class="p-6 border-t border-gray-200 bg-gray-50">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
-                <div>
-                    <div class="border-t-2 border-black pt-4">
-                        <p class="text-center font-medium">Received By</p>
-                        <p class="text-center mt-2">{{ $grn->receivedByUser->name ?? '____________________' }}</p>
-                    </div>
-                </div>
-                <div>
-                    <div class="border-t-2 border-black pt-4">
-                        <p class="text-center font-medium">Verified By</p>
-                        @if ($grn->verifiedByUser)
-                            <p class="text-center mt-2">{{ $grn->verifiedByUser->name }}</p>
-                        @else
-                            <p class="text-center mt-2">____________________</p>
-                        @endif
-                    </div>
-                </div>
-                <div>
-                    <div class="border-t-2 border-black pt-4">
-                        <p class="text-center font-medium">Supplier Representative</p>
-                        <p class="text-center mt-2">____________________</p>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-8 text-xs text-gray-500 text-center">
-                <p>This is a computer generated goods received note and does not require a signature.</p>
-                <p class="mt-1">Printed on {{ $printedDate }}</p>
+            <div class="mt-8 text-xs text-gray-500 text-center border-t pt-4">
+                <p>This is a computer generated goods received note.</p>
+                <p class="mt-1">Printed on {{ now()->format('d M Y H:i') }} | GRN #{{ $grn->grn_number }}</p>
+                @if ($grn->status === 'verified')
+                    <p class="mt-1 text-green-600 font-medium">✓ Goods received and verified</p>
+                @elseif($grn->status === 'rejected')
+                    <p class="mt-1 text-red-600 font-medium">✗ Goods rejected</p>
+                @endif
             </div>
         </div>
     </div>
 
     <script>
         // Auto-print when the page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            window.print();
+        window.addEventListener('load', function() {
+            // Small delay to ensure everything is rendered
+            setTimeout(() => {
+                window.print();
+            }, 500);
         });
+
+        // Print function for manual triggering
+        function printGRN() {
+            window.print();
+        }
     </script>
 </body>
 

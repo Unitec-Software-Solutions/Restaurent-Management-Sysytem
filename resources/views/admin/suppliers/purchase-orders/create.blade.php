@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('header-title', 'Purchase Orders - Create New Order')
+@section('header-title', 'Create Purchase Order')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Main Content Card -->
@@ -146,7 +146,7 @@
                                                 @foreach ($items as $itemOption)
                                                     <option value="{{ $itemOption->id }}"
                                                         {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}>
-                                                        {{ $itemOption->name }}
+                                                        {{ $itemOption->item_code }} - {{ $itemOption->name }}
                                                     </option>
                                                 @endforeach
                                             </select>
@@ -235,65 +235,65 @@
         </div>
     </div>
 
-@push('scripts')
-<script>
-    // Preload items data
-    const itemsData = {
-        @foreach($items as $item)
-            "{{ $item->id }}": {
-                buying_price: {{ $item->buying_price }}
-            },
-        @endforeach
-    };
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const itemsContainer = document.getElementById('items-container');
-        const addItemBtn = document.getElementById('add-item-btn');
-        const grandTotalEl = document.getElementById('grand-total');
-        let itemCount = {{ count($oldItems) }};
+    @push('scripts')
+        <script>
+            // Preload items data
+            const itemsData = {
+                @foreach ($items as $item)
+                    "{{ $item->id }}": {
+                        buying_price: {{ $item->buying_price }}
+                    },
+                @endforeach
+            };
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const itemsContainer = document.getElementById('items-container');
+                const addItemBtn = document.getElementById('add-item-btn');
+                const grandTotalEl = document.getElementById('grand-total');
+                let itemCount = {{ count($oldItems) }};
 
-        // Function to handle item selection change
-        function handleItemChange() {
-            const row = this.closest('tr');
-            const itemId = this.value;
-            const priceInput = row.querySelector('.item-price');
-            
-            if (itemId && itemsData[itemId]) {
-                priceInput.value = itemsData[itemId].buying_price;
-                // Trigger the input event to recalculate the row total
-                const event = new Event('input', { bubbles: true });
-                priceInput.dispatchEvent(event);
-            }
-        }
+                // Function to handle item selection change
+                function handleItemChange() {
+                    const row = this.closest('tr');
+                    const itemId = this.value;
+                    const priceInput = row.querySelector('.item-price');
+                    if (itemId && itemsData[itemId]) {
+                        priceInput.value = itemsData[itemId].buying_price;
+                        // Trigger the input event to recalculate the row total
+                        priceInput.dispatchEvent(new Event('input', {
+                            bubbles: true
+                        }));
+                    }
+                }
 
-        // Attach event to existing item selects
-        document.querySelectorAll('.item-select').forEach(select => {
-            select.addEventListener('change', handleItemChange);
-        });
+                // Attach event to existing item selects
+                document.querySelectorAll('.item-select').forEach(select => {
+                    select.addEventListener('change', handleItemChange);
+                });
 
-        // Add new item row
-        addItemBtn.addEventListener('click', function() {
-            const newRow = document.createElement('tr');
-            newRow.className = 'item-row border-b bg-white hover:bg-gray-50';
-            newRow.dataset.index = itemCount;
-            newRow.innerHTML = `
+                // Add new item row
+                addItemBtn.addEventListener('click', function() {
+                    const newRow = document.createElement('tr');
+                    newRow.className = 'item-row border-b bg-white hover:bg-gray-50';
+                    newRow.dataset.index = itemCount;
+                    newRow.innerHTML = `
                 <td class="px-4 py-3">
                     <select name="items[${itemCount}][item_id]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select" required>
                         <option value="">Select Item</option>
                         @foreach ($items as $item)
-                            <option value="{{ $item->id }}">{{ $item->name }}</option>
+                            <option value="{{ $item->id }}">{{ $item->item_code }} - {{ $item->name }}</option>
                         @endforeach
                     </select>
                 </td>
                 <td class="px-4 py-3">
-                    <input type="number" name="items[${itemCount}][quantity]" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-quantity" 
+                    <input type="number" name="items[${itemCount}][quantity]"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-quantity"
                            min="0.01" step="0.01" value="1" required>
                 </td>
                 <td class="px-4 py-3">
-                    <input type="number" name="items[${itemCount}][buying_price]" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-price" 
+                    <input type="number" name="items[${itemCount}][buying_price]"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-price"
                            min="0" step="0.01" value="0.00" required>
                 </td>
                 <td class="px-4 py-3 font-medium item-total">0.00</td>
@@ -303,84 +303,75 @@
                     </button>
                 </td>
             `;
+                    itemsContainer.appendChild(newRow);
 
-            itemsContainer.appendChild(newRow);
-            
-            // Add event listeners to the new row
-            const select = newRow.querySelector('.item-select');
-            const quantityInput = newRow.querySelector('.item-quantity');
-            const priceInput = newRow.querySelector('.item-price');
-            const removeBtn = newRow.querySelector('.remove-item-btn');
+                    // Add event listeners to the new row
+                    const select = newRow.querySelector('.item-select');
+                    const quantityInput = newRow.querySelector('.item-quantity');
+                    const priceInput = newRow.querySelector('.item-price');
+                    const removeBtn = newRow.querySelector('.remove-item-btn');
 
-            // Add item change handler
-            select.addEventListener('change', handleItemChange);
-            
-            // Add calculation handlers
-            quantityInput.addEventListener('input', calculateRowTotal);
-            priceInput.addEventListener('input', calculateRowTotal);
-            
-            // Add remove button handler
-            removeBtn.addEventListener('click', function() {
-                newRow.remove();
+                    select.addEventListener('change', handleItemChange);
+                    quantityInput.addEventListener('input', calculateRowTotal);
+                    priceInput.addEventListener('input', calculateRowTotal);
+                    removeBtn.addEventListener('click', function() {
+                        newRow.remove();
+                        updateGrandTotal();
+                    });
+
+                    itemCount++;
+                });
+
+                // Calculate row total
+                function calculateRowTotal() {
+                    const row = this.closest('tr');
+                    const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+                    const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                    row.querySelector('.item-total').textContent = (quantity * price).toFixed(2);
+                    updateGrandTotal();
+                }
+
+                // Update grand total
+                function updateGrandTotal() {
+                    let grandTotal = 0;
+                    document.querySelectorAll('.item-row').forEach(row => {
+                        const totalText = row.querySelector('.item-total').textContent;
+                        const totalValue = parseFloat(totalText) || 0;
+                        grandTotal += totalValue;
+                    });
+                    grandTotalEl.textContent = grandTotal.toFixed(2);
+                }
+
+                // Add event listeners to existing inputs
+                document.querySelectorAll('.item-quantity, .item-price').forEach(input => {
+                    input.addEventListener('input', calculateRowTotal);
+                });
+
+                // Add event listeners to remove buttons
+                document.querySelectorAll('.remove-item-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        this.closest('tr').remove();
+                        updateGrandTotal();
+                    });
+                });
+
+                // Set min date for expected delivery
+                document.getElementById('order_date').addEventListener('change', function() {
+                    const expectedDate = document.getElementById('expected_delivery_date');
+                    expectedDate.min = this.value;
+                    if (new Date(expectedDate.value) < new Date(this.value)) {
+                        expectedDate.value = this.value;
+                    }
+                });
+
+                // Initialize calculations on page load
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
+                    const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                    row.querySelector('.item-total').textContent = (quantity * price).toFixed(2);
+                });
                 updateGrandTotal();
             });
-
-            itemCount++;
-        });
-
-        // Calculate row total
-        function calculateRowTotal() {
-            const row = this.closest('tr');
-            const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
-            const price = parseFloat(row.querySelector('.item-price').value) || 0;
-            const total = quantity * price;
-
-            row.querySelector('.item-total').textContent = total.toFixed(2);
-            updateGrandTotal();
-        }
-
-        // Update grand total
-        function updateGrandTotal() {
-            let grandTotal = 0;
-            document.querySelectorAll('.item-row').forEach(row => {
-                const totalText = row.querySelector('.item-total').textContent;
-                const totalValue = parseFloat(totalText) || 0;
-                grandTotal += totalValue;
-            });
-
-            grandTotalEl.textContent = grandTotal.toFixed(2);
-        }
-
-        // Add event listeners to existing inputs
-        document.querySelectorAll('.item-quantity, .item-price').forEach(input => {
-            input.addEventListener('input', calculateRowTotal);
-        });
-
-        // Add event listeners to remove buttons
-        document.querySelectorAll('.remove-item-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                this.closest('tr').remove();
-                updateGrandTotal();
-            });
-        });
-
-        // Set min date for expected delivery
-        document.getElementById('order_date').addEventListener('change', function() {
-            const expectedDate = document.getElementById('expected_delivery_date');
-            expectedDate.min = this.value;
-            if (new Date(expectedDate.value) < new Date(this.value)) {
-                expectedDate.value = this.value;
-            }
-        });
-
-        // Initialize calculations on page load
-        document.querySelectorAll('.item-row').forEach(row => {
-            const quantity = parseFloat(row.querySelector('.item-quantity').value) || 0;
-            const price = parseFloat(row.querySelector('.item-price').value) || 0;
-            row.querySelector('.item-total').textContent = (quantity * price).toFixed(2);
-        });
-        updateGrandTotal();
-    });
-</script>
-@endpush
+        </script>
+    @endpush
 @endsection

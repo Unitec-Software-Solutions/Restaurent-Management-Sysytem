@@ -69,7 +69,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200"  >
                         @forelse($suppliers as $supplier)
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.location='{{ route('admin.suppliers.show', $supplier) }}'">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">{{ $supplier->supplier_id }}</td>
                                 <td class="px-6 py-4">
                                     <div class="text-sm font-medium text-gray-900">{{ $supplier->name }}</div>

@@ -22,14 +22,22 @@
         <div>
             <p class="text-sm text-gray-600 dark:text-gray-400">Quantity</p>
             <p class="text-gray-900 dark:text-white">
-                {{ number_format($transaction->quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                @php
+                    $qty = $transaction->quantity;
+                    $sign = $qty > 0 ? '+' : ($qty < 0 ? '-' : '');
+                @endphp
+                {{ $sign }}{{ number_format(abs($qty), 2) }} {{ $transaction->item->unit_of_measurement }}
             </p>
         </div>
 
         <div>
             <p class="text-sm text-gray-600 dark:text-gray-400">Net Quantity</p>
             <p class="text-gray-900 dark:text-white">
-                {{ number_format($transaction->net_quantity, 2) }} {{ $transaction->item->unit_of_measurement }}
+                @php
+                    $netQty = $transaction->net_quantity;
+                    $netSign = $netQty > 0 ? '+' : ($netQty < 0 ? '-' : '');
+                @endphp
+                {{ $netSign }}{{ number_format(abs($netQty), 2) }} {{ $transaction->item->unit_of_measurement }}
             </p>
         </div>
 

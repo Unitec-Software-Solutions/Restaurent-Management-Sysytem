@@ -8,7 +8,7 @@
 <div class="space-y-6">
     <h2 class="text-2xl font-semibold text-indigo-700 border-b border-indigo-200 pb-2">🛠️ Admin Functions</h2>
     <p class="text-sm text-gray-600">
-        These pages are designed for administrative operations such as managing reservations, orders, inventory, stock, suppliers, and user profiles. 
+        These pages are designed for administrative operations such as managing reservations, orders, inventory, stock, suppliers, and user profiles.
     </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -26,7 +26,7 @@
 
         <!-- Stock -->
         <x-test-tile label="Stock Transactions" route="admin.inventory.stock.index" />
-        <x-test-tile label="New Stock Entry" route="admin.inventory.stock.create" />
+        {{-- <x-test-tile label="New Stock Entry" route="admin.inventory.stock.create" /> --}}
 
         <!-- Suppliers -->
         <x-test-tile label="Suppliers" route="admin.suppliers.index" />
@@ -41,7 +41,7 @@
 <div class="space-y-6">
     <h2 class="text-2xl font-semibold text-green-700 border-b border-green-200 pb-2">🌐 Public Functions</h2>
     <p class="text-sm text-gray-600">
-        These views represent the customer-facing side of the system. 
+        These views represent the customer-facing side of the system.
     </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
