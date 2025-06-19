@@ -10,9 +10,8 @@ class CustomerAuthenticationMethodFactory extends Factory
     protected $model = CustomerAuthenticationMethod::class;
 
     public function definition()
-    {
-        return [
-            'customer_profile_id' => $this->faker->randomNumber(),
+    {        return [
+            'customer_profile_id' => CustomerProfile::factory(),
             'provider' => $this->faker->randomElement(['email','phone','google','facebook']),
             'provider_id' => $this->faker->uuid(),
             'email' => $this->faker->safeEmail(),

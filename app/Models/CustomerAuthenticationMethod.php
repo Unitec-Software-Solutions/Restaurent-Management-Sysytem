@@ -31,18 +31,18 @@ class CustomerAuthenticationMethod extends Model
         'phone_verified_at' => 'datetime',
     ];
 
-    // public function customerProfile()
-    // {
-    //     return $this->belongsTo(CustomerProfile::class);
-    // }
+    public function customerProfile()
+    {
+        return $this->belongsTo(CustomerProfile::class);
+    }
 
-    // public function isEmailVerified()
-    // {
-    //     return !is_null($this->email_verified_at);
-    // }
+    public function isEmailVerified()
+    {
+        return !is_null($this->email_verified_at);
+    }
 
-    // public function isPhoneVerified()
-    // {
-    //     return !is_null($this->phone_verified_at);
-    // }
+    public function isPhoneVerified()
+    {
+        return !is_null($this->phone_verified_at);
+    }
 } 

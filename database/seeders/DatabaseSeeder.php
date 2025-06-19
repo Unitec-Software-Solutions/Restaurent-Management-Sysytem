@@ -39,12 +39,38 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Seed subscription plans first
-        $plans = \App\Models\SubscriptionPlan::factory()->count(3)->create([
-            ['name' => 'Basic', 'price' => 0, 'currency' => 'LKR', 'modules' => [], 'description' => 'Basic free plan', 'is_trial' => true, 'trial_period_days' => 30],
-            ['name' => 'Pro', 'price' => 5000, 'currency' => 'LKR', 'modules' => [], 'description' => 'Pro annual plan', 'is_trial' => false, 'trial_period_days' => null],
-            ['name' => 'Legacy', 'price' => 1000, 'currency' => 'LKR', 'modules' => [], 'description' => 'Legacy plan', 'is_trial' => false, 'trial_period_days' => null],
+        // Seed subscription plans first using direct model creation to avoid array conversion issues
+        $basicPlan = \App\Models\SubscriptionPlan::create([
+            'name' => 'Basic', 
+            'price' => 0, 
+            'currency' => 'LKR', 
+            'modules' => [], 
+            'description' => 'Basic free plan', 
+            'is_trial' => true, 
+            'trial_period_days' => 30
         ]);
+        
+        $proPlan = \App\Models\SubscriptionPlan::create([
+            'name' => 'Pro', 
+            'price' => 5000, 
+            'currency' => 'LKR', 
+            'modules' => [], 
+            'description' => 'Pro annual plan', 
+            'is_trial' => false, 
+            'trial_period_days' => null
+        ]);
+        
+        $legacyPlan = \App\Models\SubscriptionPlan::create([
+            'name' => 'Legacy', 
+            'price' => 1000, 
+            'currency' => 'LKR', 
+            'modules' => [], 
+            'description' => 'Legacy plan', 
+            'is_trial' => false, 
+            'trial_period_days' => null
+        ]);
+
+        $plans = collect([$basicPlan, $proPlan, $legacyPlan]);
 
         // Get all plan IDs for use in OrganizationFactory
         $planIds = $plans->pluck('id')->toArray();
@@ -71,11 +97,11 @@ class DatabaseSeeder extends Seeder
             });
             $gtns = GoodsTransferNote::factory(2)->create(['organization_id' => $organization->id, 'from_branch_id' => $branches->random()->id, 'to_branch_id' => $branches->random()->id]);
             $gtns->each(function ($gtn) {
-                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->id]);
+                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->gtn_id]);
             });
             $grns = GrnMaster::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $grns->each(function ($grn) {
-                GrnItem::factory(3)->create(['grn_id' => $grn->id]);
+                GrnItem::factory(3)->create(['grn_id' => $grn->grn_id]);
             });
             ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             CustomerAuthenticationMethod::factory(2)->create();
@@ -84,7 +110,7 @@ class DatabaseSeeder extends Seeder
             Permission::factory(2)->create();
             $pos = PurchaseOrder::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $pos->each(function ($po) {
-                PurchaseOrderItem::factory(3)->create(['po_id' => $po->id]);
+                PurchaseOrderItem::factory(3)->create(['po_id' => $po->po_id]);
             });
             Payment::factory(2)->create();
             PaymentAllocation::factory(2)->create();

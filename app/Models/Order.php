@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
 
 class Order extends Model
 {
+    use HasFactory;
+
     // Order types from database check constraint
     const TYPE_TAKEAWAY_IN_CALL = 'takeaway_in_call_scheduled';
     const TYPE_TAKEAWAY_ONLINE = 'takeaway_online_scheduled';

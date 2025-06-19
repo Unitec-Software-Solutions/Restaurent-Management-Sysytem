@@ -48,7 +48,7 @@ class SupplierPaymentMaster extends Model
 
     public function organization(): BelongsTo
     {
-        return $this->belongsTo(Organizations::class);
+        return $this->belongsTo(Organization::class);
     }
 
     public function purchaseOrder(): BelongsTo

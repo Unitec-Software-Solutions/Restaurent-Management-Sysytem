@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use App\Models\Organizations;
+use App\Models\Organization;
 use App\Models\ItemCategory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ItemMaster extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasFactory;
 
     protected $table = 'item_master';
 
@@ -55,7 +56,7 @@ class ItemMaster extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organizations::class, 'organization_id');
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     /**
@@ -82,7 +83,7 @@ class ItemMaster extends Model
         if (isset($this->attributes['attributes']['img'])) {
             return asset('storage/'.$this->attributes['attributes']['img']);
         }
-        return asset('resources\\assets\\image.png'); // Default image if not set
+        return asset('storage/default.png'); 
     }
 
 

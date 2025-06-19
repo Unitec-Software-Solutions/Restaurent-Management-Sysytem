@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\OrderItem;
 use App\Models\Order;
 use App\Models\MenuItem;
+use App\Models\ItemMaster;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class OrderItemFactory extends Factory
@@ -21,7 +22,7 @@ class OrderItemFactory extends Factory
             'total_price' => function (array $attributes) {
                 return $attributes['quantity'] * $attributes['unit_price'];
             },
-            'inventory_item_id' => null,
+            'inventory_item_id' => ItemMaster::factory(),
         ];
     }
 }

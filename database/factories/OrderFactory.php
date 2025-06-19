@@ -35,8 +35,7 @@ class OrderFactory extends Factory
                 Order::STATUS_READY,
                 Order::STATUS_COMPLETED,
                 Order::STATUS_CANCELLED,
-            ]),
-            'total_amount' => $this->faker->randomFloat(2, 10, 500),
+            ]),            'total' => $this->faker->randomFloat(2, 10, 500),
             'notes' => $this->faker->sentence(),
         ];
     }
