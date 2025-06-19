@@ -18,7 +18,7 @@ class LoginSeeder extends Seeder
 
         // Super Admin: always seed, even if no org/role
         User::updateOrCreate(
-            ['id' => 2, 'email' => 'superadmin@rms.com'],
+            ['email' => 'superadmin@rms.com'],
             [
                 'name' => 'Super Admin',
                 'password' => Hash::make('password'),
