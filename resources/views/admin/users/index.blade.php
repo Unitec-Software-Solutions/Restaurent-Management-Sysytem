@@ -4,61 +4,62 @@
 
 @section('content')
 <div class="bg-white rounded shadow p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-lg font-medium">All Users</h2>
-        @can('create', App\Models\User::class)
-            <a href="{{ route('admin.users.create') }}" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
-                Create User
-            </a>
-        @endcan
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-semibold">Users</h2>
+        <a href="{{ route('admin.users.create') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+            + Create User
+        </a>
     </div>
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead>
+            <tr>
+                <th class="px-4 py-2">#</th>
+                <th class="px-4 py-2">Name</th>
+                <th class="px-4 py-2">Email</th>
+                <th class="px-4 py-2">Role</th>
+                <th class="px-4 py-2">Organization</th>
+                <th class="px-4 py-2">Branch</th>
+                <th class="px-4 py-2">Status</th>
+                <th class="px-4 py-2">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($users as $index => $user)
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <td class="px-4 py-2">{{ $users->firstItem() + $index }}</td>
+                    <td class="px-4 py-2">{{ $user->name }}</td>
+                    <td class="px-4 py-2">{{ $user->email }}</td>
+                    <td class="px-4 py-2">{{ $user->userRole->name ?? '-' }}</td>
+                    <td class="px-4 py-2">{{ $user->organization->name ?? '-' }}</td>
+                    <td class="px-4 py-2">{{ $user->branch->name ?? '-' }}</td>
+                    <td class="px-4 py-2">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            {{ $user->is_active ? 'Active' : 'Inactive' }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 flex space-x-1">
+                        <a href="{{ route('admin.users.show', $user) }}" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">View</a>
+                        @can('update', $user)
+                            <a href="{{ route('admin.users.edit', $user) }}" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Edit</a>
+                        @endcan
+                        @can('delete', $user)
+                            <form action="{{ route('admin.users.destroy', $user) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');" style="display:inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Delete</button>
+                            </form>
+                        @endcan
+                    </td>
                 </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @foreach($users as $user)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $user->name }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $user->email }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">{{ $user->branch->name ?? '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            @if($user->role)
-                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                                    {{ $user->role->name }}
-                                </span>
-                            @else
-                                <span class="text-yellow-600">No role assigned</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            @can('update', $user)
-                                <a href="{{ route('users.edit', $user) }}" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
-                            @endcan
-                            @can('assignRole', $user)
-                                <a href="{{ route('users.assign-role', $user) }}" class="text-purple-600 hover:text-purple-900 mr-3">
-                                    {{ $user->role ? 'Change Role' : 'Assign Role' }}
-                                </a>
-                            @endcan
-                            @can('delete', $user)
-                                <form action="{{ route('users.destroy', $user) }}" method="POST" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
-                                </form>
-                            @endcan
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
+            @empty
+                <tr>
+                    <td colspan="8" class="px-4 py-2 text-center text-gray-500">No users found.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+    <div class="mt-4">
+        {{ $users->links() }}
     </div>
 </div>
 @endsection
