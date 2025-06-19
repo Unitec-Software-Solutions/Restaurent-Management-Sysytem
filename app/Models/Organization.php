@@ -51,4 +51,9 @@ class Organization extends Model
     {
         return $this->belongsTo(\App\Models\SubscriptionPlan::class, 'subscription_plan_id');
     }
+
+    public function users()
+    {
+        return $this->hasMany(\App\Models\User::class);
+    }
 }
