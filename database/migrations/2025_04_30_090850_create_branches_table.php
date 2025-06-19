@@ -21,7 +21,9 @@ return new class extends Migration
             $table->integer('total_capacity');
             $table->decimal('reservation_fee', 10, 2);
             $table->decimal('cancellation_fee', 10, 2);
-            $table->boolean('is_active')->default(true);
+            $table->string('type')->default('branch');
+            $table->string('activation_key')->unique();
+            $table->boolean('is_active')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });

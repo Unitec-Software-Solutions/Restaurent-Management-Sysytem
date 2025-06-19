@@ -1,35 +1,46 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\CustomerDashboardController;
-use App\Http\Controllers\ReservationController;
-use App\Http\Controllers\AdminReservationController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AdminAuthController;
-use App\Http\Controllers\GrnDashboardController;
-use App\Http\Controllers\GoodsTransferNoteController;
-use App\Http\Controllers\ItemDashboardController;
-use App\Http\Controllers\ItemCategoryController;
-use App\Http\Controllers\ItemMasterController;
-use App\Http\Controllers\ItemTransactionController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\{
+    HomeController,
+    CustomerDashboardController,
+    ReservationController,
+    AdminReservationController,
+    AdminController,
+    AdminAuthController,
+    GrnDashboardController,
+    ItemDashboardController,
+    ItemCategoryController,
+    ItemMasterController,
+    ItemTransactionController,
+    OrderController,
+    SupplierController,
+    AdminOrderController,
+    SupplierPaymentController,
+    PurchaseOrderController,
+    GrnPaymentController,
+    OrganizationController,
+    ActivationController,
+    RoleController,
+    BranchController,
+    SubscriptionController,
+    UserController,
+    ModuleController
+};
+use App\Http\Middleware\SuperAdmin;
 
-use App\Http\Controllers\AdminOrderController;
 
-use App\Http\Controllers\SupplierPaymentController;
-use App\Http\Controllers\PurchaseOrderController;
-use App\Http\Controllers\GrnPaymentController;
-use Illuminate\Support\Facades\Mail;
+/*-------------------------------------------------------------------------
+| Public Routes
+|------------------------------------------------------------------------*/
 
-
-// Public Routes
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-// Customer Routes
+/*-------------------------------------------------------------------------
+| Customer Routes
+|------------------------------------------------------------------------*/
 Route::middleware(['web'])->group(function () {
     // Customer Dashboard
     Route::get('/customer-dashboard', [CustomerDashboardController::class, 'showReservationsByPhone'])
@@ -45,7 +56,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{reservation}/summary', [ReservationController::class, 'summary'])->name('summary');
         Route::match(['get', 'post'], '/review', [ReservationController::class, 'review'])->name('review');
         Route::post('/{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
-        Route::get('/{reservation}', [ReservationController::class, 'show'])->name('show');
+        Route::get('/{reservation}', [ReservationController::class, 'show'])->whereNumber('reservation')->name('show');
         Route::get('/cancellation-success', [ReservationController::class, 'cancellationSuccess'])->name('cancellation-success');
     });
 
@@ -55,37 +66,40 @@ Route::middleware(['web'])->group(function () {
         Route::get('/all', [OrderController::class, 'allOrders'])->name('all');
         Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('update-cart');
         Route::get('/create', [OrderController::class, 'create'])->name('create');
-
         Route::post('/store', [OrderController::class, 'store'])->name('store');
-        Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
-        Route::get('/{order}/edit', [OrderController::class, 'edit'])->name('edit');
-        Route::delete('/{order}', [OrderController::class, 'destroy'])->name('destroy');
-        Route::put('/{order}', [OrderController::class, 'update'])->name('update');
+        Route::get('/{order}/summary', [OrderController::class, 'summary'])->whereNumber('order')->name('summary');
+        Route::get('/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('edit');
+        Route::delete('/{order}', [OrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
+        Route::put('/{order}', [OrderController::class, 'update'])->whereNumber('order')->name('update');
 
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function () {
             Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
             Route::post('/store', [OrderController::class, 'storeTakeaway'])->name('store');
-            Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->name('edit');
-            Route::get('/{order}/summary', [OrderController::class, 'summary'])->name('summary');
-            Route::delete('/{order}/delete', [OrderController::class, 'destroyTakeaway'])->name('destroy');
-            // Add missing update and submit routes for customer takeaway orders
-            Route::put('/{order}', [OrderController::class, 'updateTakeaway'])->name('update');
-            Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->name('submit');
-            Route::get('/{order}', [OrderController::class, 'showTakeaway'])->name('show');
+            Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
+            Route::get('/{order}/summary', [OrderController::class, 'summary'])->whereNumber('order')->name('summary');
+            Route::delete('/{order}/delete', [OrderController::class, 'destroyTakeaway'])->whereNumber('order')->name('destroy');
+            Route::put('/{order}', [OrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
+            Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->whereNumber('order')->name('submit');
+            Route::get('/{order}', [OrderController::class, 'showTakeaway'])->whereNumber('order')->name('show');
         });
     });
 });
 
-Route::get('/login', function () {
-    return redirect()->route('admin.login');
-})->name('login');  // fix for redirecting to admin login Login not Found issue
-// Admin Routes
+
+/*-------------------------------------------------------------------------
+| Authentication Routes
+|------------------------------------------------------------------------*/
+Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AdminAuthController::class, 'login']);
+
+/*-------------------------------------------------------------------------
+| Admin Routes
+|------------------------------------------------------------------------*/
 Route::prefix('admin')->name('admin.')->group(function () {
     // Authentication
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login']);
-    // Route::get('/logout', [AdminAuthController::class, 'adminLogoutPage'])->name('logout.page'); // replaced by
     Route::post('/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
 
     // Authenticated Admin Routes
@@ -103,22 +117,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/check-table-availability', [AdminReservationController::class, 'checkTableAvailability'])
             ->name('check-table-availability');
 
-        // Consolidated Orders Management
+        // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
-
-            // Order Dashboard and Index
             Route::get('/dashboard', [AdminOrderController::class, 'dashboard'])->name('dashboard');
             Route::get('/', [AdminOrderController::class, 'index'])->name('index');
             Route::get('reservations', [AdminOrderController::class, 'reservationIndex'])->name('reservations.index');
-            Route::get('branch/{branch}', [AdminOrderController::class, 'branchOrders'])->name('branch');
+            Route::get('branch/{branch}', [AdminOrderController::class, 'branchOrders'])->whereNumber('branch')->name('branch');
             Route::post('/update-cart', [AdminOrderController::class, 'updateCart'])->name('update-cart');
-
-            // Order CRUD Operations
-            Route::get('{order}/edit', [AdminOrderController::class, 'edit'])->name('edit');
-            Route::put('{order}', [AdminOrderController::class, 'update'])->name('update');
-            // Reservation Order Summary (fix binding order)
-            Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->name('summary');
-            Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->name('destroy');
+            Route::get('{order}/edit', [AdminOrderController::class, 'edit'])->whereNumber('order')->name('edit');
+            Route::put('{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
+            Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->whereNumber('order')->name('summary');
+            Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
 
             // Reservation Orders
             Route::prefix('reservations/{reservation}')->name('reservations.')->group(function () {
@@ -126,7 +135,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/store', [AdminOrderController::class, 'storeForReservation'])->name('store');
                 Route::get('/edit', [AdminOrderController::class, 'editReservationOrder'])->name('edit');
                 Route::put('/update', [AdminOrderController::class, 'updateReservationOrder'])->name('update');
-                Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->name('summary');
+                Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->whereNumber('order')->name('summary');
             });
 
             // Takeaway Orders
@@ -134,12 +143,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [AdminOrderController::class, 'takeawayIndex'])->name('index');
                 Route::get('/create', [AdminOrderController::class, 'createTakeaway'])->name('create');
                 Route::post('/store', [AdminOrderController::class, 'storeTakeaway'])->name('store');
-                Route::get('/{order}/show', [OrderController::class, 'showTakeaway'])->name('takeaway.show');
-                // Added missing edit and update routes for takeaway orders
-                Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('edit');
-                Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('update');
-                // Add missing summary route for admin takeaway orders
-                Route::get('/{order}/summary', [AdminOrderController::class, 'takeawaySummary'])->name('summary');
+                Route::get('/{order}/show', [OrderController::class, 'showTakeaway'])->whereNumber('order')->name('takeaway.show');
+                Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
+                Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
+                Route::get('/{order}/summary', [AdminOrderController::class, 'takeawaySummary'])->whereNumber('order')->name('summary');
             });
         });
 
@@ -148,30 +155,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
             Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
 
-            // Inventory Items
+            // Items
             Route::prefix('items')->name('items.')->group(function () {
                 Route::get('/', [ItemMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
                 Route::post('/', [ItemMasterController::class, 'store'])->name('store');
                 Route::get('/{item}', [ItemMasterController::class, 'show'])->whereNumber('item')->name('show');
-                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
-                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
-                Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->name('destroy');
-                Route::get('/create-template/{index}/', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
+                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->whereNumber('item')->name('edit');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->whereNumber('item')->name('update');
+                Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->whereNumber('item')->name('destroy');
+                Route::get('/create-template/{index}', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
                 Route::get('/added-items', [ItemMasterController::class, 'added'])->name('added-items');
             });
 
-            // Stock Management
+            // Stock
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
                // Route::get('/create', [ItemTransactionController::class, 'create'])->name('create'); removed admin.inventory.stock.create route
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
                 Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
-                Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->name('edit');
-                Route::put('/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->name('update');
-                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
+                Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->whereNumber(['item_id', 'branch_id'])->name('edit');
+                Route::put('/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->whereNumber(['item_id', 'branch_id'])->name('update');
+                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->whereNumber('transaction')->name('destroy');
 
-                // Stock Transactions
+                // Transactions
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
@@ -212,7 +219,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Suppliers Management
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
-            // Supplier Routes
             Route::get('/', [SupplierController::class, 'index'])->name('index');
             Route::get('/create', [SupplierController::class, 'create'])->name('create');
             Route::post('/', [SupplierController::class, 'store'])->name('store');
@@ -229,24 +235,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Route::get('/{supplier}/pending-grns-pay', [SupplierPaymentController::class, 'getPendingGrns'])->name('pending-grns-pay');
             // Route::get('/{supplier}/pending-pos-pay', [SupplierPaymentController::class, 'getPendingPos'])->name('pending-pos-pay');
-
-
         });
 
-        // Separate GRN Routes
+        // GRN Management
         Route::prefix('grn')->name('grn.')->group(function () {
             Route::get('/', [GrnDashboardController::class, 'index'])->name('index');
             Route::get('/create', [GrnDashboardController::class, 'create'])->name('create');
             Route::post('/', [GrnDashboardController::class, 'store'])->name('store');
-            Route::get('/{grn}', [GrnDashboardController::class, 'show'])->name('show');
-            Route::get('/{grn}/edit', [GrnDashboardController::class, 'edit'])->name('edit');
-            Route::put('/{grn}', [GrnDashboardController::class, 'update'])->name('update');
-            Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->name('verify');
+            Route::get('/{grn}', [GrnDashboardController::class, 'show'])->whereNumber('grn')->name('show');
+            Route::get('/{grn}/edit', [GrnDashboardController::class, 'edit'])->whereNumber('grn')->name('edit');
+            Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
+            Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->whereNumber('grn')->name('verify');
             Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
         });
 
-        // Supplier Payments ( temporarily moved out from suppliers section due to conflict with supplier routes )
+        // Payments
         Route::prefix('payments')->name('payments.')->group(function () {
             Route::get('/', [SupplierPaymentController::class, 'index'])->name('index');
             Route::get('/create', [SupplierPaymentController::class, 'create'])->name('create');
@@ -257,11 +261,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
             Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
             // AJAX routes for pending GRNs and POs
-
         });
 
-
-        // purchase orders ( temporarily moved out from suppliers section due to conflict with supplier routes )
+        // Purchase Orders
         Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
             Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
             Route::get('/create', [PurchaseOrderController::class, 'create'])->name('create');
@@ -272,8 +274,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
         });
 
-
-
+        // Additional Admin Routes
         Route::get('/testpage', function () {
             return view('admin.testpage');
         })->name('testpage');
@@ -283,38 +284,168 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/customers', function () {
             return view('admin.customers.index');
         })->name('customers.index');
-
         Route::get('/digital-menu', function () {
             return view('admin.digital-menu.index');
         })->name('digital-menu.index');
         Route::get('/settings', function () {
             return view('admin.settings.index');
         })->name('settings.index');
-
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+
+    });
+
+});
+
+
+// Super Admin Routes
+Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
+    // Organizations CRUD
+    Route::resource('organizations', OrganizationController::class)->except(['show']);
+    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
+    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
+
+    // Branches: Organization-specific CRUD
+    Route::prefix('organizations/{organization}')->group(function () {
+        Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+        Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+        Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+        Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+    });
+
+    // Global Branches Index (for Super Admin to see all branches)
+    Route::get('branches', [BranchController::class, 'globalIndex'])->name('branches.global');
+
+    // Users Management
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+
+
+    // Roles & Permissions
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+
+    // Subscription Plans
+    Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+});
+
+// Branch summary and regenerate key
+Route::middleware(['auth:admin'])->group(function () {
+    Route::get('branches/{branch}/summary', [BranchController::class, 'summary'])->name('branches.summary');
+    Route::put('branches/{branch}/regenerate-key', [BranchController::class, 'regenerateKey'])->name('branches.regenerate-key');
+});
+
+// Show activation form for all admins
+Route::get('admin/organizations/activate', [OrganizationController::class, 'showActivationForm'])->name('admin.organizations.activate.form');
+Route::post('admin/organizations/activate', [OrganizationController::class, 'activateOrganization'])->name('admin.organizations.activate.submit');
+
+Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
+    Route::get('branches/activate', [BranchController::class, 'showActivationForm'])->name('branches.activate.form');
+    Route::post('branches/activate', [BranchController::class, 'activateBranch'])->name('branches.activate.submit');
+});
+
+Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        // Organizations CRUD
+        Route::resource('organizations', OrganizationController::class)->except(['show']);
+        Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
+        Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
+
+        // Branches: Organization-specific CRUD
+        Route::prefix('organizations/{organization}')->group(function () {
+            Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+            Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+            Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+            Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+            Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+            Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+        });
+
+        // Global Branches Index (for Super Admin to see all branches)
+        Route::get('branches', [BranchController::class, 'globalIndex'])->name('branches.global');
+
+        // Users Management
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+
+
+        // Roles & Permissions
+        Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+
+        // Subscription Plans
+        Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+
+        Route::resource('subscriptions', \App\Http\Controllers\SubscriptionController::class)->only(['edit', 'update']);
+    });
+
+Route::middleware(['auth:admin'])->group(function () {
+    // Organizations CRUD
+    Route::resource('organizations', OrganizationController::class)->except(['show']);
+    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
+    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
+
+    // Branches: Organization-specific CRUD
+    Route::prefix('organizations/{organization}')->group(function () {
+        Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+        Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+        Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+        Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+    });
+
+    // Global Branches Index (for Super Admin to see all branches)
+    Route::get('branches', [BranchController::class, 'globalIndex'])->name('branches.global');
+
+    // Users Management
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+
+
+    // Roles & Permissions
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+
+    // Subscription Plans
+    Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+
+});
+
+Route::middleware(['auth:admin', 'module:reservation'])->group(function () {
+    Route::resource('reservations', ReservationController::class);
+});
+
+Route::middleware(['auth:admin', 'module:inventory'])->group(function () {
+    Route::prefix('inventory')->group(function () {
+        // Inventory routes
     });
 });
-
-// Test Email Route
-Route::get('/test-email', function () {
-    $reservation = \App\Models\Reservation::first();
-    Mail::to('test@example.com')->send(new \App\Mail\ReservationConfirmed($reservation));
-    return 'Email sent!';
+// Repeat for other modules
+Route::middleware(['auth:admin', 'module:reservation_management'])->group(function () {
+    // Reservation management routes
 });
 
-// Add a dedicated route for cancellation success and update the show route to enforce numeric ID constraints.
-Route::get('/reservations/cancellation/success', [ReservationController::class, 'cancellationSuccess'])->name('reservations.cancellation.success');
+Route::middleware(['auth:admin', SuperAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('roles', \App\Http\Controllers\RoleController::class)->except(['show']);
+        Route::resource('modules', \App\Http\Controllers\ModuleController::class)->except(['show']);
+        Route::get('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'permissions'])->name('roles.permissions');
+        Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
+    });
 
-// Takeaway routes
-Route::get('admin/orders/takeaway/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('admin.orders.takeaway.edit');
-Route::put('admin/orders/takeaway/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('admin.orders.takeaway.update');
-
-// Reservation routes
-Route::get('admin/orders/reservations/{reservation}/orders/{order}/edit', [AdminOrderController::class, 'editReservationOrder'])->name('admin.orders.reservations.edit');
-Route::put('admin/orders/reservations/{reservation}/orders/{order}', [AdminOrderController::class, 'updateReservationOrder'])->name('admin.orders.reservations.update');
-
-// Additional Order Routes
-Route::get('/orders/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
-Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
-
-
+Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/users/{user}/assign-role', [UserController::class, 'assignRoleForm'])->name('users.assign-role');
+        Route::post('/users/{user}/assign-role', [UserController::class, 'assignRole'])->name('users.assign-role.store');
+        Route::get('admin/organizations/{organization}/users/create', [UserController::class, 'create'])->name('admin.users.create');
+        Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('admin.branch.users.create');
+        Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
+});

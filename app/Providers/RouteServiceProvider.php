@@ -19,8 +19,5 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
         });
-
-        // Explicit route model binding
-        \Route::model('reservation', \App\Models\Reservation::class);
     }
 }

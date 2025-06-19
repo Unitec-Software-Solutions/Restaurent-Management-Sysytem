@@ -187,6 +187,22 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        {{-- Branch hours info --}}
+                        <div id="branch-hours-info" class="mb-2 text-sm text-blue-700 flex items-center space-x-2">
+                            <i class="fas fa-clock"></i>
+                            <span id="branch-hours-text">
+                                @php
+                                    $selectedBranch = $branches->firstWhere('id', $branch_id);
+                                @endphp
+                                @if($selectedBranch)
+                                    Open: {{ \Carbon\Carbon::parse($selectedBranch->opening_time)->format('h:i A') }}
+                                    - {{ \Carbon\Carbon::parse($selectedBranch->closing_time)->format('h:i A') }}
+                                @else
+                                    Select a branch to view hours
+                                @endif
+                            </span>
+                        </div>
                     </div>
                 </div>
                 
@@ -265,6 +281,7 @@
         const submitButton = document.getElementById('submitButton');
         const successMessage = document.getElementById('successMessage');
         const confirmationDetails = document.getElementById('confirmationDetails');
+        const branchHoursText = document.getElementById('branch-hours-text');
 
         // Format date to display in confirmation
         function formatDate(dateString) {
@@ -285,6 +302,91 @@
         const today = new Date().toISOString().split('T')[0];
         dateInput.min = today;
         dateInput.value = today;
+
+        // Set min/max times based on branch hours
+        function setTimeConstraints() {
+            const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
+            if (!selectedBranch.value) return;
+            
+            const opening = selectedBranch.dataset.opening;
+            const closing = selectedBranch.dataset.closing;
+            
+            startTimeInput.min = opening;
+            endTimeInput.max = closing;
+            
+            // Set end time min based on start time
+            if (startTimeInput.value) {
+                const start = new Date(`2000-01-01T${startTimeInput.value}`);
+                const minEnd = new Date(start.getTime() + 30 * 60000);
+                endTimeInput.min = minEnd.toTimeString().slice(0,5);
+            }
+        }
+
+        // Update time constraints when branch changes
+        branchSelect.addEventListener('change', function() {
+            setTimeConstraints();
+            validateTimeInputs();
+        });
+
+        // Update end time constraints when start time changes
+        startTimeInput.addEventListener('change', function() {
+            if (!startTimeInput.value) return;
+            
+            const start = new Date(`2000-01-01T${startTimeInput.value}`);
+            const minEnd = new Date(start.getTime() + 30 * 60000);
+            endTimeInput.min = minEnd.toTimeString().slice(0,5);
+            
+            // Adjust end time if needed
+            if (endTimeInput.value && endTimeInput.value < endTimeInput.min) {
+                endTimeInput.value = endTimeInput.min;
+            }
+            
+            validateTimeInputs();
+        });
+
+        // Set initial constraints
+        setTimeConstraints();
+        
+        // Update date input handler to respect branch hours
+        dateInput.addEventListener('change', function() {
+            if (dateInput.value) {
+                timeSuggestions.classList.remove('hidden');
+                
+                // If date is today, set minimum start time to current time + 30 minutes
+                if (dateInput.value === today) {
+                    const now = new Date();
+                    const minStart = new Date(now.getTime() + 30 * 60000);
+                    const minStartTime = minStart.toTimeString().slice(0,5);
+                    
+                    // Apply branch opening time constraint
+                    const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
+                    if (selectedBranch.value) {
+                        const opening = selectedBranch.dataset.opening;
+                        startTimeInput.min = minStartTime > opening ? minStartTime : opening;
+                    } else {
+                        startTimeInput.min = minStartTime;
+                    }
+                    
+                    // If current time is after 8 PM, suggest tomorrow
+                    if (now.getHours() >= 20) {
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        dateInput.value = tomorrow.toISOString().split('T')[0];
+                    }
+                } else {
+                    // Apply branch opening time constraint for future dates
+                    const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
+                    if (selectedBranch.value) {
+                        startTimeInput.min = selectedBranch.dataset.opening;
+                    } else {
+                        startTimeInput.min = '';
+                    }
+                }
+            } else {
+                timeSuggestions.classList.add('hidden');
+            }
+            validateTimeInputs();
+        });
 
         // Show time suggestions when date is selected
         dateInput.addEventListener('change', function() {
@@ -457,6 +559,18 @@
                 }, 3000);
                 
             }, 1500);
+        });
+        
+        // Update branch hours text on branch change
+        branchSelect.addEventListener('change', function() {
+            const selected = branchSelect.options[branchSelect.selectedIndex];
+            if (selected && selected.value) {
+                const opening = selected.dataset.opening;
+                const closing = selected.dataset.closing;
+                branchHoursText.textContent = `Open: ${formatTime(opening)} - ${formatTime(closing)}`;
+            } else {
+                branchHoursText.textContent = 'Select a branch to view hours';
+            }
         });
     });
 </script>

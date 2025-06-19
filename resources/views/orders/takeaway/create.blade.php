@@ -82,11 +82,12 @@
                             @foreach($items as $item)
                             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150">
                                 <div class="flex items-center">
-                                    <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300" 
+                                    <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
                                         type="checkbox" 
                                         name="items[{{ $item->id }}][item_id]" 
                                         value="{{ $item->id }}" 
-                                        id="item_{{ $item->id }}">
+                                        id="item_{{ $item->id }}" 
+                                        data-item-id="{{ $item->id }}">
                                     
                                     <label for="item_{{ $item->id }}" class="ml-3 flex-1">
                                         <div class="flex justify-between items-center">
@@ -95,12 +96,23 @@
                                         </div>
                                     </label>
                                     
-                                    <input type="number" 
-                                        name="items[{{ $item->id }}][quantity]" 
-                                        min="1" 
-                                        value="1" 
-                                        class="ml-3 w-20 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1 px-2 border bg-gray-100" 
-                                        disabled>
+                                    <div class="flex items-center">
+                                        <button type="button"
+                                            class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                            data-item-id="{{ $item->id }}"
+                                            disabled>-</button>
+                                        <input type="number"
+                                            min="1"
+                                            value="{{ isset($existingItem) ? $existingItem->quantity : 1 }}"
+                                            class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
+                                            data-item-id="{{ $item->id }}"
+                                            name="items[{{ $item->id }}][quantity]"
+                                            @if(empty($existingItem)) disabled @endif>
+                                        <button type="button"
+                                            class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                            data-item-id="{{ $item->id }}"
+                                            disabled>+</button>
+                                    </div>
                                 </div>
                             </div>
                             @endforeach
@@ -123,8 +135,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const isAdmin = @json(auth()->check() && auth()->user()->isAdmin());
-
     // Admin-specific time handling
     if (isAdmin) {
         const setDefaultTime = (minutesToAdd) => {
@@ -141,6 +151,66 @@ document.addEventListener('DOMContentLoaded', function() {
             setDefaultTime(this.value === 'takeaway_in_call_scheduled' ? 30 : 15);
         });
     }
+
+    // Enable/disable qty and buttons on checkbox change
+    document.querySelectorAll('.item-check').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const itemId = this.getAttribute('data-item-id');
+            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
+            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
+            if (this.checked) {
+                qtyInput.disabled = false;
+                plusBtn.disabled = false;
+                minusBtn.disabled = false;
+                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+            } else {
+                qtyInput.disabled = true;
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
+                qtyInput.removeAttribute('name');
+                qtyInput.value = 1;
+            }
+            if (typeof updateCart === 'function') updateCart();
+        });
+    });
+
+    // Prevent going below 1
+    document.querySelectorAll('.item-qty').forEach(function(input) {
+        input.addEventListener('input', function() {
+            if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
+                this.value = 1;
+            }
+            if (typeof updateCart === 'function') updateCart();
+        });
+    });
+
+    // Plus button
+    document.querySelectorAll('.qty-increase').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                input.value = parseInt(input.value) + 1;
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+    });
+
+    // Minus button
+    document.querySelectorAll('.qty-decrease').forEach(function(btn) {
+        btn.addEventListener('click', function () {
+            const itemId = this.dataset.itemId;
+            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            if (!input.disabled) {
+                const currentValue = parseInt(input.value);
+                if (currentValue > 1) {
+                    input.value = currentValue - 1;
+                    input.dispatchEvent(new Event('input'));
+                }
+            }
+        });
+    });
 
     // Item selection handling
     document.querySelectorAll('[type="checkbox"]').forEach(checkbox => {

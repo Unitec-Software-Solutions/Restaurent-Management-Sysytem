@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RMS - Restaurant Management System</title>
+    <title>@yield('title') - {{ config('app.name') }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://kit.fontawesome.com/a2e0e6fa71.js" crossorigin="anonymous"></script>
     <style>
@@ -112,7 +114,7 @@
     </style>
 </head>
 
-<body class="bg-[#e3e4f8] text-gray-800">
+<body class="bg-gray-50">
     <div class="min-h-screen flex flex-col">
         <!-- Navigation -->
         <nav class=" no-print nav-gradient shadow-sm border-b border-[#515DEF]/20">
@@ -141,10 +143,14 @@
             </div>
         </nav>
 
-        <!-- Main Content -->
-        <main class="flex-grow">
-            @yield('content')
-        </main>
+        <div class="flex flex-1">
+            @include('partials.sidebar')
+
+            <!-- Main Content -->
+            <main class="flex-1 p-6">
+                @yield('content')
+            </main>
+        </div>
 
         <!-- Footer Section - Only shown if yielded -->
         @hasSection('show-footer')
@@ -152,7 +158,7 @@
         @endif
 
     </div>
-    
+    @livewireScripts
     @stack('scripts')
 </body>
 

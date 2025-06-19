@@ -13,24 +13,22 @@ class Branch extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'organization_id',
         'name',
         'address',
         'phone',
-        'email',
         'opening_time',
         'closing_time',
         'total_capacity',
         'reservation_fee',
         'cancellation_fee',
+        'contact_person',
+        'contact_person_designation',
+        'contact_person_phone',
         'is_active',
+        'activation_key',
+        'activated_at',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
     protected $casts = [
         'is_active' => 'boolean',
         'opening_time' => 'datetime',
@@ -38,10 +36,23 @@ class Branch extends Model
         'reservation_fee' => 'decimal:2',
         'cancellation_fee' => 'decimal:2',
     ];
-    
-    /**
-     * Get the inventory transactions for the branch.
-     */
+
+    // Relationships
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    public function roles(): HasMany
+    {
+        return $this->hasMany(Role::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
@@ -52,6 +63,7 @@ class Branch extends Model
         return $this->hasMany(Table::class);
     }
 
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -87,9 +99,20 @@ class Branch extends Model
     {
         return $query->where('organization_id', $organizationId);
     }
-    
-    public function organization(): BelongsTo
+
+    // Activation Key Logic
+    public function activate()
     {
-        return $this->belongsTo(Organizations::class);
+        $this->update(['is_active' => true]);
     }
-} 
+
+    public function deactivate()
+    {
+        $this->update(['is_active' => false]);
+    }
+
+    public function isSystemActive()
+    {
+        return $this->organization->is_active && $this->is_active;
+    }
+}
