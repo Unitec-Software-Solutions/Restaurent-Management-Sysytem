@@ -39,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Module::class, ModulePolicy::class);
 
         $this->registerPolicies();
+        $this->registerBladeDirectives();
     }
 
     /**
@@ -60,4 +61,53 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Branch::class => \App\Policies\BranchPolicy::class,
         \App\Models\Module::class => \App\Policies\ModulePolicy::class,
     ];
+
+    /**
+     * Register custom Blade directives for restaurant permissions
+     */
+    protected function registerBladeDirectives()
+    {
+        // Directive to check if current user has restaurant permission
+        \Illuminate\Support\Facades\Blade::directive('canRestaurant', function ($permission) {
+            return "<?php if(auth()->check() && auth()->user()->can($permission)): ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('endcanRestaurant', function () {
+            return "<?php endif; ?>";
+        });
+
+        // Directive to check if current user has specific restaurant role
+        \Illuminate\Support\Facades\Blade::directive('hasRestaurantRole', function ($role) {
+            return "<?php if(auth()->check() && auth()->user() instanceof \App\Models\Employee && auth()->user()->hasRole($role)): ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('endhasRestaurantRole', function () {
+            return "<?php endif; ?>";
+        });
+
+        // Directive to check if current user is a specific restaurant role
+        \Illuminate\Support\Facades\Blade::directive('isServer', function () {
+            return "<?php if(auth()->check() && auth()->user() instanceof \App\Models\Employee && auth()->user()->isServer()): ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('endisServer', function () {
+            return "<?php endif; ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('isChef', function () {
+            return "<?php if(auth()->check() && auth()->user() instanceof \App\Models\Employee && auth()->user()->isChef()): ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('endisChef', function () {
+            return "<?php endif; ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('isHost', function () {
+            return "<?php if(auth()->check() && auth()->user() instanceof \App\Models\Employee && auth()->user()->isHost()): ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('endisHost', function () {
+            return "<?php endif; ?>";
+        });
+    }
 }
