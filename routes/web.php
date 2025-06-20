@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
-    HomeController,
     CustomerDashboardController,
     ReservationController,
     AdminReservationController,
@@ -30,6 +29,11 @@ use App\Http\Controllers\{
 };
 use App\Http\Middleware\SuperAdmin;
 
+
+/*-------------------------------------------------------------------------
+| Debug Routes - Removed in production refactoring
+|------------------------------------------------------------------------*/
+// Debug routes have been removed for production readiness
 
 /*-------------------------------------------------------------------------
 | Public Routes
@@ -131,7 +135,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
 
             // Reservation Orders
-            Route::prefix('reservations/{reservation}')->name('reservations.')->group(function () {
+            Route::prefix('reservations/{reservation}')->name('orders.reservations.')->group(function () {
                 Route::get('/create', [AdminOrderController::class, 'createForReservation'])->name('create');
                 Route::post('/store', [AdminOrderController::class, 'storeForReservation'])->name('store');
                 Route::get('/edit', [AdminOrderController::class, 'editReservationOrder'])->name('edit');
