@@ -130,5 +130,18 @@ class DatabaseSeeder extends Seeder
             Payment::factory(2)->create();
             PaymentAllocation::factory(2)->create();
         });
+
+        // Display success message
+        $this->command->info('');
+        $this->command->info('🎉 DATABASE SEEDING COMPLETED SUCCESSFULLY! 🎉');
+        $this->command->info('');
+        $this->command->info('✅ All tables have been seeded with test data');
+        $this->command->info('✅ Organizations, branches, users, and related data created');
+        $this->command->info('✅ Menu items, orders, inventory, and transactions populated');
+        $this->command->info('✅ GTN, GRN, and purchase order workflows ready');
+        $this->command->info('✅ Permissions and roles configured');
+        $this->command->info('');
+        $this->command->info('Your Restaurant Management System is ready for testing!');
+        $this->command->info('');
     }
 }

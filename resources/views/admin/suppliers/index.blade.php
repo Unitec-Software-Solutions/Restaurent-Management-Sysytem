@@ -1,6 +1,15 @@
 @extends('layouts.admin')
 
 @section('content')
+{{-- Debug: Check what data is passed to view --}}
+@dd([
+    'suppliers' => $suppliers ?? 'undefined',
+    'totalSuppliers' => $totalSuppliers ?? 'undefined', 
+    'activeSuppliers' => $activeSuppliers ?? 'undefined',
+    'inactiveSuppliers' => $inactiveSuppliers ?? 'undefined',
+    'newSuppliersToday' => $newSuppliersToday ?? 'undefined'
+])
+
     <div class="p-4 rounded-lg">
         <!-- Header with buttons -->
         <x-nav-buttons :items="[
