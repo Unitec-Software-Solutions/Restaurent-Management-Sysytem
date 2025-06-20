@@ -27,11 +27,7 @@
                 <p class="text-xs text-gray-400 mt-1">All time</p>
             </div>
             
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-gray-500 text-sm font-medium">Total Customers</h3>
-                <p class="text-2xl font-bold mt-2">{{ \App\Models\Customer::count() }}</p>
-                <p class="text-xs text-gray-400 mt-1">Registered users</p>
-            </div>
+            
         </div>
 
         {{-- GRN Payment Status (if available) --}}
