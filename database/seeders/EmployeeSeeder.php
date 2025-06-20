@@ -46,8 +46,8 @@ class EmployeeSeeder extends Seeder
     {
         $faker = Faker::create();
 
-        if (!$this->hasEnoughOrganizations(5)) {
-            $this->command->warn("  🚨 Expected at least 5 organizations, aborting seeder.");
+        if (!$this->hasEnoughOrganization(5)) {
+            $this->command->warn("  🚨 Expected at least 5 Organization, aborting seeder.");
             return;
         }
 
@@ -95,7 +95,7 @@ class EmployeeSeeder extends Seeder
         }
     }
 
-    protected function hasEnoughOrganizations(int $minimum): bool
+    protected function hasEnoughOrganization(int $minimum): bool
     {
         return Organization::count() >= $minimum;
     }
