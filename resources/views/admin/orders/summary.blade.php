@@ -2,6 +2,37 @@
 @extends('layouts.admin')
 
 @section('content')
+
+{{-- Debug Info Card for Order Summary --}}
+@if(config('app.debug'))
+    <div class="bg-pink-50 border border-pink-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-medium text-pink-800">🔍 Order Summary Debug Info</h3>
+            <a href="{{ request()->fullUrlWithQuery(['debug' => 1]) }}" 
+               class="text-xs text-pink-600 hover:text-pink-800">
+                Full Debug (@dd)
+            </a>
+        </div>
+        <div class="text-xs text-pink-700 mt-2 grid grid-cols-3 gap-4">
+            <div>
+                <p><strong>Order ID:</strong> {{ $order->id ?? 'N/A' }}</p>
+                <p><strong>Takeaway ID:</strong> {{ $order->takeaway_id ?? 'N/A' }}</p>
+                <p><strong>Items Count:</strong> {{ isset($order) ? $order->orderItems->count() : 'N/A' }}</p>
+            </div>
+            <div>
+                <p><strong>Branch:</strong> {{ $order->branch->name ?? 'N/A' }}</p>
+                <p><strong>Total Amount:</strong> Rs. {{ number_format($order->total_amount ?? 0, 2) }}</p>
+                <p><strong>Status:</strong> {{ $order->status ?? 'N/A' }}</p>
+            </div>
+            <div>
+                <p><strong>Items with Menu:</strong> {{ isset($order) ? $order->orderItems->filter(fn($i) => !is_null($i->menuItem))->count() : 'N/A' }}</p>
+                <p><strong>Items with Inventory:</strong> {{ isset($order) ? $order->orderItems->filter(fn($i) => !is_null($i->inventoryItem))->count() : 'N/A' }}</p>
+                <p><strong>Missing Items:</strong> {{ isset($order) ? $order->orderItems->filter(fn($i) => is_null($i->menuItem) && is_null($i->inventoryItem))->count() : 'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+@endif
+
 <div class="container mx-auto px-4 py-8 bg-gray-50">
     <!-- Receipt Card -->
     <div class="max-w-4xl mx-auto bg-white rounded-xl overflow-hidden shadow-[0_10px_30px_-5px_rgba(0,0,0,0.2)]">

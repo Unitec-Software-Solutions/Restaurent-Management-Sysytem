@@ -17,8 +17,8 @@ class SuperAdminSeeder extends Seeder
             ['email' => 'superadmin@rms.com'],
             [
                 'name' => 'Super Admin',
-                'password' => Hash::make('password'), // Always hash the password!
-                'is_super_admin' => true, // or 'is_super_admin' if that's your column name
+                'password' => Hash::make('password'), 
+                'is_super_admin' => true, 
             ]
         );
     }

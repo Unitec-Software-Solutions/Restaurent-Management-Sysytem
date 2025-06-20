@@ -13,28 +13,26 @@ use Illuminate\Support\Facades\Log;
 
 class AdminOrderController extends Controller
 {
-    // List all submitted orders (admin)
     public function index()
     {
         $admin = auth('admin')->user();
+        
+        $query = Order::with(['reservation', 'branch', 'orderItems.menuItem'])
+            ->latest();
 
         if ($admin->is_super_admin) {
-            $orders = \App\Models\Order::with(['reservation', 'branch'])->latest()->paginate(20);
+            // Super admin can see all orders
         } elseif ($admin->branch_id) {
-            $orders = \App\Models\Order::with(['reservation', 'branch'])
-                ->where('branch_id', $admin->branch_id)
-                ->latest()->paginate(20);
+            $query->where('branch_id', $admin->branch_id);
         } elseif ($admin->organization_id) {
-            $orders = \App\Models\Order::with(['reservation', 'branch'])
-                ->whereHas('branch', function ($q) use ($admin) {
-                    $q->where('organization_id', $admin->organization_id);
-                })
-                ->latest()->paginate(20);
+            $query->whereHas('branch', fn($q) => $q->where('organization_id', $admin->organization_id));
         } else {
-            // Return an empty paginator instead of a collection
-            $orders = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+            // Return empty result for users without proper permissions
+            $orders = collect()->paginate(20);
+            return view('admin.orders.index', compact('orders'));
         }
 
+        $orders = $query->paginate(20);
         return view('admin.orders.index', compact('orders'));
     }
 
@@ -67,42 +65,42 @@ class AdminOrderController extends Controller
         return redirect()->route('admin.orders.index')->with('success', 'Order updated successfully!');
     }
 
-    // List orders for a specific branch (admin)
     public function branchOrders(Branch $branch)
     {
-        $orders = Order::with(['items'])
-            ->where('branch_id', $branch->id)
+        $orders = $branch->orders()
+            ->with(['orderItems.menuItem', 'reservation'])
             ->where('status', 'submitted')
             ->latest()
             ->paginate(10);
-        return view('admin.orders.branch', compact('orders', 'branch'));
+            
+        return view('admin.orders.index', compact('orders'));
     }
 
-    /**
-     * Show form to create order for a reservation
-     */
     public function createForReservation(Reservation $reservation)
     {
-        $branches = Branch::all();
-        $stewards = \App\Models\Employee::whereIn('role', ['steward', 'waiter'])->get();
-        $menuItems = ItemMaster::where('is_menu_item', true)->get();
-
-        return view('admin.orders.create', [
+        // Use eager loading and specific queries to optimize performance
+        $data = [
             'reservation' => $reservation,
-            'branches' => $branches,
-            'stewards' => $stewards,
-            'menuItems' => $menuItems,
+            'branches' => Branch::select('id', 'name')->get(),
+            'stewards' => \App\Models\Employee::select('id', 'name')
+                ->whereIn('role', ['steward', 'waiter'])
+                ->get(),
+            'menuItems' => ItemMaster::select('id', 'name', 'price')
+                ->where('is_menu_item', true)
+                ->get(),
             'prefill' => [
                 'customer_name' => $reservation->name,
                 'customer_phone' => $reservation->phone,
                 'branch_id' => $reservation->branch_id,
-                'date' => $reservation->date ? $reservation->date->format('Y-m-d') : '',
+                'date' => $reservation->date?->format('Y-m-d') ?? '',
                 'start_time' => $reservation->start_time,
                 'end_time' => $reservation->end_time,
                 'number_of_people' => $reservation->number_of_people,
                 'reservation_id' => $reservation->id
             ]
-        ]);
+        ];
+        
+        return view('admin.orders.create', $data);
     }
 
     /**
@@ -140,22 +138,28 @@ class AdminOrderController extends Controller
             'reservation_id' => $order->reservation_id
         ]);
 
-        // Create order items
-        $subtotal = 0;
-        foreach ($data['items'] as $item) {
-            $menuItem = ItemMaster::find($item['item_id']);
+        // Create order items with optimized queries
+        $itemIds = collect($data['items'])->pluck('item_id')->unique();
+        $menuItems = ItemMaster::whereIn('id', $itemIds)->get()->keyBy('id');
+        
+        $orderItems = collect($data['items'])->map(function ($item) use ($menuItems, $order) {
+            $menuItem = $menuItems[$item['item_id']];
             $lineTotal = $menuItem->selling_price * $item['quantity'];
-            $subtotal += $lineTotal;
-
-            OrderItem::create([
+            
+            return [
                 'order_id' => $order->id,
                 'menu_item_id' => $item['item_id'],
                 'inventory_item_id' => $item['item_id'], 
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->selling_price,
                 'total_price' => $lineTotal,
-            ]);
-        }
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        });
+        
+        OrderItem::insert($orderItems->toArray());
+        $subtotal = $orderItems->sum('total_price');
 
         // Calculate totals
         $tax = $subtotal * 0.10;
@@ -210,21 +214,27 @@ class AdminOrderController extends Controller
 
     private function createOrderItems(Order $order, array $items)
     {
-        $subtotal = 0;
-        foreach ($items as $item) {
-            $menuItem = \App\Models\ItemMaster::find($item['item_id']);
+        $itemIds = collect($items)->pluck('item_id')->unique();
+        $menuItems = \App\Models\ItemMaster::whereIn('id', $itemIds)->get()->keyBy('id');
+        
+        $orderItems = collect($items)->map(function ($item) use ($menuItems, $order) {
+            $menuItem = $menuItems[$item['item_id']];
             $lineTotal = $menuItem->selling_price * $item['quantity'];
-            $subtotal += $lineTotal;
-
-            \App\Models\OrderItem::create([
+            
+            return [
                 'order_id' => $order->id,
                 'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'], // Use the menu item's own ID
+                'inventory_item_id' => $item['item_id'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->selling_price,
                 'total_price' => $lineTotal,
-            ]);
-        }
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        });
+        
+        \App\Models\OrderItem::insert($orderItems->toArray());
+        $subtotal = $orderItems->sum('total_price');
 
         $tax = $subtotal * 0.10;
         $order->update([

@@ -880,8 +880,7 @@
                 .then(data => {
                     if (data.success) {
                         // Display audit trail in a modal or new page
-                        console.log('Audit Trail:', data.data);
-                        alert('Audit trail displayed in console. See browser developer tools.');
+                        alert('Audit trail loaded successfully.');
                     } else {
                         alert('Error: ' + data.error);
                     }

@@ -29,6 +29,7 @@ class User extends Authenticatable
         'branch_id', 
         'role_id', 
         'is_admin', 
+        'is_super_admin',
         'created_by'
     ];
 

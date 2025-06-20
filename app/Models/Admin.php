@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -12,7 +13,7 @@ use App\Models\Branch;
 
 class Admin extends Authenticatable
 {
-    use Notifiable, HasRoles;
+    use Notifiable, HasRoles, HasFactory;
 
     protected $guard_name = 'admin'; 
 
@@ -22,12 +23,27 @@ class Admin extends Authenticatable
         'password',
         'branch_id',
         'organization_id',
+        'is_super_admin',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_super_admin' => 'boolean',
+        ];
+    }
 
     // Check if the admin is a super admin
     public function isSuperAdmin(): bool
@@ -82,15 +98,5 @@ class Admin extends Authenticatable
     public function isActive(): bool
     {
         return property_exists($this, 'active') ? (bool) $this->active : true;
-    }
-
-    /**
-     * Set the admin's password (hash automatically).
-     */
-    public function setPasswordAttribute($value)
-    {
-        if ($value) {
-            $this->attributes['password'] = bcrypt($value);
-        }
     }
 }

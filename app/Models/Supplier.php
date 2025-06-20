@@ -67,7 +67,7 @@ class Supplier extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organizations::class); 
+        return $this->belongsTo(Organization::class); 
     }
 
     // Scopes

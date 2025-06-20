@@ -232,7 +232,7 @@ class ReservationController extends Controller
 
     public function cancellationSuccess()
     {
-        return view('reservations.cancellation_success');
+        return view('reservations.cancellation-success');
     }
 
     public function show(Reservation $reservation)

@@ -13,7 +13,11 @@ class ItemCategorySeeder extends Seeder
      */
     public function run(): void
     {
+
+        $organizations = Organization::where('is_active', true)->take(5)->get();
+
         $Organization = Organization::where('is_active', true)->take(5)->get();
+
 
         if ($Organization->isEmpty()) {
             $this->command->error('❌ No active Organization found to seed item categories.');

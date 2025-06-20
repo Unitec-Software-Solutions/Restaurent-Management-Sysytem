@@ -31,7 +31,7 @@ class UserSeeder extends Seeder
         $superAdminRole = Role::firstOrCreate([
             'name' => 'Super Admin',
             'organization_id' => null,
-            'guard_name' => 'admin',
+            'guard_name' => 'web',
         ]);
         $superAdmin->assignRole($superAdminRole);
 
@@ -51,7 +51,7 @@ class UserSeeder extends Seeder
             $orgAdminRole = Role::firstOrCreate([
                 'name' => 'Admin',
                 'organization_id' => $org->id,
-                'guard_name' => 'admin',
+                'guard_name' => 'web',
             ]);
             $orgAdmin->assignRole($orgAdminRole);
 
@@ -71,7 +71,7 @@ class UserSeeder extends Seeder
                 $branchAdminRole = Role::firstOrCreate([
                     'name' => 'Admin',
                     'organization_id' => $org->id,
-                    'guard_name' => 'admin',
+                    'guard_name' => 'web',
                 ]);
                 $branchAdmin->assignRole($branchAdminRole);
 
@@ -90,7 +90,7 @@ class UserSeeder extends Seeder
                 $staffRole = Role::firstOrCreate([
                     'name' => 'Staff',
                     'organization_id' => $org->id,
-                    'guard_name' => 'admin',
+                    'guard_name' => 'web',
                 ]);
                 $staff->assignRole($staffRole);
             }

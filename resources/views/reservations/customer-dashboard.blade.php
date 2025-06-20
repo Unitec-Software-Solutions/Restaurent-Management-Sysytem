@@ -2,6 +2,31 @@
 
 @section('content')
 <div class="container mx-auto max-w-2xl py-8">
+    {{-- Debug Info Card for Customer Dashboard --}}
+    @if(config('app.debug'))
+        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-medium text-purple-800">🔍 Customer Dashboard Debug Info</h3>
+                <a href="{{ route('customer.dashboard', array_merge(request()->all(), ['debug' => 1])) }}" 
+                   class="text-xs text-purple-600 hover:text-purple-800">
+                    Full Debug (@dd)
+                </a>
+            </div>
+            <div class="text-xs text-purple-700 mt-2 grid grid-cols-2 gap-4">
+                <div>
+                    <p><strong>Phone:</strong> {{ $phone ?? 'NOT SET' }}</p>
+                    <p><strong>Reservations Variable:</strong> {{ isset($reservations) ? 'Set (' . count($reservations) . ')' : 'NOT SET' }}</p>
+                </div>
+                <div>
+                    <p><strong>DB Total Reservations:</strong> {{ \App\Models\Reservation::count() }}</p>
+                    <p><strong>DB Total Orders:</strong> {{ \App\Models\Order::count() }}</p>
+                    <p><strong>DB Total Branches:</strong> {{ \App\Models\Branch::count() }}</p>
+                    <p><strong>DB Total Organizations:</strong> {{ \App\Models\Organization::count() }}</p> 
+                </div>
+            </div>
+        </div>
+    @endif
+
     <h2 class="text-2xl font-bold mb-6">Find Your Reservations</h2>
     <form method="GET" action="{{ route('customer.dashboard') }}" class="mb-8">
         <div class="flex flex-col md:flex-row items-center gap-4">
