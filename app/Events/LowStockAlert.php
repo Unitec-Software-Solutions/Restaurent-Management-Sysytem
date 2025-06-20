@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Events;
+
+use App\Models\InventoryItem;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class LowStockAlert
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public InventoryItem $inventory;
+
+    /**
+     * Create a new event instance.
+     */
+    public function __construct(InventoryItem $inventory)
+    {
+        $this->inventory = $inventory;
+    }
+
+    /**
+     * Get the channels the event should broadcast on.
+     *
+     * @return array<int, \Illuminate\Broadcasting\Channel>
+     */
+    public function broadcastOn(): array
+    {
+        return [
+            new PrivateChannel('organization.' . $this->inventory->organization_id),
+        ];
+    }
+}
