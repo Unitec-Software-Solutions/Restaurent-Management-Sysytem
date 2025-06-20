@@ -9,8 +9,10 @@ use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 class EmployeeController extends Controller
 {
@@ -25,7 +27,7 @@ class EmployeeController extends Controller
     {
         $orgId = $this->getOrganizationId();
         
-        $query = Employee::with(['branch'])
+        $query = Employee::with(['branch', 'employeeRole'])
             ->where('organization_id', $orgId);
 
         // Include trashed records if requested
@@ -43,8 +45,17 @@ class EmployeeController extends Controller
             });
         }
 
+        // Handle both old role field and new restaurant roles
         if ($request->has('role') && $request->role) {
-            $query->where('role', $request->role);
+            if (in_array($request->role, array_keys(Employee::getAvailableRestaurantRoles()))) {
+                // New restaurant role filter
+                $query->whereHas('employeeRole', function($q) use ($request) {
+                    $q->where('name', $request->role);
+                });
+            } else {
+                // Legacy role filter
+                $query->where('role', $request->role);
+            }
         }
 
         if ($request->has('branch_id') && $request->branch_id) {
@@ -59,21 +70,22 @@ class EmployeeController extends Controller
         $employees = $query->orderBy('name')->paginate(15)->appends($request->query());
         $branches = Branch::where('organization_id', $orgId)->active()->get();
         $roles = Employee::getAvailableRoles();
+        $restaurantRoles = Employee::getAvailableRestaurantRoles();
 
-        return view('admin.employees.index', compact('employees', 'branches', 'roles'));
-    }public function create()
+        return view('admin.employees.index', compact('employees', 'branches', 'roles', 'restaurantRoles'));
+    }    public function create()
     {
         $orgId = $this->getOrganizationId();
         $branches = Branch::where('organization_id', $orgId)->active()->get();
         $roles = Employee::getAvailableRoles();
-        $spatieRoles = Role::where('organization_id', $orgId)->get();
+        $restaurantRoles = SpatieRole::where('guard_name', 'web')
+            ->whereIn('name', ['host/hostess', 'servers', 'bartenders', 'cashiers', 'chefs', 'dishwashers', 'kitchen-managers'])
+            ->get();
 
-        return view('admin.employees.create', compact('branches', 'roles', 'spatieRoles'));
+        return view('admin.employees.create', compact('branches', 'roles', 'restaurantRoles'));
     }public function store(Request $request)
     {
-        $orgId = $this->getOrganizationId();
-
-        $validated = $request->validate([
+        $orgId = $this->getOrganizationId();        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
                 'required',
@@ -83,6 +95,7 @@ class EmployeeController extends Controller
             ],
             'phone' => 'required|string|max:20',
             'role' => 'required|in:' . implode(',', array_keys(Employee::getAvailableRoles())),
+            'restaurant_role' => 'required|exists:roles,name', // Make restaurant role required
             'branch_id' => 'required|exists:branches,id',
             'position' => 'nullable|string|max:255',
             'salary' => 'nullable|numeric|min:0',
@@ -90,8 +103,6 @@ class EmployeeController extends Controller
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
-            'spatie_roles' => 'array',
-            'spatie_roles.*' => 'exists:roles,id'
         ]);
 
         // Validate branch belongs to organization
@@ -106,13 +117,14 @@ class EmployeeController extends Controller
         DB::transaction(function () use ($validated, $request, &$employee) {
             $employee = Employee::create($validated);
             
-            // Assign Spatie roles if provided
-            if ($request->has('spatie_roles')) {
-                $roleIds = $request->input('spatie_roles');
-                $roles = Role::whereIn('id', $roleIds)
-                    ->where('organization_id', $validated['organization_id'])
-                    ->get();
-                $employee->syncRoles($roles);
+            // Assign restaurant role if provided
+            if ($request->has('restaurant_role') && $request->restaurant_role) {
+                $role = SpatieRole::where('name', $request->restaurant_role)->first();
+                if ($role) {
+                    $employee->role_id = $role->id;
+                    $employee->save();
+                    $employee->assignRole($role);
+                }
             }
         });
 
@@ -139,19 +151,19 @@ class EmployeeController extends Controller
         $orgId = $this->getOrganizationId();
         $branches = Branch::where('organization_id', $orgId)->active()->get();
         $roles = Employee::getAvailableRoles();
-        $spatieRoles = Role::where('organization_id', $orgId)->get();
-        $employee->load('roles');
+        $restaurantRoles = SpatieRole::where('guard_name', 'web')
+            ->whereIn('name', ['host/hostess', 'servers', 'bartenders', 'cashiers', 'chefs', 'dishwashers', 'kitchen-managers'])
+            ->get();
+        $employee->load(['roles', 'employeeRole']);
 
-        return view('admin.employees.edit', compact('employee', 'branches', 'roles', 'spatieRoles'));
-    }    public function update(Request $request, Employee $employee)
+        return view('admin.employees.edit', compact('employee', 'branches', 'roles', 'restaurantRoles'));
+    }public function update(Request $request, Employee $employee)
     {
         if ($employee->organization_id !== $this->getOrganizationId()) {
             abort(403, 'Unauthorized access');
         }
 
-        $orgId = $this->getOrganizationId();
-
-        $validated = $request->validate([
+        $orgId = $this->getOrganizationId();        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
                 'required',
@@ -161,6 +173,7 @@ class EmployeeController extends Controller
             ],
             'phone' => 'required|string|max:20',
             'role' => 'required|in:' . implode(',', array_keys(Employee::getAvailableRoles())),
+            'restaurant_role' => 'required|exists:roles,name', // Make restaurant role required
             'branch_id' => 'required|exists:branches,id',
             'position' => 'nullable|string|max:255',
             'salary' => 'nullable|numeric|min:0',
@@ -168,8 +181,6 @@ class EmployeeController extends Controller
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
-            'spatie_roles' => 'array',
-            'spatie_roles.*' => 'exists:roles,id'
         ]);
 
         // Validate branch belongs to organization
@@ -182,14 +193,17 @@ class EmployeeController extends Controller
         DB::transaction(function () use ($validated, $request, $employee, $orgId) {
             $employee->update($validated);
             
-            // Sync Spatie roles
-            if ($request->has('spatie_roles')) {
-                $roleIds = $request->input('spatie_roles');
-                $roles = Role::whereIn('id', $roleIds)
-                    ->where('organization_id', $orgId)
-                    ->get();
-                $employee->syncRoles($roles);
+            // Update restaurant role
+            if ($request->has('restaurant_role') && $request->restaurant_role) {
+                $role = SpatieRole::where('name', $request->restaurant_role)->first();
+                if ($role) {
+                    $employee->role_id = $role->id;
+                    $employee->save();
+                    $employee->syncRoles([$role]);
+                }
             } else {
+                $employee->role_id = null;
+                $employee->save();
                 $employee->syncRoles([]);
             }
         });
@@ -250,18 +264,24 @@ class EmployeeController extends Controller
             return redirect()->route('admin.employees.index')
                 ->with('error', 'Failed to restore employee');
         }
+    }    /**
+     * Get stewards for AJAX requests (legacy method)
+     */
+    public function getStewards(Request $request)
+    {
+        return $this->getServers($request); // Redirect to servers for backward compatibility
     }
 
     /**
-     * Get stewards for AJAX requests
+     * Get servers for AJAX requests
      */
-    public function getStewards(Request $request)
+    public function getServers(Request $request)
     {
         $branchId = $request->get('branch_id');
         $orgId = $this->getOrganizationId();
 
-        $stewards = Employee::active()
-            ->stewards()
+        $servers = Employee::active()
+            ->servers()
             ->where('organization_id', $orgId)
             ->when($branchId, function ($query) use ($branchId) {
                 return $query->where('branch_id', $branchId);
@@ -270,6 +290,6 @@ class EmployeeController extends Controller
             ->orderBy('name')
             ->get();
 
-        return response()->json($stewards);
+        return response()->json($servers);
     }
 }
