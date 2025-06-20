@@ -58,4 +58,50 @@ class Organization extends Model
     {
         return $this->hasMany(\App\Models\User::class);
     }
+
+    public function currentSubscription()
+    {
+        return $this->hasOne(\App\Models\Subscription::class)->where('is_active', true)->latest();
+    }
+
+    public function hasFeature(string $feature): bool
+    {
+        $subscription = $this->currentSubscription;
+        return $subscription ? $subscription->hasFeature($feature) : false;
+    }
+
+    public function hasModule(string $module): bool
+    {
+        $subscription = $this->currentSubscription;
+        return $subscription ? $subscription->hasModule($module) : false;
+    }
+
+    public function getModuleTier(string $module): string
+    {
+        $subscription = $this->currentSubscription;
+        return $subscription ? $subscription->getModuleTier($module) : 'basic';
+    }
+
+    public function canAddBranches(): bool
+    {
+        $plan = $this->plan;
+        if (!$plan || !isset($plan->max_branches)) {
+            return true; // No limit
+        }
+        return $this->branches()->count() < $plan->max_branches;
+    }
+
+    public function canAddEmployees(): bool
+    {
+        $plan = $this->plan;
+        if (!$plan || !isset($plan->max_employees)) {
+            return true; // No limit
+        }
+        return $this->employees()->count() < $plan->max_employees;
+    }
+
+    public function employees()
+    {
+        return $this->hasMany(\App\Models\Employee::class);
+    }
 }
