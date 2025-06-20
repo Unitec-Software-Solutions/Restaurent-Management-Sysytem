@@ -41,9 +41,9 @@
                                         @if($order->reservation)
                                             #{{ $order->reservation->id }}<br>
                                             {{ $order->reservation->reservation_time->format('M d, Y H:i') }}
-                                            @if($admin->isSuperAdmin() && $order->reservation->organization)
+                                            @if($admin->isSuperAdmin() && $order->reservation->branch && $order->reservation->branch->organization)
                                                 <br>
-                                                <span class="text-xs text-gray-400">Org: {{ $order->reservation->organization->name }}</span>
+                                                <span class="text-xs text-gray-400">Org: {{ $order->reservation->branch->organization->name }}</span>
                                             @endif
                                         @else
                                             —
