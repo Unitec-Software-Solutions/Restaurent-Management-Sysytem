@@ -82,8 +82,7 @@
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Work Information</h3>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">                <div>
                     <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Primary Role *</label>
                     <select id="role" name="role" required
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('role') border-red-500 @enderror">
@@ -97,6 +96,24 @@
                     @error('role')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
+                </div>
+
+                <div>
+                    <label for="restaurant_role" class="block text-sm font-medium text-gray-700 mb-1">Restaurant Role *</label>
+                    <select id="restaurant_role" name="restaurant_role" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('restaurant_role') border-red-500 @enderror">
+                        <option value="">Select Restaurant Role</option>
+                        @foreach($restaurantRoles as $role)
+                            <option value="{{ $role->name }}" 
+                                {{ old('restaurant_role', $employee->employeeRole?->name) === $role->name ? 'selected' : '' }}>
+                                {{ ucwords(str_replace('-', ' ', $role->name)) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('restaurant_role')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">This determines what operations the employee can perform</p>
                 </div>
                 
                 <div>
@@ -134,20 +151,69 @@
                     @enderror
                 </div>
             </div>
-        </div>
-
-        <!-- Permissions -->
+        </div>        <!-- Current Restaurant Role -->
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">System Permissions</h3>
-            <p class="text-gray-600 text-sm mb-4">Select additional roles and permissions for this employee</p>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Current Restaurant Role & Permissions</h3>
             
-            @if($spatieRoles->count() > 0)
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    @foreach($spatieRoles as $spatieRole)
-                        <div class="flex items-start">
-                            <input type="checkbox" 
-                                   id="role_{{ $spatieRole->id }}" 
-                                   name="spatie_roles[]" 
+            @if($employee->employeeRole)
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-user-tag text-green-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-medium text-green-800">
+                                Current Role: {{ ucwords(str_replace('-', ' ', $employee->employeeRole->name)) }}
+                            </h4>
+                            <div class="mt-1 text-sm text-green-700">
+                                @if($employee->employeeRole->permissions->count() > 0)
+                                    <span class="font-medium">Permissions:</span>
+                                    {{ $employee->employeeRole->permissions->pluck('name')->map(function($perm) {
+                                        return ucwords(str_replace('-', ' ', $perm));
+                                    })->join(', ') }}
+                                @else
+                                    No specific permissions assigned
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @else
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-medium text-yellow-800">No Restaurant Role Assigned</h4>
+                            <p class="text-sm text-yellow-700">This employee does not have a restaurant role assigned.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h4 class="text-sm font-medium text-blue-800">Restaurant Role Permissions</h4>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Host/Hostess:</strong> Manage reservations, view table status, customer service</li>
+                                <li><strong>Servers:</strong> Take orders, modify orders, process payments, customer service</li>
+                                <li><strong>Bartenders:</strong> Manage bar inventory, prepare beverages, cash handling</li>
+                                <li><strong>Cashiers:</strong> Process payments, handle refunds, print receipts</li>
+                                <li><strong>Chefs:</strong> View kitchen orders, update order status, manage inventory</li>
+                                <li><strong>Dishwashers:</strong> Kitchen support, equipment maintenance</li>
+                                <li><strong>Kitchen Managers:</strong> Manage kitchen staff, operations, reports</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
                                    value="{{ $spatieRole->id }}"
                                    {{ $employee->hasRole($spatieRole->name) || in_array($spatieRole->id, old('spatie_roles', [])) ? 'checked' : '' }}
                                    class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
