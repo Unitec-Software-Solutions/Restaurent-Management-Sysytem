@@ -19,27 +19,20 @@ use App\Models\GoodsTransferItem;
 use App\Models\GrnMaster;
 use App\Models\GrnItem;
 use App\Models\ItemMaster;
-use App\Models\CustomerAuthenticationMethod;
-use App\Models\CustomerPreference;
-use App\Models\AuditLog;
-use App\Models\NotificationProvider;
 use App\Models\Permission;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
-use App\Models\SubscriptionPlan;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
+    
     public function run(): void
     {
-        // Seed subscription plans first using direct model creation to avoid array conversion issues
+        
         $basicPlan = \App\Models\SubscriptionPlan::create([
             'name' => 'Basic', 
             'price' => 0, 
@@ -72,10 +65,10 @@ class DatabaseSeeder extends Seeder
 
         $plans = collect([$basicPlan, $proPlan, $legacyPlan]);
 
-        // Get all plan IDs for use in OrganizationFactory
+        
         $planIds = $plans->pluck('id')->toArray();
 
-        // Sample data seeding using factories
+        
         Organization::factory(5)->create([
             'subscription_plan_id' => $planIds[array_rand($planIds)]
         ])->each(function ($organization) use ($planIds) {
@@ -88,7 +81,7 @@ class DatabaseSeeder extends Seeder
             Employee::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $menuCategories = MenuCategory::factory(3)->create();
             MenuItem::factory(10)->create(['menu_category_id' => $menuCategories->random()->id]);
-            // Create tables with unique numbers per branch
+            
             $branches->each(function ($branch, $index) {
                 for ($tableNum = 1; $tableNum <= 5; $tableNum++) {
                     Table::factory()->create([
@@ -100,7 +93,7 @@ class DatabaseSeeder extends Seeder
             User::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             Reservation::factory(5)->create(['branch_id' => $branches->random()->id]);
             
-            // Create ItemMaster records first
+            
             $itemMasters = ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             
             $orders = Order::factory(5)->create(['branch_id' => $branches->random()->id]);
@@ -119,9 +112,7 @@ class DatabaseSeeder extends Seeder
             $grns->each(function ($grn) {
                 GrnItem::factory(3)->create(['grn_id' => $grn->grn_id]);
             });
-            // CustomerAuthenticationMethod::factory(2)->create(); // Table doesn't exist
-            // AuditLog::factory(2)->create(); // Table doesn't exist
-            // NotificationProvider::factory(1)->create(); // Table doesn't exist
+            
             Permission::factory(2)->create();
             $pos = PurchaseOrder::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
             $pos->each(function ($po) {
@@ -132,16 +123,40 @@ class DatabaseSeeder extends Seeder
         });
 
         // Display success message
-        $this->command->info('');
-        $this->command->info('🎉 DATABASE SEEDING COMPLETED SUCCESSFULLY! 🎉');
-        $this->command->info('');
-        $this->command->info('✅ All tables have been seeded with test data');
-        $this->command->info('✅ Organizations, branches, users, and related data created');
-        $this->command->info('✅ Menu items, orders, inventory, and transactions populated');
-        $this->command->info('✅ GTN, GRN, and purchase order workflows ready');
-        $this->command->info('✅ Permissions and roles configured');
-        $this->command->info('');
-        $this->command->info('Your Restaurant Management System is ready for testing!');
-        $this->command->info('');
+        $this->displaySuccessMessage();
+    }
+
+    private function displaySuccessMessage(): void
+    {
+        $this->command->newLine();
+        $this->command->getOutput()->writeln('<fg=white;bg=green> ✅ DATABASE SEEDING COMPLETED SUCCESSFULLY! </fg=white;bg=green>');
+        $this->command->newLine();
+        
+        $this->command->info('🎉 <fg=green>Database has been seeded with sample data!</fg=green>');
+        $this->command->newLine();
+        
+        $this->command->line('<fg=cyan>📊 Summary of created records:</fg=cyan>');
+        $this->command->line('   • Organizations: ' . \App\Models\Organization::count());
+        $this->command->line('   • Subscription Plans: ' . \App\Models\SubscriptionPlan::count());
+        $this->command->line('   • Branches: ' . \App\Models\Branch::count());
+        $this->command->line('   • Employees: ' . \App\Models\Employee::count());
+        $this->command->line('   • Menu Items: ' . \App\Models\MenuItem::count());
+        $this->command->line('   • Orders: ' . \App\Models\Order::count());
+        $this->command->line('   • Reservations: ' . \App\Models\Reservation::count());
+        $this->command->line('   • Suppliers: ' . \App\Models\Supplier::count());
+        $this->command->line('   • Purchase Orders: ' . \App\Models\PurchaseOrder::count());
+        $this->command->line('   • GRNs: ' . \App\Models\GrnMaster::count());
+        $this->command->line('   • Payments: ' . \App\Models\Payment::count());
+        
+        $this->command->newLine();
+        $this->command->line('<fg=yellow>🚀 Next steps:</fg=yellow>');
+        $this->command->line('   1. Visit your application dashboard');
+        $this->command->line('   2. Check views for data display issues');
+        $this->command->line('   3. Use @dd() for debugging any unexpected values');
+        $this->command->line('   4. Add ?debug=1 to URLs for detailed debugging');
+        
+        $this->command->newLine();
+        $this->command->line('<fg=green>✨ Your Restaurant Management System is ready to go!</fg=green>');
+        $this->command->newLine();
     }
 }
