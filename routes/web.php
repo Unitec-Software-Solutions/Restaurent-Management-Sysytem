@@ -76,6 +76,14 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('edit');
         Route::delete('/{order}', [OrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
         Route::put('/{order}', [OrderController::class, 'update'])->whereNumber('order')->name('update');
+        
+        // Stock checking
+        Route::post('/check-stock', [OrderController::class, 'checkStock'])->name('check-stock');
+        Route::post('/{order}/print-kot', [OrderController::class, 'printKOT'])->name('print-kot');
+        Route::post('/{order}/print-bill', [OrderController::class, 'printBill'])->name('print-bill');
+        Route::post('/{order}/mark-preparing', [OrderController::class, 'markAsPreparing'])->name('mark-preparing');
+        Route::post('/{order}/mark-ready', [OrderController::class, 'markAsReady'])->name('mark-ready');
+        Route::post('/{order}/complete', [OrderController::class, 'completeOrder'])->name('complete');
 
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function () {
@@ -121,6 +129,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('reservations.check-out');
         Route::get('/check-table-availability', [AdminReservationController::class, 'checkTableAvailability'])
             ->name('check-table-availability');
+
+        // Employee Management
+        Route::prefix('employees')->name('employees.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\EmployeeController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\EmployeeController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\EmployeeController::class, 'store'])->name('store');
+            Route::get('/{employee}', [\App\Http\Controllers\Admin\EmployeeController::class, 'show'])->name('show');
+            Route::get('/{employee}/edit', [\App\Http\Controllers\Admin\EmployeeController::class, 'edit'])->name('edit');
+            Route::put('/{employee}', [\App\Http\Controllers\Admin\EmployeeController::class, 'update'])->name('update');
+            Route::delete('/{employee}', [\App\Http\Controllers\Admin\EmployeeController::class, 'destroy'])->name('destroy');
+            Route::post('/{employee}/restore', [\App\Http\Controllers\Admin\EmployeeController::class, 'restore'])->name('restore');
+        });
 
         // Orders Management
         Route::prefix('orders')->name('orders.')->group(function () {
