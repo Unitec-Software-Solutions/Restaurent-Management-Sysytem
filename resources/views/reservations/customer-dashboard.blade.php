@@ -19,7 +19,9 @@
                 </div>
                 <div>
                     <p><strong>DB Total Reservations:</strong> {{ \App\Models\Reservation::count() }}</p>
-                    <p><strong>DB Total Customers:</strong> {{ \App\Models\Customer::count() }}</p>
+                    <p><strong>DB Total Orders:</strong> {{ \App\Models\Order::count() }}</p>
+                    <p><strong>DB Total Branches:</strong> {{ \App\Models\Branch::count() }}</p>
+                    <p><strong>DB Total Organizations:</strong> {{ \App\Models\Organization::count() }}</p> 
                 </div>
             </div>
         </div>
