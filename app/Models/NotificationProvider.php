@@ -21,11 +21,6 @@ class NotificationProvider extends Model
         'is_active' => 'boolean',
     ];
 
-    public function getCredentialsAttribute($value)
-    {
-        return json_decode($value, true);
-    }
-
     public function setCredentialsAttribute($value)
     {
         $this->attributes['credentials'] = json_encode($value);
