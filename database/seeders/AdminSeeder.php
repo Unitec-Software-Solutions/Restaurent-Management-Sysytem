@@ -6,7 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Admin;
 use App\Models\Branch;
-use App\Models\Organizations;
+use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
@@ -17,26 +17,26 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        // $organizations = Organizations::all();
+        // $Organization = Organization::all();
 
-        // if ($organizations->count() < 5) {
-        //     $this->command->warn('🚨 Not enough organizations found. Ensure 5 organizations exist before seeding admins.');
+        // if ($Organization->count() < 5) {
+        //     $this->command->warn('🚨 Not enough Organization found. Ensure 5 Organization exist before seeding admins.');
         //     return;
         // }
 
-        // /**  
-        //  * Creates 2 admins per organization with sequentially numbered credentials:  
-        //  * - Email: admin{number}@example.com (e.g., admin1@example.com, admin2@example.com, ...)  
-        //  * - Password: password{number} (e.g., password1, password2, ...)  
-        //  *  
-        //  * Example: The 5th admin will have:  
-        //  * - Email: admin5@example.com  
-        //  * - Password: password5  
-        //  */  
+        // /**
+        //  * Creates 2 admins per organization with sequentially numbered credentials:
+        //  * - Email: admin{number}@example.com (e.g., admin1@example.com, admin2@example.com, ...)
+        //  * - Password: password{number} (e.g., password1, password2, ...)
+        //  *
+        //  * Example: The 5th admin will have:
+        //  * - Email: admin5@example.com
+        //  * - Password: password5
+        //  */
 
         // $adminIndex = 1;
 
-        // foreach ($organizations as $organization) {
+        // foreach ($Organization as $organization) {
         //     $branches = Branch::where('organization_id', $organization->id)->get();
 
         //     if ($branches->isEmpty()) {

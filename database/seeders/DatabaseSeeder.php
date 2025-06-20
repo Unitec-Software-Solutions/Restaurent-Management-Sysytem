@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
     
     public function run(): void
     {
+
         
         $basicPlan = \App\Models\SubscriptionPlan::create([
             'name' => 'Basic', 
@@ -51,6 +52,32 @@ class DatabaseSeeder extends Seeder
             'description' => 'Pro annual plan', 
             'is_trial' => false, 
             'trial_period_days' => null
+
+        DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
+
+        $this->call([
+            SubscriptionPlanSeeder::class, // <-- Move this to the top
+            OrganizationSeeder::class,
+            BranchSeeder::class,
+            // TableSeeder::class,
+            LoginSeeder::class,
+            // SupplierSeeder::class,
+            ItemCategorySeeder::class,
+            // ItemMasterSeeder::class,
+            AdminSeeder::class,
+            // ReservationSeeder::class,
+            // PurchaseOrderSeeder::class,
+            // GRNSeeder::class,
+            // SupplierPaymentSeeder::class,
+            // ItemTransactionSeeder::class,
+            //EmployeeSeeder::class,
+            // ModulePermissionSeeder::class,
+            SuperAdminSeeder::class,
+            ModulesTableSeeder::class,
+            RoleSeeder::class,
+            UserSeeder::class,
+
+
         ]);
         
         $legacyPlan = \App\Models\SubscriptionPlan::create([
