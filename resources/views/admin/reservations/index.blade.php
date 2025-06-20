@@ -2,6 +2,33 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
+    {{-- Debug Info Card for Admin Reservations --}}
+    @if(config('app.debug'))
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-medium text-indigo-800">🔍 Admin Reservations Debug Info</h3>
+                <a href="{{ route('admin.reservations.index', array_merge(request()->all(), ['debug' => 1])) }}" 
+                   class="text-xs text-indigo-600 hover:text-indigo-800">
+                    Full Debug (@dd)
+                </a>
+            </div>
+            <div class="text-xs text-indigo-700 mt-2 grid grid-cols-3 gap-4">
+                <div>
+                    <p><strong>Reservations Variable:</strong> {{ isset($reservations) ? 'Set (' . $reservations->count() . ')' : 'NOT SET' }}</p>
+                    <p><strong>Phone Search:</strong> {{ request('phone') ?? 'None' }}</p>
+                </div>
+                <div>
+                    <p><strong>DB Total Reservations:</strong> {{ \App\Models\Reservation::count() }}</p>
+                    <p><strong>Today's Reservations:</strong> {{ \App\Models\Reservation::whereDate('reservation_date', today())->count() }}</p>
+                </div>
+                <div>
+                    <p><strong>Admin:</strong> {{ auth('admin')->check() ? 'Authenticated' : 'NOT AUTH' }}</p>
+                    <p><strong>Organization:</strong> {{ auth('admin')->user()->organization->name ?? 'None' }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">Reservations Management</h1>
         <a href="{{ route('admin.reservations.create') }}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">

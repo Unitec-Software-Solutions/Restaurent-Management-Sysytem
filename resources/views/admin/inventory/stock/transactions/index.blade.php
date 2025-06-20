@@ -12,6 +12,38 @@
 @section('header-title', 'Stock Transactions')
 
 @section('content')
+
+{{-- Debug Info Card for Stock Transactions --}}
+@if(config('app.debug'))
+    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-medium text-indigo-800">🔍 Stock Transactions Debug Info</h3>
+            <a href="{{ route('admin.inventory.stock.transactions.index', array_merge(request()->query(), ['debug' => 1])) }}" 
+               class="text-xs text-indigo-600 hover:text-indigo-800">
+                Full Debug (@dd)
+            </a>
+        </div>
+        <div class="text-xs text-indigo-700 mt-2 grid grid-cols-4 gap-4">
+            <div>
+                <p><strong>Transactions Variable:</strong> {{ isset($transactions) ? 'Set (' . $transactions->count() . ')' : 'NOT SET' }}</p>
+                <p><strong>DB Transactions:</strong> {{ \App\Models\ItemTransaction::count() }}</p>
+            </div>
+            <div>
+                <p><strong>Branches Variable:</strong> {{ isset($branches) ? 'Set (' . $branches->count() . ')' : 'NOT SET' }}</p>
+                <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}</p>
+            </div>
+            <div>
+                <p><strong>Date Range:</strong> {{ $dateFrom }} to {{ $dateTo }}</p>
+                <p><strong>Search:</strong> {{ request('search', 'None') }}</p>
+            </div>
+            <div>
+                <p><strong>Transaction Type:</strong> {{ request('transaction_type', 'All') }}</p>
+                <p><strong>Branch Filter:</strong> {{ request('branch_id', 'All') }}</p>
+            </div>
+        </div>
+    </div>
+@endif
+
     <div class="p-4 rounded-lg">
         <!-- Header with navigation buttons -->
         <div class="justify-between items-center mb-4">

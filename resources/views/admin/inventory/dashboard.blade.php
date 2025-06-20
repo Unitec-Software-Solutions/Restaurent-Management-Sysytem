@@ -7,6 +7,38 @@
 @section('header-title', 'Inventory Dashboard')
 
 @section('content')
+
+{{-- Header Navigation --}}
+@if(config('app.debug'))
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-medium text-green-800">🔍 Inventory Dashboard Debug Info</h3>
+            <a href="{{ route('admin.inventory.dashboard', ['debug' => 1]) }}" 
+               class="text-xs text-green-600 hover:text-green-800">
+                Full Debug (@dd)
+            </a>
+        </div>
+        <div class="text-xs text-green-700 mt-2 grid grid-cols-4 gap-4">
+            <div>
+                <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}</p>
+                <p><strong>DB ItemMaster:</strong> {{ \App\Models\ItemMaster::count() }}</p>
+            </div>
+            <div>
+                <p><strong>Categories Variable:</strong> {{ isset($categories) ? 'Set (' . $categories->count() . ')' : 'NOT SET' }}</p>
+                <p><strong>DB Categories:</strong> {{ \App\Models\ItemCategory::count() }}</p>
+            </div>
+            <div>
+                <p><strong>Top Selling:</strong> {{ isset($topSellingItems) ? 'Set (' . count($topSellingItems) . ')' : 'NOT SET' }}</p>
+                <p><strong>Transactions:</strong> {{ \App\Models\ItemTransaction::count() }}</p>
+            </div>
+            <div>
+                <p><strong>Admin:</strong> {{ auth('admin')->check() ? auth('admin')->user()->name : 'NOT AUTH' }}</p>
+                <p><strong>Branch:</strong> {{ auth('admin')->user()->branch->name ?? 'None' }}</p>
+            </div>
+        </div>
+    </div>
+@endif
+
     <div class="p-4 rounded-lg">
         <!-- Header with navigation buttons -->
         <div class="  justify-between items-center mb-4">

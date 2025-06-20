@@ -1,5 +1,38 @@
 @extends('layouts.admin')
+
 @section('content')
+
+{{-- Debug Info Card for Order Show --}}
+@if(config('app.debug'))
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-medium text-orange-800">🔍 Order Debug Info</h3>
+            <a href="{{ route('admin.orders.show', $order->id ?? 0) }}?debug=1" 
+               class="text-xs text-orange-600 hover:text-orange-800">
+                Full Debug (@dd)
+            </a>
+        </div>
+        <div class="text-xs text-orange-700 mt-2 grid grid-cols-4 gap-4">
+            <div>
+                <p><strong>Order Variable:</strong> {{ isset($order) ? 'Set' : 'NOT SET' }}</p>
+                <p><strong>Order ID:</strong> {{ $order->id ?? 'N/A' }}</p>
+            </div>
+            <div>
+                <p><strong>Customer:</strong> {{ $order->customer_name ?? 'N/A' }}</p>
+                <p><strong>Phone:</strong> {{ $order->customer_phone ?? 'N/A' }}</p>
+            </div>
+            <div>
+                <p><strong>Items Count:</strong> {{ isset($order) ? $order->orderItems->count() : 'N/A' }}</p>
+                <p><strong>Total Amount:</strong> Rs. {{ number_format($order->total_amount ?? 0, 2) }}</p>
+            </div>
+            <div>
+                <p><strong>Status:</strong> {{ $order->status ?? 'N/A' }}</p>
+                <p><strong>Branch:</strong> {{ $order->branch->name ?? 'N/A' }}</p>
+            </div>
+        </div>
+    </div>
+@endif
+
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
         <div class="flex justify-between items-center mb-6">
