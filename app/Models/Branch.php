@@ -14,6 +14,8 @@ class Branch extends Model
 
     protected $fillable = [
         'name',
+        'slug',
+        'organization_id',
         'address',
         'phone',
         'opening_time',
@@ -27,10 +29,13 @@ class Branch extends Model
         'is_active',
         'activation_key',
         'activated_at',
+        'is_head_office',
+        'type',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_head_office' => 'boolean',
         'opening_time' => 'datetime',
         'closing_time' => 'datetime',
         'reservation_fee' => 'decimal:2',
@@ -61,6 +66,21 @@ class Branch extends Model
     public function tables(): HasMany
     {
         return $this->hasMany(Table::class);
+    }
+
+    public function kitchenStations(): HasMany
+    {
+        return $this->hasMany(KitchenStation::class);
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function admins(): HasMany
+    {
+        return $this->hasMany(Admin::class);
     }
 
     // Scopes
@@ -114,5 +134,43 @@ class Branch extends Model
     public function isSystemActive()
     {
         return $this->organization->is_active && $this->is_active;
+    }
+
+    /**
+     * Helper methods for branch type management
+     */
+    public function isHeadOffice(): bool
+    {
+        return $this->is_head_office;
+    }
+
+    public function getDefaultKitchenStations(): array
+    {
+        $defaultStations = [
+            'Hot Kitchen' => ['type' => 'cooking', 'priority' => 1],
+            'Cold Kitchen' => ['type' => 'prep', 'priority' => 2],
+            'Grill Station' => ['type' => 'grill', 'priority' => 3],
+            'Fry Station' => ['type' => 'fry', 'priority' => 4],
+            'Dessert Station' => ['type' => 'dessert', 'priority' => 5],
+        ];
+
+        // Add beverage/bar stations for appropriate types
+        if (in_array($this->type, ['bar', 'pub', 'restaurant'])) {
+            $defaultStations['Bar Station'] = ['type' => 'bar', 'priority' => 6];
+            $defaultStations['Beverage Station'] = ['type' => 'beverage', 'priority' => 7];
+        }
+
+        return $defaultStations;
+    }
+
+    /**
+     * Manually trigger the automated setup for this branch
+     * 
+     * @return void
+     */
+    public function setupAutomation(): void
+    {
+        $automationService = app(\App\Services\BranchAutomationService::class);
+        $automationService->setupNewBranch($this);
     }
 }

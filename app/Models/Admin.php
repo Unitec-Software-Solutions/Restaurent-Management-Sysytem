@@ -24,6 +24,7 @@ class Admin extends Authenticatable
         'branch_id',
         'organization_id',
         'is_super_admin',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -42,6 +43,7 @@ class Admin extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
