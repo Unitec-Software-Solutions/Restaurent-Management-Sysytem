@@ -121,18 +121,24 @@ class OrderService
             'quantity' => $quantity,
             'remaining_stock' => ItemTransaction::stockOnHand($item->id, $order->branch_id)
         ]);
-    }
-
-    /**
-     * Get available stewards for a branch
+    }    /**
+     * Get available servers for a branch (updated from stewards)
      */
-    public function getAvailableStewards($branchId)
+    public function getAvailableServers($branchId)
     {
         return Employee::active()
-            ->stewards()
+            ->servers()
             ->where('branch_id', $branchId)
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Get available stewards for a branch (legacy method - kept for compatibility)
+     */
+    public function getAvailableStewards($branchId)
+    {
+        return $this->getAvailableServers($branchId);
     }
 
     /**
