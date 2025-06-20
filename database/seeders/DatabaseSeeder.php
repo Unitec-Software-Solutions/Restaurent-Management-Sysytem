@@ -33,33 +33,13 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-
-
-        $basicPlan = \App\Models\SubscriptionPlan::create([
-            'name' => 'Basic',
-            'price' => 0,
-            'currency' => 'LKR',
-            'modules' => [],
-            'description' => 'Basic free plan',
-            'is_trial' => true,
-            'trial_period_days' => 30
-        ]);
-
-        $proPlan = \App\Models\SubscriptionPlan::create([
-            'name' => 'Pro',
-            'price' => 5000,
-            'currency' => 'LKR',
-            'modules' => [],
-            'description' => 'Pro annual plan',
-            'is_trial' => false,
-            'trial_period_days' => null
-
-        ]);
-
+        // Clear existing data first
         DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
 
+        // Run basic seeders first
         $this->call([
-            SubscriptionPlanSeeder::class, // <-- Move this to the top
+            SubscriptionPlanSeeder::class, // Creates subscription plans
+            EnhancedPermissionSeeder::class, // Creates roles and permissions for automation
             OrganizationSeeder::class,
             BranchSeeder::class,
             // TableSeeder::class,
@@ -94,6 +74,10 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $plans = collect([$basicPlan, $proPlan, $legacyPlan]);
+        ]);
+
+        // Get the created subscription plans for factory data
+        $plans = \App\Models\SubscriptionPlan::all();
 
 
         $planIds = $plans->pluck('id')->toArray();
