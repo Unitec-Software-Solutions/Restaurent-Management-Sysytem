@@ -20,6 +20,15 @@ class Organization extends Model
         'is_active',
         'subscription_plan_id',
         'discount_percentage',
+        'password',
+        'business_type',
+        'status',
+        'description',
+        'website',
+        'logo',
+        'trading_name',
+        'registration_number',
+        'alternative_phone',
     ];
 
     public function branches()
