@@ -116,6 +116,12 @@ class Order extends Model
         return $this->belongsTo(Employee::class, 'steward_id');
     }
 
+    // New method that aliases steward to server for better naming
+    public function server()
+    {
+        return $this->belongsTo(Employee::class, 'steward_id');
+    }
+
     public function bills()
     {
         return $this->hasMany(Bill::class);
