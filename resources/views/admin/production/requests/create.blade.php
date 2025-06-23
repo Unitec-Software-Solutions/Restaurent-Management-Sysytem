@@ -48,9 +48,11 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
-                            <input type="text" value="{{ Auth::user()->branch->name }}"
+                            <input type="text" value="{{ Auth::user()->branch?->name ?? 'N/A' }}"
                                 class="w-full rounded-lg border-gray-300 bg-gray-50 shadow-sm" readonly>
-                            <input type="hidden" name="branch_id" value="{{ Auth::user()->branch_id }}">
+                            @if (Auth::user()->branch_id)
+                                <input type="hidden" name="branch_id" value="{{ Auth::user()->branch_id }}">
+                            @endif
                         </div>
                     </div>
 
