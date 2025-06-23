@@ -45,7 +45,7 @@ class ProductionRequestsMasterController extends Controller
         $requests = $query->latest()->paginate(20);
         $branches = Branch::where('organization_id', Auth::user()->organization_id)->get();
 
-        return view('production.requests.index', compact('requests', 'branches'));
+        return view('admin.production.requests.index', compact('requests', 'branches'));
     }
 
     /**
@@ -60,7 +60,7 @@ class ProductionRequestsMasterController extends Controller
         ->where('organization_id', Auth::user()->organization_id)
         ->get();
 
-        return view('production.requests.create', compact('productionItems'));
+        return view('admin.production.requests.create', compact('productionItems'));
     }
 
     /**
@@ -97,7 +97,7 @@ class ProductionRequestsMasterController extends Controller
             }
         });
 
-        return redirect()->route('production.requests.index')
+        return redirect()->route('admin.production.requests.index')
             ->with('success', 'Production request created successfully.');
     }
 
@@ -108,7 +108,7 @@ class ProductionRequestsMasterController extends Controller
     {
         $productionRequest->load(['branch', 'items.item', 'createdBy', 'approvedBy']);
 
-        return view('production.requests.show', compact('productionRequest'));
+        return view('admin.production.requests.show', compact('productionRequest'));
     }
 
     /**
@@ -198,6 +198,6 @@ class ProductionRequestsMasterController extends Controller
             }
         }
 
-        return view('production.requests.aggregate', compact('aggregatedItems', 'requests'));
+        return view('admin.production.requests.aggregate', compact('aggregatedItems', 'requests'));
     }
 }
