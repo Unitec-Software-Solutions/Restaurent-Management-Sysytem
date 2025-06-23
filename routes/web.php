@@ -299,6 +299,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
         });
 
+        // Production Requests (Branch)
+        Route::prefix('production/requests')->name('production.requests.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'store'])->name('store');
+            Route::get('/{productionRequest}', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'show'])->name('show');
+            Route::post('/{productionRequest}/submit', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'submit'])->name('submit');
+            Route::post('/{productionRequest}/approve', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'approve'])->name('approve');
+            Route::post('/{productionRequest}/cancel', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'cancel'])->name('cancel');
+        });
+
+        // Production Orders (HQ)
+        Route::prefix('production/orders')->name('production.orders.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ProductionOrderController::class, 'index'])->name('index');
+            Route::get('/aggregate', [\App\Http\Controllers\ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
+            Route::post('/', [\App\Http\Controllers\ProductionOrderController::class, 'store'])->name('store');
+            Route::get('/{productionOrder}', [\App\Http\Controllers\ProductionOrderController::class, 'show'])->name('show');
+        });
+
         // Additional Admin Routes
         Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
         Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
