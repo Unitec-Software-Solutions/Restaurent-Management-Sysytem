@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\ItemCategory;
 use App\Models\ItemMaster;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use App\Models\Branch;
 use Illuminate\Support\Facades\Auth;
 
 class ItemMasterController extends Controller
 {
+    use Exportable;
+
     /**
      * Display a listing of items.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -23,32 +26,24 @@ class ItemMasterController extends Controller
 
         $orgId = $user->organization_id;
 
-        $items = ItemMaster::with('category')
-            ->where('organization_id', $orgId)
-            ->when(request('search'), function ($query) {
-                $search = strtolower(request('search'));
-                $query->where(function ($q) use ($search) {
-                    $q->whereRaw('LOWER(name) LIKE ?', ['%' . $search . '%'])
-                        ->orWhereRaw('LOWER(item_code) LIKE ?', ['%' . $search . '%']);
-                });
-            })
-            ->when(request('category'), function ($query) {
-                return $query->where('item_category_id', request('category'));
-            })
-            ->when(request('status'), function ($query) {
-                $status = request('status');
-                if ($status === 'active') {
-                    $query->whereNull('deleted_at'); // Non-trashed items
-                } elseif ($status === 'inactive') {
-                    $query->onlyTrashed(); // Only soft-deleted items
-                }
-            })
-            ->paginate(15);
+        $query = ItemMaster::with('category')
+            ->where('organization_id', $orgId);
+
+        // Apply filters
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'inventory_items_export.xlsx', [
+                'Item Code', 'Name', 'Category', 'Unit', 'Cost Price', 'Selling Price', 'Status', 'Created At'
+            ]);
+        }
+
+        $items = $query->paginate(15);
 
         $categories = ItemCategory::active()
             ->where('organization_id', $orgId)
             ->get();
-
 
         $totalItems = ItemMaster::where('organization_id', $orgId)->count();
         $activeItems = ItemMaster::where('organization_id', $orgId)->count();
@@ -321,5 +316,13 @@ class ItemMasterController extends Controller
 
         return redirect()->route('admin.inventory.items.index')
             ->with('success', 'Item deleted successfully');
+    }
+
+    /**
+     * Get searchable columns for inventory items
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'item_code', 'description'];
     }
 }

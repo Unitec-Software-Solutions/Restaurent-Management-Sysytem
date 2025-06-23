@@ -60,36 +60,21 @@
                     </a>
             </div>
 
-            <!-- Search & Filters -->
-            <div class="p-6 border-b bg-gray-50">
-                <form method="GET" action="{{ route('admin.suppliers.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                        <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Name, ID, contact..." 
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                            <option value="">All Status</option>
-                            <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
-                        </select>
-                    </div>
-                    <div class="flex gap-2 items-end">
-                        <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-search mr-2"></i> Search
-                        </button>
-                        @if (request()->hasAny(['search', 'status']))
-                            <a href="{{ route('admin.suppliers.index') }}"
-                                class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200">
-                                Clear
-                            </a>
-                        @endif
-                    </div>
-                </form>
-            </div>
+            <!-- Filters with Export -->
+            <x-module-filters 
+                :action="route('admin.suppliers.index')"
+                :export-permission="'export_suppliers'"
+                :export-filename="'suppliers_export.xlsx'">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Status</option>
+                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                    </select>
+                </div>
+            </x-module-filters>
 
             <!-- Suppliers Table -->
             <div class="overflow-x-auto">

@@ -36,11 +36,20 @@
                         <td class="px-6 py-4 text-gray-700">{{ number_format($plan->price, 2) }}</td>
                         <td class="px-6 py-4 text-gray-700">{{ $plan->currency }}</td>                        <td class="px-6 py-4">
                             <div class="flex flex-wrap gap-1">
-                                @foreach(is_array($plan->modules) ? $plan->modules : json_decode($plan->modules, true) ?? [] as $moduleId)
+                                @php
+                                    $modules = $plan->getModulesArray();
+                                @endphp
+                                @forelse($modules as $moduleData)
+                                    @php
+                                        $moduleName = is_array($moduleData) ? ($moduleData['name'] ?? $moduleData) : $moduleData;
+                                        $moduleId = is_numeric($moduleName) ? $moduleName : null;
+                                    @endphp
                                     <span class="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-semibold">
-                                        {{ $allModules[$moduleId] ?? $moduleId }}
+                                        {{ $moduleId ? ($allModules[$moduleId] ?? $moduleId) : $moduleName }}
                                     </span>
-                                @endforeach
+                                @empty
+                                    <span class="text-gray-500 text-sm">No modules</span>
+                                @endforelse
                             </div>
                         </td>
                         <td class="px-6 py-4">

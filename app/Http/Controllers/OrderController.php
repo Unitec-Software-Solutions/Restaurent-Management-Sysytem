@@ -6,16 +6,36 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ItemMaster;
+use App\Models\MenuItem;
+use App\Models\MenuCategory;
 use App\Models\Reservation;
 use App\Models\Branch;
 use App\Models\Employee;
+use App\Services\InventoryService;
+use App\Services\ProductCatalogService;
+use App\Services\OrderService;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderController extends Controller
 {
+    protected $inventoryService;
+    protected $catalogService;
+    protected $orderService;
+
+    public function __construct(
+        InventoryService $inventoryService,
+        ProductCatalogService $catalogService,
+        OrderService $orderService
+    ) {
+        $this->inventoryService = $inventoryService;
+        $this->catalogService = $catalogService;
+        $this->orderService = $orderService;
+    }
+
     // List all orders for a reservation (dine-in)
     public function index(Request $request)
     {

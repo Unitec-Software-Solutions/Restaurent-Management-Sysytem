@@ -14,70 +14,57 @@
             </div>
         </div>
 
-        <!-- Filters Section -->
-        <div class="border-t pt-4">
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-6 gap-4">
-                
-                <!-- Date Range Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                    <input type="date" name="start_date" value="{{ $filters['startDate'] }}"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                    <input type="date" name="end_date" value="{{ $filters['endDate'] }}"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                </div>
+        <!-- Filters with Export -->
+        <x-module-filters 
+            :action="route('admin.reservations.index')"
+            :export-permission="'export_reservations'"
+            :export-filename="'reservations_export.xlsx'">
+            
+            <!-- Date Range Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input type="date" name="start_date" value="{{ $filters['startDate'] }}"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input type="date" name="end_date" value="{{ $filters['endDate'] }}"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            </div>
 
-                <!-- Status Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Statuses</option>
-                        <option value="pending" {{ $filters['status'] == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="confirmed" {{ $filters['status'] == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
-                        <option value="cancelled" {{ $filters['status'] == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                    </select>
-                </div>
+            <!-- Status Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {{ $filters['status'] == 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="confirmed" {{ $filters['status'] == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
+                    <option value="cancelled" {{ $filters['status'] == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                </select>
+            </div>
 
-                <!-- Branch Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <select name="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Branches</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ $filters['branchId'] == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+            <!-- Branch Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <select name="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Branches</option>
+                    @foreach($branches as $branch)
+                        <option value="{{ $branch->id }}" {{ $filters['branchId'] == $branch->id ? 'selected' : '' }}>
+                            {{ $branch->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-                <!-- Phone Search -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                    <input type="text" name="phone" value="{{ $filters['phone'] }}" 
-                           placeholder="Search by phone"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                </div>
-
-                <!-- Filter Actions -->
-                <div class="flex items-end space-x-2">
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-filter mr-2"></i> Filter
-                    </button>
-                    <a href="{{ route('admin.reservations.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg">
-                        Reset
-                    </a>
-                </div>
-
-                <!-- Export Actions -->
-                <div class="flex items-end space-x-2">
-                    <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" 
-                       class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-file-csv mr-2"></i> CSV
+            <!-- Phone Search -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input type="text" name="phone" value="{{ $filters['phone'] }}" 
+                       placeholder="Search by phone"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            </div>
+        </x-module-filters>
                     </a>
                 </div>
             </form>
@@ -157,10 +144,16 @@
                                    class="text-green-600 hover:text-green-900">
                                     <i class="fas fa-utensils mr-1"></i> Orders
                                 </a>
-                                <a href="{{ route('admin.orders.reservations.create', ['reservation' => $reservation->id]) }}" 
-                                   class="text-purple-600 hover:text-purple-900">
-                                    <i class="fas fa-plus mr-1"></i> Add Order
-                                </a>
+                                @routeexists('admin.orders.orders.reservations.create')
+                                    <a href="{{ route('admin.orders.orders.reservations.create', ['reservation' => $reservation->id]) }}" 
+                                       class="text-purple-600 hover:text-purple-900">
+                                        <i class="fas fa-plus mr-1"></i> Add Order
+                                    </a>
+                                @else
+                                    <span class="text-gray-400">
+                                        <i class="fas fa-plus mr-1"></i> Add Order (Unavailable)
+                                    </span>
+                                @endrouteexists
                             </div>
                         </td>
                     </tr>

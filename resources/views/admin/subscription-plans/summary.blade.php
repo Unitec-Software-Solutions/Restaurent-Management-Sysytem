@@ -8,19 +8,25 @@
             <li>
                 <span class="block text-xs text-gray-500 uppercase font-semibold">Name</span>
                 <span class="text-lg font-bold text-gray-800">{{ $subscriptionPlan->name }}</span>
-            </li>
-            <li>
+            </li>            <li>
                 <span class="block text-xs text-gray-500 uppercase font-semibold">Modules</span>
                 @php
                     $allModules = \App\Models\Module::pluck('name', 'id')->toArray();
-                    $modules = is_array($subscriptionPlan->modules) ? $subscriptionPlan->modules : json_decode($subscriptionPlan->modules, true) ?? [];
+                    $modules = $subscriptionPlan->getModulesArray();
                 @endphp
                 <div class="flex flex-wrap gap-2 mt-1">
-                    @foreach($modules as $moduleId)
+                    @forelse($modules as $moduleData)
+                        @php
+                            $moduleName = is_array($moduleData) ? ($moduleData['name'] ?? $moduleData) : $moduleData;
+                            $moduleId = is_numeric($moduleName) ? $moduleName : null;
+                            $displayName = $moduleId ? ($allModules[$moduleId] ?? $moduleId) : $moduleName;
+                        @endphp
                         <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                            {{ $allModules[$moduleId] ?? $moduleId }}
+                            {{ $displayName }}
                         </span>
-                    @endforeach
+                    @empty
+                        <span class="text-gray-500 text-sm">No modules assigned</span>
+                    @endforelse
                 </div>
             </li>
             <li>

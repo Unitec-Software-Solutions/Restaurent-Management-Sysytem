@@ -7,9 +7,9 @@
         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <div class="flex justify-between items-center">
                 <h3 class="text-sm font-medium text-yellow-800">🔍 Orders Debug Info</h3>
-                <a href="{{ route('admin.orders.index', ['debug' => 1]) }}" 
+                <a href="{{ route('admin.orders.index', ['debug' => request('debug') ? null : true]) }}" 
                    class="text-xs text-yellow-600 hover:text-yellow-800">
-                    Full Debug (@dd)
+                    {{ request('debug') ? 'Hide Debug' : 'Show Full Debug' }}
                 </a>
             </div>
             <div class="text-xs text-yellow-700 mt-2 grid grid-cols-3 gap-4">
@@ -26,6 +26,14 @@
                     <p><strong>Organization:</strong> {{ auth('admin')->user()->organization->name ?? 'None' }}</p>
                 </div>
             </div>
+            
+            {{-- Full Debug Display --}}
+            @if(request('debug'))
+                <div class="mt-4 p-3 bg-gray-100 rounded">
+                    <h4 class="font-medium text-gray-800 mb-2">Full Orders Data:</h4>
+                    <pre class="text-xs overflow-auto max-h-40">{{ isset($orders) ? print_r($orders->toArray(), true) : 'Orders variable not set' }}</pre>
+                </div>
+            @endif
         </div>
     @endif
     <div class="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -42,17 +50,45 @@
                 @endif
             </h1>
             <div class="flex gap-2">
-                <a href="{{ route('admin.orders.takeaway.create') }}" 
-                   class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                    Create Takeaway
-                </a>
+                @php
+                    $takeawayRoute = 'admin.orders.takeaway.create';
+                    $reservationRoute = 'admin.reservations.create';
+                    $dashboardRoute = 'admin.orders.dashboard';
+                @endphp
+                
+                @routeexists($takeawayRoute)
+                    <a href="{{ route($takeawayRoute) }}" 
+                       class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Create Takeaway
+                    </a>
+                @else
+                    <span class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
+                        Create Takeaway (Unavailable)
+                    </span>
+                @endrouteexists
 
                 @if(!$admin->isSuperAdmin())
-                    <a href="{{ route('admin.reservations.create') }}" class="btn btn-primary">Create Reservation</a>
+                    @routeexists($reservationRoute)
+                        <a href="{{ route($reservationRoute) }}" 
+                           class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            Create Reservation
+                        </a>
+                    @else
+                        <span class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
+                            Create Reservation (Unavailable)
+                        </span>
+                    @endrouteexists
                 @endif
-                <a href="{{ route('admin.orders.dashboard') }}" class="text-blue-500 hover:text-blue-700 flex items-center">
-                    ← Back to Dashboard
-                </a>
+                
+                @routeexists($dashboardRoute)
+                    <a href="{{ route($dashboardRoute) }}" class="text-blue-500 hover:text-blue-700 flex items-center">
+                        ← Back to Dashboard
+                    </a>
+                @else
+                    <a href="{{ route('admin.dashboard') }}" class="text-blue-500 hover:text-blue-700 flex items-center">
+                        ← Back to Dashboard
+                    </a>
+                @endrouteexists
             </div>
         </div>
         <div class="overflow-x-auto">
@@ -82,9 +118,13 @@
                         </td>
                         <td class="px-4 py-3">
                             @if($order->reservation_id)
-                                <a href="{{ route('admin.reservations.show', $order->reservation_id) }}" class="text-blue-500">
-                                    Reservation #{{ $order->reservation_id }}
-                                </a>
+                                @if(Route::has('admin.reservations.show'))
+                                    <a href="{{ route('admin.reservations.show', $order->reservation_id) }}" class="text-blue-500">
+                                        Reservation #{{ $order->reservation_id }}
+                                    </a>
+                                @else
+                                    <span class="text-gray-600">Reservation #{{ $order->reservation_id }}</span>
+                                @endif
                             @else
                                 Takeaway Order
                             @endif
@@ -101,16 +141,44 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-center">
+                            @php
+                                $reservationEditRoute = 'admin.orders.orders.reservations.edit';
+                                $takeawayEditRoute = 'admin.orders.takeaway.edit';
+                                $orderShowRoute = 'admin.orders.show';
+                            @endphp
+                            
                             @if($order->reservation)
-                                <a href="{{ route('admin.orders.reservations.edit', ['reservation' => $order->reservation_id, 'order' => $order->id]) }}"
-                                   class="text-blue-500 hover:text-blue-700">
-                                    Edit
-                                </a>
+                                @routeexists($reservationEditRoute)
+                                    <a href="{{ route($reservationEditRoute, ['reservation' => $order->reservation_id, 'order' => $order->id]) }}"
+                                       class="text-blue-500 hover:text-blue-700 mr-2">
+                                        Edit Reservation
+                                    </a>
+                                @endrouteexists
+                                
+                                @routeexists($orderShowRoute)
+                                    <a href="{{ route($orderShowRoute, $order->id) }}"
+                                       class="text-green-500 hover:text-green-700">
+                                        View Order
+                                    </a>
+                                @endrouteexists
                             @else
-                                <a href="{{ route('admin.orders.takeaway.edit', ['order' => $order->id]) }}"
-                                   class="text-blue-500 hover:text-blue-700">
-                                    Edit
-                                </a>
+                                @routeexists($takeawayEditRoute)
+                                    <a href="{{ route($takeawayEditRoute, ['order' => $order->id]) }}"
+                                       class="text-blue-500 hover:text-blue-700 mr-2">
+                                        Edit Takeaway
+                                    </a>
+                                @endrouteexists
+                                
+                                @routeexists($orderShowRoute)
+                                    <a href="{{ route($orderShowRoute, $order->id) }}"
+                                       class="text-green-500 hover:text-green-700">
+                                        View
+                                    </a>
+                                @endrouteexists
+                            @endif
+                            
+                            @if(!Route::has($reservationEditRoute) && !Route::has($takeawayEditRoute) && !Route::has($orderShowRoute))
+                                <span class="text-gray-400">No actions available</span>
                             @endif
                         </td>
                     </tr>

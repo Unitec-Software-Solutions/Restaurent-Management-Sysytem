@@ -44,75 +44,34 @@
                 ]" active="Item Management" />
             </div>
 
-            <!-- Search and Filter -->
-            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <form method="GET" action="{{ route('admin.inventory.items.index') }}"
-                    class="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                    <!-- Search Input -->
-                    <div>
-                        <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search Item</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" name="search" id="search" value="{{ request('search') }}"
-                                placeholder="Enter item name or code" aria-label="Search items" autocomplete="on"
-                                class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                    </div>
-
-                    <!-- Category Filter -->
-                    <div>
-                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                        <select name="category" id="category"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">All Categories</option>
-                            @foreach ($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>
-                                    {{ $cat->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label for="status" class="block text-sm font-medium text-gray-400 mb-1">Status</label>
-                        <select name="status" id="status"
-                            class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-400" disabled>
-                            <option value="">Status</option>
-                            <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive
+            <!-- Filters with Export -->
+            <x-module-filters 
+                :action="route('admin.inventory.items.index')"
+                :export-permission="'export_inventory_items'"
+                :export-filename="'inventory_items_export.xlsx'">
+                
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select name="category" id="category"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Categories</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>
+                                {{ $cat->name }}
                             </option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="sort_by" class="block text-sm font-medium text-gray-400 mb-1">Sort By</label>
-                        <select name="sort_by" id="sort_by"
-                            class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-400" disabled>
-                            <option value="">Default</option>
-                            <option value="name_asc" {{ request('sort_by') == 'name_asc' ? 'selected' : '' }}>
-                                Name (A-Z)</option>
-                            <option value="name_desc" {{ request('sort_by') == 'name_desc' ? 'selected' : '' }}>
-                                Name (Z-A)</option>
-                            <option value="price_asc" {{ request('sort_by') == 'price_asc' ? 'selected' : '' }}>
-                                Price (Low to High)</option>
-                            <option value="price_desc" {{ request('sort_by') == 'price_desc' ? 'selected' : '' }}>
-                                Price (High to Low)</option>
-                        </select>
-                    </div>
-                    <!-- Filter Buttons -->
-                    <div class="flex items-end space-x-2">
-                        <button type="submit"
-                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-filter mr-2"></i> Filter
-                        </button>
-                        <a href="{{ route('admin.inventory.items.index') }}"
-                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-redo mr-2"></i> Reset
-                        </a>
-                    </div>
-                </form>
-            </div>
+                        @endforeach
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" id="status" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Status</option>
+                        <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
+                    </select>
+                </div>
+            </x-module-filters>
 
             <!-- Item List -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">

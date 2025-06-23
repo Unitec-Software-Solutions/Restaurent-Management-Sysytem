@@ -13,6 +13,7 @@ use App\Models\GrnMaster;
 use App\Services\GTNService;
 use App\Http\Requests\GTNStoreRequest;
 use App\Http\Requests\GTNUpdateRequest;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,13 +22,16 @@ use Exception;
 
 class GoodsTransferNoteController extends Controller
 {
+    use Exportable;
+    
     protected $gtnService;
 
     public function __construct(GTNService $gtnService)
     {
         $this->gtnService = $gtnService;
     }
-    public function index()
+    
+    public function index(Request $request)
     {
         $admin = Auth::user();
 
@@ -41,36 +45,18 @@ class GoodsTransferNoteController extends Controller
         $startDate = request('start_date', now()->subDays(30)->format('Y-m-d'));
         $endDate = request('end_date', now()->format('Y-m-d'));
 
-        // Apply filters from request
+        // Build query
         $query = GoodsTransferNote::with(['fromBranch', 'toBranch', 'createdBy', 'items'])
             ->where('organization_id', $orgId);
 
-        if ($from = request('from_branch_id')) {
-            $query->where('from_branch_id', $from);
-        }
-        if ($to = request('to_branch_id')) {
-            $query->where('to_branch_id', $to);
-        }
-        if (($status = request('status')) && $status !== 'all') {
-            $query->where('status', $status);
-        }
-        // Add origin_status filter
-        if ($originStatus = request('origin_status')) {
-            $query->where('origin_status', $originStatus);
-        }
-        // Add receiver_status filter
-        if ($receiverStatus = request('receiver_status')) {
-            $query->where('receiver_status', $receiverStatus);
-        }
-        // Add search filter for GTN number or GTN name (case-insensitive)
-        if ($search = request('search')) {
-            $search = strtolower($search);
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(gtn_number) LIKE ?', ['%' . $search . '%'])
-                  ->orWhereRaw('LOWER(gtn_number) LIKE ?', ['%' . $search . '%']);
-                // If you have a GTN name field, add it here:
-                // $q->orWhereRaw('LOWER(gtn_name) LIKE ?', ['%' . $search . '%']);
-            });
+        // Apply filters using the trait
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'gtn_export.xlsx', [
+                'GTN Number', 'From Branch', 'To Branch', 'Status', 'Origin Status', 'Receiver Status', 'Transfer Date', 'Created At'
+            ]);
         }
 
         // Always apply date range filter
@@ -662,5 +648,13 @@ class GoodsTransferNoteController extends Controller
         ->findOrFail($id);
 
         return view('admin.inventory.gtn.print', compact('gtn'));
+    }
+
+    /**
+     * Get searchable columns for GTN
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['gtn_number'];
     }
 }

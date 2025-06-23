@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Reservation;
 use App\Models\Payment;
 use App\Models\Table;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ReservationConfirmed;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class AdminReservationController extends Controller
 {
+    use Exportable;
     public function index(Request $request)
     {
         $admin = auth('admin')->user();
@@ -65,9 +67,14 @@ class AdminReservationController extends Controller
 
         $query->orderBy('date', 'desc')->orderBy('start_time', 'desc');
 
-        // Export functionality
-        if ($export) {
-            return $this->exportReservations($query->get(), $export);
+        // Apply filters and search for potential export
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'reservations_export.xlsx', [
+                'ID', 'Customer Name', 'Phone', 'Email', 'Date', 'Time', 'People', 'Status', 'Branch', 'Tables', 'Created At'
+            ]);
         }
 
         $reservations = $query->paginate(20);
@@ -89,6 +96,14 @@ class AdminReservationController extends Controller
         ];
 
         return view('admin.reservations.index', compact('reservations', 'branches', 'stewards', 'filters'));
+    }
+
+    /**
+     * Get searchable columns for reservations
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'phone', 'email'];
     }
 
     public function pending()

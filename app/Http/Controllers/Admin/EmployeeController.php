@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Branch;
 use App\Models\Role;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,10 +17,19 @@ use Spatie\Permission\Models\Role as SpatieRole;
 
 class EmployeeController extends Controller
 {
-    protected function getOrganizationId()
+    use Exportable;protected function getOrganizationId()
     {
         $user = Auth::user();
-        if (!$user || !$user->organization_id) {
+        if (!$user) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Super admins don't have organization restrictions
+        if (isset($user->is_super_admin) && $user->is_super_admin) {
+            return null; // Return null to indicate no restriction
+        }
+        
+        if (!$user->organization_id) {
             abort(403, 'Unauthorized access');
         }
         return $user->organization_id;
@@ -27,8 +37,12 @@ class EmployeeController extends Controller
     {
         $orgId = $this->getOrganizationId();
         
-        $query = Employee::with(['branch', 'employeeRole'])
-            ->where('organization_id', $orgId);
+        $query = Employee::with(['branch', 'employeeRole']);
+        
+        // Apply organization filter only if not super admin
+        if ($orgId !== null) {
+            $query->where('organization_id', $orgId);
+        }
 
         // Include trashed records if requested
         if ($request->boolean('show_deleted')) {
@@ -60,23 +74,43 @@ class EmployeeController extends Controller
 
         if ($request->has('branch_id') && $request->branch_id) {
             $query->where('branch_id', $request->branch_id);
-        }
-
-        if ($request->has('status')) {
+        }        if ($request->has('status')) {
             $isActive = $request->status === 'active';
             $query->where('is_active', $isActive);
         }
 
+        // Apply filters and search for potential export
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'employees_export.xlsx', [
+                'ID', 'Name', 'Email', 'Phone', 'Branch', 'Role', 'Status', 'Join Date', 'Created At'
+            ]);
+        }
+
         $employees = $query->orderBy('name')->paginate(15)->appends($request->query());
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = ($orgId !== null) 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $roles = Employee::getAvailableRoles();
         $restaurantRoles = Employee::getAvailableRestaurantRoles();
 
         return view('admin.employees.index', compact('employees', 'branches', 'roles', 'restaurantRoles'));
-    }    public function create()
+    }
+
+    /**
+     * Get searchable columns for employees
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'email', 'phone', 'emp_id'];
+    }public function create()
     {
         $orgId = $this->getOrganizationId();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = ($orgId !== null) 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $roles = Employee::getAvailableRoles();
         $restaurantRoles = SpatieRole::where('guard_name', 'web')
             ->whereIn('name', ['host/hostess', 'servers', 'bartenders', 'cashiers', 'chefs', 'dishwashers', 'kitchen-managers'])
@@ -102,15 +136,16 @@ class EmployeeController extends Controller
             'address' => 'nullable|string',
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
-            'is_active' => 'boolean',
-        ]);
+            'is_active' => 'boolean',        ]);
 
-        // Validate branch belongs to organization
-        $branch = Branch::where('id', $validated['branch_id'])
-            ->where('organization_id', $orgId)
-            ->firstOrFail();
+        // Validate branch belongs to organization (skip for super admin)
+        if ($orgId !== null) {
+            $branch = Branch::where('id', $validated['branch_id'])
+                ->where('organization_id', $orgId)
+                ->firstOrFail();
+        }
 
-        $validated['organization_id'] = $orgId;
+        $validated['organization_id'] = $orgId ?: Branch::find($validated['branch_id'])->organization_id;
         $validated['joined_date'] = now();
         $validated['is_active'] = $request->boolean('is_active', true);
 
@@ -131,11 +166,12 @@ class EmployeeController extends Controller
         return redirect()
             ->route('admin.employees.index')
             ->with('success', "Employee {$employee->name} created successfully!");
-    }
-
-    public function show(Employee $employee)
+    }    public function show(Employee $employee)
     {
-        if ($employee->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all employees, others need organization match
+        if ($orgId !== null && $employee->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
@@ -144,12 +180,17 @@ class EmployeeController extends Controller
         return view('admin.employees.show', compact('employee'));
     }    public function edit(Employee $employee)
     {
-        if ($employee->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all employees, others need organization match
+        if ($orgId !== null && $employee->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
         $orgId = $this->getOrganizationId();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = ($orgId !== null) 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $roles = Employee::getAvailableRoles();
         $restaurantRoles = SpatieRole::where('guard_name', 'web')
             ->whereIn('name', ['host/hostess', 'servers', 'bartenders', 'cashiers', 'chefs', 'dishwashers', 'kitchen-managers'])
@@ -180,13 +221,14 @@ class EmployeeController extends Controller
             'address' => 'nullable|string',
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
-            'is_active' => 'boolean',
-        ]);
+            'is_active' => 'boolean',        ]);
 
-        // Validate branch belongs to organization
-        $branch = Branch::where('id', $validated['branch_id'])
-            ->where('organization_id', $orgId)
-            ->firstOrFail();
+        // Validate branch belongs to organization (skip for super admin)
+        if ($orgId !== null) {
+            $branch = Branch::where('id', $validated['branch_id'])
+                ->where('organization_id', $orgId)
+                ->firstOrFail();
+        }
 
         $validated['is_active'] = $request->boolean('is_active', true);
 
@@ -211,11 +253,12 @@ class EmployeeController extends Controller
         return redirect()
             ->route('admin.employees.index')
             ->with('success', "Employee {$employee->name} updated successfully!");
-    }
-
-    public function destroy(Employee $employee)
+    }    public function destroy(Employee $employee)
     {
-        if ($employee->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all employees, others need organization match
+        if ($orgId !== null && $employee->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 

@@ -67,6 +67,39 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function registerBladeDirectives()
     {
+        // Directive to check if a route exists
+        \Illuminate\Support\Facades\Blade::if('routeexists', function ($route) {
+            return \Illuminate\Support\Facades\Route::has($route);
+        });
+
+        // Directive to safely generate routes with fallback
+        \Illuminate\Support\Facades\Blade::directive('safeRoute', function ($expression) {
+            return "<?php echo \Illuminate\Support\Facades\Route::has($expression) ? route($expression) : '#'; ?>";
+        });
+
+        // Directive for safe debug display
+        \Illuminate\Support\Facades\Blade::directive('debugInfo', function ($expression) {
+            return "<?php if(config('app.debug')): ?>";
+        });
+
+        \Illuminate\Support\Facades\Blade::directive('enddebugInfo', function () {
+            return "<?php endif; ?>";
+        });
+
+        // Directive for safe route link with fallback text
+        \Illuminate\Support\Facades\Blade::directive('safeRouteLink', function ($expression) {
+            [$route, $text, $fallback] = explode(',', str_replace(['(', ')', "'", '"'], '', $expression));
+            $route = trim($route);
+            $text = trim($text);
+            $fallback = trim($fallback ?: 'Link unavailable');
+            
+            return "<?php if(\Illuminate\Support\Facades\Route::has('$route')): ?>
+                        <a href=\"<?php echo route('$route'); ?>\">$text</a>
+                    <?php else: ?>
+                        <span class=\"text-gray-400\">$fallback</span>
+                    <?php endif; ?>";
+        });
+
         // Directive to check if current user has restaurant permission
         \Illuminate\Support\Facades\Blade::directive('canRestaurant', function ($permission) {
             return "<?php if(auth()->check() && auth()->user()->can($permission)): ?>";

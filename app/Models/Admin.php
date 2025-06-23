@@ -27,6 +27,20 @@ class Admin extends Authenticatable
         'is_active',
     ];
 
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Admin $admin) {
+            // Super admins should not be bound to organizations
+            if ($admin->is_super_admin) {
+                $admin->organization_id = null;
+                $admin->branch_id = null;
+            }
+        });
+    }
+
     protected $hidden = [
         'password',
         'remember_token',

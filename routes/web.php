@@ -7,6 +7,7 @@ use App\Http\Controllers\{
     AdminReservationController,
     AdminController,
     AdminAuthController,
+    AdminAuthTestController,
     GrnDashboardController,
     ItemDashboardController,
     ItemCategoryController,
@@ -25,8 +26,10 @@ use App\Http\Controllers\{
     SubscriptionController,
     UserController,
     ModuleController,
-    GoodsTransferNoteController
+    GoodsTransferNoteController,
+    RealtimeDashboardController
 };
+use App\Http\Controllers\Admin\MenuController;
 use App\Http\Middleware\SuperAdmin;
 
 
@@ -107,6 +110,32 @@ Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login
 Route::post('/login', [AdminAuthController::class, 'login']);
 
 /*-------------------------------------------------------------------------
+| Debug Routes (Development Only)
+|------------------------------------------------------------------------*/
+if (config('app.debug')) {
+    Route::get('/admin/auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('admin.auth.check');
+    Route::get('/admin/auth/test', function() {
+        return [
+            'admin_authenticated' => \Illuminate\Support\Facades\Auth::guard('admin')->check(),
+            'admin_user' => \Illuminate\Support\Facades\Auth::guard('admin')->user(),
+            'session_id' => session()->getId(),
+            'session_data' => session()->all()
+        ];
+    })->middleware('auth:admin');
+    
+    Route::get('/debug/session', function() {
+        return [
+            'session_driver' => config('session.driver'),
+            'session_table' => config('session.table'),
+            'session_connection' => config('session.connection'),
+            'session_id' => session()->getId(),
+            'session_name' => session()->getName(),
+            'session_exists' => session()->isStarted(),
+        ];
+    });
+}
+
+/*-------------------------------------------------------------------------
 | Admin Routes
 |------------------------------------------------------------------------*/
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -173,6 +202,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
                 Route::get('/{order}/summary', [AdminOrderController::class, 'takeawaySummary'])->whereNumber('order')->name('summary');
             });
+        });
+
+        // Menu Management
+        Route::prefix('menus')->name('menus.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\MenuController::class, 'index'])->name('index');
+            Route::get('/list', [\App\Http\Controllers\Admin\MenuController::class, 'list'])->name('list');
+            Route::get('/create', [\App\Http\Controllers\Admin\MenuController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\MenuController::class, 'store'])->name('store');
+            Route::get('/{menu}', [\App\Http\Controllers\Admin\MenuController::class, 'show'])->name('show');
+            Route::get('/{menu}/edit', [\App\Http\Controllers\Admin\MenuController::class, 'edit'])->name('edit');
+            Route::put('/{menu}', [\App\Http\Controllers\Admin\MenuController::class, 'update'])->name('update');
+            Route::delete('/{menu}', [\App\Http\Controllers\Admin\MenuController::class, 'destroy'])->name('destroy');
+            
+            // Menu Scheduling & Activation
+            Route::get('/calendar/view', [\App\Http\Controllers\Admin\MenuController::class, 'calendar'])->name('calendar');
+            Route::get('/calendar/data', [\App\Http\Controllers\Admin\MenuController::class, 'getCalendarData'])->name('calendar.data');
+            Route::post('/{menu}/activate', [\App\Http\Controllers\Admin\MenuController::class, 'activate'])->name('activate');
+            Route::post('/{menu}/deactivate', [\App\Http\Controllers\Admin\MenuController::class, 'deactivate'])->name('deactivate');
+            Route::get('/{menu}/preview', [\App\Http\Controllers\Admin\MenuController::class, 'preview'])->name('preview');
+            
+            // Bulk Operations
+            Route::get('/bulk/create', [\App\Http\Controllers\Admin\MenuController::class, 'bulkCreate'])->name('bulk.create');
+            Route::post('/bulk/store', [\App\Http\Controllers\Admin\MenuController::class, 'bulkStore'])->name('bulk.store');
         });
 
         // Inventory Management
@@ -434,20 +486,6 @@ Route::middleware(['auth:admin'])->group(function () {
 
 });
 
-Route::middleware(['auth:admin', 'module:reservation'])->group(function () {
-    Route::resource('reservations', ReservationController::class);
-});
-
-Route::middleware(['auth:admin', 'module:inventory'])->group(function () {
-    Route::prefix('inventory')->group(function () {
-        // Inventory routes
-    });
-});
-// Repeat for other modules
-Route::middleware(['auth:admin', 'module:reservation_management'])->group(function () {
-    // Reservation management routes
-});
-
 Route::middleware(['auth:admin', SuperAdmin::class])
     ->prefix('admin')
     ->name('admin.')
@@ -474,3 +512,46 @@ Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('admin.branch.users.create');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 });
+
+/*-------------------------------------------------------------------------
+| Enhanced Order Management API Routes
+|------------------------------------------------------------------------*/
+Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
+    // Stock and availability APIs
+    Route::get('/stock-summary', [AdminOrderController::class, 'getStockSummary']);
+    Route::post('/validate-cart', [AdminOrderController::class, 'validateCart']);
+    Route::get('/menu-alternatives/{item}', [AdminOrderController::class, 'getMenuAlternatives']);
+    Route::get('/real-time-availability/{branch}', [AdminOrderController::class, 'getRealTimeAvailability']);
+    
+    // Product catalog APIs
+    Route::get('/menu-items/{branch}', [AdminOrderController::class, 'getMenuItems']);
+    Route::get('/inventory-items/{branch}', [AdminOrderController::class, 'getInventoryItems']);
+    Route::post('/update-menu-availability/{branch}', [AdminOrderController::class, 'updateMenuAvailability']);
+});
+
+// Enhanced order routes
+Route::prefix('admin/orders')->middleware(['auth:admin'])->group(function () {
+    Route::get('/enhanced-create', [AdminOrderController::class, 'enhancedCreate'])->name('admin.orders.enhanced-create');
+    Route::post('/enhanced-store', [AdminOrderController::class, 'enhancedStore'])->name('admin.orders.enhanced-store');
+    Route::post('/{order}/confirm-stock', [AdminOrderController::class, 'confirmOrderStock'])->name('admin.orders.confirm-stock');
+    Route::delete('/{order}/cancel-with-stock', [AdminOrderController::class, 'cancelOrderWithStock'])->name('admin.orders.cancel-with-stock');
+});
+
+/*-------------------------------------------------------------------------
+| Real-time Dashboard Routes
+|------------------------------------------------------------------------*/
+Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () {
+    Route::get('/realtime-inventory', [RealtimeDashboardController::class, 'index'])->name('admin.dashboard.realtime-inventory');
+    
+    // API endpoints for dashboard
+    Route::get('/api/recent-orders', [RealtimeDashboardController::class, 'getRecentOrdersApi']);
+    Route::get('/api/low-stock-items', [RealtimeDashboardController::class, 'getLowStockItemsApi']);
+    Route::get('/api/stock-levels-chart', [RealtimeDashboardController::class, 'getStockLevelsChart']);
+    Route::get('/api/menu-availability-stats', [RealtimeDashboardController::class, 'getMenuAvailabilityStatsApi']);
+    Route::post('/api/export-stock-report', [RealtimeDashboardController::class, 'exportStockReport']);
+    Route::get('/api/dashboard-alerts', [RealtimeDashboardController::class, 'getDashboardAlerts']);
+    Route::get('/api/dashboard-summary', [RealtimeDashboardController::class, 'getDashboardSummary']);
+});
+
+// Menu safety dashboard
+Route::get('menus/safety-dashboard', [MenuController::class, 'safetyDashboard'])->name('admin.menus.safety-dashboard');

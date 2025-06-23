@@ -16,65 +16,60 @@
         </a>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <form method="GET" action="{{ route('admin.employees.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input type="text" name="search" value="{{ request('search') }}" 
-                       placeholder="Name, ID, email, phone..."
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+    <!-- Filters with Export -->
+    <x-module-filters 
+        :action="route('admin.employees.index')"
+        :export-permission="'export_employees'"
+        :export-filename="'employees_export.xlsx'">
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <input type="text" name="search" value="{{ request('search') }}" 
+                   placeholder="Name, ID, email, phone..."
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                <option value="">All Roles</option>
+                @foreach($roles as $key => $label)
+                    <option value="{{ $key }}" {{ request('role') === $key ? 'selected' : '' }}>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+            <select name="branch_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                <option value="">All Branches</option>
+                @foreach($branches as $branch)
+                    <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                        {{ $branch->name }}
+                    </option>
+                @endforeach        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                <option value="">All Status</option>
+                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+            </select>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Show Deleted</label>
+            <div class="flex items-center h-[42px]">
+                <input type="checkbox" name="show_deleted" value="1" 
+                       {{ request('show_deleted') ? 'checked' : '' }}
+                       class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                <span class="ml-2 text-sm text-gray-600">Include deleted employees</span>
             </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    <option value="">All Roles</option>
-                    @foreach($roles as $key => $label)
-                        <option value="{{ $key }}" {{ request('role') === $key ? 'selected' : '' }}>
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                <select name="branch_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    <option value="">All Branches</option>
-                    @foreach($branches as $branch)
-                        <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
-                            {{ $branch->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    <option value="">All Status</option>
-                    <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                    <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
-                </select>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Show Deleted</label>
-                <div class="flex items-center h-[42px]">
-                    <input type="checkbox" name="show_deleted" value="1" 
-                           {{ request('show_deleted') ? 'checked' : '' }}
-                           class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    <span class="ml-2 text-sm text-gray-600">Include deleted employees</span>
-                </div>
-            </div>
-            
-            <div class="flex items-end">
-                <button type="submit" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center transition">
-                    <i class="fas fa-search mr-2"></i> Filter
-                </button>
-            </div>
-        </form>
-    </div>
+        </div>
+    </x-module-filters>
 
     <!-- Employees Table -->
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">

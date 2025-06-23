@@ -39,6 +39,7 @@ class Order extends Model
     protected $fillable = [
         'reservation_id',
         'branch_id',
+        'menu_id',
         'customer_name',
         'customer_phone',
         'order_type',
@@ -94,6 +95,11 @@ class Order extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class);
     }
 
     public function items()

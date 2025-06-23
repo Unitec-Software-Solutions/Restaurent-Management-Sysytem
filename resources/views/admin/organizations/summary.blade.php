@@ -74,17 +74,26 @@
             <li>
                 <span class="font-semibold">Plan Price:</span>
                 {{ optional($organization->plan) ? number_format($organization->plan->price, 2) . ' ' . $organization->plan->currency : 'N/A' }}
-            </li>
-            <li>
+            </li>            <li>
                 <span class="font-semibold">Modules:</span>
                 <span>
                     @php
-                        $moduleIds = optional($organization->plan) ? (is_array($organization->plan->modules) ? $organization->plan->modules : json_decode($organization->plan->modules, true) ?? []) : [];
-                        $moduleNames = \App\Models\Module::whereIn('id', $moduleIds)->pluck('name')->toArray();
+                        $plan = $organization->plan;
+                        $modulesList = $plan ? $plan->getModulesArray() : [];
                     @endphp
-                    @if(count($moduleNames))
-                        @foreach($moduleNames as $mod)
-                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">{{ $mod }}</span>
+                    @if(!empty($modulesList))
+                        @foreach($modulesList as $moduleData)
+                            @php
+                                $moduleName = is_array($moduleData) ? ($moduleData['name'] ?? $moduleData) : $moduleData;
+                                $moduleId = is_numeric($moduleName) ? $moduleName : null;
+                                if ($moduleId) {
+                                    $moduleRecord = \App\Models\Module::find($moduleId);
+                                    $displayName = $moduleRecord ? $moduleRecord->name : $moduleId;
+                                } else {
+                                    $displayName = ucfirst($moduleName);
+                                }
+                            @endphp
+                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">{{ $displayName }}</span>
                         @endforeach
                     @else
                         N/A

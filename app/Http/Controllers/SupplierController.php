@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Supplier;
 use App\Models\PurchaseOrder;
 use App\Models\GrnMaster;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class SupplierController extends Controller
 {
-    public function index()
+    use Exportable;
+
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -21,28 +24,20 @@ class SupplierController extends Controller
 
         $orgId = $user->organization_id;
 
-        $suppliers = Supplier::with('purchaseOrders')
-            ->where('organization_id', $orgId)
-            ->when(request('search'), function ($query) {
-                $search = request('search');
-                return $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%')
-                      ->orWhere('supplier_id', 'like', '%' . $search . '%')
-                      ->orWhere('contact_person', 'like', '%' . $search . '%')
-                      ->orWhere('phone', 'like', '%' . $search . '%')
-                      ->orWhere('email', 'like', '%' . $search . '%');
-                });
-            })
-            ->when(request('status'), function ($query) {
-                $status = request('status');
-                if ($status === 'active') {
-                    $query->where('is_active', true);
-                } elseif ($status === 'inactive') {
-                    $query->where('is_active', false);
-                }
-            })
-            ->latest()
-            ->paginate(10);
+        $query = Supplier::with('purchaseOrders')
+            ->where('organization_id', $orgId);
+
+        // Apply filters
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'suppliers_export.xlsx', [
+                'Supplier ID', 'Name', 'Contact Person', 'Phone', 'Email', 'Address', 'Status', 'Created At'
+            ]);
+        }
+
+        $suppliers = $query->latest()->paginate(10);
 
         // Statistics
         $totalSuppliers = Supplier::where('organization_id', $orgId)->count();
@@ -307,5 +302,13 @@ public function goodsReceived(Supplier $supplier)
             });
 
         return response()->json($grns);
+    }
+
+    /**
+     * Get searchable columns for suppliers
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'supplier_id', 'contact_person', 'phone', 'email'];
     }
 }
