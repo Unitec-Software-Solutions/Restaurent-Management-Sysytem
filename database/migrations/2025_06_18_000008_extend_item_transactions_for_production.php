@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::table('item_transactions', function (Blueprint $table) {
             // Add new transaction types to enum if not already present
             // Note: In production, you'd want to alter the enum more carefully
-            $table->string('production_session_id')->nullable()->after('gtn_id');
-            $table->string('production_order_id')->nullable()->after('production_session_id');
+            $table->unsignedBigInteger('production_session_id')->nullable()->after('gtn_id');
+            $table->unsignedBigInteger('production_order_id')->nullable()->after('production_session_id');
             $table->decimal('waste_quantity', 10, 2)->default(0)->after('damaged_quantity');
             $table->string('waste_reason')->nullable()->after('waste_quantity');
         });
