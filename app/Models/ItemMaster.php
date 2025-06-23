@@ -68,6 +68,38 @@ class ItemMaster extends Model
     }
 
     /**
+     * Production request items relationship
+     */
+    public function productionRequestItems()
+    {
+        return $this->hasMany(ProductionRequestItem::class, 'item_id');
+    }
+
+    /**
+     * Production order items relationship
+     */
+    public function productionOrderItems()
+    {
+        return $this->hasMany(ProductionOrderItem::class, 'item_id');
+    }
+
+    /**
+     * Recipes where this item is the production item
+     */
+    public function productionRecipes()
+    {
+        return $this->hasMany(Recipe::class, 'production_item_id');
+    }
+
+    /**
+     * Recipe details where this item is a raw material
+     */
+    public function rawMaterialRecipes()
+    {
+        return $this->hasMany(RecipeDetail::class, 'raw_material_item_id');
+    }
+
+    /**
      * Accessor Example: Get Ingredients if available in attributes
      */
     public function getIngredientsAttribute()
@@ -83,7 +115,7 @@ class ItemMaster extends Model
         if (isset($this->attributes['attributes']['img'])) {
             return asset('storage/'.$this->attributes['attributes']['img']);
         }
-        return asset('storage/default.png'); 
+        return asset('storage/default.png');
     }
 
 
@@ -105,6 +137,22 @@ class ItemMaster extends Model
     public function scopePerishable($query)
     {
         return $query->where('is_perishable', true);
+    }
+
+    // New scope for production items
+    public function scopeProductionItems($query)
+    {
+        return $query->whereHas('category', function($q) {
+            $q->where('name', 'Production Items');
+        });
+    }
+
+    // New scope for raw materials
+    public function scopeRawMaterials($query)
+    {
+        return $query->whereHas('category', function($q) {
+            $q->where('name', 'Raw Materials');
+        });
     }
 
     // In ItemMaster model
