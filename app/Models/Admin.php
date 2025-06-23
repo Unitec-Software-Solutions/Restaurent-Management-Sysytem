@@ -2,18 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\Organization;
 use App\Models\Branch;
 
 
-class Admin extends Authenticatable
+class Admin extends Model implements Authenticatable
 {
-    use Notifiable, HasRoles, HasFactory;
+    use Notifiable, HasRoles, HasFactory, AuthenticatableTrait;
 
     protected $guard_name = 'admin'; 
 
