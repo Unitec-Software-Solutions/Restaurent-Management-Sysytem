@@ -73,8 +73,6 @@ class DatabaseSeeder extends Seeder
             'trial_period_days' => null
         ]);
 
-        $plans = collect([$basicPlan, $proPlan, $legacyPlan]);
-        ]);
 
         // Get the created subscription plans for factory data
         $plans = \App\Models\SubscriptionPlan::all();

@@ -22,7 +22,7 @@ class EnhancedPermissionSeeder extends Seeder
             'edit_organizations',
             'delete_organizations',
             'view_organizations',
-            
+
             // Branch Management
             'manage_branches',
             'create_branches',
@@ -31,7 +31,7 @@ class EnhancedPermissionSeeder extends Seeder
             'view_branches',
             'activate_branches',
             'deactivate_branches',
-            
+
             // User Management
             'manage_users',
             'create_users',
@@ -39,7 +39,7 @@ class EnhancedPermissionSeeder extends Seeder
             'delete_users',
             'view_users',
             'assign_roles',
-            
+
             // Role and Permission Management
             'manage_roles',
             'create_roles',
@@ -47,7 +47,7 @@ class EnhancedPermissionSeeder extends Seeder
             'delete_roles',
             'view_roles',
             'manage_permissions',
-            
+
             // Inventory Management
             'manage_inventory',
             'create_inventory_items',
@@ -57,7 +57,7 @@ class EnhancedPermissionSeeder extends Seeder
             'adjust_inventory',
             'transfer_inventory',
             'audit_inventory',
-            
+
             // Order Management
             'manage_orders',
             'create_orders',
@@ -67,7 +67,7 @@ class EnhancedPermissionSeeder extends Seeder
             'process_orders',
             'cancel_orders',
             'refund_orders',
-            
+
             // Reservation Management
             'manage_reservations',
             'create_reservations',
@@ -76,7 +76,7 @@ class EnhancedPermissionSeeder extends Seeder
             'view_reservations',
             'approve_reservations',
             'cancel_reservations',
-            
+
             // Menu Management
             'manage_menu',
             'create_menu_items',
@@ -84,26 +84,26 @@ class EnhancedPermissionSeeder extends Seeder
             'delete_menu_items',
             'view_menu',
             'manage_menu_categories',
-            
+
             // Kitchen Management
             'manage_kitchen',
             'view_kitchen_orders',
             'update_order_status',
             'manage_kitchen_stations',
-            
+
             // Reports and Analytics
             'view_reports',
             'generate_reports',
             'export_reports',
             'view_analytics',
             'view_financial_reports',
-            
+
             // System Configuration
             'manage_settings',
             'view_system_logs',
             'manage_modules',
             'configure_notifications',
-            
+
             // Staff Management
             'manage_staff',
             'create_staff',
@@ -111,13 +111,13 @@ class EnhancedPermissionSeeder extends Seeder
             'delete_staff',
             'view_staff',
             'manage_schedules',
-            
+
             // Financial Management
             'manage_payments',
             'process_refunds',
             'view_financial_data',
             'manage_pricing',
-            
+
             // Subscription Management (Org Admin only)
             'manage_subscriptions',
             'view_billing',
@@ -132,12 +132,12 @@ class EnhancedPermissionSeeder extends Seeder
             ]);
         }
 
-        $this->command->info('Admin permissions created successfully!');
+        $this->command->info('  Admin permissions created successfully!');
 
         // Create default role templates (these will be created per organization)
         $this->createDefaultRoleTemplates();
 
-        $this->command->info('Enhanced permission system seeded successfully!');
+        $this->command->info('  Enhanced permission system seeded successfully!');
     }
 
     private function createDefaultRoleTemplates(): void
@@ -169,7 +169,7 @@ class EnhancedPermissionSeeder extends Seeder
                 'permissions' => [
                     'view_branches',
                     'manage_users', 'create_users', 'edit_users', 'view_users',
-                    'manage_inventory', 'create_inventory_items', 'edit_inventory_items', 'view_inventory', 
+                    'manage_inventory', 'create_inventory_items', 'edit_inventory_items', 'view_inventory',
                     'adjust_inventory', 'transfer_inventory',
                     'manage_orders', 'create_orders', 'edit_orders', 'view_orders', 'process_orders', 'cancel_orders',
                     'manage_reservations', 'create_reservations', 'edit_reservations', 'view_reservations',
@@ -221,7 +221,7 @@ class EnhancedPermissionSeeder extends Seeder
         // Store role templates for later use by observers
         cache()->put('role_templates', $roleTemplates, now()->addDays(30));
 
-        $this->command->info('Role templates cached for automated creation');
+        $this->command->info('  Role templates cached for automated creation');
     }
 
     /**
@@ -230,13 +230,13 @@ class EnhancedPermissionSeeder extends Seeder
     public static function getPermissionsForRole(string $roleName): array
     {
         $templates = cache()->get('role_templates', []);
-        
+
         if (!isset($templates[$roleName])) {
             return [];
         }
 
         $template = $templates[$roleName];
-        
+
         if ($template['permissions'] === 'all') {
             return Permission::where('guard_name', 'admin')->pluck('name')->toArray();
         }
