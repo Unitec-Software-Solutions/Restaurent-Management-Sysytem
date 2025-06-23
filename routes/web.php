@@ -76,7 +76,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('edit');
         Route::delete('/{order}', [OrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
         Route::put('/{order}', [OrderController::class, 'update'])->whereNumber('order')->name('update');
-        
+
         // Stock checking
         Route::post('/check-stock', [OrderController::class, 'checkStock'])->name('check-stock');
         Route::post('/{order}/print-kot', [OrderController::class, 'printKOT'])->name('print-kot');
@@ -300,21 +300,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
 
         // Additional Admin Routes
-        Route::get('/testpage', function () {
-            return view('admin.testpage');
-        })->name('testpage');
-        Route::get('/reports', function () {
-            return view('admin.reports.index');
-        })->name('reports.index');
-        Route::get('/customers', function () {
-            return view('admin.customers.index');
-        })->name('customers.index');
-        Route::get('/digital-menu', function () {
-            return view('admin.digital-menu.index');
-        })->name('digital-menu.index');
-        Route::get('/settings', function () {
-            return view('admin.settings.index');
-        })->name('settings.index');
+        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
+        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
+        Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
+        Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
+        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
 
     });
