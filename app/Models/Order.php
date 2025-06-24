@@ -19,11 +19,11 @@ class Order extends Model
         'order_type',
         'status',
         'subtotal',
-        'tax_amount',        // Changed from 'tax'
-        'discount_amount',   // Changed from 'discount'
+        'tax_amount',        
+        'discount_amount',   
         'service_charge',
         'delivery_fee',
-        'total_amount',      // Changed from 'total'
+        'total_amount',      
         'currency',
         'payment_status',
         'payment_method',
@@ -36,11 +36,10 @@ class Order extends Model
         'table_id',
         'user_id',
         'created_by',
-        'placed_by_admin',
-        // Additional enhanced columns
-        'tax',              // Keep for compatibility
-        'discount',         // Keep for compatibility
-        'total',            // Keep for compatibility
+        'placed_by_admin',       
+        'tax',              
+        'discount',         
+        'total',            
         'requested_time',
         'confirmed_at',
         'prepared_at',
