@@ -18,12 +18,20 @@ class ProductionOrderIngredient extends Model
         'returned_quantity',
         'unit_of_measurement',
         'notes',
-        'is_manually_added'
+        'is_manually_added',
+    ];
+
+    protected $casts = [
+        'planned_quantity' => 'decimal:3',
+        'issued_quantity' => 'decimal:3',
+        'consumed_quantity' => 'decimal:3',
+        'returned_quantity' => 'decimal:3',
+        'is_manually_added' => 'boolean',
     ];
 
     public function productionOrder()
     {
-        return $this->belongsTo(ProductionOrder::class, 'production_order_id');
+        return $this->belongsTo(ProductionOrder::class);
     }
 
     public function ingredient()
@@ -32,19 +40,19 @@ class ProductionOrderIngredient extends Model
     }
 
     /**
-     * Get remaining quantity to issue
+     * Get remaining quantity to be issued
      */
-    public function getRemainingToIssue()
+    public function getRemainingQuantity()
     {
         return $this->planned_quantity - $this->issued_quantity;
     }
 
     /**
-     * Get remaining quantity to consume
+     * Get unused quantity (issued but not consumed)
      */
-    public function getRemainingToConsume()
+    public function getUnusedQuantity()
     {
-        return $this->issued_quantity - $this->consumed_quantity - $this->returned_quantity;
+        return $this->issued_quantity - $this->consumed_quantity;
     }
 
     /**
@@ -60,6 +68,6 @@ class ProductionOrderIngredient extends Model
      */
     public function isFullyConsumed()
     {
-        return ($this->consumed_quantity + $this->returned_quantity) >= $this->issued_quantity;
+        return $this->consumed_quantity >= $this->issued_quantity;
     }
 }
