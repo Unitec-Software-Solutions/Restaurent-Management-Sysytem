@@ -2,39 +2,38 @@
 
 @section('header-title', 'Purchase Order Details')
 @section('content')
-    ])
-@endif
 
-{{-- Debug Info Card for PO Show --}}
-@if(config('app.debug'))
-    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
-        <div class="flex justify-between items-center">
-            <h3 class="text-sm font-medium text-purple-800">🔍 Purchase Order Debug Info</h3>
-            <a href="{{ route('admin.purchase-orders.show', $po->po_id ?? 0) }}?debug=1" 
-               class="text-xs text-purple-600 hover:text-purple-800">
-                Full Debug (@dd)
-            </a>
+
+    {{-- Debug Info Card for PO Show --}}
+    @if (config('app.debug'))
+        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-medium text-purple-800">🔍 Purchase Order Debug Info</h3>
+                <a href="{{ route('admin.purchase-orders.show', $po->po_id ?? 0) }}?debug=1"
+                    class="text-xs text-purple-600 hover:text-purple-800">
+                    Full Debug (debug=1)
+                </a>
+            </div>
+            <div class="text-xs text-purple-700 mt-2 grid grid-cols-4 gap-4">
+                <div>
+                    <p><strong>PO Variable:</strong> {{ isset($po) ? 'Set' : 'NOT SET' }}</p>
+                    <p><strong>PO Number:</strong> {{ $po->po_number ?? 'N/A' }}</p>
+                </div>
+                <div>
+                    <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . count($items) . ')' : 'NOT SET' }}</p>
+                    <p><strong>PO Items:</strong> {{ isset($po) ? $po->items->count() : 'N/A' }}</p>
+                </div>
+                <div>
+                    <p><strong>Supplier:</strong> {{ $po->supplier->name ?? 'N/A' }}</p>
+                    <p><strong>Total Amount:</strong> Rs. {{ number_format($po->total_amount ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p><strong>Status:</strong> {{ $po->status ?? 'N/A' }}</p>
+                    <p><strong>GRNs:</strong> {{ isset($po) && $po->grns ? $po->grns->count() : 0 }}</p>
+                </div>
+            </div>
         </div>
-        <div class="text-xs text-purple-700 mt-2 grid grid-cols-4 gap-4">
-            <div>
-                <p><strong>PO Variable:</strong> {{ isset($po) ? 'Set' : 'NOT SET' }}</p>
-                <p><strong>PO Number:</strong> {{ $po->po_number ?? 'N/A' }}</p>
-            </div>
-            <div>
-                <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . count($items) . ')' : 'NOT SET' }}</p>
-                <p><strong>PO Items:</strong> {{ isset($po) ? $po->items->count() : 'N/A' }}</p>
-            </div>
-            <div>
-                <p><strong>Supplier:</strong> {{ $po->supplier->name ?? 'N/A' }}</p>
-                <p><strong>Total Amount:</strong> Rs. {{ number_format($po->total_amount ?? 0, 2) }}</p>
-            </div>
-            <div>
-                <p><strong>Status:</strong> {{ $po->status ?? 'N/A' }}</p>
-                <p><strong>GRNs:</strong> {{ isset($po) && $po->grns ? $po->grns->count() : 0 }}</p>
-            </div>
-        </div>
-    </div>
-@endif
+    @endif
 
     <div class="p-4 rounded-lg">
         <!-- Back and Action Buttons -->
