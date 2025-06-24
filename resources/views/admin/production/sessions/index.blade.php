@@ -1,9 +1,19 @@
 @extends('layouts.admin')
 
 @section('title', 'Production Sessions')
+@section('header-title', 'Production Sessions')
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="p-4 space-y-8">
+        <!-- Navigation Buttons -->
+        <div class="rounded-lg">
+            <x-nav-buttons :items="[
+                ['name' => 'Production', 'link' => route('admin.production.index')],
+                ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
+                ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
+                ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+            ]" active="Production Sessions" />
+        </div>
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>
