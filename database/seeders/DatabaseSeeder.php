@@ -38,23 +38,14 @@ class DatabaseSeeder extends Seeder
 
         // Run basic seeders first
         $this->call([
-            SubscriptionPlanSeeder::class, // Creates subscription plans
-            EnhancedPermissionSeeder::class, // Creates roles and permissions for automation
+            SubscriptionPlanSeeder::class, 
+            EnhancedPermissionSeeder::class, 
+            AdminPermissionSeeder::class,
             OrganizationSeeder::class,
             BranchSeeder::class,
-            // TableSeeder::class,
             LoginSeeder::class,
-            // SupplierSeeder::class,
             ItemCategorySeeder::class,
-            // ItemMasterSeeder::class,
-            AdminSeeder::class,
-            // ReservationSeeder::class,
-            // PurchaseOrderSeeder::class,
-            // GRNSeeder::class,
-            // SupplierPaymentSeeder::class,
-            // ItemTransactionSeeder::class,
-            //EmployeeSeeder::class,
-            // ModulePermissionSeeder::class,
+            AdminSeeder::class,            
             SuperAdminSeeder::class,
             ModulesTableSeeder::class,
             RoleSeeder::class,
