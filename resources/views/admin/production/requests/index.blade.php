@@ -2,8 +2,19 @@
 
 @section('title', 'Production Requests')
 
+@section('header-title', 'Production Requests')
+
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="p-4 space-y-8">
+        <!-- Navigation Buttons -->
+        <div class="rounded-lg">
+            <x-nav-buttons :items="[
+                ['name' => 'Production', 'link' => route('admin.production.index')],
+                ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
+                ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
+                ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+            ]" active="Production Requests" />
+        </div>
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
             <div>
@@ -83,66 +94,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select name="status" class="w-full rounded-lg border-gray-300 shadow-sm">
-                        <option value="">All Statuses</option>
-                        <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
-                        <option value="submitted" {{ request('status') === 'submitted' ? 'selected' : '' }}>Submitted
-                        </option>
-                        <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
-                        <option value="in_production" {{ request('status') === 'in_production' ? 'selected' : '' }}>In
-                            Production</option>
-                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed
-                        </option>
-                        <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled
-                        </option>
-                    </select>
-                </div>
-
-                @if (!Auth::user()->branch_id)
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
-                        <select name="branch_id" class="w-full rounded-lg border-gray-300 shadow-sm">
-                            <option value="">All Branches</option>
-                            @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}"
-                                    {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
-                                    {{ $branch->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                @endif
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
-                    <input type="date" name="date_from" value="{{ request('date_from') }}"
-                        class="w-full rounded-lg border-gray-300 shadow-sm">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}"
-                        class="w-full rounded-lg border-gray-300 shadow-sm">
-                </div>
-
-                <div class="md:col-span-4 flex gap-3">
-                    <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">
-                        <i class="fas fa-search mr-2"></i>Filter
-                    </button>
-                    <a href="{{ route('admin.production.requests.index') }}"
-                        class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition duration-200">
-                        <i class="fas fa-times mr-2"></i>Clear
-                    </a>
-                </div>
-            </form>
         </div>
 
         <!-- Enhanced Filters -->
