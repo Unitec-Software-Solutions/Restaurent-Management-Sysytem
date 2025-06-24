@@ -13,35 +13,68 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained(); // Can be null for unregistered users
-            $table->foreignId('reservation_id')->nullable()->constrained(); // Nullable for takeaway orders
+            $table->string('order_number')->unique();
+            
+            // Customer Information
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
             $table->string('customer_name')->nullable();
-            $table->string('customer_phone');
-            $table->enum('order_type', [
-                'takeaway_in_call_scheduled',
-                'takeaway_online_scheduled',
-                'takeaway_walk_in_scheduled',
-                'takeaway_walk_in_demand',
-                'dine_in_online_scheduled',
-                'dine_in_in_call_scheduled',
-                'dine_in_walk_in_scheduled',
-                'dine_in_walk_in_demand'
-            ]);
-            $table->enum('status', ['active', 'preparing', 'ready', 'served', 'completed', 'cancelled'])->default('active');
-            $table->dateTime('scheduled_time')->nullable();
-            $table->integer('estimated_preparing_time')->default(0); // In minutes
-            $table->decimal('subtotal', 10, 2)->default(0);
-            $table->decimal('tax', 10, 2)->default(0);
+            $table->string('customer_phone')->nullable();
+            $table->string('customer_email')->nullable();
+            
+            // Order Details
+            $table->enum('order_type', ['dine_in', 'takeaway', 'delivery', 'reservation'])->default('dine_in');
+            $table->enum('status', [
+                'pending', 'confirmed', 'preparing', 'ready', 
+                'completed', 'cancelled', 'refunded'
+            ])->default('pending');
+            
+            // Pricing
+            $table->decimal('subtotal', 10, 2);
+            $table->decimal('tax_amount', 10, 2)->default(0);
+            $table->decimal('discount_amount', 10, 2)->default(0);
             $table->decimal('service_charge', 10, 2)->default(0);
-            $table->decimal('discount', 10, 2)->default(0);
-            $table->decimal('total', 10, 2)->default(0);
+            $table->decimal('delivery_fee', 10, 2)->default(0);
+            $table->decimal('total_amount', 10, 2);
+            $table->string('currency', 3)->default('USD');
+            
+            // Payment
+            $table->enum('payment_status', ['pending', 'paid', 'partially_paid', 'refunded'])->default('pending');
+            $table->enum('payment_method', ['cash', 'card', 'mobile', 'bank_transfer', 'other'])->nullable();
+            $table->string('payment_reference')->nullable();
+            
+            // Location & Timing
+            $table->foreignId('organization_id')->constrained()->onDelete('cascade');
+            $table->foreignId('branch_id')->constrained()->onDelete('cascade');
+            $table->foreignId('table_id')->nullable()->constrained()->onDelete('set null');
+            
+            // Order Timing
+            $table->timestamp('order_date');
+            $table->timestamp('requested_time')->nullable();
+            $table->timestamp('confirmed_at')->nullable();
+            $table->timestamp('prepared_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            
+            // Delivery Information
+            $table->text('delivery_address')->nullable();
+            $table->decimal('delivery_latitude', 10, 8)->nullable();
+            $table->decimal('delivery_longitude', 11, 8)->nullable();
+            $table->text('delivery_instructions')->nullable();
+            
+            // Additional Info
+            $table->text('special_instructions')->nullable();
             $table->text('notes')->nullable();
-            $table->foreignId('waiter_id')->nullable()->references('id')->on('users');
-            $table->foreignId('cashier_id')->nullable()->references('id')->on('users');
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes();
+            $table->json('metadata')->nullable(); // For additional flexible data
+            
             $table->timestamps();
-            });
+            $table->softDeletes();
+            
+            // Indexes for performance
+            $table->index(['organization_id', 'status']);
+            $table->index(['branch_id', 'order_date']);
+            $table->index(['user_id', 'status']);
+            $table->index(['payment_status', 'order_date']);
+            $table->index('order_number');
+        });
     }
 
     /**
