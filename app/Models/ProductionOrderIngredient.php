@@ -18,7 +18,7 @@ class ProductionOrderIngredient extends Model
         'returned_quantity',
         'unit_of_measurement',
         'notes',
-        'is_manually_added',
+        'is_manually_added'
     ];
 
     protected $casts = [
@@ -26,9 +26,10 @@ class ProductionOrderIngredient extends Model
         'issued_quantity' => 'decimal:3',
         'consumed_quantity' => 'decimal:3',
         'returned_quantity' => 'decimal:3',
-        'is_manually_added' => 'boolean',
+        'is_manually_added' => 'boolean'
     ];
 
+    // Relationships
     public function productionOrder()
     {
         return $this->belongsTo(ProductionOrder::class);
@@ -39,35 +40,34 @@ class ProductionOrderIngredient extends Model
         return $this->belongsTo(ItemMaster::class, 'ingredient_item_id');
     }
 
-    /**
-     * Get remaining quantity to be issued
-     */
-    public function getRemainingQuantity()
+    // Helper methods
+    public function getRemainingToIssue()
     {
-        return $this->planned_quantity - $this->issued_quantity;
+        return max(0, $this->planned_quantity - $this->issued_quantity);
     }
 
-    /**
-     * Get unused quantity (issued but not consumed)
-     */
-    public function getUnusedQuantity()
+    public function getRemainingToConsume()
     {
-        return $this->issued_quantity - $this->consumed_quantity;
+        return max(0, $this->issued_quantity - $this->consumed_quantity - $this->returned_quantity);
     }
 
-    /**
-     * Check if ingredient is fully issued
-     */
+    public function getIssuanceProgress()
+    {
+        return $this->planned_quantity > 0 ? ($this->issued_quantity / $this->planned_quantity) * 100 : 0;
+    }
+
+    public function getConsumptionProgress()
+    {
+        return $this->issued_quantity > 0 ? ($this->consumed_quantity / $this->issued_quantity) * 100 : 0;
+    }
+
     public function isFullyIssued()
     {
         return $this->issued_quantity >= $this->planned_quantity;
     }
 
-    /**
-     * Check if ingredient is fully consumed
-     */
     public function isFullyConsumed()
     {
-        return $this->consumed_quantity >= $this->issued_quantity;
+        return ($this->consumed_quantity + $this->returned_quantity) >= $this->issued_quantity;
     }
 }
