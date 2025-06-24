@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderItem;
 use App\Models\ProductionRequestMaster;
+use App\Models\ProductionRequestItem;
 use App\Models\ProductionSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,7 @@ class ProductionOrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ProductionOrder::with(['productionRequestMaster', 'items.item', 'createdBy'])
+        $query = ProductionOrder::with(['productionRequests', 'items.item', 'createdBy'])
             ->where('organization_id', Auth::user()->organization_id);
 
         // Apply filters
@@ -35,7 +36,17 @@ class ProductionOrderController extends Controller
 
         $orders = $query->latest()->paginate(20);
 
-        return view('production.orders.index', compact('orders'));
+        // Fetch production items for filter dropdown
+        $productionItems = \App\Models\ItemMaster::whereHas('category', function($query) {
+            $query->where('name', 'Production Items');
+        })->where('organization_id', Auth::user()->organization_id)->get();
+
+        // Count pending requests for aggregation
+        $pendingRequests = \App\Models\ProductionRequestMaster::where('organization_id', Auth::user()->organization_id)
+            ->where('status', 'approved')
+            ->count();
+
+        return view('admin.production.orders.index', compact('orders', 'productionItems', 'pendingRequests'));
     }
 
     /**
@@ -46,7 +57,7 @@ class ProductionOrderController extends Controller
         // Get aggregated approved production requests
         $aggregatedItems = $this->getAggregatedItems($request);
 
-        return view('production.orders.create', compact('aggregatedItems'));
+        return view('admin.production.orders.create', compact('aggregatedItems'));
     }
 
     /**
@@ -82,8 +93,89 @@ class ProductionOrderController extends Controller
             }
         });
 
-        return redirect()->route('production.orders.index')
+        return redirect()->route('admin.production.orders.index')
             ->with('success', 'Production order created successfully.');
+    }
+
+    /**
+     * Store a newly created production order from aggregated requests
+     */
+    public function store_aggregated(Request $request)
+    {
+        $request->validate([
+            'production_date' => 'required|date',
+            'selected_requests' => 'required|array|min:1',
+            'selected_requests.*' => 'exists:production_requests_master,id',
+            'production_notes' => 'nullable|string|max:1000'
+        ]);
+
+        DB::transaction(function () use ($request) {
+            // Get the selected production requests
+            $selectedRequests = ProductionRequestMaster::whereIn('id', $request->selected_requests)
+                ->where('status', 'approved')
+                ->with('items.item')
+                ->get();
+
+            if ($selectedRequests->isEmpty()) {
+                throw new \Exception('No approved requests found.');
+            }
+
+            // Generate production order number
+            $orderNumber = $this->generateOrderNumber();
+
+            // Create production order
+            $productionOrder = ProductionOrder::create([
+                'organization_id' => Auth::user()->organization_id,
+                'production_order_number' => $orderNumber,
+                'production_date' => $request->production_date,
+                'status' => ProductionOrder::STATUS_DRAFT,
+                'notes' => $request->production_notes,
+                'created_by_user_id' => Auth::id(),
+            ]);
+
+            // Aggregate items by item_id
+            $aggregatedItems = [];
+            $requestIds = [];
+
+            foreach ($selectedRequests as $productionRequest) {
+                $requestIds[] = $productionRequest->id;
+
+                foreach ($productionRequest->items as $item) {
+                    $itemId = $item->item_id;
+
+                    if (!isset($aggregatedItems[$itemId])) {
+                        $aggregatedItems[$itemId] = [
+                            'item_id' => $itemId,
+                            'quantity_to_produce' => 0,
+                            'requests' => []
+                        ];
+                    }
+
+                    $aggregatedItems[$itemId]['quantity_to_produce'] += $item->quantity_approved;
+                    $aggregatedItems[$itemId]['requests'][] = $productionRequest->id;
+                }
+            }
+
+            // Create production order items
+            foreach ($aggregatedItems as $itemData) {
+                ProductionOrderItem::create([
+                    'production_order_id' => $productionOrder->id,
+                    'item_id' => $itemData['item_id'],
+                    'quantity_to_produce' => $itemData['quantity_to_produce'],
+                    'quantity_produced' => 0,
+                    'notes' => 'Aggregated from requests: ' . implode(', ', $itemData['requests'])
+                ]);
+            }
+
+            // Update production requests status (without production_order_id for now)
+            ProductionRequestMaster::whereIn('id', $request->selected_requests)
+                ->update([
+                    'status' => ProductionRequestMaster::STATUS_IN_PRODUCTION
+                ]);
+        });
+
+        return redirect()->route('admin.production.orders.index')
+            ->with('success', 'Production order created successfully from ' . count($request->selected_requests) . ' requests.');
     }
 
     /**
@@ -93,7 +185,7 @@ class ProductionOrderController extends Controller
     {
         $productionOrder->load(['items.item', 'createdBy', 'approvedBy']);
 
-        return view('production.orders.show', compact('productionOrder'));
+        return view('admin.production.orders.show', compact('productionOrder'));
     }
 
     /**
@@ -149,6 +241,20 @@ class ProductionOrderController extends Controller
         $this->updateProductionRequests($productionOrder);
 
         return redirect()->back()->with('success', 'Production completed successfully.');
+    }
+
+    /**
+     * Cancel production order
+     */
+    public function cancel(ProductionOrder $productionOrder)
+    {
+        if (!$productionOrder->canBeCancelled()) {
+            return redirect()->back()->with('error', 'This production order cannot be cancelled.');
+        }
+
+        $productionOrder->update(['status' => 'cancelled']);
+
+        return redirect()->back()->with('success', 'Production order cancelled successfully.');
     }
 
     /**
