@@ -314,10 +314,15 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right text-sm">
-                                    <div class="font-semibold">Rs. {{ number_format($item->line_total, 2) }}</div>
+                                    @php
+                                        $lineTotalBeforeDiscount = $item->accepted_quantity * $item->buying_price;
+                                        $discountAmount = ($item->discount_received / 100) * $lineTotalBeforeDiscount;
+                                        $finalLineTotal = $lineTotalBeforeDiscount - $discountAmount;
+                                    @endphp
+                                    <div class="font-semibold">Rs. {{ number_format($finalLineTotal, 2) }}</div>
                                     @if (($item->discount_received ?? 0) > 0)
                                         <div class="text-xs text-gray-500 line-through">
-                                            Rs. {{ number_format($item->line_total_before_discount, 2) }}
+                                            Rs. {{ number_format($lineTotalBeforeDiscount, 2) }}
                                         </div>
                                     @endif
                                 </td>
