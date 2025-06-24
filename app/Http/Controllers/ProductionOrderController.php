@@ -8,8 +8,10 @@ use App\Models\ProductionOrderItem;
 use App\Models\ProductionRequestMaster;
 use App\Models\ProductionRequestItem;
 use App\Models\ProductionSession;
+use App\Models\ProductionOrderIngredient;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Recipe;
 
 class ProductionOrderController extends Controller
 {
@@ -600,6 +602,48 @@ class ProductionOrderController extends Controller
             // Update related production requests
             ProductionRequestMaster::where('production_order_id', $productionOrder->id)
                 ->update(['status' => ProductionRequestMaster::STATUS_COMPLETED]);
+        }
+    }
+
+    /**
+     * Calculate and create ingredients for production order based on recipes
+     */
+    private function calculateAndCreateIngredients(ProductionOrder $productionOrder)
+    {
+        foreach ($productionOrder->items as $orderItem) {
+            $recipe = Recipe::where('production_item_id', $orderItem->item_id)
+                          ->where('is_active', true)
+                          ->with('details.rawMaterialItem')
+                          ->first();
+
+            if ($recipe) {
+                $productionMultiplier = $orderItem->quantity_to_produce / $recipe->yield_quantity;
+
+                foreach ($recipe->details as $recipeDetail) {
+                    $plannedQuantity = $recipeDetail->quantity_required * $productionMultiplier;
+
+                    // Check if ingredient already exists for this order
+                    $existingIngredient = ProductionOrderIngredient::where('production_order_id', $productionOrder->id)
+                        ->where('ingredient_item_id', $recipeDetail->raw_material_item_id)
+                        ->first();
+
+                    if ($existingIngredient) {
+                        // Add to existing ingredient quantity
+                        $existingIngredient->update([
+                            'planned_quantity' => $existingIngredient->planned_quantity + $plannedQuantity
+                        ]);
+                    } else {
+                        // Create new ingredient record
+                        ProductionOrderIngredient::create([
+                            'production_order_id' => $productionOrder->id,
+                            'ingredient_item_id' => $recipeDetail->raw_material_item_id,
+                            'planned_quantity' => $plannedQuantity,
+                            'unit_of_measurement' => $recipeDetail->unit_of_measurement,
+                            'is_manually_added' => false,
+                        ]);
+                    }
+                }
+            }
         }
     }
 }
