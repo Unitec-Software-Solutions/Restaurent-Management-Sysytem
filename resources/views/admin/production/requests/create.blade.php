@@ -39,7 +39,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Required Date *</label>
-                            <input type="date" name="required_date" value="{{ old('required_date') }}"
+                            <input type="date" name="required_date"
+                                value="{{ old('required_date', now()->addDay()->format('Y-m-d')) }}"
                                 min="{{ now()->addDay()->format('Y-m-d') }}"
                                 class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                 required>
@@ -48,10 +49,19 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
-                            <input type="text" value="{{ Auth::user()->branch?->name ?? 'N/A' }}"
+                            @php
+                                $user = Auth::user();
+                                $branchName = null;
+                                $branchId = $user->branch_id;
+                                if ($branchId) {
+                                    $branch = \App\Models\Branch::find($branchId);
+                                    $branchName = $branch ? $branch->name : 'Unknown Branch';
+                                }
+                            @endphp
+                            <input type="text" value="{{ $branchName ?? 'N/A' }}"
                                 class="w-full rounded-lg border-gray-300 bg-gray-50 shadow-sm" readonly>
-                            @if (Auth::user()->branch_id)
-                                <input type="hidden" name="branch_id" value="{{ Auth::user()->branch_id }}">
+                            @if ($branchId)
+                                <input type="hidden" name="branch_id" value="{{ $branchId }}">
                             @endif
                         </div>
                     </div>
@@ -127,11 +137,7 @@
                                                             ->transactions()
                                                             ->where('branch_id', Auth::user()->branch_id)
                                                             ->selectRaw(
-                                                                'COALESCE(SUM(CASE
-                                                        WHEN transaction_type IN ("purchase", "production", "adjustment_increase") THEN quantity
-                                                        WHEN transaction_type IN ("sale", "consumption", "waste", "adjustment_decrease") THEN -quantity
-                                                        ELSE 0
-                                                    END), 0) as current_stock',
+                                                                "COALESCE(SUM(CASE\n                    WHEN transaction_type IN ('purchase', 'production', 'adjustment_increase') THEN quantity\n                    WHEN transaction_type IN ('sale', 'consumption', 'waste', 'adjustment_decrease') THEN -quantity\n                    ELSE 0\n                END), 0) as current_stock",
                                                             )
                                                             ->value('current_stock') ?? 0;
                                                 @endphp
@@ -304,6 +310,29 @@
                         item.style.display = 'block';
                     } else {
                         item.style.display = 'none';
+                    }
+                });
+            });
+
+            // Ensure only checked items' inputs are submitted
+            document.getElementById('productionRequestForm').addEventListener('submit', function(e) {
+                document.querySelectorAll('.item-checkbox').forEach(function(checkbox) {
+                    const itemId = checkbox.dataset.itemId;
+                    const quantityInput = document.querySelector(
+                        `input[name="items[${itemId}][quantity_requested]"]`);
+                    const notesInput = document.querySelector(
+                        `input[name="items[${itemId}][notes]"]`);
+                    if (checkbox.checked) {
+                        quantityInput.disabled = false;
+                        notesInput.disabled = false;
+                    } else {
+                        // Remove all inputs for unchecked items
+                        if (quantityInput) quantityInput.remove();
+                        if (notesInput) notesInput.remove();
+                        // Also remove the hidden item_id input
+                        const itemIdInput = document.querySelector(
+                            `input[name="items[${itemId}][item_id]"]`);
+                        if (itemIdInput) itemIdInput.remove();
                     }
                 });
             });
