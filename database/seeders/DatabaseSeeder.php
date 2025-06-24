@@ -30,9 +30,11 @@ use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
-    
+    protected $faker;
+
     public function run(): void
     {
+        $this->faker = \Faker\Factory::create();
         // Clear existing data first
         DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
 
@@ -59,40 +61,70 @@ class DatabaseSeeder extends Seeder
         $planIds = $plans->pluck('id')->toArray();
 
         
-        Organization::factory(5)->create([
-            'subscription_plan_id' => $planIds[array_rand($planIds)]
-        ])->each(function ($organization) use ($planIds) {
-            if (!$organization->subscription_plan_id || !in_array($organization->subscription_plan_id, $planIds)) {
-                echo "[ERROR] Organization ID {$organization->id} has invalid subscription_plan_id: {$organization->subscription_plan_id}\n";
-            }
-            $branches = Branch::factory(3)->create(['organization_id' => $organization->id]);
-            Admin::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            CustomRole::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            Employee::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            $menuCategories = MenuCategory::factory(3)->create();
-            MenuItem::factory(10)->create(['menu_category_id' => $menuCategories->random()->id]);
+        Organization::factory(5)->create()->each(function ($organization) {
+            $this->command->info("🏢 Creating data for: {$organization->name}");
             
-            $branches->each(function ($branch, $index) {
-                for ($tableNum = 1; $tableNum <= 5; $tableNum++) {
-                    Table::factory()->create([
-                        'branch_id' => $branch->id,
-                        'number' => $tableNum
+            // Create branches first
+            $branches = Branch::factory(3)->create(['organization_id' => $organization->id]);
+            
+            // Create menu categories
+            $menuCategories = MenuCategory::factory(3)->create([
+                'organization_id' => $organization->id,
+                'branch_id' => $branches->random()->id
+            ]);
+            
+            // Create item masters (inventory items)
+            $itemMasters = ItemMaster::factory(10)->create([
+                'organization_id' => $organization->id, 
+                'branch_id' => $branches->random()->id,
+                'is_menu_item' => true
+            ]);
+            
+            // Create menu items linked to item masters
+            $menuItems = collect();
+            foreach ($itemMasters->take(8) as $itemMaster) {
+                $menuItem = MenuItem::factory()->create([
+                    'organization_id' => $organization->id,
+                    'branch_id' => $itemMaster->branch_id,
+                    'menu_category_id' => $menuCategories->random()->id,
+                    'item_master_id' => $itemMaster->id,
+                    'name' => $itemMaster->name,
+                    'price' => $itemMaster->selling_price,
+                    'description' => $itemMaster->description ?? "Delicious {$itemMaster->name}"
+                ]);
+                $menuItems->push($menuItem);
+            }
+            
+            // Create orders with proper menu items
+            $orders = Order::factory(5)->create([
+                'branch_id' => $branches->random()->id,
+                'organization_id' => $organization->id
+            ]);
+            
+            // Create order items for each order
+            $orders->each(function ($order) use ($menuItems, $itemMasters) {
+                $orderMenuItems = $menuItems->where('branch_id', $order->branch_id)->take(3);
+                
+                if ($orderMenuItems->isEmpty()) {
+                    $orderMenuItems = $menuItems->take(3);
+                }
+                
+                foreach ($orderMenuItems as $menuItem) {
+                    $inventoryItem = $itemMasters->find($menuItem->item_master_id);
+                    
+                    OrderItem::factory()->create([
+                        'order_id' => $order->id,
+                        'menu_item_id' => $menuItem->id,
+                        'inventory_item_id' => $inventoryItem?->id,
+                        'item_name' => $menuItem->name,
+                        'unit_price' => $menuItem->price,
+                        'quantity' => $this->faker->numberBetween(1, 3)
                     ]);
                 }
-            });
-            User::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            Reservation::factory(5)->create(['branch_id' => $branches->random()->id]);
-            
-            
-            $itemMasters = ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            
-            $orders = Order::factory(5)->create(['branch_id' => $branches->random()->id]);
-            $orders->each(function ($order) use ($itemMasters) {
-                OrderItem::factory(3)->create([
-                    'order_id' => $order->id,
-                    'menu_item_id' => $itemMasters->random()->id,
-                    'inventory_item_id' => $itemMasters->random()->id
-                ]);
+                
+                // Update order total
+                $orderTotal = $order->orderItems()->sum('total_price');
+                $order->update(['total_amount' => $orderTotal]);
             });
             $gtns = GoodsTransferNote::factory(2)->create(['organization_id' => $organization->id, 'from_branch_id' => $branches->random()->id, 'to_branch_id' => $branches->random()->id]);
             $gtns->each(function ($gtn) {
