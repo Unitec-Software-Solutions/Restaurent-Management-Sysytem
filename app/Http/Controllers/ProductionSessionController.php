@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\ProductionSession;
-use App\Models\ProductionOrder;
-use App\Models\ProductionOrderItem;
 use App\Models\ItemTransaction;
-use App\Models\Recipe;
+use App\Models\ProductionOrder;
 use App\Models\ProductionOrderIngredient;
+use App\Models\ProductionOrderItem;
+use App\Models\ProductionSession;
+use App\Models\Recipe;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -43,12 +43,25 @@ class ProductionSessionController extends Controller
     /**
      * Show the form for creating a new production session
      */
-    public function create()
+    public function create(Request $request)
     {
-        $availableOrders = ProductionOrder::where('organization_id', Auth::user()->organization_id)
-            ->whereIn('status', ['approved', 'in_progress'])
-            ->with('items.item')
+        // Get available production orders (approved status)
+        $availableOrders = ProductionOrder::with(['items.item', 'productionRequestMaster'])
+            ->where('organization_id', Auth::user()->organization_id)
+            ->where('status', 'approved')
+            ->orderBy('production_date')
             ->get();
+
+        // If order_id is provided in URL, verify it exists and is available
+        if ($request->has('order_id')) {
+            $orderId = $request->get('order_id');
+            $selectedOrder = $availableOrders->where('id', $orderId)->first();
+            
+            if (!$selectedOrder) {
+                return redirect()->route('admin.production.sessions.create')
+                    ->with('error', 'The specified production order is not available for session creation.');
+            }
+        }
 
         return view('admin.production.sessions.create', compact('availableOrders'));
     }
@@ -281,44 +294,44 @@ class ProductionSessionController extends Controller
      */
     public function issueIngredients(Request $request, ProductionSession $session)
     {
-        $request->validate([
-            'ingredients' => 'required|array',
-            'ingredients.*.ingredient_id' => 'required|exists:production_order_ingredients,id',
-            'ingredients.*.issued_quantity' => 'required|numeric|min:0',
-            'ingredients.*.notes' => 'nullable|string|max:255',
-        ]);
+        // $request->validate([
+        //     'ingredients' => 'required|array',
+        //     'ingredients.*.ingredient_id' => 'required|exists:production_order_ingredients,id',
+        //     'ingredients.*.issued_quantity' => 'required|numeric|min:0',
+        //     'ingredients.*.notes' => 'nullable|string|max:255',
+        // ]);
 
-        DB::transaction(function () use ($request, $session) {
-            foreach ($request->ingredients as $ingredientData) {
-                $ingredient = ProductionOrderIngredient::find($ingredientData['ingredient_id']);
+        // DB::transaction(function () use ($request, $session) {
+        //     foreach ($request->ingredients as $ingredientData) {
+        //         $ingredient = ProductionOrderIngredient::find($ingredientData['ingredient_id']);
                 
-                if ($ingredient && $ingredientData['issued_quantity'] > 0) {
-                    // Update ingredient issued quantity
-                    $ingredient->update([
-                        'issued_quantity' => $ingredient->issued_quantity + $ingredientData['issued_quantity'],
-                        'notes' => $ingredientData['notes'] ?? $ingredient->notes,
-                    ]);
+        //         if ($ingredient && $ingredientData['issued_quantity'] > 0) {
+        //             // Update ingredient issued quantity
+        //             $ingredient->update([
+        //                 'issued_quantity' => $ingredient->issued_quantity + $ingredientData['issued_quantity'],
+        //                 'notes' => $ingredientData['notes'] ?? $ingredient->notes,
+        //             ]);
 
-                    // Create inventory transaction for ingredient consumption
-                    ItemTransaction::create([
-                        'organization_id' => Auth::user()->organization_id,
-                        'branch_id' => Auth::user()->branch_id,
-                        'inventory_item_id' => $ingredient->ingredient_item_id,
-                        'transaction_type' => 'issue_production',
-                        'quantity' => -$ingredientData['issued_quantity'],
-                        'unit_price' => 0,
-                        'total_amount' => 0,
-                        'transaction_date' => now(),
-                        'description' => "Ingredient issued for production session: {$session->session_name}",
-                        'production_session_id' => $session->id,
-                        'production_order_id' => $session->production_order_id,
-                        'created_by_user_id' => Auth::id(),
-                    ]);
-                }
-            }
-        });
+        //             // Create inventory transaction for ingredient consumption
+        //             ItemTransaction::create([
+        //                 'organization_id' => Auth::user()->organization_id,
+        //                 'branch_id' => Auth::user()->branch_id,
+        //                 'inventory_item_id' => $ingredient->ingredient_item_id,
+        //                 'transaction_type' => 'issue_production',
+        //                 'quantity' => -$ingredientData['issued_quantity'],
+        //                 'unit_price' => 0,
+        //                 'total_amount' => 0,
+        //                 'transaction_date' => now(),
+        //                 'description' => "Ingredient issued for production session: {$session->session_name}",
+        //                 'production_session_id' => $session->id,
+        //                 'production_order_id' => $session->production_order_id,
+        //                 'created_by_user_id' => Auth::id(),
+        //             ]);
+        //         }
+        //     }
+        // });
 
-        return redirect()->back()->with('success', 'Ingredients issued successfully.');
+        return redirect()->back()->with('success', 'Place Holder .');
     }
 
     /**
