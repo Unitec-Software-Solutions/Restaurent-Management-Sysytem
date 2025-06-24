@@ -113,9 +113,20 @@ class ProductionOrder extends Model
         return $this->status === self::STATUS_IN_PROGRESS;
     }
 
-    public function getTotalItemsCount()
+    /**
+     * Get status badge CSS class
+     */
+    public function getStatusBadgeClass()
     {
-        return $this->items()->count();
+        return match($this->status) {
+            self::STATUS_DRAFT => 'bg-gray-100 text-gray-800',
+            self::STATUS_APPROVED => 'bg-green-100 text-green-800',
+            self::STATUS_IN_PRODUCTION => 'bg-blue-100 text-blue-800',
+            self::STATUS_IN_PROGRESS => 'bg-purple-100 text-purple-800',
+            self::STATUS_COMPLETED => 'bg-green-100 text-green-800',
+            self::STATUS_CANCELLED => 'bg-red-100 text-red-800',
+            default => 'bg-gray-100 text-gray-800'
+        };
     }
 
     /**
@@ -161,30 +172,11 @@ class ProductionOrder extends Model
     }
 
     /**
-     * Get status badge CSS class
+     * Check if order can be approved
      */
-    public function getStatusBadgeClass()
+    public function canBeApproved()
     {
-        return match($this->status) {
-            'draft' => 'bg-gray-100 text-gray-800',
-            'approved' => 'bg-blue-100 text-blue-800',
-            'in_production', 'in_progress' => 'bg-yellow-100 text-yellow-800',
-            'completed' => 'bg-green-100 text-green-800',
-            'cancelled' => 'bg-red-100 text-red-800',
-            default => 'bg-gray-100 text-gray-800'
-        };
-    }
-
-    /**
-     * Get production progress percentage
-     */
-    public function getProductionProgress()
-    {
-        $totalOrdered = $this->getTotalQuantityOrdered();
-        if ($totalOrdered == 0) return 0;
-
-        $totalProduced = $this->getTotalQuantityProduced();
-        return ($totalProduced / $totalOrdered) * 100;
+        return $this->status === self::STATUS_DRAFT && $this->items()->count() > 0;
     }
 
     /**
@@ -192,15 +184,7 @@ class ProductionOrder extends Model
      */
     public function canStartProduction()
     {
-        return $this->status === 'approved';
-    }
-
-    /**
-     * Check if order can be approved
-     */
-    public function canBeApproved()
-    {
-        return $this->status === 'draft';
+        return $this->status === self::STATUS_APPROVED;
     }
 
     /**
@@ -208,7 +192,7 @@ class ProductionOrder extends Model
      */
     public function canBeCancelled()
     {
-        return in_array($this->status, ['draft', 'approved']);
+        return !in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_CANCELLED]);
     }
 
     /**
@@ -237,5 +221,40 @@ class ProductionOrder extends Model
         }
 
         return $totalTime;
+    }
+
+    /**
+     * Get production progress percentage
+     */
+    public function getProductionProgress()
+    {
+        $totalPlanned = $this->items->sum('quantity');
+        $totalCompleted = $this->sessions->sum('quantity_produced');
+        
+        return $totalPlanned > 0 ? ($totalCompleted / $totalPlanned) * 100 : 0;
+    }
+
+    /**
+     * Get total quantity of items to be produced
+     */
+    public function getTotalQuantity()
+    {
+        return $this->items->sum('quantity');
+    }
+
+    /**
+     * Get total quantity produced across all sessions
+     */
+    public function getTotalProduced()
+    {
+        return $this->sessions->sum('quantity_produced');
+    }
+
+    /**
+     * Check if production order is fully completed
+     */
+    public function isFullyCompleted()
+    {
+        return $this->getTotalProduced() >= $this->getTotalQuantity();
     }
 }
