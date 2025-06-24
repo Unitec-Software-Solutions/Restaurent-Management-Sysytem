@@ -9,6 +9,7 @@ use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class SupplierController extends Controller
 {
@@ -16,42 +17,56 @@ class SupplierController extends Controller
 
     public function index(Request $request)
     {
-        $user = Auth::user();
-
-        if (!$user || !$user->organization_id) {
+        $admin = Auth::guard('admin')->user();
+        
+        if (!$admin || !$admin->organization_id) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
 
-        $orgId = $user->organization_id;
+        try {
+            $query = Supplier::where('organization_id', $admin->organization_id);
 
-        $query = Supplier::with('purchaseOrders')
-            ->where('organization_id', $orgId);
+            // Apply filters
+            if ($request->has('search')) {
+                $search = $request->input('search');
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'ILIKE', "%{$search}%")
+                      ->orWhere('supplier_id', 'ILIKE', "%{$search}%")
+                      ->orWhere('contact_person', 'ILIKE', "%{$search}%")
+                      ->orWhere('phone', 'ILIKE', "%{$search}%");
+                });
+            }
 
-        // Apply filters
-        $query = $this->applyFiltersToQuery($query, $request);
+            if ($request->filled('status')) {
+                $query->where('is_active', $request->input('status') === '1');
+            }
 
-        // Handle export
-        if ($request->has('export')) {
-            return $this->exportToExcel($request, $query, 'suppliers_export.xlsx', [
-                'Supplier ID', 'Name', 'Contact Person', 'Phone', 'Email', 'Address', 'Status', 'Created At'
-            ]);
+            // Handle export
+            if ($request->has('export')) {
+                return $this->exportToExcel($request, $query, 'suppliers_export.xlsx', [
+                    'Supplier ID', 'Name', 'Contact Person', 'Phone', 'Email', 'Address', 'Status', 'Created At'
+                ]);
+            }
+
+            $suppliers = $query->latest()->paginate(15);
+
+            // Statistics
+            $totalSuppliers = Supplier::where('organization_id', $admin->organization_id)->count();
+            $activeSuppliers = Supplier::where('organization_id', $admin->organization_id)->where('is_active', true)->count();
+            $inactiveSuppliers = Supplier::where('organization_id', $admin->organization_id)->where('is_active', false)->count();
+            $newSuppliersToday = Supplier::where('organization_id', $admin->organization_id)->whereDate('created_at', today())->count();
+
+            return view('admin.suppliers.index', compact(
+                'suppliers',
+                'totalSuppliers',
+                'activeSuppliers',
+                'inactiveSuppliers',
+                'newSuppliersToday'
+            ));
+        } catch (\Exception $e) {
+            Log::error('Supplier index error: ' . $e->getMessage());
+            return view('admin.suppliers.index', ['suppliers' => collect()]);
         }
-
-        $suppliers = $query->latest()->paginate(10);
-
-        // Statistics
-        $totalSuppliers = Supplier::where('organization_id', $orgId)->count();
-        $activeSuppliers = Supplier::where('organization_id', $orgId)->where('is_active', true)->count();
-        $inactiveSuppliers = Supplier::where('organization_id', $orgId)->where('is_active', false)->count();
-        $newSuppliersToday = Supplier::where('organization_id', $orgId)->whereDate('created_at', today())->count();
-
-        return view('admin.suppliers.index', compact(
-            'suppliers',
-            'totalSuppliers',
-            'activeSuppliers',
-            'inactiveSuppliers',
-            'newSuppliersToday'
-        ));
     }
 
     public function create()
