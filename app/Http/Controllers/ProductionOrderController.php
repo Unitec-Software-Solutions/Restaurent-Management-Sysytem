@@ -106,7 +106,13 @@ class ProductionOrderController extends Controller
             'production_date' => 'required|date',
             'selected_requests' => 'required|array|min:1',
             'selected_requests.*' => 'exists:production_requests_master,id',
-            'production_notes' => 'nullable|string|max:1000'
+            'production_notes' => 'nullable|string|max:1000',
+            'ingredients' => 'nullable|array',
+            'ingredients.*.ingredient_item_id' => 'required_with:ingredients.*|exists:item_master,id',
+            'ingredients.*.planned_quantity' => 'required_with:ingredients.*|numeric|min:0.001',
+            'ingredients.*.unit_of_measurement' => 'nullable|string|max:50',
+            'ingredients.*.notes' => 'nullable|string|max:500',
+            'ingredients.*.is_manually_added' => 'boolean'
         ]);
 
         DB::transaction(function () use ($request) {
@@ -167,15 +173,81 @@ class ProductionOrderController extends Controller
                 ]);
             }
 
-            // Update production requests status (without production_order_id for now)
+            // Calculate and create ingredient requirements
+            $this->createIngredientRequirements($productionOrder, $aggregatedItems, $request->ingredients ?? []);
+
+            // Update production requests status and link to production order
             ProductionRequestMaster::whereIn('id', $request->selected_requests)
                 ->update([
-                    'status' => ProductionRequestMaster::STATUS_IN_PRODUCTION
+                    'status' => ProductionRequestMaster::STATUS_IN_PRODUCTION,
+                    'production_order_id' => $productionOrder->id
                 ]);
         });
 
         return redirect()->route('admin.production.orders.index')
-            ->with('success', 'Production order created successfully from ' . count($request->selected_requests) . ' requests.');
+            ->with('success', 'Production order created successfully from ' . count($request->selected_requests) . ' requests with ingredient requirements.');
+    }
+
+    /**
+     * Create ingredient requirements for production order
+     */
+    private function createIngredientRequirements($productionOrder, $aggregatedItems, $manualIngredients = [])
+    {
+        $ingredientRequirements = [];
+
+        // Calculate ingredients from recipes
+        foreach ($aggregatedItems as $itemData) {
+            $recipe = \App\Models\Recipe::where('production_item_id', $itemData['item_id'])
+                ->where('is_active', true)
+                ->with('details.rawMaterialItem')
+                ->first();
+
+            if ($recipe) {
+                $multiplier = $itemData['quantity_to_produce'] / $recipe->yield_quantity;
+
+                foreach ($recipe->details as $detail) {
+                    $ingredientId = $detail->raw_material_item_id;
+                    $requiredQuantity = $detail->quantity_required * $multiplier;
+
+                    if (!isset($ingredientRequirements[$ingredientId])) {
+                        $ingredientRequirements[$ingredientId] = [
+                            'ingredient_item_id' => $ingredientId,
+                            'planned_quantity' => 0,
+                            'unit_of_measurement' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                            'notes' => 'From recipe: ' . $recipe->recipe_name,
+                            'is_manually_added' => false
+                        ];
+                    }
+
+                    $ingredientRequirements[$ingredientId]['planned_quantity'] += $requiredQuantity;
+                }
+            }
+        }
+
+        // Add manual ingredients
+        foreach ($manualIngredients as $ingredientId => $ingredientData) {
+            if (isset($ingredientData['ingredient_item_id']) && isset($ingredientData['planned_quantity'])) {
+                $ingredientRequirements[$ingredientId] = [
+                    'ingredient_item_id' => $ingredientData['ingredient_item_id'],
+                    'planned_quantity' => $ingredientData['planned_quantity'],
+                    'unit_of_measurement' => $ingredientData['unit_of_measurement'] ?? '',
+                    'notes' => $ingredientData['notes'] ?? 'Manually added',
+                    'is_manually_added' => true
+                ];
+            }
+        }
+
+        // Create ingredient records
+        foreach ($ingredientRequirements as $ingredient) {
+            \App\Models\ProductionOrderIngredient::create([
+                'production_order_id' => $productionOrder->id,
+                'ingredient_item_id' => $ingredient['ingredient_item_id'],
+                'planned_quantity' => $ingredient['planned_quantity'],
+                'unit_of_measurement' => $ingredient['unit_of_measurement'],
+                'notes' => $ingredient['notes'],
+                'is_manually_added' => $ingredient['is_manually_added']
+            ]);
+        }
     }
 
     /**
@@ -183,7 +255,7 @@ class ProductionOrderController extends Controller
      */
     public function show(ProductionOrder $productionOrder)
     {
-        $productionOrder->load(['items.item', 'createdBy', 'approvedBy']);
+        $productionOrder->load(['items.item', 'ingredients.ingredient', 'createdBy', 'approvedBy', 'sessions']);
 
         return view('admin.production.orders.show', compact('productionOrder'));
     }
@@ -374,6 +446,160 @@ class ProductionOrderController extends Controller
                     $requestItem->productionRequestMaster->update(['status' => 'completed']);
                 }
             }
+        }
+    }
+
+    /**
+     * Calculate ingredient requirements for aggregated items
+     */
+    public function calculateIngredients(Request $request)
+    {
+        $aggregatedItems = $request->input('aggregated_items', []);
+        $ingredients = [];
+
+        foreach ($aggregatedItems as $itemId => $itemData) {
+            $recipe = \App\Models\Recipe::where('production_item_id', $itemId)
+                ->where('is_active', true)
+                ->with('details.rawMaterialItem')
+                ->first();
+
+            if ($recipe && isset($itemData['totalQuantity'])) {
+                $multiplier = $itemData['totalQuantity'] / $recipe->yield_quantity;
+
+                foreach ($recipe->details as $detail) {
+                    $ingredientId = $detail->raw_material_item_id;
+                    $requiredQuantity = $detail->quantity_required * $multiplier;
+
+                    if (!isset($ingredients[$ingredientId])) {
+                        $ingredients[$ingredientId] = [
+                            'name' => $detail->rawMaterialItem->name,
+                            'quantity' => 0,
+                            'unit' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                            'notes' => 'From recipe: ' . $recipe->recipe_name
+                        ];
+                    }
+
+                    $ingredients[$ingredientId]['quantity'] += $requiredQuantity;
+                }
+            }
+        }
+
+        return response()->json(['ingredients' => $ingredients]);
+    }
+
+    /**
+     * Issue ingredients to production order
+     */
+    public function issueIngredients(Request $request, ProductionOrder $productionOrder)
+    {
+        $request->validate([
+            'ingredients' => 'required|array',
+            'ingredients.*.ingredient_item_id' => 'required|exists:item_master,id',
+            'ingredients.*.issued_quantity' => 'required|numeric|min:0.001'
+        ]);
+
+        DB::transaction(function () use ($request, $productionOrder) {
+            foreach ($request->ingredients as $ingredientData) {
+                $ingredient = \App\Models\ProductionOrderIngredient::where('production_order_id', $productionOrder->id)
+                    ->where('ingredient_item_id', $ingredientData['ingredient_item_id'])
+                    ->first();
+
+                if ($ingredient) {
+                    $issuedQuantity = $ingredientData['issued_quantity'];
+                    
+                    // Update ingredient issued quantity
+                    $ingredient->update([
+                        'issued_quantity' => $ingredient->issued_quantity + $issuedQuantity
+                    ]);
+
+                    // Create inventory transaction for ingredient outgoing
+                    \App\Models\ItemTransaction::create([
+                        'organization_id' => Auth::user()->organization_id,
+                        'branch_id' => Auth::user()->organization_id, // HQ branch
+                        'inventory_item_id' => $ingredientData['ingredient_item_id'],
+                        'transaction_type' => 'production_issue',
+                        'quantity' => -$issuedQuantity, // Negative for outgoing
+                        'cost_price' => 0, // Will be calculated based on current stock
+                        'source_id' => $productionOrder->id,
+                        'source_type' => 'ProductionOrder',
+                        'notes' => 'Issued to production order: ' . $productionOrder->production_order_number,
+                        'created_by_user_id' => Auth::id(),
+                        'is_active' => true
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->back()->with('success', 'Ingredients issued successfully.');
+    }
+
+    /**
+     * Complete production and add produced items to inventory
+     */
+    public function completeProduction(Request $request, ProductionOrder $productionOrder)
+    {
+        $request->validate([
+            'items' => 'required|array',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity_produced' => 'required|numeric|min:0'
+        ]);
+
+        DB::transaction(function () use ($request, $productionOrder) {
+            foreach ($request->items as $itemData) {
+                $orderItem = ProductionOrderItem::where('production_order_id', $productionOrder->id)
+                    ->where('item_id', $itemData['item_id'])
+                    ->first();
+
+                if ($orderItem) {
+                    $producedQuantity = $itemData['quantity_produced'];
+                    
+                    // Update order item quantities
+                    $orderItem->update([
+                        'quantity_produced' => $orderItem->quantity_produced + $producedQuantity
+                    ]);
+
+                    // Create inventory transaction for produced items (incoming)
+                    \App\Models\ItemTransaction::create([
+                        'organization_id' => Auth::user()->organization_id,
+                        'branch_id' => Auth::user()->organization_id, // HQ branch
+                        'inventory_item_id' => $itemData['item_id'],
+                        'transaction_type' => 'production_completion',
+                        'quantity' => $producedQuantity, // Positive for incoming
+                        'cost_price' => 0, // Will be calculated based on ingredient costs
+                        'source_id' => $productionOrder->id,
+                        'source_type' => 'ProductionOrder',
+                        'notes' => 'Produced from production order: ' . $productionOrder->production_order_number,
+                        'created_by_user_id' => Auth::id(),
+                        'is_active' => true
+                    ]);
+                }
+            }
+
+            // Check if production order is complete
+            $this->checkProductionOrderCompletion($productionOrder);
+        });
+
+        return redirect()->back()->with('success', 'Production completed and items added to inventory.');
+    }
+
+    /**
+     * Check if production order should be marked as completed
+     */
+    private function checkProductionOrderCompletion(ProductionOrder $productionOrder)
+    {
+        $allItemsCompleted = $productionOrder->items->every(function ($item) {
+            return $item->quantity_produced >= $item->quantity_to_produce;
+        });
+
+        if ($allItemsCompleted) {
+            $productionOrder->update([
+                'status' => ProductionOrder::STATUS_COMPLETED,
+                'completed_at' => now()
+            ]);
+
+            // Update related production requests
+            ProductionRequestMaster::where('production_order_id', $productionOrder->id)
+                ->update(['status' => ProductionRequestMaster::STATUS_COMPLETED]);
         }
     }
 }
