@@ -5,22 +5,24 @@
 @section('content')
     <div class="p-4 rounded-lg">
         {{-- Debug Info Card for Inventory Items --}}
-        @if(config('app.debug'))
+        @if (config('app.debug'))
             <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-medium text-green-800">🔍 Inventory Items Debug Info</h3>
-                    <a href="{{ route('admin.inventory.items.index', ['debug' => 1]) }}" 
-                       class="text-xs text-green-600 hover:text-green-800">
-                        Full Debug (@dd)
+                    <a href="{{ route('admin.inventory.items.index', ['debug' => 1]) }}"
+                        class="text-xs text-green-600 hover:text-green-800">
+                        Full Debug (debug=1)
                     </a>
                 </div>
                 <div class="text-xs text-green-700 mt-2 grid grid-cols-3 gap-4">
                     <div>
-                        <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}</p>
+                        <p><strong>Items Variable:</strong>
+                            {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}</p>
                         <p><strong>DB Total Items:</strong> {{ \App\Models\ItemMaster::count() }}</p>
                     </div>
                     <div>
-                        <p><strong>Categories Variable:</strong> {{ isset($categories) ? 'Set (' . $categories->count() . ')' : 'NOT SET' }}</p>
+                        <p><strong>Categories Variable:</strong>
+                            {{ isset($categories) ? 'Set (' . $categories->count() . ')' : 'NOT SET' }}</p>
                         <p><strong>DB Total Categories:</strong> {{ \App\Models\ItemCategory::count() }}</p>
                     </div>
                     <div>
@@ -69,7 +71,8 @@
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="">All Categories</option>
                             @foreach ($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>
+                                <option value="{{ $cat->id }}"
+                                    {{ request('category') == $cat->id ? 'selected' : '' }}>
                                     {{ $cat->name }}
                                 </option>
                             @endforeach
