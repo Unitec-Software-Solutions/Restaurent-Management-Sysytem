@@ -121,4 +121,55 @@ class ProductionSession extends Model
             default => 'bg-gray-100 text-gray-800',
         };
     }
+
+    /**
+     * Get estimated duration for the session in minutes
+     */
+    public function getEstimatedDuration()
+    {
+        return $this->estimated_duration ?? 60; // Default 60 minutes
+    }
+
+    /**
+     * Get actual duration of the session in minutes
+     */
+    public function getActualDuration()
+    {
+        if ($this->start_time && $this->end_time) {
+            return $this->start_time->diffInMinutes($this->end_time);
+        }
+        
+        return $this->actual_duration ?? null;
+    }
+
+    /**
+     * Calculate session efficiency percentage
+     */
+    public function getEfficiencyPercentage()
+    {
+        $estimated = $this->getEstimatedDuration();
+        $actual = $this->getActualDuration();
+        
+        if (!$actual || $actual == 0) {
+            return 0;
+        }
+        
+        return round(($estimated / $actual) * 100, 1);
+    }
+
+    /**
+     * Check if session is overdue
+     */
+    public function isOverdue()
+    {
+        if ($this->status === 'completed') {
+            return false;
+        }
+        
+        $expectedEndTime = $this->start_time ? 
+            $this->start_time->addMinutes($this->getEstimatedDuration()) : 
+            $this->created_at->addMinutes($this->getEstimatedDuration());
+            
+        return now()->isAfter($expectedEndTime);
+    }
 }
