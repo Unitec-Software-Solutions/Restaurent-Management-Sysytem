@@ -19,7 +19,7 @@
                         <span class="bg-green-800 text-white px-2 py-1 rounded-full text-xs">{{ $pendingRequests }}</span>
                     </a>
                 @endif
-                <a href="{{ route('production.sessions.index') }}"
+                <a href="{{ route('admin.production.sessions.index') }}"
                     class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
                     <i class="fas fa-play"></i>
                     Production Sessions
@@ -145,7 +145,7 @@
                             class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">
                             <i class="fas fa-search mr-2"></i>Filter
                         </button>
-                        <a href="{{ route('production.orders.index') }}"
+                        <a href="{{ route('admin.production.orders.index') }}"
                             class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200 text-center">
                             <i class="fas fa-times mr-2"></i>Clear
                         </a>
@@ -220,9 +220,11 @@
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ $order->requests->count() }} requests</div>
+                                    <div class="text-sm text-gray-900">
+                                        {{ $order->productionRequests ? $order->productionRequests->count() : 0 }} requests
+                                    </div>
                                     <div class="text-xs text-gray-500">
-                                        {{ $order->requests->pluck('branch.name')->unique()->join(', ') }}
+                                        {{ $order->productionRequests ? $order->productionRequests->pluck('branch.name')->unique()->join(', ') : 'N/A' }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -251,13 +253,13 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex items-center space-x-3">
-                                        <a href="{{ route('production.orders.show', $order) }}"
+                                        <a href="{{ route('admin.production.orders.show', $order) }}"
                                             class="text-blue-600 hover:text-blue-900" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
 
                                         @if ($order->canStartProduction())
-                                            <a href="{{ route('production.sessions.create', ['order_id' => $order->id]) }}"
+                                            <a href="{{ route('admin.production.sessions.create', ['order_id' => $order->id]) }}"
                                                 class="text-green-600 hover:text-green-900" title="Start Production">
                                                 <i class="fas fa-play"></i>
                                             </a>
@@ -265,7 +267,8 @@
 
                                         @if ($order->canBeApproved())
                                             <form method="POST"
-                                                action="{{ route('production.orders.approve', $order) }}" class="inline">
+                                                action="{{ route('admin.production.orders.approve', $order) }}"
+                                                class="inline">
                                                 @csrf
                                                 <button type="submit" class="text-green-600 hover:text-green-900"
                                                     title="Approve">
@@ -275,7 +278,8 @@
                                         @endif
 
                                         @if ($order->canBeCancelled())
-                                            <form method="POST" action="{{ route('production.orders.cancel', $order) }}"
+                                            <form method="POST"
+                                                action="{{ route('admin.production.orders.cancel', $order) }}"
                                                 class="inline"
                                                 onsubmit="return confirm('Are you sure you want to cancel this order?')">
                                                 @csrf
@@ -346,7 +350,7 @@
                         <h3 class="text-lg font-semibold text-purple-900">Production Sessions</h3>
                     </div>
                     <p class="text-purple-700 mb-4">Manage active production sessions and track real-time progress.</p>
-                    <a href="{{ route('production.sessions.index') }}"
+                    <a href="{{ route('admin.production.sessions.index') }}"
                         class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition duration-200">
                         <i class="fas fa-tasks mr-2"></i>
                         Manage Sessions
