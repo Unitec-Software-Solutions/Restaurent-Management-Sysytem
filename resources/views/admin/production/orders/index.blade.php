@@ -11,13 +11,33 @@
                 <p class="text-gray-600 mt-1">Manage kitchen production orders and sessions</p>
             </div>
             <div class="flex items-center gap-3">
-                @if (!Auth::user()->branch_id && $pendingRequests > 0)
-                    <a href="{{ route('admin.production.requests.aggregate') }}"
-                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
-                        <i class="fas fa-layer-group"></i>
-                        Aggregate Requests
-                        <span class="bg-green-800 text-white px-2 py-1 rounded-full text-xs">{{ $pendingRequests }}</span>
+                @if (!Auth::user()->branch_id)
+                    <a href="{{ route('admin.production.requests.manage') }}"
+                        class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
+                        <i class="fas fa-clipboard-check"></i>
+                        Approve Requests
+                        @php
+                            $pendingCount = \App\Models\ProductionRequestMaster::where(
+                                'organization_id',
+                                Auth::user()->organization_id,
+                            )
+                                ->where('status', 'submitted')
+                                ->count();
+                        @endphp
+                        @if ($pendingCount > 0)
+                            <span class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs">{{ $pendingCount }}</span>
+                        @endif
                     </a>
+
+                    @if ($pendingRequests > 0)
+                        <a href="{{ route('admin.production.requests.aggregate') }}"
+                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
+                            <i class="fas fa-layer-group"></i>
+                            Aggregate Requests
+                            <span
+                                class="bg-green-800 text-white px-2 py-1 rounded-full text-xs">{{ $pendingRequests }}</span>
+                        </a>
+                    @endif
                 @endif
                 <a href="{{ route('admin.production.sessions.index') }}"
                     class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
