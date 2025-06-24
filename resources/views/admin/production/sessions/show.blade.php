@@ -143,7 +143,8 @@
 
                     <!-- Ingredient Management -->
                     @if ($session->productionOrder->ingredients->count() > 0)
-                        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        ing zero
+                        {{-- <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                             <div class="p-6 border-b border-gray-200 flex items-center justify-between">
                                 <h2 class="text-xl font-semibold text-gray-900">Ingredients</h2>
                                 @if ($session->status === 'in_progress')
@@ -216,7 +217,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
+                        </div> --}}
                     @endif
 
                     <!-- Production Output Recording -->
@@ -362,9 +363,8 @@
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700">Issue Quantity</label>
                                         <input type="number" name="ingredients[{{ $loop->index }}][issued_quantity]"
-                                            step="0.001" min="0"
-                                            max="{{ $ingredient->getRemainingQuantity() }}"
-                                            value="{{ $ingredient->getRemainingQuantity() }}"
+                                            step="0.001" min="0" max="{{ $ingredient->getRemainingToIssue() }}"
+                                            value="{{ $ingredient->getRemainingToIssue() }}"
                                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                                         <input type="hidden" name="ingredients[{{ $loop->index }}][ingredient_id]"
                                             value="{{ $ingredient->id }}">
