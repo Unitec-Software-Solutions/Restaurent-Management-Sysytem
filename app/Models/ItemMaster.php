@@ -7,6 +7,7 @@ use App\Models\ItemCategory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class ItemMaster extends Model
 {
@@ -139,7 +140,9 @@ class ItemMaster extends Model
         return $query->where('is_perishable', true);
     }
 
-    // New scope for production items
+    /**
+     * Scope to get production items only
+     */
     public function scopeProductionItems($query)
     {
         return $query->whereHas('category', function($q) {
