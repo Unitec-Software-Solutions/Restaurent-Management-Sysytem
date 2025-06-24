@@ -5,302 +5,334 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class MenuItem extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * The attributes that are mass assignable following UI/UX guidelines.
+     */
     protected $fillable = [
         'menu_category_id',
+        'organization_id',
+        'branch_id',
+        'item_master_id',
         'name',
         'description',
         'price',
+        'promotion_price',
+        'promotion_start',
+        'promotion_end',
         'image_path',
+        'display_order',
         'is_available',
+        'is_featured',
         'requires_preparation',
         'preparation_time',
         'station',
         'is_vegetarian',
+        'is_spicy',
         'contains_alcohol',
         'allergens',
+        'calories',
+        'ingredients',
         'is_active',
-        'item_master_id',
-        'organization_id',
-        'estimated_cost',
-        'profit_margin',
-        'max_daily_quantity',
-        'current_daily_quantity',
     ];
-
-    protected $casts = [
-        'is_available' => 'boolean',
-        'requires_preparation' => 'boolean',
-        'is_vegetarian' => 'boolean',
-        'contains_alcohol' => 'boolean',
-        'is_active' => 'boolean',
-        'allergens' => 'array',
-        'price' => 'decimal:2',
-        'estimated_cost' => 'decimal:2',
-        'profit_margin' => 'decimal:2',
-        'max_daily_quantity' => 'integer',
-        'current_daily_quantity' => 'integer',
-    ];
-
-    protected $appends = ['availability_status', 'stock_percentage', 'stock_indicator'];
 
     /**
-     * MenuItem belongs to a category
+     * Get the attributes that should be cast following UI/UX data types.
      */
-    public function category(): BelongsTo
+    protected function casts(): array
     {
-        return $this->belongsTo(MenuCategory::class, 'menu_category_id');
+        return [
+            'price' => 'decimal:2',
+            'promotion_price' => 'decimal:2',
+            'promotion_start' => 'datetime',
+            'promotion_end' => 'datetime',
+            'is_available' => 'boolean',
+            'is_featured' => 'boolean',
+            'requires_preparation' => 'boolean',
+            'is_vegetarian' => 'boolean',
+            'is_spicy' => 'boolean',
+            'contains_alcohol' => 'boolean',
+            'is_active' => 'boolean',
+            'allergens' => 'array',
+            'preparation_time' => 'integer',
+            'display_order' => 'integer',
+            'calories' => 'integer',
+        ];
     }
 
     /**
-     * MenuItem belongs to a branch
+     * Relationships following UI/UX guidelines
      */
-    public function branch(): BelongsTo
+    public function menuCategory(): BelongsTo
     {
-        return $this->belongsTo(Branch::class);
+        return $this->belongsTo(MenuCategory::class);
     }
 
-    /**
-     * MenuItem belongs to an organization
-     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
-    /**
-     * MenuItem has many recipes (ingredients)
-     */
-    public function recipes(): HasMany
+    public function branch(): BelongsTo
     {
-        return $this->hasMany(Recipe::class);
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function itemMaster(): BelongsTo
+    {
+        return $this->belongsTo(ItemMaster::class);
     }
 
     /**
-     * MenuItem has many order items
+     * Scopes for UI filtering following UI/UX patterns
      */
-    public function orderItems(): HasMany
+    public function scopeAvailable($query)
     {
-        return $this->hasMany(OrderItem::class);
+        return $query->where('is_available', true)->where('is_active', true);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
+    public function scopeVegetarian($query)
+    {
+        return $query->where('is_vegetarian', true);
+    }
+
+    public function scopeByCategory($query, $categoryId)
+    {
+        return $query->where('menu_category_id', $categoryId);
+    }
+
+    public function scopeByOrganization($query, $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
+    }
+
+    public function scopeByBranch($query, $branchId)
+    {
+        return $query->where('branch_id', $branchId);
+    }
+
+    public function scopeOrderedForDisplay($query)
+    {
+        return $query->orderBy('display_order')->orderBy('name');
+    }
+
+    public function scopeOnPromotion($query)
+    {
+        return $query->whereNotNull('promotion_price')
+                    ->where('promotion_start', '<=', now())
+                    ->where('promotion_end', '>=', now());
     }
 
     /**
-     * MenuItem belongs to many menus
+     * Accessors for UI display following UI/UX guidelines
      */
-    public function menus()
+    protected function displayPrice(): Attribute
     {
-        return $this->belongsToMany(Menu::class, 'menu_menu_items')
-                    ->withPivot(['is_available', 'special_price', 'display_order'])
-                    ->withTimestamps();
+        return Attribute::make(
+            get: function () {
+                // Check if item is on promotion
+                if ($this->isOnPromotion()) {
+                    return $this->promotion_price;
+                }
+                return $this->price;
+            }
+        );
     }
 
-    /**
-     * MenuItem available menus
-     */
-    public function availableMenus()
+    protected function originalPrice(): Attribute
     {
-        return $this->menus()->wherePivot('is_available', true);
+        return Attribute::make(
+            get: fn() => $this->price
+        );
     }
 
-    /**
-     * Check if item is available in active menu for branch
-     */
-    public function isAvailableInActiveMenu(int $branchId): bool
+    protected function hasPromotion(): Attribute
     {
-        $activeMenu = Menu::getActiveMenuForBranch($branchId);
-        
-        if (!$activeMenu) {
-            return false;
-        }
-        
-        return $this->availableMenus()
-                    ->where('menu_id', $activeMenu->id)
-                    ->exists();
+        return Attribute::make(
+            get: fn() => $this->isOnPromotion()
+        );
     }
 
-    /**
-     * Get availability with menu context
-     */
-    public function getMenuAvailability(int $branchId, int $quantity = 1): array
+    protected function statusBadge(): Attribute
     {
-        $baseAvailability = $this->checkAvailability($branchId, $quantity);
-        
-        // Add menu availability check
-        $menuAvailable = $this->isAvailableInActiveMenu($branchId);
-        
-        return array_merge($baseAvailability, [
-            'menu_available' => $menuAvailable,
-            'overall_available' => $baseAvailability['available'] && $menuAvailable
-        ]);
-    }
-
-    /**
-     * Check real-time availability based on ingredients stock
-     */
-    public function checkAvailability(int $branchId, int $quantity = 1): array
-    {
-        // If no recipes defined, assume it's available (simple item)
-        if ($this->recipes()->count() === 0) {
-            return [
-                'available' => $this->is_available && $this->is_active,
-                'max_quantity' => $this->max_daily_quantity - $this->current_daily_quantity,
-                'limiting_factor' => null,
-                'missing_ingredients' => []
-            ];
-        }
-
-        $maxPossible = PHP_INT_MAX;
-        $limitingFactor = null;
-        $missingIngredients = [];
-
-        foreach ($this->recipes()->active()->get() as $recipe) {
-            $maxFromThisIngredient = $recipe->getMaxPortionsPossible($branchId);
-            
-            if ($maxFromThisIngredient < $quantity) {
-                $missingIngredients[] = [
-                    'ingredient' => $recipe->ingredient->name,
-                    'needed' => $recipe->actual_quantity_needed * $quantity,
-                    'available' => $recipe->getCurrentStock($branchId),
-                    'unit' => $recipe->unit
+        return Attribute::make(
+            get: function () {
+                if (!$this->is_active) {
+                    return [
+                        'text' => 'Inactive',
+                        'class' => 'bg-gray-100 text-gray-800'
+                    ];
+                }
+                
+                if (!$this->is_available) {
+                    return [
+                        'text' => 'Unavailable',
+                        'class' => 'bg-red-100 text-red-800'
+                    ];
+                }
+                
+                if ($this->is_featured) {
+                    return [
+                        'text' => 'Featured',
+                        'class' => 'bg-purple-100 text-purple-800'
+                    ];
+                }
+                
+                if ($this->isOnPromotion()) {
+                    return [
+                        'text' => 'On Sale',
+                        'class' => 'bg-yellow-100 text-yellow-800'
+                    ];
+                }
+                
+                return [
+                    'text' => 'Available',
+                    'class' => 'bg-green-100 text-green-800'
                 ];
             }
+        );
+    }
 
-            if ($maxFromThisIngredient < $maxPossible) {
-                $maxPossible = $maxFromThisIngredient;
-                $limitingFactor = $recipe->ingredient->name;
+    protected function dietaryTags(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $tags = [];
+                
+                if ($this->is_vegetarian) {
+                    $tags[] = [
+                        'text' => 'Vegetarian',
+                        'class' => 'bg-green-100 text-green-700',
+                        'icon' => 'fa-leaf'
+                    ];
+                }
+                
+                if ($this->is_spicy) {
+                    $tags[] = [
+                        'text' => 'Spicy',
+                        'class' => 'bg-red-100 text-red-700',
+                        'icon' => 'fa-pepper-hot'
+                    ];
+                }
+                
+                if ($this->contains_alcohol) {
+                    $tags[] = [
+                        'text' => 'Contains Alcohol',
+                        'class' => 'bg-orange-100 text-orange-700',
+                        'icon' => 'fa-wine-glass'
+                    ];
+                }
+                
+                return $tags;
             }
-        }
+        );
+    }
 
-        // Consider daily quantity limits
-        $dailyLimit = $this->max_daily_quantity - $this->current_daily_quantity;
-        if ($dailyLimit < $maxPossible) {
-            $maxPossible = $dailyLimit;
-            $limitingFactor = 'Daily limit reached';
-        }
-
-        return [
-            'available' => $maxPossible >= $quantity && $this->is_available && $this->is_active,
-            'max_quantity' => max(0, $maxPossible),
-            'limiting_factor' => $limitingFactor,
-            'missing_ingredients' => $missingIngredients
-        ];
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->image_path) {
+                    return asset('storage/' . $this->image_path);
+                }
+                
+                // Generate placeholder image following UI/UX guidelines
+                $categoryName = $this->menuCategory?->name ?? 'Menu Item';
+                return "https://via.placeholder.com/400x300/6366f1/ffffff?text=" . urlencode($categoryName);
+            }
+        );
     }
 
     /**
-     * Get availability status attribute
+     * Business logic methods following UI/UX guidelines
      */
-    public function getAvailabilityStatusAttribute(): string
+    public function isOnPromotion(): bool
     {
-        if (!$this->is_active) return 'inactive';
-        if (!$this->is_available) return 'unavailable';
-        
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $branchId = $user && isset($user->branch_id) ? $user->branch_id : 1;
-        $availability = $this->checkAvailability($branchId);
-        
-        if (!$availability['available']) return 'out_of_stock';
-        if ($availability['max_quantity'] <= 5) return 'low_stock';
-        
-        return 'available';
-    }
-
-    /**
-     * Get stock percentage for UI indicators
-     */
-    public function getStockPercentageAttribute(): int
-    {
-        if (!$this->max_daily_quantity) return 100;
-        
-        $user = \Illuminate\Support\Facades\Auth::user();
-        $branchId = $user && isset($user->branch_id) ? $user->branch_id : 1;
-        $availability = $this->checkAvailability($branchId);
-        
-        if ($this->max_daily_quantity <= 0) return 0;
-        
-        return min(100, max(0, round(($availability['max_quantity'] / $this->max_daily_quantity) * 100)));
-    }
-
-    /**
-     * Get real-time stock indicator for UI
-     */
-    public function getStockIndicatorAttribute(): string
-    {
-        $status = $this->availability_status;
-        
-        switch($status) {
-            case 'available':
-                return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">In Stock</span>';
-            case 'low_stock':
-                return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Low Stock</span>';
-            case 'out_of_stock':
-                return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Out of Stock</span>';
-            case 'unavailable':
-                return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unavailable</span>';
-            default:
-                return '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Unknown</span>';
-        }
-    }
-
-    /**
-     * Reserve ingredients for an order
-     */
-    public function reserveIngredients(int $branchId, int $quantity): bool
-    {
-        if (!$this->checkAvailability($branchId, $quantity)['available']) {
+        if (!$this->promotion_price || !$this->promotion_start || !$this->promotion_end) {
             return false;
         }
-
-        // Implementation would go here for actual reservation
-        // This could involve creating temporary "reserved" transactions
         
-        return true;
+        $now = now();
+        return $now->between($this->promotion_start, $this->promotion_end);
     }
 
-    /**
-     * Consume ingredients for confirmed order
-     */
-    public function consumeIngredients(int $branchId, int $quantity): void
+    public function getDiscountPercentage(): float
     {
-        foreach ($this->recipes()->active()->get() as $recipe) {
-            $totalQuantityNeeded = $recipe->actual_quantity_needed * $quantity;
-            
-            // Create consumption transaction
-            ItemTransaction::create([
-                'organization_id' => $this->organization_id,
-                'branch_id' => $branchId,
-                'inventory_item_id' => $recipe->ingredient_item_id,
-                'transaction_type' => 'menu_consumption',
-                'quantity' => -$totalQuantityNeeded, // Negative for consumption
-                'cost_price' => $recipe->ingredient->buying_price ?? 0,
-                'unit_price' => 0,
-                'total_value' => 0,
-                'notes' => "Consumed for menu item: {$this->name} (Qty: {$quantity})",
-                'reference_type' => 'MenuItem',
-                'reference_id' => $this->id,
-            ]);
+        if (!$this->isOnPromotion()) {
+            return 0;
         }
-
-        // Update daily quantity
-        $this->increment('current_daily_quantity', $quantity);
+        
+        return round((($this->price - $this->promotion_price) / $this->price) * 100, 1);
     }
 
-    // Scopes
-    public function scopeActive($query)
+    public function canBeOrdered(): bool
     {
-        return $query->where('is_active', true);
+        return $this->is_active && $this->is_available;
+    }
+
+    public function getAllergensList(): array
+    {
+        return $this->allergens ?? [];
+    }
+
+    public function hasAllergen(string $allergen): bool
+    {
+        return in_array($allergen, $this->getAllergensList());
     }
 
     /**
-     * Get associated ItemMaster
+     * UI helper methods following UI/UX guidelines
      */
-    public function itemMaster()
+    public function getFormattedPreparationTime(): string
     {
-        return $this->belongsTo(ItemMaster::class, 'item_master_id');
+        if (!$this->preparation_time) {
+            return 'N/A';
+        }
+        
+        if ($this->preparation_time < 60) {
+            return $this->preparation_time . ' min';
+        }
+        
+        $hours = intval($this->preparation_time / 60);
+        $minutes = $this->preparation_time % 60;
+        
+        if ($minutes > 0) {
+            return $hours . 'h ' . $minutes . 'm';
+        }
+        
+        return $hours . 'h';
+    }
+
+    public function getCaloriesDisplay(): string
+    {
+        if (!$this->calories) {
+            return 'N/A';
+        }
+        
+        return number_format($this->calories) . ' cal';
+    }
+
+    /**
+     * Kitchen workflow methods
+     */
+    public function getKitchenStation(): string
+    {
+        return $this->station ?? 'kitchen';
+    }
+
+    public function requiresPreparation(): bool
+    {
+        return $this->requires_preparation ?? true;
     }
 }
