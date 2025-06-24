@@ -109,6 +109,8 @@
             'write_off' => 'Write Off',
             'transfer' => 'Transfer',
             'usage' => 'Usage',
+            'production_issue' => 'Production Issue',
+            'production_in' => 'Production In',
         ] as $value => $label)
                                     <option value="{{ $value }}"
                                         {{ request('transaction_type') == $value ? 'selected' : '' }}>
@@ -221,6 +223,8 @@
                                             'write_off' => 'bg-red-100 text-red-800',
                                             'transfer' => 'bg-indigo-100 text-indigo-800',
                                             'usage' => 'bg-purple-100 text-purple-800',
+                                            'production_issue' => 'bg-orange-100 text-orange-800',
+                                            'production_in' => 'bg-green-100 text-green-800',
                                         ];
                                         $isIn = !$controller->isStockOut($tx->transaction_type);
                                     @endphp
