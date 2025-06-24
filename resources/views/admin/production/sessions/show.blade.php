@@ -143,7 +143,7 @@
 
                     <!-- Ingredient Management -->
                     @if ($session->productionOrder->ingredients->count() > 0)
-                        ing zero
+                        
                         {{-- <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                             <div class="p-6 border-b border-gray-200 flex items-center justify-between">
                                 <h2 class="text-xl font-semibold text-gray-900">Ingredients</h2>
