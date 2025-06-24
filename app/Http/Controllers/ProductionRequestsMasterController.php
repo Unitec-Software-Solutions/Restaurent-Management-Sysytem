@@ -174,13 +174,19 @@ class ProductionRequestsMasterController extends Controller
     }
 
     /**
-     * Get aggregated production requirements for HQ
+     * Show the aggregate view for creating production orders
      */
     public function aggregate(Request $request)
     {
-        $query = ProductionRequestMaster::with(['items.item'])
+        // Get all approved production requests
+        $query = ProductionRequestMaster::with(['items.item', 'branch'])
             ->where('organization_id', Auth::user()->organization_id)
             ->where('status', 'approved');
+
+        // Apply filters if provided
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
 
         if ($request->filled('required_date_from')) {
             $query->whereDate('required_date', '>=', $request->required_date_from);
@@ -190,32 +196,100 @@ class ProductionRequestsMasterController extends Controller
             $query->whereDate('required_date', '<=', $request->required_date_to);
         }
 
-        $requests = $query->get();
+        $requests = $query->orderBy('required_date')->get();
 
-        // Aggregate quantities by item
-        $aggregatedItems = [];
+        // Get aggregated data for preview
+        $aggregatedItems = $this->getAggregatedData($requests);
+
+        // Get all branches for filtering
+        $branches = Branch::where('organization_id', Auth::user()->organization_id)
+            ->where('is_active', true)
+            ->get();
+
+        // Get all available ingredients for manual addition
+        $availableIngredients = ItemMaster::whereHas('category', function($query) {
+            $query->whereIn('name', ['Raw Materials', 'Ingredients']);
+        })
+        ->where('organization_id', Auth::user()->organization_id)
+        ->where('is_active', true)
+        ->get();
+
+        return view('admin.production.orders.aggregate', compact('requests', 'branches', 'aggregatedItems', 'availableIngredients'));
+    }
+
+    /**
+     * Get aggregated data with ingredient calculations
+     */
+    private function getAggregatedData($requests)
+    {
+        $aggregated = [];
+        $totalIngredients = [];
+
         foreach ($requests as $request) {
             foreach ($request->items as $item) {
                 $itemId = $item->item_id;
-                if (!isset($aggregatedItems[$itemId])) {
-                    $aggregatedItems[$itemId] = [
+
+                if (!isset($aggregated[$itemId])) {
+                    $aggregated[$itemId] = [
                         'item' => $item->item,
                         'total_quantity' => 0,
-                        'requests' => []
+                        'requests' => [],
+                        'ingredients' => []
                     ];
                 }
-                $aggregatedItems[$itemId]['total_quantity'] += $item->quantity_approved;
-                $aggregatedItems[$itemId]['requests'][] = $request;
+
+                $aggregated[$itemId]['total_quantity'] += $item->quantity_approved;
+                $aggregated[$itemId]['requests'][] = [
+                    'request_id' => $request->id,
+                    'branch' => $request->branch->name,
+                    'quantity' => $item->quantity_approved
+                ];
+
+                // Calculate ingredients from recipe
+                $recipe = \App\Models\Recipe::where('production_item_id', $itemId)
+                    ->where('is_active', true)
+                    ->with('details.rawMaterialItem')
+                    ->first();
+
+                if ($recipe) {
+                    $multiplier = $item->quantity_approved / $recipe->yield_quantity;
+                    
+                    foreach ($recipe->details as $detail) {
+                        $ingredientId = $detail->raw_material_item_id;
+                        $requiredQuantity = $detail->quantity_required * $multiplier;
+
+                        if (!isset($totalIngredients[$ingredientId])) {
+                            $totalIngredients[$ingredientId] = [
+                                'item' => $detail->rawMaterialItem,
+                                'total_required' => 0,
+                                'unit' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                                'from_items' => []
+                            ];
+                        }
+
+                        $totalIngredients[$ingredientId]['total_required'] += $requiredQuantity;
+                        $totalIngredients[$ingredientId]['from_items'][] = [
+                            'production_item' => $item->item->name,
+                            'quantity_needed' => $requiredQuantity,
+                            'notes' => $detail->preparation_notes
+                        ];
+
+                        // Add to item's ingredient list
+                        $aggregated[$itemId]['ingredients'][$ingredientId] = [
+                            'item' => $detail->rawMaterialItem,
+                            'quantity_per_unit' => $detail->quantity_required,
+                            'total_quantity' => $requiredQuantity,
+                            'unit' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                            'notes' => $detail->preparation_notes
+                        ];
+                    }
+                }
             }
         }
 
-        $branches = Branch::where('organization_id', Auth::user()->organization_id)->get();
-        $productionItems = \App\Models\ItemMaster::whereHas('category', function($query) {
-            $query->where('name', 'Production Items');
-        })->where('organization_id', Auth::user()->organization_id)->get();
-
-        $approvedRequests = $requests;
-
-        return view('admin.production.orders.aggregate', compact('aggregatedItems', 'approvedRequests', 'branches', 'productionItems'));
+        return [
+            'items' => $aggregated,
+            'ingredients' => $totalIngredients
+        ];
     }
 }
