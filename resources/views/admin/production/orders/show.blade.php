@@ -224,12 +224,12 @@
                     <div class="p-6 border-b border-gray-200">
                         <div class="flex items-center justify-between">
                             <h2 class="text-xl font-semibold text-gray-900">Ingredient Requirements</h2>
-                            @if ($productionOrder->status === 'draft')
+                            {{-- @if ($productionOrder->status === 'draft')
                                 <button type="button" onclick="openIngredientManagement()"
                                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">
                                     <i class="fas fa-edit mr-2"></i>Manage Ingredients
                                 </button>
-                            @endif
+                            @endif --}}
                         </div>
                     </div>
 
