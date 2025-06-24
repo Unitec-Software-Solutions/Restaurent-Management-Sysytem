@@ -118,7 +118,7 @@ class ProductionRequestsMasterController extends Controller
                 'branch_id' => $branchId,
                 'request_date' => now()->toDateString(),
                 'required_date' => $request->required_date,
-                'status' => 'draft',
+                'status' => 'submitted', // set this to  'draft' to allow edits before submission 
                 'notes' => $request->notes,
                 'created_by_user_id' => $admin->id,
             ]);
