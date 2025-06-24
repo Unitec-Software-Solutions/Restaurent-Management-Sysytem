@@ -69,24 +69,29 @@ class MenuItem extends Model
     /**
      * Relationships following UI/UX guidelines
      */
-    public function menuCategory(): BelongsTo
+    public function category()
     {
-        return $this->belongsTo(MenuCategory::class);
+        return $this->belongsTo(MenuCategory::class, 'menu_category_id');
     }
 
-    public function organization(): BelongsTo
+    public function organization()
     {
         return $this->belongsTo(Organization::class);
     }
 
-    public function branch(): BelongsTo
+    public function branch()
     {
         return $this->belongsTo(Branch::class);
     }
 
-    public function itemMaster(): BelongsTo
+    public function itemMaster()
     {
-        return $this->belongsTo(ItemMaster::class);
+        return $this->belongsTo(ItemMaster::class, 'item_master_id');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     /**
