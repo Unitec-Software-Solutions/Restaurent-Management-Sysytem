@@ -335,15 +335,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{productionOrder}/complete', [ProductionOrderController::class, 'completeProduction'])->name('complete');
             });
 
-            // Production Sessions (HQ)
+            // Production Session routes with ingredient management
             Route::prefix('sessions')->name('sessions.')->group(function () {
                 Route::get('/', [ProductionSessionController::class, 'index'])->name('index');
                 Route::get('/create', [ProductionSessionController::class, 'create'])->name('create');
                 Route::post('/', [ProductionSessionController::class, 'store'])->name('store');
                 Route::get('/{session}', [ProductionSessionController::class, 'show'])->name('show');
                 Route::post('/{session}/start', [ProductionSessionController::class, 'start'])->name('start');
-                Route::post('/{session}/complete', [ProductionSessionController::class, 'complete'])->name('complete');
                 Route::post('/{session}/cancel', [ProductionSessionController::class, 'cancel'])->name('cancel');
+                Route::post('/{session}/issue-ingredients', [ProductionSessionController::class, 'issueIngredients'])->name('issue-ingredients');
+                Route::post('/{session}/record-production', [ProductionSessionController::class, 'recordProduction'])->name('record-production');
+                Route::post('/{session}/return-ingredients', [ProductionSessionController::class, 'returnIngredients'])->name('return-ingredients');
             });
 
         });
