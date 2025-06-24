@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Organization extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -19,98 +21,232 @@ class Organization extends Model
         'contact_person_phone',
         'is_active',
         'subscription_plan_id',
+        'plan_snapshot',
         'discount_percentage',
-        'password',
-        'business_type',
-        'status',
-        'description',
-        'website',
-        'logo',
-        'trading_name',
-        'registration_number',
-        'alternative_phone',
+        'activation_key',
+        'activated_at',
+        'password'
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+        'activated_at' => 'datetime',
+        'plan_snapshot' => 'array',
+        'discount_percentage' => 'decimal:2'
+    ];
+
+    /**
+     * Boot method to generate activation key
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($organization) {
+            if (empty($organization->activation_key)) {
+                $organization->activation_key = Str::uuid();
+            }
+        });
+    }
+
+    /**
+     * Relationships following UI/UX guidelines
+     */
     public function branches()
     {
         return $this->hasMany(Branch::class);
     }
 
-    public function roles()
+    public function menuItems()
     {
-        return $this->hasMany(Role::class);
+        return $this->hasMany(MenuItem::class);
     }
 
-    public function subscriptions()
+    public function admins()
     {
-        return $this->hasMany(\App\Models\Subscription::class);
-    }
-    
-    public function activate()
-    {
-        $this->update(['is_active' => true]);
-        $this->branches()->update(['is_active' => true]);
-    }
-
-    public function deactivate()
-    {
-        $this->update(['is_active' => false]);
-        $this->branches()->update(['is_active' => false]);
-    }
-    
-    public function plan()
-    {
-        return $this->belongsTo(\App\Models\SubscriptionPlan::class, 'subscription_plan_id');
+        return $this->hasMany(Admin::class);
     }
 
     public function users()
     {
-        return $this->hasMany(\App\Models\User::class);
+        return $this->hasMany(User::class);
     }
 
-    public function currentSubscription()
+    public function orders()
     {
-        return $this->hasOne(\App\Models\Subscription::class)->where('is_active', true)->latest();
+        return $this->hasMany(Order::class);
     }
 
-    public function hasFeature(string $feature): bool
+    public function subscriptions()
     {
-        $subscription = $this->currentSubscription;
-        return $subscription ? $subscription->hasFeature($feature) : false;
+        return $this->hasMany(Subscription::class);
     }
 
-    public function hasModule(string $module): bool
+    public function subscriptionPlan()
     {
-        $subscription = $this->currentSubscription;
-        return $subscription ? $subscription->hasModule($module) : false;
+        return $this->belongsTo(SubscriptionPlan::class);
     }
 
-    public function getModuleTier(string $module): string
+    public function itemCategories()
     {
-        $subscription = $this->currentSubscription;
-        return $subscription ? $subscription->getModuleTier($module) : 'basic';
+        return $this->hasMany(ItemCategory::class);
     }
 
-    public function canAddBranches(): bool
+    public function itemMasters()
     {
-        $plan = $this->plan;
-        if (!$plan || !isset($plan->max_branches)) {
-            return true; // No limit
+        return $this->hasMany(ItemMaster::class);
+    }
+
+    public function suppliers()
+    {
+        return $this->hasMany(Supplier::class);
+    }
+
+    public function kitchenStations()
+    {
+        return $this->hasManyThrough(KitchenStation::class, Branch::class);
+    }
+
+    public function menuCategories()
+    {
+        return $this->hasMany(MenuCategory::class);
+    }
+
+    /**
+     * Scopes for common queries
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeActivated($query)
+    {
+        return $query->whereNotNull('activated_at');
+    }
+
+    public function scopeWithSubscription($query)
+    {
+        return $query->whereNotNull('subscription_plan_id');
+    }
+
+    /**
+     * Get organization status badge for UI display
+     */
+    public function getStatusBadgeAttribute(): string
+    {
+        if (!$this->is_active) {
+            return 'bg-red-100 text-red-800';
         }
-        return $this->branches()->count() < $plan->max_branches;
-    }
 
-    public function canAddEmployees(): bool
-    {
-        $plan = $this->plan;
-        if (!$plan || !isset($plan->max_employees)) {
-            return true; // No limit
+        if (!$this->activated_at) {
+            return 'bg-yellow-100 text-yellow-800';
         }
-        return $this->employees()->count() < $plan->max_employees;
+
+        return 'bg-green-100 text-green-800';
     }
 
-    public function employees()
+    /**
+     * Get organization status text
+     */
+    public function getStatusTextAttribute(): string
     {
-        return $this->hasMany(\App\Models\Employee::class);
+        if (!$this->is_active) {
+            return 'Inactive';
+        }
+
+        if (!$this->activated_at) {
+            return 'Pending Activation';
+        }
+
+        return 'Active';
+    }
+
+    /**
+     * Check if organization has specific module access
+     */
+    public function hasModuleAccess(string $moduleName): bool
+    {
+        if (!$this->subscriptionPlan) {
+            return false;
+        }
+
+        $modules = $this->subscriptionPlan->modules ?? [];
+        return collect($modules)->contains('name', $moduleName);
+    }
+
+    /**
+     * Get active subscription
+     */
+    public function getActiveSubscription()
+    {
+        return $this->subscriptions()
+            ->where('is_active', true)
+            ->where('starts_at', '<=', now())
+            ->where('ends_at', '>=', now())
+            ->first();
+    }
+
+    /**
+     * Get organization metrics for dashboard
+     */
+    public function getDashboardMetrics(): array
+    {
+        return [
+            'total_branches' => $this->branches()->count(),
+            'active_branches' => $this->branches()->where('is_active', true)->count(),
+            'total_menu_items' => $this->menuItems()->count(),
+            'active_menu_items' => $this->menuItems()->where('is_active', true)->count(),
+            'total_orders' => $this->orders()->count(),
+            'pending_orders' => $this->orders()->where('status', 'pending')->count(),
+            'total_admins' => $this->admins()->count(),
+            'active_admins' => $this->admins()->where('is_active', true)->count(),
+        ];
+    }
+
+    /**
+     * Generate unique activation key
+     */
+    public function generateActivationKey(): string
+    {
+        $this->activation_key = Str::uuid();
+        $this->save();
+        
+        return $this->activation_key;
+    }
+
+    /**
+     * Activate organization
+     */
+    public function activate(): bool
+    {
+        $this->activated_at = now();
+        $this->is_active = true;
+        
+        return $this->save();
+    }
+
+    /**
+     * Get subscription tier
+     */
+    public function getSubscriptionTier(): string
+    {
+        return $this->subscriptionPlan?->name ?? 'No Subscription';
+    }
+
+    /**
+     * Check if organization can create more branches
+     */
+    public function canCreateMoreBranches(): bool
+    {
+        $plan = $this->subscriptionPlan;
+        if (!$plan) {
+            return false;
+        }
+
+        $maxBranches = $plan->max_branches ?? 1;
+        $currentBranches = $this->branches()->count();
+
+        return $currentBranches < $maxBranches;
     }
 }
