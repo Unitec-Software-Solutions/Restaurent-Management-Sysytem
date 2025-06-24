@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -68,21 +70,25 @@ class Menu extends Model
     /**
      * Relationships
      */
-    public function branch()
+    public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    public function organization()
+    public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
-    public function menuItems()
+    public function menuItems(): BelongsToMany
     {
         return $this->belongsToMany(MenuItem::class, 'menu_menu_items')
-                    ->withPivot(['is_available', 'special_price', 'display_order'])
-                    ->withTimestamps();
+                    ->withPivot([
+                        'override_price', 'is_available', 'sort_order',
+                        'special_notes', 'available_from', 'available_until'
+                    ])
+                    ->withTimestamps()
+                    ->orderBy('pivot_sort_order');
     }
 
     public function availableMenuItems()
