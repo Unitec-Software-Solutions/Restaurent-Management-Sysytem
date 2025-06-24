@@ -43,6 +43,11 @@ class ProductionOrder extends Model
         return $this->hasMany(ProductionOrderItem::class, 'production_order_id');
     }
 
+    public function ingredients()
+    {
+        return $this->hasMany(ProductionOrderIngredient::class, 'production_order_id');
+    }
+
     public function productionRequestMaster()
     {
         return $this->belongsTo(ProductionRequestMaster::class, 'production_requests_master_id');
