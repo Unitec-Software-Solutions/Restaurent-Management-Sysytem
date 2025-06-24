@@ -5,24 +5,35 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Reservation;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
     public function dashboard()
     {
-        $admin = Auth::user();
-
+        $admin = Auth::guard('admin')->user();
+        
         if (!$admin) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access the dashboard.');
         }
 
-        // Fetch GRN payment status counts
-        $grnPaymentStatusCounts = \App\Models\GrnMaster::selectRaw('payment_status, COUNT(*) as count')
-            ->groupBy('payment_status')
-            ->pluck('count', 'payment_status')
-            ->toArray();
+        // Basic validation without strict organization checks
+        if (!$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
+        }
 
-        return view('admin.dashboard', compact('admin', 'grnPaymentStatusCounts'));
+        try {
+            $reservations = Reservation::with(['user', 'table'])
+                ->where('organization_id', $admin->organization_id)
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get();
+
+            return view('admin.dashboard', compact('reservations'));
+        } catch (\Exception $e) {
+            Log::error('Dashboard error: ' . $e->getMessage());
+            return view('admin.dashboard', ['reservations' => collect()]);
+        }
     }
 
     public function index()
