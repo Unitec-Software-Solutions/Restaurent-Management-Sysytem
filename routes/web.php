@@ -10,24 +10,19 @@ use App\Http\Controllers\{
     AdminAuthTestController,
     GrnDashboardController,
     ItemDashboardController,
-    ItemCategoryController,
     ItemMasterController,
     ItemTransactionController,
     OrderController,
     SupplierController,
     AdminOrderController,
-    SupplierPaymentController,
-    PurchaseOrderController,
-    GrnPaymentController,
     OrganizationController,
-    ActivationController,
     RoleController,
     BranchController,
-    SubscriptionController,
     UserController,
-    ModuleController,
     GoodsTransferNoteController,
-    RealtimeDashboardController
+    RealtimeDashboardController,
+    AdminTestPageController,
+    DatabaseTestController,
 };
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Middleware\SuperAdmin;
@@ -139,95 +134,23 @@ if (config('app.debug')) {
 | Admin Routes
 |------------------------------------------------------------------------*/
 Route::prefix('admin')->name('admin.')->group(function () {
-    // Authentication
+    // Authentication routes (no middleware)
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login']);
     Route::post('/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
 
-    // Authenticated Admin Routes
-    Route::middleware('auth:admin')->group(function () {
+    // All authenticated admin routes
+    Route::middleware(['auth:admin'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+        Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+
+        // Test page route (development only)
+        Route::get('/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
 
         // Reservations Management
         Route::resource('reservations', AdminReservationController::class);
-        Route::post('reservations/{reservation}/assign-steward', [AdminReservationController::class, 'assignSteward'])
-            ->name('reservations.assign-steward');
-        Route::post('reservations/{reservation}/check-in', [AdminReservationController::class, 'checkIn'])
-            ->name('reservations.check-in');
-        Route::post('reservations/{reservation}/check-out', [AdminReservationController::class, 'checkOut'])
-            ->name('reservations.check-out');
-        Route::get('/check-table-availability', [AdminReservationController::class, 'checkTableAvailability'])
-            ->name('check-table-availability');
-
-        // Employee Management
-        Route::prefix('employees')->name('employees.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\EmployeeController::class, 'index'])->name('index');
-            Route::get('/create', [\App\Http\Controllers\Admin\EmployeeController::class, 'create'])->name('create');
-            Route::post('/', [\App\Http\Controllers\Admin\EmployeeController::class, 'store'])->name('store');
-            Route::get('/{employee}', [\App\Http\Controllers\Admin\EmployeeController::class, 'show'])->name('show');
-            Route::get('/{employee}/edit', [\App\Http\Controllers\Admin\EmployeeController::class, 'edit'])->name('edit');
-            Route::put('/{employee}', [\App\Http\Controllers\Admin\EmployeeController::class, 'update'])->name('update');
-            Route::delete('/{employee}', [\App\Http\Controllers\Admin\EmployeeController::class, 'destroy'])->name('destroy');
-            Route::post('/{employee}/restore', [\App\Http\Controllers\Admin\EmployeeController::class, 'restore'])->name('restore');
-        });
-
-        // Orders Management
-        Route::prefix('orders')->name('orders.')->group(function () {
-            Route::get('/dashboard', [AdminOrderController::class, 'dashboard'])->name('dashboard');
-            Route::get('/', [AdminOrderController::class, 'index'])->name('index');
-            Route::get('reservations', [AdminOrderController::class, 'reservationIndex'])->name('reservations.index');
-            Route::get('branch/{branch}', [AdminOrderController::class, 'branchOrders'])->whereNumber('branch')->name('branch');
-            Route::post('/update-cart', [AdminOrderController::class, 'updateCart'])->name('update-cart');
-            Route::get('{order}/edit', [AdminOrderController::class, 'edit'])->whereNumber('order')->name('edit');
-            Route::put('{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
-            Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->whereNumber('order')->name('summary');
-            Route::delete('/{order}/destroy', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
-
-            // Reservation Orders
-            Route::prefix('reservations/{reservation}')->name('orders.reservations.')->group(function () {
-                Route::get('/create', [AdminOrderController::class, 'createForReservation'])->name('create');
-                Route::post('/store', [AdminOrderController::class, 'storeForReservation'])->name('store');
-                Route::get('/edit', [AdminOrderController::class, 'editReservationOrder'])->name('edit');
-                Route::put('/update', [AdminOrderController::class, 'updateReservationOrder'])->name('update');
-                Route::get('/{order}/summary', [AdminOrderController::class, 'summary'])->whereNumber('order')->name('summary');
-            });
-
-            // Takeaway Orders
-            Route::prefix('takeaway')->name('takeaway.')->group(function () {
-                Route::get('/', [AdminOrderController::class, 'takeawayIndex'])->name('index');
-                Route::get('/create', [AdminOrderController::class, 'createTakeaway'])->name('create');
-                Route::post('/store', [AdminOrderController::class, 'storeTakeaway'])->name('store');
-                Route::get('/{order}/show', [OrderController::class, 'showTakeaway'])->whereNumber('order')->name('takeaway.show');
-                Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
-                Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
-                Route::get('/{order}/summary', [AdminOrderController::class, 'takeawaySummary'])->whereNumber('order')->name('summary');
-            });
-        });
-
-        // Menu Management
-        Route::prefix('menus')->name('menus.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\MenuController::class, 'index'])->name('index');
-            Route::get('/list', [\App\Http\Controllers\Admin\MenuController::class, 'list'])->name('list');
-            Route::get('/create', [\App\Http\Controllers\Admin\MenuController::class, 'create'])->name('create');
-            Route::post('/', [\App\Http\Controllers\Admin\MenuController::class, 'store'])->name('store');
-            Route::get('/{menu}', [\App\Http\Controllers\Admin\MenuController::class, 'show'])->name('show');
-            Route::get('/{menu}/edit', [\App\Http\Controllers\Admin\MenuController::class, 'edit'])->name('edit');
-            Route::put('/{menu}', [\App\Http\Controllers\Admin\MenuController::class, 'update'])->name('update');
-            Route::delete('/{menu}', [\App\Http\Controllers\Admin\MenuController::class, 'destroy'])->name('destroy');
-            
-            // Menu Scheduling & Activation
-            Route::get('/calendar/view', [\App\Http\Controllers\Admin\MenuController::class, 'calendar'])->name('calendar');
-            Route::get('/calendar/data', [\App\Http\Controllers\Admin\MenuController::class, 'getCalendarData'])->name('calendar.data');
-            Route::post('/{menu}/activate', [\App\Http\Controllers\Admin\MenuController::class, 'activate'])->name('activate');
-            Route::post('/{menu}/deactivate', [\App\Http\Controllers\Admin\MenuController::class, 'deactivate'])->name('deactivate');
-            Route::get('/{menu}/preview', [\App\Http\Controllers\Admin\MenuController::class, 'preview'])->name('preview');
-            
-            // Bulk Operations
-            Route::get('/bulk/create', [\App\Http\Controllers\Admin\MenuController::class, 'bulkCreate'])->name('bulk.create');
-            Route::post('/bulk/store', [\App\Http\Controllers\Admin\MenuController::class, 'bulkStore'])->name('bulk.store');
-        });
-
-        // Inventory Management
+        
+        // Inventory Management - Remove duplicate middleware
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
             Route::get('/dashboard', [ItemDashboardController::class, 'index'])->name('dashboard');
@@ -241,60 +164,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->whereNumber('item')->name('edit');
                 Route::put('/{item}', [ItemMasterController::class, 'update'])->whereNumber('item')->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->whereNumber('item')->name('destroy');
-                Route::get('/create-template/{index}', [ItemMasterController::class, 'getItemFormPartial'])->name('form-partial');
-                Route::get('/added-items', [ItemMasterController::class, 'added'])->name('added-items');
             });
 
-            // Stock
+            // Stock Management
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
-               // Route::get('/create', [ItemTransactionController::class, 'create'])->name('create'); removed admin.inventory.stock.create route
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-                Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->whereNumber('transaction')->name('show');
-                Route::get('/{item_id}/{branch_id}/edit', [ItemTransactionController::class, 'edit'])->whereNumber(['item_id', 'branch_id'])->name('edit');
-                Route::put('/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->whereNumber(['item_id', 'branch_id'])->name('update');
-                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->whereNumber('transaction')->name('destroy');
-
-                // Transactions
+                
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
             });
 
-            // Categories
-            Route::resource('categories', ItemCategoryController::class);
-
-            // GTN (Goods Transfer Note) Management
+            // GTN Management
             Route::prefix('gtn')->name('gtn.')->group(function () {
-                // AJAX endpoints must come before parameterized routes
-                Route::get('/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->name('items-with-stock');
                 Route::get('/search-items', [GoodsTransferNoteController::class, 'searchItems'])->name('search-items');
                 Route::get('/item-stock', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock');
-
-                // Standard CRUD routes
                 Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
                 Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
                 Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
                 Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('show');
-                Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->whereNumber('gtn')->name('edit');
-                Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->whereNumber('gtn')->name('update');
-                Route::delete('/{gtn}', [GoodsTransferNoteController::class, 'destroy'])->whereNumber('gtn')->name('destroy');
-                Route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'print'])->name('print');
-
-                // Enhanced workflow routes for unified GTN system
-                Route::post('/{gtn}/confirm', [GoodsTransferNoteController::class, 'confirm'])->whereNumber('gtn')->name('confirm');
-                Route::post('/{gtn}/receive', [GoodsTransferNoteController::class, 'receive'])->whereNumber('gtn')->name('receive');
-                Route::post('/{gtn}/verify', [GoodsTransferNoteController::class, 'verify'])->whereNumber('gtn')->name('verify');
-                Route::post('/{gtn}/accept', [GoodsTransferNoteController::class, 'processAcceptance'])->whereNumber('gtn')->name('accept');
-                Route::post('/{gtn}/reject', [GoodsTransferNoteController::class, 'reject'])->whereNumber('gtn')->name('reject');
-                Route::get('/{gtn}/audit-trail', [GoodsTransferNoteController::class, 'auditTrail'])->whereNumber('gtn')->name('audit-trail');
-
-                // Legacy status management (for backward compatibility)
-                Route::post('/{gtn}/change-status', [GoodsTransferNoteController::class, 'changeStatus'])->whereNumber('gtn')->name('change-status');
             });
         });
 
-        // Suppliers Management
+        // Suppliers Management - Fix middleware conflict
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
             Route::get('/', [SupplierController::class, 'index'])->name('index');
             Route::get('/create', [SupplierController::class, 'create'])->name('create');
@@ -303,15 +196,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit');
             Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
             Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
-            Route::get('/{supplier}/purchase-orders', [SupplierController::class, 'purchaseOrders'])->name('purchase-orders');
-            Route::get('/{supplier}/grns', [SupplierController::class, 'goodsReceived'])->name('grns');
-
-            //  Supplier json (remove  later | only for testing)
+            
+            // JSON endpoints for testing
             Route::get('/{supplier}/pending-grns', [SupplierController::class, 'pendingGrns']);
             Route::get('/{supplier}/pending-pos', [SupplierController::class, 'pendingPos']);
-
-            // Route::get('/{supplier}/pending-grns-pay', [SupplierPaymentController::class, 'getPendingGrns'])->name('pending-grns-pay');
-            // Route::get('/{supplier}/pending-pos-pay', [SupplierPaymentController::class, 'getPendingPos'])->name('pending-pos-pay');
         });
 
         // GRN Management
@@ -319,60 +207,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [GrnDashboardController::class, 'index'])->name('index');
             Route::get('/create', [GrnDashboardController::class, 'create'])->name('create');
             Route::post('/', [GrnDashboardController::class, 'store'])->name('store');
-            Route::get('/{grn}', [GrnDashboardController::class, 'show'])->whereNumber('grn')->name('show');
-            Route::get('/{grn}/edit', [GrnDashboardController::class, 'edit'])->whereNumber('grn')->name('edit');
-            Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
-            Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->whereNumber('grn')->name('verify');
-            Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
-            Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
+            Route::get('/{grn}', [GrnDashboardController::class, 'show'])->name('show');
         });
-
-        // Payments
-        Route::prefix('payments')->name('payments.')->group(function () {
-            Route::get('/', [SupplierPaymentController::class, 'index'])->name('index');
-            Route::get('/create', [SupplierPaymentController::class, 'create'])->name('create');
-            Route::post('/', [SupplierPaymentController::class, 'store'])->name('store');
-            Route::get('/{payment}', [SupplierPaymentController::class, 'show'])->name('show');
-            Route::get('/{payment}/edit', [SupplierPaymentController::class, 'edit'])->name('edit');
-            Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
-            Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
-            Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
-            // AJAX routes for pending GRNs and POs
-        });
-
-        // Purchase Orders
-        Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
-            Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
-            Route::get('/create', [PurchaseOrderController::class, 'create'])->name('create');
-            Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
-            Route::get('/{po}', [PurchaseOrderController::class, 'show'])->name('show');
-            Route::get('/{po}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
-            Route::post('/{po}/approve', [PurchaseOrderController::class, 'approve'])->name('approve');
-            Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
-        });
-
-        // Additional Admin Routes
-        Route::get('/testpage', function () {
-            return view('admin.testpage');
-        })->name('testpage');
-        Route::get('/reports', function () {
-            return view('admin.reports.index');
-        })->name('reports.index');
-        Route::get('/customers', function () {
-            return view('admin.customers.index');
-        })->name('customers.index');
-        Route::get('/digital-menu', function () {
-            return view('admin.digital-menu.index');
-        })->name('digital-menu.index');
-        Route::get('/settings', function () {
-            return view('admin.settings.index');
-        })->name('settings.index');
-        Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
-
     });
-
 });
-
 
 // Super Admin Routes
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
@@ -555,3 +393,17 @@ Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () 
 
 // Menu safety dashboard
 Route::get('menus/safety-dashboard', [MenuController::class, 'safetyDashboard'])->name('admin.menus.safety-dashboard');
+
+// Database test operations
+Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
+    Route::post('/diagnose-table', [DatabaseTestController::class, 'diagnoseTable']);
+    Route::post('/run-migrations', [DatabaseTestController::class, 'runMigrations']);
+    Route::post('/run-seeder', [DatabaseTestController::class, 'runSeeder']);
+    Route::post('/full-diagnose', [DatabaseTestController::class, 'fullDiagnose']);
+    Route::post('/fresh-migrate', [DatabaseTestController::class, 'freshMigrate']);
+    Route::post('/test-orders', [DatabaseTestController::class, 'testOrderCreation']);
+    Route::get('/system-stats', [DatabaseTestController::class, 'getSystemStats']);
+    Route::get('/order-stats', [DatabaseTestController::class, 'getOrderStats']);
+    Route::get('/recent-orders', [DatabaseTestController::class, 'getRecentOrders']);
+    Route::get('/orders-preview', [DatabaseTestController::class, 'getOrdersPreview']);
+});
