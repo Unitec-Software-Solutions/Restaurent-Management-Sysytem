@@ -17,6 +17,17 @@
                 </a>
             </div>
 
+            @if (request('order_id'))
+                <div class="mb-6 bg-blue-100 text-blue-800 p-4 rounded-lg border border-blue-200">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <span class="font-medium">Production Order Pre-selected</span>
+                    </div>
+                    <p class="mt-1 text-sm">Production Order #{{ request('order_id') }} has been automatically selected for
+                        this session.</p>
+                </div>
+            @endif
+
             @if ($errors->any())
                 <div class="mb-6 bg-red-100 text-red-800 p-4 rounded-lg border border-red-200">
                     <h4 class="font-medium">Please fix the following errors:</h4>
@@ -40,13 +51,18 @@
                             <label for="production_order_id" class="block text-sm font-medium text-gray-700 mb-2">Production
                                 Order *</label>
                             <select name="production_order_id" id="production_order_id"
-                                class="w-full rounded-lg border-gray-300 shadow-sm" required>
+                                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                required>
                                 <option value="">Select Production Order</option>
                                 @foreach ($availableOrders as $order)
                                     <option value="{{ $order->id }}"
-                                        {{ old('production_order_id') == $order->id ? 'selected' : '' }}>
+                                        {{ old('production_order_id') == $order->id || request('order_id') == $order->id ? 'selected' : '' }}
+                                        data-order='@json($order)'>
                                         {{ $order->production_order_number }} - {{ $order->items->count() }} items
                                         ({{ $order->production_date->format('M d, Y') }})
+                                        @if (request('order_id') == $order->id)
+                                            ✓ Pre-selected
+                                        @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -115,6 +131,17 @@
             // Production order data (you'd pass this from controller)
             const orders = @json($availableOrders);
 
+            // Check if order is pre-selected from URL parameter
+            const preSelectedOrderId = productionOrderSelect.value;
+            if (preSelectedOrderId) {
+                const preSelectedOrder = orders.find(order => order.id == preSelectedOrderId);
+                if (preSelectedOrder) {
+                    showOrderPreview(preSelectedOrder);
+                    // Auto-generate session name for pre-selected order
+                    generateSessionName(preSelectedOrder);
+                }
+            }
+
             productionOrderSelect.addEventListener('change', function() {
                 const selectedOrderId = this.value;
 
@@ -123,11 +150,25 @@
 
                     if (selectedOrder) {
                         showOrderPreview(selectedOrder);
+                        generateSessionName(selectedOrder);
                     }
                 } else {
                     hideOrderPreview();
                 }
             });
+
+            function generateSessionName(order) {
+                const sessionNameInput = document.getElementById('session_name');
+                if (!sessionNameInput.value) { // Only generate if field is empty
+                    const date = new Date();
+                    const timeString = date.toLocaleTimeString('en-US', {
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    sessionNameInput.value = `${order.production_order_number} - ${timeString}`;
+                }
+            }
 
             function showOrderPreview(order) {
                 let itemsHtml = '';
@@ -150,7 +191,7 @@
                         itemsHtml += `
                             <tr>
                                 <td class="px-4 py-2 text-sm font-medium text-gray-900">${item.item ? item.item.name : 'Unknown Item'}</td>
-                                <td class="px-4 py-2 text-sm text-gray-900">${parseFloat(item.quantity_to_produce).toFixed(2)}</td>
+                                <td class="px-4 py-2 text-sm text-gray-900">${parseFloat(item.quantity || item.quantity_to_produce || 0).toFixed(2)}</td>
                                 <td class="px-4 py-2 text-sm text-gray-500">${item.item ? item.item.unit_of_measurement : 'N/A'}</td>
                             </tr>
                         `;
@@ -187,11 +228,11 @@
                     </div>
                     
                     ${order.notes ? `
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium text-gray-700">Order Notes</label>
-                                <p class="text-sm text-gray-900">${order.notes}</p>
-                            </div>
-                        ` : ''}
+                                <div class="mt-4">
+                                    <label class="block text-sm font-medium text-gray-700">Order Notes</label>
+                                    <p class="text-sm text-gray-900">${order.notes}</p>
+                                </div>
+                            ` : ''}
                 `;
 
                 orderPreview.classList.remove('hidden');
@@ -201,23 +242,33 @@
                 orderPreview.classList.add('hidden');
                 orderDetails.innerHTML = '';
             }
-
-            // Auto-generate session name based on selection
-            productionOrderSelect.addEventListener('change', function() {
-                const sessionNameInput = document.getElementById('session_name');
-                if (this.value && !sessionNameInput.value) {
-                    const selectedOrder = orders.find(order => order.id == this.value);
-                    if (selectedOrder) {
-                        const date = new Date();
-                        const timeString = date.toLocaleTimeString('en-US', {
-                            hour12: false,
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                        sessionNameInput.value = `${selectedOrder.production_order_number} - ${timeString}`;
-                    }
-                }
-            });
         });
     </script>
 @endsection
+
+@push('styles')
+    <style>
+        /* Highlight pre-selected order in dropdown */
+        select#production_order_id option[selected] {
+            background-color: #dbeafe;
+            font-weight: 600;
+        }
+
+        /* Enhanced styling for the pre-selected notification */
+        .pre-selected-notification {
+            animation: slideInTop 0.3s ease-out;
+        }
+
+        @keyframes slideInTop {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+@endpush
