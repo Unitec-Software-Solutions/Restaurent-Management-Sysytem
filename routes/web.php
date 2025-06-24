@@ -312,13 +312,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [ProductionRequestsMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ProductionRequestsMasterController::class, 'create'])->name('create');
                 Route::post('/', [ProductionRequestsMasterController::class, 'store'])->name('store');
-                Route::get('/{productionRequest}', [ProductionRequestsMasterController::class, 'show'])->name('show');
-                Route::post('/{productionRequest}/submit', [ProductionRequestsMasterController::class, 'submit'])->name('submit');
-                Route::post('/{productionRequest}/approve', [ProductionRequestsMasterController::class, 'approve'])->name('approve');
-                Route::post('/{productionRequest}/cancel', [ProductionRequestsMasterController::class, 'cancel'])->name('cancel');
-                // Production Requests - Aggregation
-                Route::get('/aggregate', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
+                Route::get('/manage', [ProductionRequestsMasterController::class, 'manage'])->name('manage');
+                Route::get('/aggregate/requests', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
                 
+                // Specific parameterized routes (these must come after static routes)
+                Route::get('/{productionRequest}', [ProductionRequestsMasterController::class, 'show'])->where('productionRequest', '[0-9]+')->name('show');
+                Route::post('/{productionRequest}/submit', [ProductionRequestsMasterController::class, 'submit'])->where('productionRequest', '[0-9]+')->name('submit');
+                Route::get('/{productionRequest}/approve', [ProductionRequestsMasterController::class, 'showApprovalForm'])->where('productionRequest', '[0-9]+')->name('show-approval');
+                Route::post('/{productionRequest}/approve', [ProductionRequestsMasterController::class, 'processApproval'])->where('productionRequest', '[0-9]+')->name('approve');
+                Route::post('/{productionRequest}/cancel', [ProductionRequestsMasterController::class, 'cancel'])->where('productionRequest', '[0-9]+')->name('cancel');
             });
 
             // Production Orders (HQ)
@@ -354,6 +356,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Additional Admin Routes
         Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
+        Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
         Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
         Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
         Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
