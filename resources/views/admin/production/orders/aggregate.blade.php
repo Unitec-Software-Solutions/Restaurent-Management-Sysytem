@@ -8,13 +8,14 @@
             <!-- Header -->
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Aggregate Production Requests</h1>
-                    <p class="text-gray-600 mt-1">Select multiple approved requests to create a single production order
-                    </p>
+                    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
+                        Aggregate Production Requests
+                    </h1>
+                    <p class="text-gray-600 mt-1">Create production orders from approved requests</p>
                 </div>
-                <a href="{{ route('admin.production.requests.index') }}"
+                <a href="{{ route('admin.production.orders.index') }}"
                     class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition duration-200">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Requests
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Orders
                 </a>
             </div>
 
@@ -25,343 +26,539 @@
                 </div>
             @endif
 
-            <form action="{{ route('admin.production.orders.store') }}" method="POST" id="aggregateForm">
-                @csrf
-
-                <!-- Filters -->
-                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Filter Requests</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Filters -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <form method="GET" action="{{ route('admin.production.requests.aggregate') }}">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
-                            <select id="branchFilter" class="w-full rounded-lg border-gray-300 shadow-sm">
+                            <select name="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                                 <option value="">All Branches</option>
                                 @foreach ($branches as $branch)
-                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                    <option value="{{ $branch->id }}"
+                                        {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                        {{ $branch->name }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Required Date From</label>
-                            <input type="date" id="dateFromFilter" class="w-full rounded-lg border-gray-300 shadow-sm">
+                            <input type="date" name="required_date_from" value="{{ request('required_date_from') }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Required Date To</label>
-                            <input type="date" id="dateToFilter" class="w-full rounded-lg border-gray-300 shadow-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Items</label>
-                            <select id="itemFilter" class="w-full rounded-lg border-gray-300 shadow-sm">
-                                <option value="">All Items</option>
-                                @foreach ($productionItems as $item)
-                                    <option value="{{ $item->id }}">{{ $item->name }}</option>
-                                @endforeach
-                            </select>
+                            <input type="date" name="required_date_to" value="{{ request('required_date_to') }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         </div>
                     </div>
+                    <div class="mt-4">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-filter mr-2"></i>Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <form action="{{ route('admin.production.orders.store') }}" method="POST" id="aggregateForm">
+                @csrf
+
+                <!-- Production Requests Table -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900">
+                                Approved Production Requests ({{ $requests->count() }})
+                            </h3>
+                            <div class="flex items-center gap-4">
+                                <button type="button" id="selectAllBtn"
+                                    class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                    Select All
+                                </button>
+                                <button type="button" id="clearAllBtn"
+                                    class="text-gray-600 hover:text-gray-800 text-sm font-medium">
+                                    Clear All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if ($requests->count() > 0)
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="w-12 px-6 py-3"></th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Request</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Branch</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Items</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Required Date</th>
+                                        <th
+                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Total Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    @foreach ($requests as $request)
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <input type="checkbox" name="selected_requests[]"
+                                                    value="{{ $request->id }}"
+                                                    class="request-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                    data-request="{{ json_encode($request->toArray()) }}">
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">Request #{{ $request->id }}
+                                                </div>
+                                                <div class="text-sm text-gray-500">
+                                                    {{ $request->request_date->format('M d, Y') }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">{{ $request->branch->name }}</div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900">{{ $request->items->count() }} items
+                                                </div>
+                                                <div class="text-xs text-gray-500 max-w-xs truncate">
+                                                    {{ $request->items->pluck('item.name')->join(', ') }}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">
+                                                    {{ $request->required_date->format('M d, Y') }}</div>
+                                                @if ($request->required_date->isPast())
+                                                    <span
+                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                        Overdue
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">
+                                                    {{ number_format($request->getTotalQuantityApproved()) }}</div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="p-12 text-center">
+                            <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-lg font-medium text-gray-900">No approved requests found</p>
+                            <p class="text-sm text-gray-500">Check if there are any approved production requests to
+                                aggregate</p>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Selected Requests Summary -->
                 <div id="selectedSummary" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-blue-900">Selected Requests Summary</h3>
-                        <button type="button" onclick="clearSelection()" class="text-blue-700 hover:text-blue-900 text-sm">
-                            <i class="fas fa-times mr-1"></i>Clear Selection
+                        <button type="button" onclick="clearSelection()" class="text-blue-600 hover:text-blue-800 text-sm">
+                            Clear Selection
                         </button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                            <span class="text-blue-700">Selected Requests:</span>
-                            <span id="selectedCount" class="font-medium text-blue-900">0</span>
-                        </div>
-                        <div>
-                            <span class="text-blue-700">Total Items:</span>
-                            <span id="totalItems" class="font-medium text-blue-900">0</span>
-                        </div>
-                        <div>
-                            <span class="text-blue-700">Unique Items:</span>
-                            <span id="uniqueItems" class="font-medium text-blue-900">0</span>
-                        </div>
-                        <div>
-                            <span class="text-blue-700">Total Quantity:</span>
-                            <span id="totalQuantity" class="font-medium text-blue-900">0</span>
-                        </div>
-                    </div>
-                </div>
+                    <div id="selectedRequestsList" class="text-sm text-blue-700 mb-4"></div>
 
-                <!-- Approved Requests -->
-                <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-                    <div class="p-6 border-b border-gray-200">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-xl font-semibold text-gray-900">Approved Production Requests</h2>
-                            <div class="flex items-center space-x-4">
-                                <label class="flex items-center">
-                                    <input type="checkbox" id="selectAll"
-                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm text-gray-700">Select All</span>
-                                </label>
-                                <div class="text-sm text-gray-500">
-                                    {{ $approvedRequests->count() }} approved requests available
-                                </div>
+                    <!-- Aggregated Items Preview -->
+                    <div id="aggregatedItemsPreview" class="mt-6">
+                        <h4 class="font-medium text-blue-900 mb-3">Production Items to Manufacture</h4>
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm">
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-blue-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-blue-700 uppercase">Item
+                                            </th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-blue-700 uppercase">
+                                                Total Quantity</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-blue-700 uppercase">From
+                                                Branches</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="aggregatedItemsBody" class="divide-y divide-gray-200">
+                                        <!-- Dynamically populated -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="w-12 px-6 py-3">
-                                        <span class="sr-only">Select</span>
-                                    </th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Request</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Branch</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Required Date</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Items</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Total Quantity</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Priority</th>
-                                    <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200" id="requestsTableBody">
-                                @forelse($approvedRequests as $request)
-                                    <tr class="request-row hover:bg-gray-50" data-request-id="{{ $request->id }}"
-                                        data-branch-id="{{ $request->branch_id }}"
-                                        data-required-date="{{ $request->required_date->format('Y-m-d') }}"
-                                        data-items="{{ $request->items->pluck('item_id')->join(',') }}">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <input type="checkbox" name="selected_requests[]" value="{{ $request->id }}"
-                                                class="request-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                data-request-id="{{ $request->id }}">
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div>
-                                                <div class="text-sm font-medium text-gray-900">Request
-                                                    #{{ $request->id }}</div>
-                                                <div class="text-sm text-gray-500">
-                                                    {{ $request->request_date->format('M d, Y') }}</div>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ $request->branch->name }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">
-                                                {{ $request->required_date->format('M d, Y') }}</div>
-                                            @if ($request->required_date->isPast())
-                                                <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                    Overdue
-                                                </span>
-                                            @elseif($request->required_date->isToday())
-                                                <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                    Today
-                                                </span>
-                                            @elseif($request->required_date->isTomorrow())
-                                                <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                                    Tomorrow
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="text-sm text-gray-900">{{ $request->items->count() }} items</div>
-                                            <div class="text-xs text-gray-500 max-w-48 truncate">
-                                                {{ $request->items->pluck('item.name')->join(', ') }}
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-gray-900">
-                                                {{ number_format($request->getTotalQuantityApproved()) }}
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            @if ($request->required_date->isPast())
-                                                <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                    <i class="fas fa-exclamation-triangle mr-1"></i>High
-                                                </span>
-                                            @elseif($request->required_date->diffInDays() <= 2)
-                                                <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                    <i class="fas fa-clock mr-1"></i>Medium
-                                                </span>
-                                            @else
-                                                <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    <i class="fas fa-check mr-1"></i>Normal
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href="{{ route('admin.production.requests.show', $request) }}"
-                                                class="text-blue-600 hover:text-blue-900 mr-3" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
-                                            <i class="fas fa-clipboard-list text-4xl mb-4 text-gray-300"></i>
-                                            <p class="text-lg font-medium">No Approved Requests Available</p>
-                                            <p class="text-sm">All production requests have been processed or there are no
-                                                approved requests.</p>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                    <!-- Ingredients Summary -->
+                    <div id="ingredientsSummary" class="mt-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-medium text-blue-900">Required Ingredients Summary</h4>
+                            <button type="button" id="addIngredientBtn"
+                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm">
+                                <i class="fas fa-plus mr-1"></i>Add Ingredient
+                            </button>
+                        </div>
+                        <div class="bg-white rounded-lg overflow-hidden shadow-sm">
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-green-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">
+                                                Ingredient</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">
+                                                Planned Quantity</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">
+                                                Unit</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">
+                                                Source</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">
+                                                Notes</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-green-700 uppercase">
+                                                Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ingredientsBody" class="divide-y divide-gray-200">
+                                        <!-- Dynamically populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Production Order Details -->
-                <div id="productionOrderSection" class="hidden bg-white rounded-xl shadow-sm p-6 mb-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Production Order Details</h2>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Production Order Details -->
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Production Date *</label>
-                            <input type="date" name="production_date" value="{{ now()->format('Y-m-d') }}"
-                                min="{{ now()->format('Y-m-d') }}"
-                                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                required>
+                            <label class="block text-sm font-medium text-blue-900 mb-2">Production Date *</label>
+                            <input type="date" name="production_date" required
+                                value="{{ old('production_date', now()->addDay()->format('Y-m-d')) }}"
+                                class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Expected Completion Date</label>
-                            <input type="date" name="expected_completion_date"
-                                value="{{ now()->addDay()->format('Y-m-d') }}" min="{{ now()->format('Y-m-d') }}"
-                                class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <label class="block text-sm font-medium text-blue-900 mb-2">Production Notes</label>
+                            <textarea name="production_notes" rows="3"
+                                class="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Any special instructions for production...">{{ old('production_notes') }}</textarea>
                         </div>
                     </div>
 
-                    <div class="mb-6">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Production Notes</label>
-                        <textarea name="production_notes" rows="3"
-                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="Any special instructions for production..."></textarea>
+                    <div class="mt-6">
+                        <button type="submit" id="createOrderBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow transition duration-200">
+                            <i class="fas fa-industry mr-2"></i>Create Production Order
+                        </button>
                     </div>
-
-                    <!-- Aggregated Items Preview -->
-                    <div id="aggregatedItemsPreview" class="hidden">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Items to Produce</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full border border-gray-200 rounded-lg">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item
-                                        </th>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total
-                                            Quantity</th>
-                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">From
-                                            Requests</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="aggregatedItemsBody" class="divide-y divide-gray-200">
-                                    <!-- Will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Form Actions -->
-                <div class="flex items-center justify-between">
-                    <a href="{{ route('admin.production.requests.index') }}"
-                        class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg transition duration-200">
-                        Cancel
-                    </a>
-
-                    <button type="submit" id="createOrderBtn"
-                        class="hidden bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200">
-                        <i class="fas fa-plus mr-2"></i>Create Production Order
-                    </button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Add Ingredient Modal -->
+    <div id="addIngredientModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Add Manual Ingredient</h3>
+                        <button type="button" id="closeModalBtn" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="addIngredientForm">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Ingredient *</label>
+                                <select id="ingredientSelect" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                    <option value="">Select ingredient...</option>
+                                    @foreach ($availableIngredients as $ingredient)
+                                        <option value="{{ $ingredient->id }}"
+                                            data-unit="{{ $ingredient->unit_of_measurement }}">
+                                            {{ $ingredient->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                                <input type="number" id="ingredientQuantity" step="0.001" min="0.001" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                                <input type="text" id="ingredientUnit" readonly
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                                <textarea id="ingredientNotes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="Reason for manual addition..."></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button type="button" id="cancelIngredientBtn"
+                                class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">
+                                Add Ingredient
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@endsection
+
+@push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const selectAllCheckbox = document.getElementById('selectAll');
+            let selectedRequests = [];
+            let aggregatedItems = {};
+            let calculatedIngredients = {};
+            let manualIngredients = {};
+
             const requestCheckboxes = document.querySelectorAll('.request-checkbox');
             const selectedSummary = document.getElementById('selectedSummary');
-            const productionOrderSection = document.getElementById('productionOrderSection');
-            const createOrderBtn = document.getElementById('createOrderBtn');
-            const aggregatedItemsPreview = document.getElementById('aggregatedItemsPreview');
+            const selectedRequestsList = document.getElementById('selectedRequestsList');
+            const aggregatedItemsBody = document.getElementById('aggregatedItemsBody');
+            const ingredientsBody = document.getElementById('ingredientsBody');
 
-            // Handle select all
-            selectAllCheckbox.addEventListener('change', function() {
-                const visibleCheckboxes = document.querySelectorAll(
-                    '.request-row:not([style*="display: none"]) .request-checkbox');
-                visibleCheckboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
-                });
-                updateSelection();
-            });
-
-            // Handle individual checkbox changes
+            // Handle request selection
             requestCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', updateSelection);
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedRequests.push(JSON.parse(this.dataset.request));
+                    } else {
+                        selectedRequests = selectedRequests.filter(req => req.id != this.value);
+                    }
+                    updateAggregatedView();
+                });
             });
 
-            function updateSelection() {
-                const checkedBoxes = document.querySelectorAll('.request-checkbox:checked');
-                const hasSelection = checkedBoxes.length > 0;
+            // Select/Clear all buttons
+            document.getElementById('selectAllBtn').addEventListener('click', function() {
+                requestCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+            });
 
-                // Show/hide summary and form sections
-                selectedSummary.classList.toggle('hidden', !hasSelection);
-                productionOrderSection.classList.toggle('hidden', !hasSelection);
-                createOrderBtn.classList.toggle('hidden', !hasSelection);
+            document.getElementById('clearAllBtn').addEventListener('click', function() {
+                requestCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+            });
 
-                if (hasSelection) {
-                    // Update summary stats
-                    document.getElementById('selectedCount').textContent = checkedBoxes.length;
-                    document.getElementById('totalItems').textContent = checkedBoxes.length;
-                    document.getElementById('uniqueItems').textContent = checkedBoxes.length;
-                    document.getElementById('totalQuantity').textContent = checkedBoxes.length;
-
-                    aggregatedItemsPreview.classList.remove('hidden');
-                } else {
-                    aggregatedItemsPreview.classList.add('hidden');
+            function updateAggregatedView() {
+                if (selectedRequests.length === 0) {
+                    selectedSummary.classList.add('hidden');
+                    return;
                 }
 
-                // Update select all checkbox state
-                const visibleCheckboxes = document.querySelectorAll(
-                    '.request-row:not([style*="display: none"]) .request-checkbox');
-                const checkedVisibleBoxes = document.querySelectorAll(
-                    '.request-row:not([style*="display: none"]) .request-checkbox:checked');
+                selectedSummary.classList.remove('hidden');
 
-                selectAllCheckbox.checked = visibleCheckboxes.length > 0 && visibleCheckboxes.length ===
-                    checkedVisibleBoxes.length;
-                selectAllCheckbox.indeterminate = checkedVisibleBoxes.length > 0 && checkedVisibleBoxes.length <
-                    visibleCheckboxes.length;
+                // Update selected requests list
+                selectedRequestsList.innerHTML = selectedRequests.map(req =>
+                    `Request #${req.id} (${req.branch.name}) - ${req.items.length} items`
+                ).join('<br>');
+
+                // Calculate aggregated items
+                aggregatedItems = {};
+                calculatedIngredients = {};
+
+                selectedRequests.forEach(request => {
+                    if (request.items) {
+                        request.items.forEach(item => {
+                            const itemId = item.item_id;
+                            if (!aggregatedItems[itemId]) {
+                                aggregatedItems[itemId] = {
+                                    item: item.item,
+                                    totalQuantity: 0,
+                                    branches: []
+                                };
+                            }
+                            aggregatedItems[itemId].totalQuantity += parseFloat(item
+                                .quantity_approved);
+                            aggregatedItems[itemId].branches.push({
+                                branch: request.branch.name,
+                                quantity: item.quantity_approved
+                            });
+                        });
+                    }
+                });
+
+                updateAggregatedItemsDisplay();
+                calculateIngredients();
+                updateIngredientsDisplay();
             }
 
-            function clearSelection() {
+            function updateAggregatedItemsDisplay() {
+                aggregatedItemsBody.innerHTML = '';
+                Object.values(aggregatedItems).forEach(itemData => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                <td class="px-4 py-2 text-sm font-medium text-gray-900">${itemData.item.name}</td>
+                <td class="px-4 py-2 text-sm text-gray-900">${itemData.totalQuantity}</td>
+                <td class="px-4 py-2 text-sm text-gray-600">
+                    ${itemData.branches.map(b => `${b.branch}: ${b.quantity}`).join('<br>')}
+                </td>
+            `;
+                    aggregatedItemsBody.appendChild(row);
+                });
+            }
+
+            function calculateIngredients() {
+                // This would need to fetch recipe data via AJAX for accurate calculations
+                // For now, we'll show placeholder for demonstration
+                calculatedIngredients = {};
+
+                // Make AJAX call to get ingredient requirements
+                fetch('/admin/production/calculate-ingredients', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
+                                'content')
+                        },
+                        body: JSON.stringify({
+                            aggregated_items: aggregatedItems
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        calculatedIngredients = data.ingredients || {};
+                        updateIngredientsDisplay();
+                    })
+                    .catch(error => {
+                        console.error('Error calculating ingredients:', error);
+                    });
+            }
+
+            function updateIngredientsDisplay() {
+                ingredientsBody.innerHTML = '';
+
+                // Display calculated ingredients
+                Object.entries(calculatedIngredients).forEach(([ingredientId, data]) => {
+                    addIngredientRow(ingredientId, data, 'recipe');
+                });
+
+                // Display manual ingredients
+                Object.entries(manualIngredients).forEach(([ingredientId, data]) => {
+                    addIngredientRow(ingredientId, data, 'manual');
+                });
+            }
+
+            function addIngredientRow(ingredientId, data, source) {
+                const row = document.createElement('tr');
+                const isManual = source === 'manual';
+
+                row.innerHTML = `
+            <td class="px-4 py-2 text-sm font-medium text-gray-900">${data.name}</td>
+            <td class="px-4 py-2">
+                <input type="number" step="0.001" min="0.001" 
+                    name="ingredients[${ingredientId}][planned_quantity]"
+                    value="${data.quantity}" 
+                    class="w-20 px-2 py-1 border border-gray-300 rounded text-sm ingredient-quantity"
+                    ${!isManual ? 'readonly' : ''}>
+            </td>
+            <td class="px-4 py-2 text-sm text-gray-600">${data.unit}</td>
+            <td class="px-4 py-2 text-sm text-gray-600">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isManual ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                    ${isManual ? 'Manual' : 'Recipe'}
+                </span>
+            </td>
+            <td class="px-4 py-2">
+                <input type="text" name="ingredients[${ingredientId}][notes]"
+                    value="${data.notes || ''}" 
+                    class="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
+                    placeholder="Notes...">
+            </td>
+            <td class="px-4 py-2">
+                ${isManual ? `<button type="button" onclick="removeIngredient('${ingredientId}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>` : ''}
+            </td>
+            <input type="hidden" name="ingredients[${ingredientId}][ingredient_item_id]" value="${ingredientId}">
+            <input type="hidden" name="ingredients[${ingredientId}][unit_of_measurement]" value="${data.unit}">
+            <input type="hidden" name="ingredients[${ingredientId}][is_manually_added]" value="${isManual ? '1' : '0'}">
+        `;
+
+                ingredientsBody.appendChild(row);
+            }
+
+            // Modal functionality
+            const modal = document.getElementById('addIngredientModal');
+            const addIngredientBtn = document.getElementById('addIngredientBtn');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            const cancelIngredientBtn = document.getElementById('cancelIngredientBtn');
+            const addIngredientForm = document.getElementById('addIngredientForm');
+            const ingredientSelect = document.getElementById('ingredientSelect');
+            const ingredientUnit = document.getElementById('ingredientUnit');
+
+            addIngredientBtn.addEventListener('click', () => modal.classList.remove('hidden'));
+            closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            cancelIngredientBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+            ingredientSelect.addEventListener('change', function() {
+                const option = this.options[this.selectedIndex];
+                ingredientUnit.value = option.dataset.unit || '';
+            });
+
+            addIngredientForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const ingredientId = ingredientSelect.value;
+                const quantity = document.getElementById('ingredientQuantity').value;
+                const unit = document.getElementById('ingredientUnit').value;
+                const notes = document.getElementById('ingredientNotes').value;
+                const name = ingredientSelect.options[ingredientSelect.selectedIndex].text;
+
+                if (manualIngredients[ingredientId] || calculatedIngredients[ingredientId]) {
+                    alert('This ingredient is already in the list.');
+                    return;
+                }
+
+                manualIngredients[ingredientId] = {
+                    name: name,
+                    quantity: quantity,
+                    unit: unit,
+                    notes: notes
+                };
+
+                updateIngredientsDisplay();
+
+                // Reset form
+                addIngredientForm.reset();
+                ingredientUnit.value = '';
+                modal.classList.add('hidden');
+            });
+
+            // Global function for removing ingredients
+            window.removeIngredient = function(ingredientId) {
+                if (confirm('Are you sure you want to remove this ingredient?')) {
+                    delete manualIngredients[ingredientId];
+                    updateIngredientsDisplay();
+                }
+            };
+
+            window.clearSelection = function() {
                 requestCheckboxes.forEach(checkbox => {
                     checkbox.checked = false;
                 });
-                selectAllCheckbox.checked = false;
-                updateSelection();
-            }
-
-            window.clearSelection = clearSelection;
+                selectedRequests = [];
+                aggregatedItems = {};
+                calculatedIngredients = {};
+                manualIngredients = {};
+                selectedSummary.classList.add('hidden');
+            };
         });
     </script>
-@endsection
+@endpush
