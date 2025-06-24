@@ -45,7 +45,7 @@ class ProductionOrder extends Model
 
     public function ingredients()
     {
-        return $this->hasMany(ProductionOrderIngredient::class, 'production_order_id');
+        return $this->hasMany(ProductionOrderIngredient::class);
     }
 
     public function productionRequestMaster()
