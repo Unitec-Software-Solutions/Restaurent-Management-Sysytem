@@ -30,7 +30,6 @@
                             'icon_type' => 'svg',
                         ],
                         [
-
                             'title' => 'Inventory Management',
 
                             'title' => 'Inventory',
@@ -40,7 +39,6 @@
                             'icon_type' => 'svg',
                         ],
                         [
-
                             'title' => 'Reservation Management',
 
                             'title' => 'Reservation',
@@ -50,7 +48,6 @@
                             'icon_type' => 'svg',
                         ],
                         [
-
                             'title' => 'Order Management',
 
                             'title' => 'Orders',
@@ -66,7 +63,6 @@
                             'icon_type' => 'svg',
                         ],
                         [
-
                             'title' => 'Customer Management',
                             'route' => 'admin.customers.index',
                             'icon' => 'users',
@@ -76,12 +72,29 @@
                             'route' => 'admin.customers.index',
                             'icon' => 'fa-solid fa-user',
                             'icon_type' => 'fa',
-
                         ],
                         [
                             'title' => 'Suppliers',
                             'route' => 'admin.suppliers.index',
                             'icon' => 'fas fa-truck',
+                            'icon_type' => 'fa',
+                        ],
+                        [
+                            'title' => 'Production Requests',
+                            'route' => 'admin.production.requests.index',
+                            'icon' => 'fas fa-clipboard-list',
+                            'icon_type' => 'fa',
+                        ],
+                        [
+                            'title' => 'Production Orders',
+                            'route' => 'admin.production.orders.index',
+                            'icon' => 'fas fa-clipboard-list',
+                            'icon_type' => 'fa',
+                        ],
+                        [
+                            'title' => 'Production agg',
+                            'route' => 'admin.production.orders.aggregate',
+                            'icon' => 'fas fa-clipboard-list',
                             'icon_type' => 'fa',
                         ],
 
@@ -93,7 +106,6 @@
                             'icon' => 'fa-solid fa-users',
                             'icon_type' => 'fa',
                         ],
-
                     ];
 
                     // Organizations nav with sub-item for activation
