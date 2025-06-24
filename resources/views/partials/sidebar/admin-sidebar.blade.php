@@ -82,7 +82,7 @@
                         [
                             'title' => 'Production',
                             'route' => 'admin.production.index',
-                            'icon' => 'fas fa-clipboard-list',
+                            'icon' => 'fas fa-industry',
                             'icon_type' => 'fa',
                         ],
 
