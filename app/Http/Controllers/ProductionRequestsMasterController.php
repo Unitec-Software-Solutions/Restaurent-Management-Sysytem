@@ -21,7 +21,7 @@ class ProductionRequestsMasterController extends Controller
             ->where('organization_id', Auth::user()->organization_id);
 
         // Filter by branch for branch users
-        if (!Auth::user()->hasRole('admin') && Auth::user()->branch_id) {
+        if ((Auth::user()->role ?? null) !== 'admin' && Auth::user()->branch_id) {
             $query->where('branch_id', Auth::user()->branch_id);
         }
 
@@ -54,11 +54,14 @@ class ProductionRequestsMasterController extends Controller
     public function create()
     {
         // Only production items can be selected
+        $user = Auth::user();
         $productionItems = ItemMaster::whereHas('category', function($query) {
-            $query->where('name', 'Production Items');
-        })
-        ->where('organization_id', Auth::user()->organization_id)
-        ->get();
+                $query->where('name', 'Production Items');
+            })
+            ->when($user->organization_id, function($query) use ($user) {
+                $query->where('organization_id', $user->organization_id);
+            })
+            ->get();
 
         return view('admin.production.requests.create', compact('productionItems'));
     }
@@ -68,6 +71,14 @@ class ProductionRequestsMasterController extends Controller
      */
     public function store(Request $request)
     {
+        $admin = auth('admin')->user() ?? Auth::user();
+        $organizationId = $admin->organization_id ?? $request->organization_id;
+        $branchId = $admin->branch_id ?? $request->branch_id;
+
+        if (!$organizationId || !$branchId) {
+            return redirect()->back()->withInput()->withErrors(['error' => 'Organization or Branch not set for this user.']);
+        }
+
         $request->validate([
             'required_date' => 'required|date|after:today',
             'items' => 'required|array|min:1',
@@ -76,15 +87,15 @@ class ProductionRequestsMasterController extends Controller
             'notes' => 'nullable|string|max:1000'
         ]);
 
-        DB::transaction(function () use ($request) {
+        DB::transaction(function () use ($request, $organizationId, $branchId, $admin) {
             $productionRequest = ProductionRequestMaster::create([
-                'organization_id' => Auth::user()->organization_id,
-                'branch_id' => Auth::user()->branch_id,
+                'organization_id' => $organizationId,
+                'branch_id' => $branchId,
                 'request_date' => now()->toDateString(),
                 'required_date' => $request->required_date,
                 'status' => 'draft',
                 'notes' => $request->notes,
-                'created_by_user_id' => Auth::id(),
+                'created_by_user_id' => $admin->id,
             ]);
 
             foreach ($request->items as $item) {
@@ -198,6 +209,13 @@ class ProductionRequestsMasterController extends Controller
             }
         }
 
-        return view('admin.production.requests.aggregate', compact('aggregatedItems', 'requests'));
+        $branches = Branch::where('organization_id', Auth::user()->organization_id)->get();
+        $productionItems = \App\Models\ItemMaster::whereHas('category', function($query) {
+            $query->where('name', 'Production Items');
+        })->where('organization_id', Auth::user()->organization_id)->get();
+
+        $approvedRequests = $requests;
+
+        return view('admin.production.orders.aggregate', compact('aggregatedItems', 'approvedRequests', 'branches', 'productionItems'));
     }
 }
