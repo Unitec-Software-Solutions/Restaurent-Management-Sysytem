@@ -11,6 +11,15 @@ class ProductionRequestMaster extends Model
 
     protected $table = 'production_requests_master';
 
+    // Status constants
+    const STATUS_DRAFT = 'draft';
+    const STATUS_SUBMITTED = 'submitted';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_IN_PRODUCTION = 'in_production';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_CANCELLED = 'cancelled';
+    const STATUS_REJECTED = 'rejected';
+
     protected $fillable = [
         'organization_id',
         'branch_id',
@@ -21,22 +30,14 @@ class ProductionRequestMaster extends Model
         'created_by_user_id',
         'approved_by_user_id',
         'approved_at',
-        'production_order_id',
+        'production_order_id'
     ];
 
     protected $casts = [
         'request_date' => 'date',
         'required_date' => 'date',
-        'approved_at' => 'datetime',
+        'approved_at' => 'datetime'
     ];
-
-    // Status constants
-    const STATUS_DRAFT = 'draft';
-    const STATUS_SUBMITTED = 'submitted';
-    const STATUS_APPROVED = 'approved';
-    const STATUS_IN_PRODUCTION = 'in_production';
-    const STATUS_COMPLETED = 'completed';
-    const STATUS_CANCELLED = 'cancelled';
 
     // Relationships
     public function items()
@@ -61,74 +62,25 @@ class ProductionRequestMaster extends Model
 
     public function approvedBy()
     {
-        return $this->belongsTo(User::class, 'approved_by_user_id');
-    }
-
-    public function productionOrders()
-    {
-        return $this->hasMany(ProductionOrder::class, 'production_requests_master_id');
+        return $this->belongsTo(\App\Models\User::class, 'approved_by_user_id');
     }
 
     /**
-     * Get the production order that this request is part of
+     * Get CSS class for status badge
      */
-    public function productionOrder()
+    public function getStatusBadgeClass()
     {
-        return $this->belongsTo(ProductionOrder::class);
-    }
-
-    // Scopes
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    public function scopeForBranch($query, $branchId)
-    {
-        return $query->where('branch_id', $branchId);
-    }
-
-    public function scopePending($query)
-    {
-        return $query->whereIn('status', [self::STATUS_DRAFT, self::STATUS_SUBMITTED]);
-    }
-
-    public function scopeApproved($query)
-    {
-        return $query->where('status', self::STATUS_APPROVED);
-    }
-
-    // Helper methods
-    public function canBeSubmitted()
-    {
-        return $this->status === self::STATUS_DRAFT && $this->items()->count() > 0;
-    }
-
-    public function canBeApproved()
-    {
-        return $this->status === self::STATUS_SUBMITTED;
-    }
-
-    public function canBeCancelled()
-    {
-        return !in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_CANCELLED]);
-    }
-
-    public function getTotalItemsCount()
-    {
-        return $this->items()->count();
+        return match($this->status) {
+            self::STATUS_DRAFT => 'bg-gray-100 text-gray-800',
+            self::STATUS_SUBMITTED => 'bg-yellow-100 text-yellow-800',
+            self::STATUS_APPROVED => 'bg-green-100 text-green-800',
+            self::STATUS_CANCELLED => 'bg-red-100 text-red-800',
+            default => 'bg-gray-100 text-gray-800'
+        };
     }
 
     /**
-     * Get total quantity approved for this request
-     */
-    public function getTotalQuantityApproved()
-    {
-        return $this->items->sum('quantity_approved');
-    }
-
-    /**
-     * Get total quantity requested for this request
+     * Get total quantity requested for all items
      */
     public function getTotalQuantityRequested()
     {
@@ -136,15 +88,40 @@ class ProductionRequestMaster extends Model
     }
 
     /**
-     * Check if request is fully approved
+     * Get total quantity approved for all items
      */
-    public function isFullyApproved()
+    public function getTotalQuantityApproved()
     {
-        return $this->items->every(function($item) {
-            return $item->quantity_approved >= $item->quantity_requested;
-        });
+        return $this->items->sum('quantity_approved');
     }
 
+    /**
+     * Check if request can be submitted
+     */
+    public function canBeSubmitted()
+    {
+        return $this->status === self::STATUS_DRAFT && $this->items()->count() > 0;
+    }
+
+    /**
+     * Check if request can be approved
+     */
+    public function canBeApproved()
+    {
+        return $this->status === self::STATUS_SUBMITTED && $this->items()->count() > 0;
+    }
+
+    /**
+     * Check if request can be cancelled
+     */
+    public function canBeCancelled()
+    {
+        return !in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_CANCELLED]);
+    }
+
+    /**
+     * Get total quantity produced across all items
+     */
     public function getTotalQuantityProduced()
     {
         return $this->items()->sum('quantity_produced');
@@ -170,18 +147,5 @@ class ProductionRequestMaster extends Model
         return $this->items->every(function ($item) {
             return $item->quantity_distributed >= $item->quantity_produced;
         });
-    }
-
-    public function getStatusBadgeClass()
-    {
-        return match($this->status) {
-            self::STATUS_DRAFT => 'bg-gray-100 text-gray-800',
-            self::STATUS_SUBMITTED => 'bg-blue-100 text-blue-800',
-            self::STATUS_APPROVED => 'bg-green-100 text-green-800',
-            self::STATUS_IN_PRODUCTION => 'bg-yellow-100 text-yellow-800',
-            self::STATUS_COMPLETED => 'bg-green-100 text-green-800',
-            self::STATUS_CANCELLED => 'bg-red-100 text-red-800',
-            default => 'bg-gray-100 text-gray-800',
-        };
     }
 }
