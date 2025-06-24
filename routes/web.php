@@ -305,6 +305,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Production Requests (Branch)
         Route::prefix('production')->name('production.')->group(function () {
+            Route::post('/calculate-ingredients', [ProductionOrderController::class, 'calculateIngredients'])->name('.calculate-ingredients');
+
             // Production requests
             Route::prefix('requests')->name('requests.')->group(function () {
                 Route::get('/', [ProductionRequestsMasterController::class, 'index'])->name('index');
@@ -314,6 +316,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{productionRequest}/submit', [ProductionRequestsMasterController::class, 'submit'])->name('submit');
                 Route::post('/{productionRequest}/approve', [ProductionRequestsMasterController::class, 'approve'])->name('approve');
                 Route::post('/{productionRequest}/cancel', [ProductionRequestsMasterController::class, 'cancel'])->name('cancel');
+                // Production Requests - Aggregation
+                Route::get('/aggregate', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
+                
             });
 
             // Production Orders (HQ)
@@ -324,7 +329,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{productionOrder}', [ProductionOrderController::class, 'show'])->name('show');
                 Route::post('/{productionOrder}/approve', [ProductionOrderController::class, 'approve'])->name('approve');
                 Route::post('/{productionOrder}/cancel', [ProductionOrderController::class, 'cancel'])->name('cancel');
+                Route::post('/store-aggregated', [ProductionOrderController::class, 'store_aggregated'])->name('store');
+                // Production Orders - Enhanced with ingredient management
+                Route::post('/{productionOrder}/issue-ingredients', [ProductionOrderController::class, 'issueIngredients'])->name('issue-ingredients');
+                Route::post('/{productionOrder}/complete', [ProductionOrderController::class, 'completeProduction'])->name('complete');
             });
+
             // Production Sessions (HQ)
             Route::prefix('sessions')->name('sessions.')->group(function () {
                 Route::get('/', [ProductionSessionController::class, 'index'])->name('index');
@@ -505,3 +515,5 @@ Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('admin.branch.users.create');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 });
+
+
