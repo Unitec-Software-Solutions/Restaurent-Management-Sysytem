@@ -21,6 +21,7 @@ class ProductionRequestMaster extends Model
         'created_by_user_id',
         'approved_by_user_id',
         'approved_at',
+        'production_order_id',
     ];
 
     protected $casts = [
@@ -68,6 +69,14 @@ class ProductionRequestMaster extends Model
         return $this->hasMany(ProductionOrder::class, 'production_requests_master_id');
     }
 
+    /**
+     * Get the production order that this request is part of
+     */
+    public function productionOrder()
+    {
+        return $this->belongsTo(ProductionOrder::class);
+    }
+
     // Scopes
     public function scopeByStatus($query, $status)
     {
@@ -110,14 +119,30 @@ class ProductionRequestMaster extends Model
         return $this->items()->count();
     }
 
-    public function getTotalQuantityRequested()
-    {
-        return $this->items()->sum('quantity_requested');
-    }
-
+    /**
+     * Get total quantity approved for this request
+     */
     public function getTotalQuantityApproved()
     {
-        return $this->items()->sum('quantity_approved');
+        return $this->items->sum('quantity_approved');
+    }
+
+    /**
+     * Get total quantity requested for this request
+     */
+    public function getTotalQuantityRequested()
+    {
+        return $this->items->sum('quantity_requested');
+    }
+
+    /**
+     * Check if request is fully approved
+     */
+    public function isFullyApproved()
+    {
+        return $this->items->every(function($item) {
+            return $item->quantity_approved >= $item->quantity_requested;
+        });
     }
 
     public function getTotalQuantityProduced()
