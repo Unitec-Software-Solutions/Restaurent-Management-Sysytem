@@ -80,20 +80,8 @@
                             'icon_type' => 'fa',
                         ],
                         [
-                            'title' => 'Production Requests',
-                            'route' => 'admin.production.requests.index',
-                            'icon' => 'fas fa-clipboard-list',
-                            'icon_type' => 'fa',
-                        ],
-                        [
-                            'title' => 'Production Orders',
-                            'route' => 'admin.production.orders.index',
-                            'icon' => 'fas fa-clipboard-list',
-                            'icon_type' => 'fa',
-                        ],
-                        [
-                            'title' => 'Production agg',
-                            'route' => 'admin.production.orders.aggregate',
+                            'title' => 'Production',
+                            'route' => 'admin.production.index',
                             'icon' => 'fas fa-clipboard-list',
                             'icon_type' => 'fa',
                         ],
