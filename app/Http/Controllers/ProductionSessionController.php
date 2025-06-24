@@ -36,7 +36,7 @@ class ProductionSessionController extends Controller
 
         $sessions = $query->latest()->paginate(20);
 
-        return view('production.sessions.index', compact('sessions'));
+        return view('admin.production.sessions.index', compact('sessions'));
     }
 
     /**
@@ -49,7 +49,7 @@ class ProductionSessionController extends Controller
             ->with('items.item')
             ->get();
 
-        return view('production.sessions.create', compact('availableOrders'));
+        return view('admin.production.sessions.create', compact('availableOrders'));
     }
 
     /**
@@ -88,8 +88,7 @@ class ProductionSessionController extends Controller
         $recipes = Recipe::whereIn('production_item_id',
             $session->productionOrder->items->pluck('item_id')
         )->with('details.rawMaterialItem')->get();
-
-        return view('production.sessions.show', compact('session', 'recipes'));
+        return view('admin.production.sessions.show', compact('session', 'recipes'));
     }
 
     /**
