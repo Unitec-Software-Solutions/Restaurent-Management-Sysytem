@@ -9,7 +9,8 @@
             <div class="flex items-center justify-between mb-8">
                 <div>
                     <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Aggregate Production Requests</h1>
-                    <p class="text-gray-600 mt-1">Select multiple approved requests to create a single production order</p>
+                    <p class="text-gray-600 mt-1">Select multiple approved requests to create a single production order
+                    </p>
                 </div>
                 <a href="{{ route('admin.production.requests.index') }}"
                     class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition duration-200">
@@ -24,7 +25,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('production.orders.store') }}" method="POST" id="aggregateForm">
+            <form action="{{ route('admin.production.orders.store') }}" method="POST" id="aggregateForm">
                 @csrf
 
                 <!-- Filters -->
@@ -56,16 +57,6 @@
                                     <option value="{{ $item->id }}">{{ $item->name }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div class="md:col-span-4 flex gap-3">
-                            <button type="button" onclick="applyFilters()"
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">
-                                <i class="fas fa-search mr-2"></i>Apply Filters
-                            </button>
-                            <button type="button" onclick="clearFilters()"
-                                class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition duration-200">
-                                <i class="fas fa-times mr-2"></i>Clear
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -196,7 +187,8 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900">
-                                                {{ number_format($request->getTotalQuantityApproved()) }}</div>
+                                                {{ number_format($request->getTotalQuantityApproved()) }}
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             @if ($request->required_date->isPast())
@@ -217,7 +209,7 @@
                                             @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href="{{ route('admin.admin.production.requests.show', $request) }}"
+                                            <a href="{{ route('admin.production.requests.show', $request) }}"
                                                 class="text-blue-600 hover:text-blue-900 mr-3" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </a>
@@ -312,7 +304,6 @@
             const productionOrderSection = document.getElementById('productionOrderSection');
             const createOrderBtn = document.getElementById('createOrderBtn');
             const aggregatedItemsPreview = document.getElementById('aggregatedItemsPreview');
-            const aggregatedItemsBody = document.getElementById('aggregatedItemsBody');
 
             // Handle select all
             selectAllCheckbox.addEventListener('change', function() {
@@ -341,50 +332,10 @@
                 if (hasSelection) {
                     // Update summary stats
                     document.getElementById('selectedCount').textContent = checkedBoxes.length;
+                    document.getElementById('totalItems').textContent = checkedBoxes.length;
+                    document.getElementById('uniqueItems').textContent = checkedBoxes.length;
+                    document.getElementById('totalQuantity').textContent = checkedBoxes.length;
 
-                    // Calculate aggregated data
-                    const aggregatedItems = {};
-                    let totalQuantity = 0;
-
-                    checkedBoxes.forEach(checkbox => {
-                        const requestId = checkbox.dataset.requestId;
-                        const row = checkbox.closest('tr');
-
-                        // Get request data (you might want to store this in data attributes or fetch via AJAX)
-                        @foreach ($approvedRequests as $request)
-                            if (requestId === '{{ $request->id }}') {
-                                @foreach ($request->items as $item)
-                                    const itemId = '{{ $item->item_id }}';
-                                    const itemName = '{{ $item->item->name }}';
-                                    const quantity = {{ $item->quantity_approved }};
-
-                                    if (!aggregatedItems[itemId]) {
-                                        aggregatedItems[itemId] = {
-                                            name: itemName,
-                                            totalQuantity: 0,
-                                            fromRequests: []
-                                        };
-                                    }
-
-                                    aggregatedItems[itemId].totalQuantity += quantity;
-                                    aggregatedItems[itemId].fromRequests.push({
-                                        requestId: requestId,
-                                        quantity: quantity
-                                    });
-
-                                    totalQuantity += quantity;
-                                @endforeach
-                            }
-                        @endforeach
-                    });
-
-                    // Update summary display
-                    document.getElementById('totalItems').textContent = Object.keys(aggregatedItems).length;
-                    document.getElementById('uniqueItems').textContent = Object.keys(aggregatedItems).length;
-                    document.getElementById('totalQuantity').textContent = totalQuantity.toFixed(2);
-
-                    // Update aggregated items preview
-                    updateAggregatedItemsPreview(aggregatedItems);
                     aggregatedItemsPreview.classList.remove('hidden');
                 } else {
                     aggregatedItemsPreview.classList.add('hidden');
@@ -402,28 +353,6 @@
                     visibleCheckboxes.length;
             }
 
-            function updateAggregatedItemsPreview(aggregatedItems) {
-                aggregatedItemsBody.innerHTML = '';
-
-                Object.entries(aggregatedItems).forEach(([itemId, data]) => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                <td class="px-4 py-2">
-                    <div class="text-sm font-medium text-gray-900">${data.name}</div>
-                </td>
-                <td class="px-4 py-2">
-                    <div class="text-sm text-gray-900">${data.totalQuantity.toFixed(2)}</div>
-                </td>
-                <td class="px-4 py-2">
-                    <div class="text-sm text-gray-500">
-                        ${data.fromRequests.map(req => `#${req.requestId} (${req.quantity})`).join(', ')}
-                    </div>
-                </td>
-            `;
-                    aggregatedItemsBody.appendChild(row);
-                });
-            }
-
             function clearSelection() {
                 requestCheckboxes.forEach(checkbox => {
                     checkbox.checked = false;
@@ -431,51 +360,6 @@
                 selectAllCheckbox.checked = false;
                 updateSelection();
             }
-
-            // Filter functions
-            window.applyFilters = function() {
-                const branchFilter = document.getElementById('branchFilter').value;
-                const dateFromFilter = document.getElementById('dateFromFilter').value;
-                const dateToFilter = document.getElementById('dateToFilter').value;
-                const itemFilter = document.getElementById('itemFilter').value;
-
-                document.querySelectorAll('.request-row').forEach(row => {
-                    let show = true;
-
-                    if (branchFilter && row.dataset.branchId !== branchFilter) {
-                        show = false;
-                    }
-
-                    if (dateFromFilter && row.dataset.requiredDate < dateFromFilter) {
-                        show = false;
-                    }
-
-                    if (dateToFilter && row.dataset.requiredDate > dateToFilter) {
-                        show = false;
-                    }
-
-                    if (itemFilter && !row.dataset.items.split(',').includes(itemFilter)) {
-                        show = false;
-                    }
-
-                    row.style.display = show ? '' : 'none';
-                });
-
-                updateSelection();
-            };
-
-            window.clearFilters = function() {
-                document.getElementById('branchFilter').value = '';
-                document.getElementById('dateFromFilter').value = '';
-                document.getElementById('dateToFilter').value = '';
-                document.getElementById('itemFilter').value = '';
-
-                document.querySelectorAll('.request-row').forEach(row => {
-                    row.style.display = '';
-                });
-
-                updateSelection();
-            };
 
             window.clearSelection = clearSelection;
         });
