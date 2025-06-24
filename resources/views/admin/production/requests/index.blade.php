@@ -26,6 +26,65 @@
             </div>
         @endif
 
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clipboard-list text-blue-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium text-gray-500">Total Requests</h3>
+                        <p class="text-2xl font-semibold text-gray-900">{{ $stats['total'] ?? 0 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clock text-yellow-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium text-gray-500">Pending Approval</h3>
+                        <p class="text-2xl font-semibold text-gray-900">{{ $stats['pending_approval'] ?? 0 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check text-green-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium text-gray-500">Approved</h3>
+                        <p class="text-2xl font-semibold text-gray-900">{{ $stats['approved_requests'] ?? 0 }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-cog text-purple-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium text-gray-500">In Production</h3>
+                        <p class="text-2xl font-semibold text-gray-900">{{ $stats['in_production'] ?? 0 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -86,8 +145,123 @@
             </form>
         </div>
 
+        <!-- Enhanced Filters -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Filter Production Requests</h3>
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select name="status"
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">All Statuses</option>
+                        <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="submitted" {{ request('status') == 'submitted' ? 'selected' : '' }}>Submitted
+                        </option>
+                        <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                        <option value="in_production" {{ request('status') == 'in_production' ? 'selected' : '' }}>In
+                            Production</option>
+                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed
+                        </option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                    <select name="branch_id"
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">All Branches</option>
+                        @foreach ($branches as $branch)
+                            <option value="{{ $branch->id }}"
+                                {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Request Date From</label>
+                    <input type="date" name="date_from" value="{{ request('date_from') }}"
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Request Date To</label>
+                    <input type="date" name="date_to" value="{{ request('date_to') }}"
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Required Date From</label>
+                    <input type="date" name="required_date_from" value="{{ request('required_date_from') }}"
+                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <div class="flex items-end">
+                    <button type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">
+                        <i class="fas fa-filter mr-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+
+            <!-- Quick Filter Buttons -->
+            <div class="mt-4 flex flex-wrap gap-2">
+                <a href="{{ route('admin.production.requests.index') }}"
+                    class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full {{ !request()->hasAny(['status', 'branch_id', 'date_from', 'date_to', 'required_date_from']) ? 'bg-blue-100 text-blue-800' : 'text-gray-700' }}">
+                    All
+                </a>
+                <a href="{{ route('admin.production.requests.index', ['status' => 'submitted']) }}"
+                    class="px-3 py-1 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-full">
+                    Pending Approval ({{ $stats['pending_approval'] }})
+                </a>
+                <a href="{{ route('admin.production.requests.index', ['status' => 'approved']) }}"
+                    class="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-800 rounded-full">
+                    Approved ({{ $stats['approved_requests'] }})
+                </a>
+                <a href="{{ route('admin.production.requests.index', ['status' => 'in_production']) }}"
+                    class="px-3 py-1 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-full">
+                    In Production ({{ $stats['in_production'] }})
+                </a>
+                @if (request('required_date_from') || request('required_date_to'))
+                    <span class="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-full">
+                        <i class="fas fa-calendar mr-1"></i>Required Date Filter Active
+                    </span>
+                @endif
+            </div>
+        </div>
+
         <!-- Requests Table -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            Production Requests
+                            @if (request()->filled('branch_id'))
+                                - {{ $branches->where('id', request('branch_id'))->first()->name ?? 'Unknown Branch' }}
+                            @endif
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of
+                            {{ $requests->total() }} requests
+                            @if (request()->filled('status'))
+                                with status: <span class="font-medium">{{ ucfirst(request('status')) }}</span>
+                            @endif
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        @if (request()->hasAny(['status', 'branch_id', 'date_from', 'date_to']))
+                            <a href="{{ route('admin.production.requests.index') }}"
+                                class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg">
+                                <i class="fas fa-times mr-1"></i>Clear Filters
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">
@@ -96,7 +270,8 @@
                                 Request Details</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Branch</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Items
                                 Count</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Required Date</th>
