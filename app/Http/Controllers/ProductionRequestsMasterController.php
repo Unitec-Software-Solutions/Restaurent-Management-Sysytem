@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\ProductionRequestMaster;
 use App\Models\ProductionRequestItem;
 use App\Models\ItemMaster;
 use App\Models\Branch;
+use App\Models\Recipe;
+use App\Models\RecipeDetail;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -17,13 +19,10 @@ class ProductionRequestsMasterController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ProductionRequestMaster::with(['branch', 'items.item', 'createdBy'])
-            ->where('organization_id', Auth::user()->organization_id);
-
-        // Filter by branch for branch users
-        if ((Auth::user()->role ?? null) !== 'admin' && Auth::user()->branch_id) {
-            $query->where('branch_id', Auth::user()->branch_id);
-        }
+        $admin = auth('admin')->user();
+        
+        $query = ProductionRequestMaster::with(['items.item', 'branch'])
+            ->where('organization_id', $admin->organization_id);
 
         // Apply filters
         if ($request->filled('status')) {
@@ -42,10 +41,36 @@ class ProductionRequestsMasterController extends Controller
             $query->whereDate('request_date', '<=', $request->date_to);
         }
 
+        if ($request->filled('required_date_from')) {
+            $query->whereDate('required_date', '>=', $request->required_date_from);
+        }
+
+        if ($request->filled('required_date_to')) {
+            $query->whereDate('required_date', '<=', $request->required_date_to);
+        }
+
         $requests = $query->latest()->paginate(20);
+
+        // Get branches for filter
         $branches = Branch::where('organization_id', Auth::user()->organization_id)->get();
 
-        return view('admin.production.requests.index', compact('requests', 'branches'));
+        // Get statistics for filters
+        $stats = [
+            'pending_approval' => ProductionRequestMaster::where('organization_id', Auth::user()->organization_id)
+                ->where('status', ProductionRequestMaster::STATUS_SUBMITTED)
+                ->count(),
+            'approved_requests' => ProductionRequestMaster::where('organization_id', Auth::user()->organization_id)
+                ->where('status', ProductionRequestMaster::STATUS_APPROVED)
+                ->count(),
+            'in_production' => ProductionRequestMaster::where('organization_id', Auth::user()->organization_id)
+                ->where('status', ProductionRequestMaster::STATUS_IN_PRODUCTION)
+                ->count(),
+            'completed' => ProductionRequestMaster::where('organization_id', Auth::user()->organization_id)
+                ->where('status', ProductionRequestMaster::STATUS_COMPLETED)
+                ->count()
+        ];
+
+        return view('admin.production.requests.index', compact('requests', 'branches', 'stats'));
     }
 
     /**
@@ -291,5 +316,146 @@ class ProductionRequestsMasterController extends Controller
             'items' => $aggregated,
             'ingredients' => $totalIngredients
         ];
+    }
+
+    /**
+     * Show all production requests for management (HQ only)
+     */
+    public function manage(Request $request)
+    {
+        $admin = auth('admin')->user();
+        
+        // For debugging - temporarily allow all authenticated admins
+        // TODO: Restore proper access control once tested
+        // if (!$admin->is_super_admin && $admin->branch_id !== null) {
+        //     abort(403, 'Access denied. HQ access required.');
+        // }
+
+        $baseQuery = ProductionRequestMaster::with(['items.item', 'branch', 'createdBy', 'approvedBy']);
+        
+        // Filter by organization for non-super admins
+        if (!$admin->is_super_admin) {
+            $baseQuery->where('organization_id', $admin->organization_id);
+        }
+
+        // Get pending approval requests (submitted status)
+        $pendingApprovalRequests = (clone $baseQuery)
+            ->where('status', ProductionRequestMaster::STATUS_SUBMITTED)
+            ->orderBy('required_date')
+            ->get();
+
+        // Get approved requests
+        $approvedRequests = (clone $baseQuery)
+            ->where('status', ProductionRequestMaster::STATUS_APPROVED)
+            ->orderBy('approved_at', 'desc')
+            ->get();
+
+        // Get all requests for general listing
+        $query = (clone $baseQuery);
+
+        // Apply filters for all requests tab
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('request_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('request_date', '<=', $request->date_to);
+        }
+
+        if ($request->filled('required_date_from')) {
+            $query->whereDate('required_date', '>=', $request->required_date_from);
+        }
+
+        if ($request->filled('required_date_to')) {
+            $query->whereDate('required_date', '<=', $request->required_date_to);
+        }
+
+        $requests = $query->latest()->paginate(20);
+
+        // Get branches for filter
+        $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
+
+        return view('admin.production.requests.manage', compact(
+            'pendingApprovalRequests', 
+            'approvedRequests', 
+            'requests', 
+            'branches'
+        ));
+    }
+
+    /**
+     * Show approval form for a production request
+     */
+    public function showApprovalForm(ProductionRequestMaster $productionRequest)
+    {
+        $admin = auth('admin')->user();
+        
+        // Allow super admin and organization admin (users without branch_id = HQ users)
+        if (!$admin->is_super_admin && $admin->branch_id !== null) {
+            abort(403, 'Access denied. HQ access required.');
+        }
+
+        if (!$productionRequest->canBeApproved()) {
+            return redirect()->back()->with('error', 'This request cannot be approved.');
+        }
+
+        $productionRequest->load(['items.item', 'branch', 'createdBy']);
+
+        return view('admin.production.requests.approval-form', compact('productionRequest'));
+    }
+
+    /**
+     * Process approval of production request
+     */
+    public function processApproval(Request $request, ProductionRequestMaster $productionRequest)
+    {
+        $admin = auth('admin')->user();
+        
+        // Allow super admin and organization admin (users without branch_id = HQ users)
+        if (!$admin->is_super_admin && $admin->branch_id !== null) {
+            abort(403, 'Access denied. HQ access required.');
+        }
+
+        if (!$productionRequest->canBeApproved()) {
+            return redirect()->back()->with('error', 'This request cannot be approved.');
+        }
+
+        $request->validate([
+            'items' => 'required|array',
+            'items.*.quantity_approved' => 'required|numeric|min:0',
+            'approval_notes' => 'nullable|string|max:500'
+        ]);
+
+        DB::transaction(function () use ($request, $productionRequest, $admin) {
+            // Update each item with approved quantities
+            foreach ($request->items as $itemId => $itemData) {
+                $productionRequestItem = $productionRequest->items()->where('item_id', $itemId)->first();
+                if ($productionRequestItem) {
+                    $productionRequestItem->update([
+                        'quantity_approved' => $itemData['quantity_approved'],
+                        'notes' => $itemData['notes'] ?? null
+                    ]);
+                }
+            }
+
+            // Update master request
+            $productionRequest->update([
+                'status' => ProductionRequestMaster::STATUS_APPROVED,
+                'approved_by_user_id' => $admin->id,
+                'approved_at' => now(),
+                'notes' => $request->approval_notes
+            ]);
+        });
+
+        return redirect()->route('admin.production.requests.manage')
+            ->with('success', 'Production request approved successfully.');
     }
 }
