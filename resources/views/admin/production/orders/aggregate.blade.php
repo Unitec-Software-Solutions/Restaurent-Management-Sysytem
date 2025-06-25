@@ -27,6 +27,13 @@
                 </div>
             @endif
 
+            @if (session('error'))
+                <div class="mb-6 bg-red-100 text-red-800 p-4 rounded-lg border border-red-200 shadow">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    {{ session('error') }}
+                </div>
+            @endif
+
             <!-- Filters -->
             <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <form method="GET" action="{{ route('admin.production.requests.aggregate') }}">
@@ -62,7 +69,7 @@
                 </form>
             </div>
 
-            <form action="{{ route('admin.production.orders.store') }}" method="POST" id="aggregateForm">
+            <form action="{{ route('admin.production.orders.store_aggregated') }}" method="POST" id="aggregateForm">
                 @csrf
 
                 <!-- Production Requests Table -->
@@ -105,46 +112,51 @@
                                             Required Date</th>
                                         <th
                                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Total Quantity</th>
+                                            Total Qty</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     @foreach ($requests as $request)
-                                        <tr class="hover:bg-gray-50">
+                                        <tr>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <input type="checkbox" name="selected_requests[]"
                                                     value="{{ $request->id }}"
-                                                    class="request-checkbox rounded border-gray-300 text-blue-600 shadow-sm"
-                                                    data-request='@json($request)'>
+                                                    class="request-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-medium text-gray-900">Request #{{ $request->id }}
                                                 </div>
                                                 <div class="text-sm text-gray-500">
-                                                    {{ $request->created_at->format('M d, Y') }}</div>
+                                                    {{ $request->request_date->format('M d, Y') }}</div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm text-gray-900">{{ $request->branch->name }}</div>
                                             </td>
-                                            <td class="px-6 py-4">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm text-gray-900">{{ $request->items->count() }} items
                                                 </div>
-                                                <div class="text-sm text-gray-500 max-w-xs truncate">
-                                                    {{ $request->items->pluck('item.name')->join(', ') }}
+                                                <div class="text-xs text-gray-500">
+                                                    @foreach ($request->items->take(3) as $item)
+                                                        {{ $item->item->name }}@if (!$loop->last)
+                                                            ,
+                                                        @endif
+                                                    @endforeach
+                                                    @if ($request->items->count() > 3)
+                                                        <span class="text-gray-400">... +{{ $request->items->count() - 3 }}
+                                                            more</span>
+                                                    @endif
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm text-gray-900">
                                                     {{ $request->required_date->format('M d, Y') }}</div>
                                                 @if ($request->required_date->isPast())
-                                                    <span
-                                                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                        Overdue
-                                                    </span>
+                                                    <div class="text-xs text-red-500">Overdue</div>
                                                 @endif
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {{ $request->items->sum('quantity_approved') }}
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {{ number_format($request->getTotalQuantityApproved(), 2) }}</div>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -153,10 +165,9 @@
                         </div>
                     @else
                         <div class="p-12 text-center">
-                            <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-lg font-medium text-gray-900">No approved requests found</p>
-                            <p class="text-sm text-gray-500">Check if there are any approved production requests to
-                                aggregate</p>
+                            <i class="fas fa-box-open text-gray-300 text-6xl mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900">No Approved Requests</h3>
+                            <p class="text-gray-500">No approved production requests found for the selected criteria.</p>
                         </div>
                     @endif
                 </div>
@@ -165,400 +176,449 @@
                 <div id="selectedSummary" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-blue-900">Selected Requests Summary</h3>
-                        <button type="button" onclick="clearSelection()" class="text-blue-600 hover:text-blue-800 text-sm">
-                            Clear Selection
+                        <button type="button" id="previewIngredientsBtn"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-eye mr-2"></i>Preview Ingredients
                         </button>
                     </div>
-                    <div id="selectedRequestsList" class="text-sm text-blue-700 mb-4"></div>
+                    <div id="selectedRequestsList" class="text-sm text-blue-700"></div>
+                </div>
 
-                    <!-- Aggregated Items Preview -->
-                    <div id="aggregatedItemsPreview" class="mt-6">
-                        <h4 class="font-medium text-blue-900 mb-3">Production Items to Manufacture</h4>
-                        <div class="bg-white rounded-lg overflow-hidden shadow-sm">
-                            <div class="overflow-x-auto">
-                                <table class="w-full">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item
-                                            </th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Total Quantity</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Branches</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Recipe Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="aggregatedItemsBody" class="divide-y divide-gray-200">
-                                        <!-- Items will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
+                <!-- Aggregated Items Preview -->
+                <div id="aggregatedItemsPreview" class="hidden bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Aggregated Production Items</h3>
+                    </div>
+                    <div id="aggregatedItemsContent"></div>
+                </div>
+
+                <!-- Ingredient Requirements Preview -->
+                <div id="ingredientRequirements" class="hidden bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900">Required Ingredients</h3>
+                            <button type="button" id="addManualIngredientBtn"
+                                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition duration-200">
+                                <i class="fas fa-plus mr-2"></i>Add Manual Ingredient
+                            </button>
                         </div>
                     </div>
+                    <div id="ingredientRequirementsContent"></div>
 
-                    <!-- Ingredients Summary -->
-                    <div id="ingredientsSummary" class="mt-6">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-medium text-blue-900">Required Ingredients Summary</h4>
-                            <div class="flex items-center gap-2">
-                                <button type="button" id="calculateIngredientsBtn"
-                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">
-                                    <i class="fas fa-calculator mr-2"></i>Calculate Ingredients
-                                </button>
-                                <button type="button" id="addIngredientBtn"
-                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">
-                                    <i class="fas fa-plus mr-2"></i>Add Manual Ingredient
-                                </button>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-lg overflow-hidden shadow-sm">
-                            <div class="overflow-x-auto">
-                                <table class="w-full">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Ingredient</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Required Quantity</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Unit</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Available Stock</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Source</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Notes</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="ingredientsBody" class="divide-y divide-gray-200">
-                                        <!-- Ingredients will be populated by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div id="ingredientsEmptyState" class="p-8 text-center text-gray-500 hidden">
-                                <i class="fas fa-flask text-3xl mb-2 text-gray-300"></i>
-                                <p class="text-sm">No ingredients calculated yet. Select requests and click "Calculate
-                                    Ingredients".</p>
-                            </div>
-                        </div>
+                    <!-- Manual Ingredients Section -->
+                    <div id="manualIngredientsSection" class="p-6 border-t border-gray-200 bg-gray-50 hidden">
+                        <h4 class="text-md font-semibold text-gray-900 mb-4">Manual Ingredients</h4>
+                        <div id="manualIngredientsList"></div>
                     </div>
+                </div>
 
-                    <!-- Production Order Details -->
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="production_date" class="block text-sm font-medium text-blue-900 mb-2">Production
-                                Date *</label>
-                            <input type="date" name="production_date" id="production_date"
-                                value="{{ now()->addDay()->toDateString() }}"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
-                        </div>
-                        <div>
-                            <label for="priority" class="block text-sm font-medium text-blue-900 mb-2">Priority</label>
-                            <select name="priority" id="priority"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                <option value="normal">Normal</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
-                            </select>
-                        </div>
-                    </div>
+                <!-- Production Order Notes -->
+                <div id="productionNotesSection" class="hidden bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <label for="production_notes" class="block text-sm font-medium text-gray-700 mb-2">Production
+                        Notes</label>
+                    <textarea name="production_notes" id="production_notes" rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter any special instructions or notes for this production order..."></textarea>
+                </div>
 
-                    <div class="mt-6">
-                        <label for="production_notes" class="block text-sm font-medium text-blue-900 mb-2">Production
-                            Notes</label>
-                        <textarea name="production_notes" id="production_notes" rows="3"
-                            placeholder="Add any special instructions for production..."
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
-                    </div>
-
-                    <div class="mt-6 flex justify-end">
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg">
-                            <i class="fas fa-plus mr-2"></i>Create Production Order
-                        </button>
-                    </div>
+                <!-- Submit Button -->
+                <div id="submitSection" class="hidden flex justify-end">
+                    <button type="submit" id="createProductionOrderBtn"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200">
+                        <i class="fas fa-plus mr-2"></i>Create Production Order
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Add Ingredient Modal -->
-    @include('admin.production.orders.partials.add-ingredient-modal')
+    <!-- Manual Ingredient Modal -->
+    <div id="manualIngredientModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-md w-full">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Add Manual Ingredient</h3>
+                        <button type="button" id="closeManualIngredientModal" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ingredient</label>
+                        <select id="manualIngredientSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <option value="">Select an ingredient...</option>
+                            @foreach ($availableIngredients as $ingredient)
+                                <option value="{{ $ingredient->id }}" data-name="{{ $ingredient->name }}"
+                                    data-unit="{{ $ingredient->unit_of_measurement }}">
+                                    {{ $ingredient->name }} ({{ $ingredient->unit_of_measurement }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                        <input type="number" id="manualIngredientQuantity" step="0.001" min="0"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="0.000">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                        <textarea id="manualIngredientNotes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="Optional notes..."></textarea>
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <button type="button" id="cancelManualIngredient"
+                            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="button" id="addManualIngredient"
+                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                            Add Ingredient
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-@endsection
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const selectAllBtn = document.getElementById('selectAllBtn');
+                const clearAllBtn = document.getElementById('clearAllBtn');
+                const requestCheckboxes = document.querySelectorAll('.request-checkbox');
+                const selectedSummary = document.getElementById('selectedSummary');
+                const previewIngredientsBtn = document.getElementById('previewIngredientsBtn');
+                const aggregatedItemsPreview = document.getElementById('aggregatedItemsPreview');
+                const ingredientRequirements = document.getElementById('ingredientRequirements');
+                const productionNotesSection = document.getElementById('productionNotesSection');
+                const submitSection = document.getElementById('submitSection');
+                const manualIngredientModal = document.getElementById('manualIngredientModal');
+                const addManualIngredientBtn = document.getElementById('addManualIngredientBtn');
 
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            let selectedRequests = [];
-            let aggregatedItems = {};
-            let calculatedIngredients = {};
-            let manualIngredients = {};
+                let selectedRequests = [];
+                let manualIngredients = [];
 
-            const requestCheckboxes = document.querySelectorAll('.request-checkbox');
-            const selectedSummary = document.getElementById('selectedSummary');
-            const selectedRequestsList = document.getElementById('selectedRequestsList');
-            const aggregatedItemsBody = document.getElementById('aggregatedItemsBody');
-            const ingredientsBody = document.getElementById('ingredientsBody');
-            const ingredientsEmptyState = document.getElementById('ingredientsEmptyState');
-            const calculateIngredientsBtn = document.getElementById('calculateIngredientsBtn');
+                // Select All functionality - prevent duplicates
+                selectAllBtn.addEventListener('click', function() {
+                    requestCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.checked = true;
+                            const requestId = checkbox.value;
+                            if (!selectedRequests.includes(requestId)) {
+                                selectedRequests.push(requestId);
+                            }
+                        }
+                    });
+                    updateSummary();
+                });
 
-            // Handle request selection
-            requestCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        selectedRequests.push(JSON.parse(this.dataset.request));
-                    } else {
-                        selectedRequests = selectedRequests.filter(req => req.id != this.value);
+                // Clear All functionality
+                clearAllBtn.addEventListener('click', function() {
+                    requestCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    selectedRequests = [];
+                    manualIngredients = [];
+                    hideSections();
+                });
+
+                // Individual checkbox change
+                requestCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', function() {
+                        const requestId = this.value;
+                        if (this.checked) {
+                            if (!selectedRequests.includes(requestId)) {
+                                selectedRequests.push(requestId);
+                            }
+                        } else {
+                            selectedRequests = selectedRequests.filter(id => id !== requestId);
+                        }
+                        updateSummary();
+                    });
+                });
+
+                // Preview ingredients
+                previewIngredientsBtn.addEventListener('click', function() {
+                    if (selectedRequests.length === 0) {
+                        alert('Please select at least one request first.');
+                        return;
                     }
-                    updateAggregatedView();
+                    fetchIngredientRequirements();
                 });
-            });
 
-            // Select/Clear all buttons
-            document.getElementById('selectAllBtn').addEventListener('click', function() {
-                requestCheckboxes.forEach(checkbox => {
-                    checkbox.checked = true;
-                    checkbox.dispatchEvent(new Event('change'));
+                // Manual ingredient modal
+                addManualIngredientBtn.addEventListener('click', function() {
+                    manualIngredientModal.classList.remove('hidden');
                 });
-            });
 
-            document.getElementById('clearAllBtn').addEventListener('click', function() {
-                requestCheckboxes.forEach(checkbox => {
-                    checkbox.checked = false;
-                    checkbox.dispatchEvent(new Event('change'));
+                document.getElementById('closeManualIngredientModal').addEventListener('click', function() {
+                    manualIngredientModal.classList.add('hidden');
+                    clearManualIngredientForm();
                 });
-            });
 
-            // Calculate ingredients button
-            calculateIngredientsBtn.addEventListener('click', function() {
-                if (Object.keys(aggregatedItems).length === 0) {
-                    alert('Please select production requests first.');
-                    return;
+                document.getElementById('cancelManualIngredient').addEventListener('click', function() {
+                    manualIngredientModal.classList.add('hidden');
+                    clearManualIngredientForm();
+                });
+
+                document.getElementById('addManualIngredient').addEventListener('click', function() {
+                    addManualIngredient();
+                });
+
+                function updateSummary() {
+                    if (selectedRequests.length === 0) {
+                        hideSections();
+                        return;
+                    }
+
+                    selectedSummary.classList.remove('hidden');
+                    const selectedRequestsList = document.getElementById('selectedRequestsList');
+                    selectedRequestsList.innerHTML =
+                        `Selected ${selectedRequests.length} request(s): ${selectedRequests.map(id => `#${id}`).join(', ')}`;
                 }
-                calculateIngredients();
-            });
 
-            function updateAggregatedView() {
-                if (selectedRequests.length === 0) {
+                function hideSections() {
                     selectedSummary.classList.add('hidden');
-                    return;
+                    aggregatedItemsPreview.classList.add('hidden');
+                    ingredientRequirements.classList.add('hidden');
+                    productionNotesSection.classList.add('hidden');
+                    submitSection.classList.add('hidden');
                 }
 
-                selectedSummary.classList.remove('hidden');
+                function fetchIngredientRequirements() {
+                    const requestIds = selectedRequests.join(',');
 
-                // Update selected requests list
-                selectedRequestsList.innerHTML = selectedRequests.map(req =>
-                    `Request #${req.id} (${req.branch.name}) - ${req.items.length} items`
-                ).join('<br>');
+                    // Show loading
+                    aggregatedItemsPreview.classList.remove('hidden');
+                    document.getElementById('aggregatedItemsContent').innerHTML =
+                        '<div class="p-6 text-center"><i class="fas fa-spinner fa-spin text-gray-400 text-2xl"></i><p class="text-gray-500 mt-2">Loading aggregated items...</p></div>';
 
-                // Calculate aggregated items
-                aggregatedItems = {};
-                selectedRequests.forEach(request => {
-                    request.items.forEach(item => {
-                        const itemId = item.item_id;
-                        if (!aggregatedItems[itemId]) {
-                            aggregatedItems[itemId] = {
-                                item: item.item,
-                                totalQuantity: 0,
-                                branches: {}
-                            };
-                        }
+                    ingredientRequirements.classList.remove('hidden');
+                    document.getElementById('ingredientRequirementsContent').innerHTML =
+                        '<div class="p-6 text-center"><i class="fas fa-spinner fa-spin text-gray-400 text-2xl"></i><p class="text-gray-500 mt-2">Calculating ingredient requirements...</p></div>';
 
-                        aggregatedItems[itemId].totalQuantity += parseFloat(item.quantity_approved);
-
-                        if (!aggregatedItems[itemId].branches[request.branch.name]) {
-                            aggregatedItems[itemId].branches[request.branch.name] = 0;
-                        }
-                        aggregatedItems[itemId].branches[request.branch.name] += parseFloat(item
-                            .quantity_approved);
-                    });
-                });
-
-                updateAggregatedItemsDisplay();
-                resetIngredientsDisplay();
-            }
-
-            function updateAggregatedItemsDisplay() {
-                aggregatedItemsBody.innerHTML = '';
-                Object.values(aggregatedItems).forEach(itemData => {
-                    const row = document.createElement('tr');
-                    const branchesText = Object.entries(itemData.branches)
-                        .map(([branch, qty]) => `${branch}: ${qty}`)
-                        .join('<br>');
-
-                    row.innerHTML = `
-                        <td class="px-4 py-2 text-sm font-medium text-gray-900">${itemData.item.name}</td>
-                        <td class="px-4 py-2 text-sm text-gray-900">${itemData.totalQuantity}</td>
-                        <td class="px-4 py-2 text-sm text-gray-600">${branchesText}</td>
-                        <td class="px-4 py-2">
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Checking Recipe...
-                            </span>
-                        </td>
-                    `;
-                    aggregatedItemsBody.appendChild(row);
-                });
-            }
-
-            function resetIngredientsDisplay() {
-                calculatedIngredients = {};
-                manualIngredients = {};
-                ingredientsBody.innerHTML = '';
-                ingredientsEmptyState.classList.remove('hidden');
-            }
-
-            function calculateIngredients() {
-                // Show loading state
-                calculateIngredientsBtn.disabled = true;
-                calculateIngredientsBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Calculating...';
-
-                // Prepare production items data
-                const productionItems = [];
-                Object.entries(aggregatedItems).forEach(([itemId, itemData]) => {
-                    productionItems.push({
-                        item_id: itemId,
-                        quantity: itemData.totalQuantity
-                    });
-                });
-
-                // Make AJAX call to calculate ingredients
-                fetch('/admin/production/calculate-ingredients-from-recipes', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute(
-                                'content')
-                        },
-                        body: JSON.stringify({
-                            production_items: productionItems
+                    // Fetch ingredient calculations
+                    fetch(`{{ route('admin.production.requests.calculate-ingredients') }}?request_ids=${requestIds}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                displayAggregatedItems(data.aggregatedItems);
+                                displayIngredientRequirements(data.ingredients);
+                                showProductionSections();
+                            } else {
+                                alert('Error calculating ingredients: ' + data.message);
+                            }
                         })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        calculatedIngredients = data.ingredients_summary || {};
-                        updateIngredientsDisplay();
-                        updateRecipeStatus(data.missing_recipes || []);
-                    })
-                    .catch(error => {
-                        console.error('Error calculating ingredients:', error);
-                        alert('Error calculating ingredients. Please try again.');
-                    })
-                    .finally(() => {
-                        calculateIngredientsBtn.disabled = false;
-                        calculateIngredientsBtn.innerHTML =
-                            '<i class="fas fa-calculator mr-2"></i>Calculate Ingredients';
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error fetching ingredient requirements');
+                        });
+                }
+
+                function displayAggregatedItems(items) {
+                    let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Quantity</th>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From Requests</th>';
+                    html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
+
+                    Object.values(items).forEach(item => {
+                        html += '<tr>';
+                        html +=
+                            `<td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${item.item.name}</div></td>`;
+                        html +=
+                            `<td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${parseFloat(item.total_quantity).toFixed(2)} ${item.item.unit_of_measurement}</div></td>`;
+                        html += '<td class="px-6 py-4"><div class="text-xs text-gray-500">';
+                        item.requests.forEach(req => {
+                            html +=
+                                `Request #${req.request_id} (${req.branch}): ${parseFloat(req.quantity).toFixed(2)}<br>`;
+                        });
+                        html += '</div></td>';
+                        html += '</tr>';
                     });
-            }
 
-            function updateIngredientsDisplay() {
-                ingredientsBody.innerHTML = '';
-                ingredientsEmptyState.classList.add('hidden');
-
-                // Display calculated ingredients
-                Object.entries(calculatedIngredients).forEach(([ingredientId, data]) => {
-                    addIngredientRow(ingredientId, data, 'recipe');
-                });
-
-                // Display manual ingredients
-                Object.entries(manualIngredients).forEach(([ingredientId, data]) => {
-                    addIngredientRow(ingredientId, data, 'manual');
-                });
-
-                if (Object.keys(calculatedIngredients).length === 0 && Object.keys(manualIngredients).length ===
-                    0) {
-                    ingredientsEmptyState.classList.remove('hidden');
+                    html += '</tbody></table></div>';
+                    document.getElementById('aggregatedItemsContent').innerHTML = html;
                 }
-            }
 
-            function addIngredientRow(ingredientId, data, source) {
-                const row = document.createElement('tr');
-                const isManual = source === 'manual';
-                const stockStatus = data.current_stock >= data.total_required ? 'text-green-600' : 'text-red-600';
-                const stockIcon = data.current_stock >= data.total_required ? 'fa-check-circle' :
-                    'fa-exclamation-triangle';
+                function displayIngredientRequirements(ingredients) {
+                    let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50"><tr>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ingredient</th>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Required Quantity</th>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Available Stock (HQ)</th>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>';
+                    html +=
+                        '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From Items</th>';
+                    html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
 
-                row.innerHTML = `
-                    <td class="px-4 py-2 text-sm font-medium text-gray-900">${data.name}</td>
-                    <td class="px-4 py-2">
-                        <input type="number" step="0.001" min="0.001"
-                            name="ingredients[${ingredientId}][planned_quantity]"
-                            value="${data.total_required}"
-                            class="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
-                            ${!isManual ? 'readonly' : ''}>
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-600">${data.unit}</td>
-                    <td class="px-4 py-2">
-                        <div class="flex items-center">
-                            <i class="fas ${stockIcon} ${stockStatus} mr-1"></i>
-                            <span class="text-sm ${stockStatus}">${data.current_stock || 0}</span>
-                        </div>
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-600">
-                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isManual ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
-                            ${isManual ? 'Manual' : 'Recipe'}
-                        </span>
-                    </td>
-                    <td class="px-4 py-2">
-                        <input type="text" name="ingredients[${ingredientId}][notes]"
-                            placeholder="Notes..."
-                            class="w-32 px-2 py-1 border border-gray-300 rounded text-sm">
-                    </td>
-                    <td class="px-4 py-2">
-                        ${isManual ? `<button type="button" onclick="removeIngredient('${ingredientId}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>` : ''}
-                    </td>
-                    <input type="hidden" name="ingredients[${ingredientId}][ingredient_item_id]" value="${ingredientId}">
-                    <input type="hidden" name="ingredients[${ingredientId}][unit_of_measurement]" value="${data.unit}">
-                    <input type="hidden" name="ingredients[${ingredientId}][is_manually_added]" value="${isManual ? '1' : '0'}">
-                `;
+                    Object.values(ingredients).forEach(ingredient => {
+                        const availableStock = parseFloat(ingredient.available_stock || 0);
+                        const requiredQty = parseFloat(ingredient.total_required);
+                        const isShort = availableStock < requiredQty;
 
-                ingredientsBody.appendChild(row);
-            }
+                        html += '<tr>';
+                        html +=
+                            `<td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${ingredient.item.name}</div><div class="text-sm text-gray-500">${ingredient.unit}</div></td>`;
+                        html +=
+                            `<td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${requiredQty.toFixed(3)} ${ingredient.unit}</div></td>`;
+                        html +=
+                            `<td class="px-6 py-4 whitespace-nowrap"><div class="text-sm ${isShort ? 'text-red-600' : 'text-green-600'}">${availableStock.toFixed(3)} ${ingredient.unit}</div></td>`;
+                        html += '<td class="px-6 py-4 whitespace-nowrap">';
+                        if (isShort) {
+                            html +=
+                                '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Short by ' +
+                                (requiredQty - availableStock).toFixed(3) + '</span>';
+                        } else {
+                            html +=
+                                '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Sufficient</span>';
+                        }
+                        html += '</td>';
+                        html += '<td class="px-6 py-4"><div class="text-xs text-gray-500">';
+                        ingredient.from_items.forEach(item => {
+                            html +=
+                                `${item.production_item}: ${parseFloat(item.quantity_needed).toFixed(3)}<br>`;
+                        });
+                        html += '</div></td>';
+                        html += '</tr>';
+                    });
 
-            function updateRecipeStatus(missingRecipes) {
-                // Update recipe status in aggregated items table
-                const rows = aggregatedItemsBody.querySelectorAll('tr');
-                rows.forEach((row, index) => {
-                    const itemData = Object.values(aggregatedItems)[index];
-                    const statusCell = row.children[3];
-                    const hasRecipe = !missingRecipes.some(missing => missing.item_id == itemData.item.id);
+                    html += '</tbody></table></div>';
+                    document.getElementById('ingredientRequirementsContent').innerHTML = html;
 
-                    if (hasRecipe) {
-                        statusCell.innerHTML = `
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <i class="fas fa-check mr-1"></i>Recipe Available
-                            </span>
-                        `;
-                    } else {
-                        statusCell.innerHTML = `
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                <i class="fas fa-times mr-1"></i>No Recipe
-                            </span>
-                        `;
+                    // Update manual ingredients display
+                    updateManualIngredientsDisplay();
+                }
+
+                function addManualIngredient() {
+                    const select = document.getElementById('manualIngredientSelect');
+                    const quantity = document.getElementById('manualIngredientQuantity');
+                    const notes = document.getElementById('manualIngredientNotes');
+
+                    if (!select.value || !quantity.value || parseFloat(quantity.value) <= 0) {
+                        alert('Please select an ingredient and enter a valid quantity.');
+                        return;
                     }
-                });
-            }
 
-            // Global function for removing ingredients
-            window.removeIngredient = function(ingredientId) {
-                if (confirm('Are you sure you want to remove this ingredient?')) {
-                    delete manualIngredients[ingredientId];
-                    updateIngredientsDisplay();
+                    const selectedOption = select.selectedOptions[0];
+                    const ingredient = {
+                        id: select.value,
+                        name: selectedOption.dataset.name,
+                        unit: selectedOption.dataset.unit,
+                        quantity: parseFloat(quantity.value),
+                        notes: notes.value || ''
+                    };
+
+                    // Check if ingredient already exists
+                    const existingIndex = manualIngredients.findIndex(ing => ing.id === ingredient.id);
+                    if (existingIndex !== -1) {
+                        manualIngredients[existingIndex].quantity += ingredient.quantity;
+                    } else {
+                        manualIngredients.push(ingredient);
+                    }
+
+                    updateManualIngredientsDisplay();
+                    manualIngredientModal.classList.add('hidden');
+                    clearManualIngredientForm();
                 }
-            };
 
-            window.clearSelection = function() {
-                requestCheckboxes.forEach(checkbox => {
-                    checkbox.checked = false;
-                });
-                selectedRequests = [];
-                aggregatedItems = {};
-                calculatedIngredients = {};
-                manualIngredients = {};
-                selectedSummary.classList.add('hidden');
-            };
-        });
-    </script>
-@endpush
+                function updateManualIngredientsDisplay() {
+                    const section = document.getElementById('manualIngredientsSection');
+                    const list = document.getElementById('manualIngredientsList');
+
+                    if (manualIngredients.length === 0) {
+                        section.classList.add('hidden');
+                        return;
+                    }
+
+                    section.classList.remove('hidden');
+
+                    let html = '';
+                    manualIngredients.forEach((ingredient, index) => {
+                        html +=
+                            `<div class="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200 mb-2">`;
+                        html += `<div>`;
+                        html += `<div class="text-sm font-medium text-gray-900">${ingredient.name}</div>`;
+                        html +=
+                            `<div class="text-sm text-gray-500">${ingredient.quantity.toFixed(3)} ${ingredient.unit}</div>`;
+                        if (ingredient.notes) {
+                            html += `<div class="text-xs text-gray-400">${ingredient.notes}</div>`;
+                        }
+                        html += `</div>`;
+                        html +=
+                            `<button type="button" onclick="removeManualIngredient(${index})" class="text-red-600 hover:text-red-800">`;
+                        html += `<i class="fas fa-trash"></i>`;
+                        html += `</button>`;
+                        html += `</div>`;
+
+                        // Add hidden inputs for form submission
+                        html +=
+                            `<input type="hidden" name="manual_ingredients[${index}][ingredient_id]" value="${ingredient.id}">`;
+                        html +=
+                            `<input type="hidden" name="manual_ingredients[${index}][quantity]" value="${ingredient.quantity}">`;
+                        html +=
+                            `<input type="hidden" name="manual_ingredients[${index}][notes]" value="${ingredient.notes}">`;
+                    });
+
+                    list.innerHTML = html;
+                }
+
+                window.removeManualIngredient = function(index) {
+                    manualIngredients.splice(index, 1);
+                    updateManualIngredientsDisplay();
+                };
+
+                function clearManualIngredientForm() {
+                    document.getElementById('manualIngredientSelect').value = '';
+                    document.getElementById('manualIngredientQuantity').value = '';
+                    document.getElementById('manualIngredientNotes').value = '';
+                }
+
+                function showProductionSections() {
+                    productionNotesSection.classList.remove('hidden');
+                    submitSection.classList.remove('hidden');
+
+                    // Add validation before allowing submission
+                    const form = document.getElementById('aggregateForm');
+                    form.addEventListener('submit', function(e) {
+                        // Check for ingredient shortages
+                        const ingredientRows = document.querySelectorAll(
+                            '#ingredientRequirementsContent tbody tr');
+                        let hasShortages = false;
+                        let shortageItems = [];
+
+                        ingredientRows.forEach(row => {
+                            const statusCell = row.querySelector('td:nth-child(4) span');
+                            if (statusCell && statusCell.textContent.includes('Short by')) {
+                                hasShortages = true;
+                                const ingredientName = row.querySelector(
+                                    'td:first-child .text-gray-900').textContent;
+                                shortageItems.push(ingredientName);
+                            }
+                        });
+
+                        if (hasShortages) {
+                            e.preventDefault();
+                            const proceed = confirm(
+                                `WARNING: The following ingredients have insufficient stock in HQ branch:\n\n${shortageItems.join('\n')}\n\nDo you want to proceed anyway? You will need to purchase or transfer these ingredients before production can begin.`
+                                );
+                            if (proceed) {
+                                // Remove the event listener and resubmit
+                                form.removeEventListener('submit', arguments.callee);
+                                form.submit();
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
+    @endpush
+@endsection
