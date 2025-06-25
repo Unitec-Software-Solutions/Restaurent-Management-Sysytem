@@ -51,20 +51,45 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
                         @php
                             $user = Auth::user();
-                            $branchName = null;
-                            $branchId = $user->branch_id;
-                            if ($branchId) {
-                                $branch = \App\Models\Branch::find($branchId);
-                                $branchName = $branch ? $branch->name : 'Unknown Branch';
-                            }
+                            $userBranchId = $user->branch_id;
+                            $isAdmin = $userBranchId === null; // Admin users have no specific branch
                         @endphp
-                        <input type="text" value="{{ $branchName ?? 'N/A' }}"
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100" readonly>
-                        @if ($branchId)
-                            <input type="hidden" name="branch_id" value="{{ $branchId }}">
+
+                        @if ($isAdmin)
+                            <!-- Admin can select branch -->
+                            <select name="branch_id" required
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="">Select Branch</option>
+                                @php
+                                    $branches = \App\Models\Branch::where('organization_id', $user->organization_id)
+                                        ->where('is_active', true)
+                                        ->orderBy('name')
+                                        ->get();
+                                @endphp
+                                @foreach ($branches as $branch)
+                                    <option value="{{ $branch->id }}"
+                                        {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                        {{ $branch->name }}
+                                        @if ($branch->is_head_office)
+                                            (Head Office)
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Select the branch requesting these items</p>
+                        @else
+                            <!-- Branch user - branch is pre-selected -->
+                            @php
+                                $userBranch = \App\Models\Branch::find($userBranchId);
+                                $branchName = $userBranch ? $userBranch->name : 'Unknown Branch';
+                            @endphp
+                            <input type="text" value="{{ $branchName }}"
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                            <input type="hidden" name="branch_id" value="{{ $userBranchId }}">
+                            <p class="text-xs text-gray-500 mt-1">Your branch (automatically selected)</p>
                         @endif
                     </div>
                 </div>
@@ -135,27 +160,47 @@
                                             <!-- Current Stock Information -->
                                             <div class="mt-2 flex items-center space-x-4 text-sm">
                                                 @php
-                                                    $currentStock =
-                                                        $item
-                                                            ->transactions()
-                                                            ->where('branch_id', Auth::user()->branch_id)
-                                                            ->selectRaw(
-                                                                "COALESCE(SUM(CASE\n                    WHEN transaction_type IN ('purchase', 'production', 'adjustment_increase') THEN quantity\n                    WHEN transaction_type IN ('sale', 'consumption', 'waste', 'adjustment_decrease') THEN -quantity\n                    ELSE 0\n                END), 0) as current_stock",
-                                                            )
-                                                            ->value('current_stock') ?? 0;
+                                                    // For stock display, use user's branch if they have one, otherwise show HQ stock for admins
+$stockBranchId = $user->branch_id ?? null;
+if ($stockBranchId) {
+    $currentStock =
+        $item
+            ->transactions()
+            ->where('branch_id', $stockBranchId)
+            ->selectRaw(
+                "COALESCE(SUM(CASE
+                                                                    WHEN transaction_type IN ('purchase', 'production', 'adjustment_increase', 'transfer_in') THEN quantity
+                                                                    WHEN transaction_type IN ('sale', 'consumption', 'waste', 'adjustment_decrease', 'transfer_out') THEN -quantity
+                                                                    ELSE 0
+                                                                END), 0) as current_stock",
+            )
+            ->value('current_stock') ?? 0;
+    $stockLocation = $userBranch
+        ? $userBranch->name
+        : 'Current Branch';
+} else {
+    // Admin user - show message about selecting branch first
+    $currentStock = 0;
+    $stockLocation = 'Select branch to view stock';
+                                                    }
                                                 @endphp
 
-                                                <span class="flex items-center">
+                                                <span class="flex items-center stock-info"
+                                                    data-stock-item="{{ $item->id }}">
                                                     <i class="fas fa-box text-gray-400 mr-1"></i>
-                                                    Current Stock:
-                                                    <span
-                                                        class="font-medium ml-1 {{ $currentStock <= ($item->reorder_level ?? 0) ? 'text-red-600' : 'text-green-600' }}">
-                                                        {{ number_format($currentStock, 2) }}
-                                                        {{ $item->unit_of_measurement }}
-                                                    </span>
+                                                    @if ($user->branch_id)
+                                                        Current Stock ({{ $stockLocation }}):
+                                                        <span
+                                                            class="font-medium ml-1 {{ $currentStock <= ($item->reorder_level ?? 0) ? 'text-red-600' : 'text-green-600' }}">
+                                                            {{ number_format($currentStock, 2) }}
+                                                            {{ $item->unit_of_measurement }}
+                                                        </span>
+                                                    @else
+                                                        <span class="text-gray-500 italic">{{ $stockLocation }}</span>
+                                                    @endif
                                                 </span>
 
-                                                @if ($item->reorder_level)
+                                                @if ($item->reorder_level && $user->branch_id)
                                                     <span class="flex items-center text-gray-500">
                                                         <i class="fas fa-exclamation-triangle mr-1"></i>
                                                         Reorder Level: {{ number_format($item->reorder_level, 2) }}
@@ -175,7 +220,8 @@
                                                     data-item-id="{{ $item->id }}" disabled>
                                                     <i class="fas fa-minus text-xs"></i>
                                                 </button>
-                                                <input type="number" name="items[{{ $item->id }}][quantity_requested]"
+                                                <input type="number"
+                                                    name="items[{{ $item->id }}][quantity_requested]"
                                                     class="quantity-input w-20 text-center rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                                     min="1" step="0.01" value="1"
                                                     data-item-id="{{ $item->id }}" disabled>
@@ -235,6 +281,69 @@
                 const totalItemsCount = document.getElementById('totalItemsCount');
                 const totalQuantity = document.getElementById('totalQuantity');
                 const itemSearch = document.getElementById('itemSearch');
+                const branchSelect = document.querySelector('select[name="branch_id"]');
+
+                // Handle branch selection change for admins
+                if (branchSelect) {
+                    branchSelect.addEventListener('change', function() {
+                        const selectedBranchId = this.value;
+                        if (selectedBranchId) {
+                            updateStockInformation(selectedBranchId);
+                        } else {
+                            // Clear stock information when no branch is selected
+                            document.querySelectorAll('.stock-info').forEach(element => {
+                                element.innerHTML =
+                                    '<span class="text-gray-500 italic">Select branch to view stock</span>';
+                            });
+                        }
+                    });
+                }
+
+                // Function to update stock information for selected branch
+                function updateStockInformation(branchId) {
+                    // Show loading state
+                    document.querySelectorAll('.stock-info').forEach(element => {
+                        element.innerHTML = '<span class="text-gray-500 italic">Loading stock...</span>';
+                    });
+
+                    // Fetch stock information for the selected branch
+                    fetch(`{{ route('admin.production.requests.index') }}?action=get_stock&branch_id=${branchId}`, {
+                            method: 'GET',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Update stock information for each item
+                                Object.entries(data.stock_data).forEach(([itemId, stockInfo]) => {
+                                    const stockElement = document.querySelector(
+                                        `[data-stock-item="${itemId}"]`);
+                                    if (stockElement) {
+                                        const stockColor = stockInfo.current_stock <= stockInfo
+                                            .reorder_level ? 'text-red-600' : 'text-green-600';
+                                        stockElement.innerHTML = `
+                                        Current Stock (${stockInfo.branch_name}):
+                                        <span class="font-medium ml-1 ${stockColor}">
+                                            ${parseFloat(stockInfo.current_stock).toFixed(2)} ${stockInfo.unit}
+                                        </span>
+                                    `;
+                                    }
+                                });
+                            } else {
+                                console.error('Failed to fetch stock information');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching stock information:', error);
+                            document.querySelectorAll('.stock-info').forEach(element => {
+                                element.innerHTML =
+                                    '<span class="text-red-500 italic">Error loading stock</span>';
+                            });
+                        });
+                }
 
                 // Handle item selection
                 itemCheckboxes.forEach(checkbox => {
