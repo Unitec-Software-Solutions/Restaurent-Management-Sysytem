@@ -312,9 +312,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/recipe-details/{itemId}', [ProductionOrderController::class, 'getRecipeDetails'])->name('recipe-details');
 
             Route::get( '/', [ProductionController::class, 'dashboard'])->name('index');
-            // Route::get('/capacity', [ProductionController::class, 'getProductionCapacity'])->name('capacity');
-            // Route::get('/alerts', [ProductionController::class, 'getProductionAlerts'])->name('alerts');
-            // Route::get('/summary', [ProductionController::class, 'getProductionSummary'])->name('summary');
 
             // Production requests
             Route::prefix('requests')->name('requests.')->group(function () {
