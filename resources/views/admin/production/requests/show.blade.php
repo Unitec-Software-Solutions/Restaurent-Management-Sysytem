@@ -80,8 +80,7 @@
                         <h1 class="text-2xl font-bold text-gray-900">Production Request #{{ $productionRequest->id }}</h1>
                         <div class="flex items-center space-x-2">
                             <p class="text-sm text-gray-500">Status:</p>
-                            <x-partials.badges.status-badge
-                                status="{{ $productionRequest->getStatusBadgeClass() }}"
+                            <x-partials.badges.status-badge status="{{ $productionRequest->getStatusBadgeClass() }}"
                                 text="{{ ucfirst($productionRequest->status) }}" />
                         </div>
                     </div>
@@ -157,22 +156,26 @@
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-gray-600">Requested Quantity:</span>
-                        <span class="font-semibold">{{ number_format($productionRequest->getTotalQuantityRequested()) }}</span>
+                        <span
+                            class="font-semibold">{{ number_format($productionRequest->getTotalQuantityRequested()) }}</span>
                     </div>
                     @if ($productionRequest->status !== 'draft')
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">Approved Quantity:</span>
-                            <span class="font-semibold">{{ number_format($productionRequest->getTotalQuantityApproved()) }}</span>
+                            <span
+                                class="font-semibold">{{ number_format($productionRequest->getTotalQuantityApproved()) }}</span>
                         </div>
                     @endif
                     @if (in_array($productionRequest->status, ['approved', 'in_production', 'completed']))
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">Received Quantity:</span>
-                            <span class="font-semibold text-green-600">{{ number_format($productionRequest->getTotalQuantityProduced()) }}</span>
+                            <span
+                                class="font-semibold text-green-600">{{ number_format($productionRequest->getTotalQuantityProduced()) }}</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-gray-600">Production Progress:</span>
-                            <span class="font-semibold text-blue-600">{{ number_format($productionRequest->getProductionProgress(), 1) }}%</span>
+                            <span
+                                class="font-semibold text-blue-600">{{ number_format($productionRequest->getProductionProgress(), 1) }}%</span>
                         </div>
                     @endif
                     <div class="pt-3 border-t">
@@ -259,17 +262,20 @@
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Requested</th>
                             @if ($productionRequest->status !== 'draft')
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th
+                                    class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Approved</th>
                             @endif
                             @if (in_array($productionRequest->status, ['approved', 'in_production', 'completed']))
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th
+                                    class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Received</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Progress</th>
                             @endif
                             @if ($productionRequest->status === 'completed')
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th
+                                    class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Distributed</th>
                             @endif
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -293,24 +299,23 @@
                                 @if ($productionRequest->status !== 'draft')
                                     <td class="px-4 py-3 text-right text-sm">
                                         @if ($productionRequest->status === 'submitted' && !Auth::user()->branch_id)
-                                            <form method="POST"
-                                                action="{{ route('production.request-items.update-approved', $item) }}"
-                                                class="inline-block">
+                                            <form method="POST" action="#" class="inline-block">
                                                 @csrf
                                                 @method('PATCH')
                                                 <input type="number" name="quantity_approved"
                                                     value="{{ $item->quantity_approved ?? $item->quantity_requested }}"
                                                     min="0" max="{{ $item->quantity_requested }}" step="0.01"
                                                     class="w-20 text-sm rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                                                <button type="submit"
-                                                    class="ml-1 text-blue-600 hover:text-blue-900" title="Update">
+                                                <button type="submit" class="ml-1 text-blue-600 hover:text-blue-900"
+                                                    title="Update">
                                                     <i class="fas fa-check text-xs"></i>
                                                 </button>
                                             </form>
                                         @else
                                             <span
                                                 class="font-medium text-green-600">{{ number_format($item->quantity_approved ?? 0, 2) }}</span>
-                                            <div class="text-xs text-gray-500">{{ $item->item->unit_of_measurement }}</div>
+                                            <div class="text-xs text-gray-500">{{ $item->item->unit_of_measurement }}
+                                            </div>
                                         @endif
                                     </td>
                                 @endif
