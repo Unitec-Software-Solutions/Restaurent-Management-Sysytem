@@ -12,6 +12,8 @@
                 ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
                 ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
                 ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+                ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
+                ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
             ]" active="Production Orders" />
         </div>
         <!-- Header -->
@@ -25,7 +27,7 @@
                     <a href="{{ route('admin.production.requests.manage') }}"
                         class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
                         <i class="fas fa-clipboard-check"></i>
-                        Approve Requests
+                        Pending Requests
                         @php
                             $pendingCount = \App\Models\ProductionRequestMaster::where(
                                 'organization_id',
