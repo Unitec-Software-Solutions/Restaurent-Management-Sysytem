@@ -460,33 +460,65 @@ class ProductionOrderController extends Controller
         $ingredients = [];
 
         foreach ($aggregatedItems as $itemId => $itemData) {
-            $recipe = \App\Models\Recipe::where('production_item_id', $itemId)
+            $quantity = $itemData['total_quantity'];
+
+            // Find recipe for this production item
+            $recipe = Recipe::where('production_item_id', $itemId)
                 ->where('is_active', true)
-                ->with('details.rawMaterialItem')
                 ->first();
 
-            if ($recipe && isset($itemData['totalQuantity'])) {
-                $multiplier = $itemData['totalQuantity'] / $recipe->yield_quantity;
+            if ($recipe) {
+                $recipeIngredients = $recipe->calculateIngredientsForQuantity($quantity);
 
-                foreach ($recipe->details as $detail) {
-                    $ingredientId = $detail->raw_material_item_id;
-                    $requiredQuantity = $detail->quantity_required * $multiplier;
+                foreach ($recipeIngredients as $ingredient) {
+                    $ingredientId = $ingredient['ingredient_item_id'];
 
-                    if (!isset($ingredients[$ingredientId])) {
+                    if (isset($ingredients[$ingredientId])) {
+                        $ingredients[$ingredientId]['planned_quantity'] += $ingredient['planned_quantity'];
+                        $ingredients[$ingredientId]['source'] .= ', ' . $recipe->recipe_name;
+                    } else {
                         $ingredients[$ingredientId] = [
-                            'name' => $detail->rawMaterialItem->name,
-                            'quantity' => 0,
-                            'unit' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
-                            'notes' => 'From recipe: ' . $recipe->recipe_name
+                            'ingredient_item_id' => $ingredientId,
+                            'ingredient_name' => $ingredient['ingredient']->name,
+                            'planned_quantity' => $ingredient['planned_quantity'],
+                            'unit_of_measurement' => $ingredient['unit_of_measurement'] ?: $ingredient['ingredient']->unit_of_measurement,
+                            'is_manually_added' => false,
+                            'source' => 'Recipe: ' . $recipe->recipe_name,
+                            'notes' => $ingredient['preparation_notes'],
+                            'current_stock' => $ingredient['ingredient']->getCurrentStock(),
+                            'reorder_level' => $ingredient['ingredient']->reorder_level
                         ];
                     }
-
-                    $ingredients[$ingredientId]['quantity'] += $requiredQuantity;
                 }
+            } else {
+                // No recipe found - add warning
+                $ingredients['no_recipe_' . $itemId] = [
+                    'ingredient_item_id' => null,
+                    'ingredient_name' => 'NO RECIPE FOUND',
+                    'planned_quantity' => 0,
+                    'unit_of_measurement' => '',
+                    'is_manually_added' => false,
+                    'source' => 'Item: ' . ($itemData['item']->name ?? 'Unknown'),
+                    'notes' => 'Recipe not defined for this production item',
+                    'current_stock' => 0,
+                    'reorder_level' => 0,
+                    'warning' => true
+                ];
             }
         }
 
-        return response()->json(['ingredients' => $ingredients]);
+        return response()->json([
+            'ingredients' => array_values($ingredients),
+            'summary' => [
+                'total_ingredients' => count($ingredients),
+                'recipes_found' => Recipe::whereIn('production_item_id', array_keys($aggregatedItems))
+                    ->where('is_active', true)
+                    ->count(),
+                'items_without_recipes' => count($aggregatedItems) - Recipe::whereIn('production_item_id', array_keys($aggregatedItems))
+                    ->where('is_active', true)
+                    ->count()
+            ]
+        ]);
     }
 
     /**
@@ -508,7 +540,7 @@ class ProductionOrderController extends Controller
 
                 if ($ingredient) {
                     $issuedQuantity = $ingredientData['issued_quantity'];
-                    
+
                     // Update ingredient issued quantity
                     $ingredient->update([
                         'issued_quantity' => $ingredient->issued_quantity + $issuedQuantity
@@ -554,7 +586,7 @@ class ProductionOrderController extends Controller
 
                 if ($orderItem) {
                     $producedQuantity = $itemData['quantity_produced'];
-                    
+
                     // Update order item quantities
                     $orderItem->update([
                         'quantity_produced' => $orderItem->quantity_produced + $producedQuantity
@@ -610,40 +642,172 @@ class ProductionOrderController extends Controller
      */
     private function calculateAndCreateIngredients(ProductionOrder $productionOrder)
     {
+        $ingredients = [];
+
         foreach ($productionOrder->items as $orderItem) {
+            // Find active recipe for this production item
             $recipe = Recipe::where('production_item_id', $orderItem->item_id)
-                          ->where('is_active', true)
-                          ->with('details.rawMaterialItem')
-                          ->first();
+                ->where('is_active', true)
+                ->first();
 
             if ($recipe) {
-                $productionMultiplier = $orderItem->quantity_to_produce / $recipe->yield_quantity;
+                $recipeIngredients = $recipe->calculateIngredientsForQuantity($orderItem->quantity_to_produce);
 
-                foreach ($recipe->details as $recipeDetail) {
-                    $plannedQuantity = $recipeDetail->quantity_required * $productionMultiplier;
+                foreach ($recipeIngredients as $ingredient) {
+                    $ingredientId = $ingredient['ingredient_item_id'];
 
-                    // Check if ingredient already exists for this order
-                    $existingIngredient = ProductionOrderIngredient::where('production_order_id', $productionOrder->id)
-                        ->where('ingredient_item_id', $recipeDetail->raw_material_item_id)
-                        ->first();
-
-                    if ($existingIngredient) {
-                        // Add to existing ingredient quantity
-                        $existingIngredient->update([
-                            'planned_quantity' => $existingIngredient->planned_quantity + $plannedQuantity
-                        ]);
+                    if (isset($ingredients[$ingredientId])) {
+                        $ingredients[$ingredientId]['planned_quantity'] += $ingredient['planned_quantity'];
                     } else {
-                        // Create new ingredient record
-                        ProductionOrderIngredient::create([
+                        $ingredients[$ingredientId] = [
                             'production_order_id' => $productionOrder->id,
-                            'ingredient_item_id' => $recipeDetail->raw_material_item_id,
-                            'planned_quantity' => $plannedQuantity,
-                            'unit_of_measurement' => $recipeDetail->unit_of_measurement,
-                            'is_manually_added' => false,
-                        ]);
+                            'ingredient_item_id' => $ingredientId,
+                            'planned_quantity' => $ingredient['planned_quantity'],
+                            'unit_of_measurement' => $ingredient['unit_of_measurement'],
+                            'notes' => $ingredient['preparation_notes'],
+                            'is_manually_added' => false
+                        ];
                     }
                 }
             }
         }
+
+        // Create ingredient records
+        foreach ($ingredients as $ingredient) {
+            ProductionOrderIngredient::create($ingredient);
+        }
+    }
+
+    /**
+     * Calculate ingredients required for production order based on recipes
+     */
+    public function calculateIngredientsFromRecipes(Request $request)
+    {
+        $request->validate([
+            'production_items' => 'required|array',
+            'production_items.*.item_id' => 'required|exists:item_master,id',
+            'production_items.*.quantity' => 'required|numeric|min:0.001',
+        ]);
+
+        $user = Auth::user();
+        $ingredientsSummary = [];
+        $missingRecipes = [];
+
+        foreach ($request->production_items as $productionItem) {
+            $itemId = $productionItem['item_id'];
+            $quantity = $productionItem['quantity'];
+
+            // Find recipe for this production item
+            $recipe = Recipe::where('production_item_id', $itemId)
+                ->where('organization_id', $user->organization_id)
+                ->where('is_active', true)
+                ->with('details.rawMaterialItem')
+                ->first();
+
+            if (!$recipe) {
+                $item = ItemMaster::find($itemId);
+                $missingRecipes[] = [
+                    'item_id' => $itemId,
+                    'item_name' => $item->name ?? 'Unknown',
+                    'quantity' => $quantity
+                ];
+                continue;
+            }
+
+            // Calculate multiplier based on yield
+            $multiplier = $quantity / $recipe->yield_quantity;
+
+            // Calculate ingredient requirements
+            foreach ($recipe->details as $detail) {
+                $ingredientId = $detail->raw_material_item_id;
+                $requiredQuantity = $detail->quantity_required * $multiplier;
+
+                if (!isset($ingredientsSummary[$ingredientId])) {
+                    $ingredientsSummary[$ingredientId] = [
+                        'item' => $detail->rawMaterialItem,
+                        'total_required' => 0,
+                        'unit_of_measurement' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                        'used_in_recipes' => []
+                    ];
+                }
+
+                $ingredientsSummary[$ingredientId]['total_required'] += $requiredQuantity;
+                $ingredientsSummary[$ingredientId]['used_in_recipes'][] = [
+                    'recipe_name' => $recipe->recipe_name,
+                    'production_item' => $recipe->productionItem->name,
+                    'quantity_needed' => $requiredQuantity,
+                    'production_quantity' => $quantity
+                ];
+            }
+        }
+
+        // Check current stock for each ingredient
+        foreach ($ingredientsSummary as $ingredientId => &$ingredient) {
+            $currentStock = $ingredient['item']->getCurrentStock();
+            $ingredient['current_stock'] = $currentStock;
+            $ingredient['shortfall'] = max(0, $ingredient['total_required'] - $currentStock);
+            $ingredient['is_sufficient'] = $currentStock >= $ingredient['total_required'];
+        }
+
+        return response()->json([
+            'success' => true,
+            'ingredients_summary' => array_values($ingredientsSummary),
+            'missing_recipes' => $missingRecipes,
+            'total_ingredients' => count($ingredientsSummary),
+            'total_shortfall_items' => count(array_filter($ingredientsSummary, function($ing) {
+                return !$ing['is_sufficient'];
+            }))
+        ]);
+    }
+
+    /**
+     * Get recipe details for a specific production item
+     */
+    public function getRecipeDetails(Request $request, $itemId)
+    {
+        $user = Auth::user();
+
+        $recipe = Recipe::where('production_item_id', $itemId)
+            ->where('organization_id', $user->organization_id)
+            ->where('is_active', true)
+            ->with(['details.rawMaterialItem', 'productionItem'])
+            ->first();
+
+        if (!$recipe) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active recipe found for this production item'
+            ], 404);
+        }
+
+        $quantity = $request->input('quantity', $recipe->yield_quantity);
+        $multiplier = $quantity / $recipe->yield_quantity;
+
+        $ingredients = $recipe->details->map(function($detail) use ($multiplier) {
+            return [
+                'ingredient_id' => $detail->raw_material_item_id,
+                'ingredient_name' => $detail->rawMaterialItem->name,
+                'quantity_required' => $detail->quantity_required * $multiplier,
+                'base_quantity' => $detail->quantity_required,
+                'unit_of_measurement' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                'preparation_notes' => $detail->preparation_notes,
+                'current_stock' => $detail->rawMaterialItem->getCurrentStock()
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'recipe' => [
+                'id' => $recipe->id,
+                'name' => $recipe->recipe_name,
+                'production_item' => $recipe->productionItem->name,
+                'yield_quantity' => $recipe->yield_quantity,
+                'total_time' => $recipe->total_time,
+                'difficulty_level' => $recipe->difficulty_level
+            ],
+            'production_quantity' => $quantity,
+            'multiplier' => $multiplier,
+            'ingredients' => $ingredients
+        ]);
     }
 }
