@@ -136,7 +136,7 @@ if (config('app.debug')) {
 Route::prefix('admin')->name('admin.')->group(function () {
     // Authentication routes (no middleware)
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AdminAuthController::class, 'login']);
+    Route::post('/login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
 
     // All authenticated admin routes
