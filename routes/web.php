@@ -307,7 +307,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Production Management
         Route::prefix('production')->name('production.')->group(function () {
-            Route::post('/calculate-ingredients', [ProductionOrderController::class, 'calculateIngredients'])->name('.calculate-ingredients');
+            Route::post('/calculate-ingredients', [ProductionOrderController::class, 'calculateIngredients'])->name('calculate-ingredients');
             Route::post('/calculate-ingredients-from-recipes', [ProductionOrderController::class, 'calculateIngredientsFromRecipes'])->name('calculate-ingredients-from-recipes');
             Route::get('/recipe-details/{itemId}', [ProductionOrderController::class, 'getRecipeDetails'])->name('recipe-details');
 
