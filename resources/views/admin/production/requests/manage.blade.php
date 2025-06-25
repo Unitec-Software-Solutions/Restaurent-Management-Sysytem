@@ -52,11 +52,6 @@
                                 </span>
                             @endif
                         </button>
-                        <button
-                            class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
-                            data-tab="aggregate-production">
-                            Aggregate for Production
-                        </button>
                     </nav>
                 </div>
             </div>
@@ -200,11 +195,7 @@
                             <table class="w-full">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th
-                                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            <input type="checkbox" id="selectAllApproved"
-                                                class="rounded border-gray-300 text-blue-600">
-                                        </th>
+
                                         <th
                                             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Request</th>
@@ -225,11 +216,6 @@
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     @foreach ($approvedRequests as $request)
                                         <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <input type="checkbox" name="selected_requests[]"
-                                                    value="{{ $request->id }}"
-                                                    class="request-checkbox rounded border-gray-300 text-blue-600">
-                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-medium text-gray-900">#{{ $request->id }}</div>
                                                 <div class="text-sm text-gray-500">
@@ -263,13 +249,13 @@
                             </table>
                         </div>
 
-                        <div class="p-6 border-t border-gray-200">
+                        {{-- <div class="p-6 border-t border-gray-200">
                             <button type="button" id="aggregateSelectedBtn"
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200 disabled:bg-gray-400"
                                 disabled>
                                 <i class="fas fa-layer-group mr-2"></i>Aggregate Selected for Production
                             </button>
-                        </div>
+                        </div> --}}
                     @else
                         <div class="text-center py-12">
                             <i class="fas fa-box text-gray-300 text-6xl mb-4"></i>
