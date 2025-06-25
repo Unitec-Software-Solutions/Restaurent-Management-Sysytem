@@ -13,9 +13,22 @@
                     </h1>
                     <p class="text-gray-600 mt-1">Manage and approve production requests</p>
                 </div>
+
+                @if (!Auth::user()->branch_id)
+                    @if ($approvedRequests->count() > 0)
+                        <a href="{{ route('admin.production.requests.aggregate') }}"
+                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
+                            <i class="fas fa-layer-group"></i>
+                            Aggregate Requests
+                            <span
+                                class="bg-green-800 text-white px-2 py-1 rounded-full text-xs">{{ $approvedRequests->count() }}</span>
+                        </a>
+                    @endif
+                @endif
                 <a href="{{ route('admin.production.orders.index') }}"
-                    class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition duration-200">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to Orders
+                    class="bg-black hover:bg-black-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Orders
                 </a>
             </div>
 
