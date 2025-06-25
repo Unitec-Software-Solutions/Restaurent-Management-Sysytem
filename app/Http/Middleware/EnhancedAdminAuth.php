@@ -57,10 +57,9 @@ class EnhancedAdminAuth
             
             return redirect()->route('admin.login')
                 ->with('error', 'Your account has been deactivated. Please contact support.');
-        }
-
-        // Check organization assignment
-        if (!$admin->organization_id) {
+        }        // Check organization assignment (but allow super admins without organization)
+        $isSuperAdmin = $admin->is_super_admin || $admin->hasRole('Super Admin', 'admin');
+        if (!$admin->organization_id && !$isSuperAdmin) {
             Auth::guard('admin')->logout();
             Log::warning('Admin without organization attempted access', ['admin_id' => $admin->id]);
             
