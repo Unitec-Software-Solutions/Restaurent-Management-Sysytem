@@ -17,22 +17,30 @@ class AdminController extends Controller
             return redirect()->route('admin.login')->with('error', 'Please log in to access the dashboard.');
         }
 
-        // Basic validation without strict organization checks
-        if (!$admin->organization_id) {
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $admin->is_super_admin || $admin->hasRole('Super Admin');
+        
+        // Basic validation - super admins don't need organization
+        if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
         }
 
         try {
-            $reservations = Reservation::with(['user', 'table'])
-                ->where('organization_id', $admin->organization_id)
+            // Super admins can see all reservations, others see their organization's
+            $reservationsQuery = Reservation::with(['user', 'table'])
                 ->orderBy('created_at', 'desc')
-                ->take(10)
-                ->get();
+                ->take(10);
+                
+            if (!$isSuperAdmin && $admin->organization_id) {
+                $reservationsQuery->where('organization_id', $admin->organization_id);
+            }
+            
+            $reservations = $reservationsQuery->get();
 
-            return view('admin.dashboard', compact('reservations'));
+            return view('admin.dashboard', compact('reservations', 'admin'));
         } catch (\Exception $e) {
             Log::error('Dashboard error: ' . $e->getMessage());
-            return view('admin.dashboard', ['reservations' => collect()]);
+            return view('admin.dashboard', ['reservations' => collect(), 'admin' => $admin]);
         }
     }
 
