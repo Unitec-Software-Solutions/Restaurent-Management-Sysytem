@@ -1,9 +1,23 @@
 @extends('layouts.admin')
 
 @section('title', 'Recipe Management')
+@section('header-title', 'Kitchen Production Management')
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="p-4 space-y-8">
+        <!-- Navigation Buttons -->
+        <div class="rounded-lg">
+            <x-nav-buttons :items="[
+                ['name' => 'Production', 'link' => route('admin.production.index')],
+                ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
+                ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
+                ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+                ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
+                ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
+            ]" active="Production Recipes" />
+        </div>
+
+
         <!-- Header -->
         <div class="flex items-center justify-between mb-8">
             <div>
