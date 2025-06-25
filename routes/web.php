@@ -30,10 +30,11 @@ use App\Http\Controllers\{
     ProductionOrderController,
     ProductionRequestItemController,
     ProductionSessionController,
-    ProductionController
+    ProductionController,
+    RecipeController
 };
 use App\Http\Middleware\SuperAdmin;
-
+use App\Models\Recipe;
 
 /*-------------------------------------------------------------------------
 | Debug Routes - Removed in production refactoring
@@ -304,22 +305,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
         });
 
-        // Production Requests (Branch)
+        // Production Management
         Route::prefix('production')->name('production.')->group(function () {
             Route::post('/calculate-ingredients', [ProductionOrderController::class, 'calculateIngredients'])->name('.calculate-ingredients');
             Route::get( '/', [ProductionController::class, 'dashboard'])->name('index');
             Route::get('/capacity', [ProductionController::class, 'getProductionCapacity'])->name('capacity');
             Route::get('/alerts', [ProductionController::class, 'getProductionAlerts'])->name('alerts');
             Route::get('/summary', [ProductionController::class, 'getProductionSummary'])->name('summary');
-            
-            // Production requests
+
+            // Production Requests
             Route::prefix('requests')->name('requests.')->group(function () {
                 Route::get('/', [ProductionRequestsMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ProductionRequestsMasterController::class, 'create'])->name('create');
                 Route::post('/', [ProductionRequestsMasterController::class, 'store'])->name('store');
                 Route::get('/manage', [ProductionRequestsMasterController::class, 'manage'])->name('manage');
                 Route::get('/aggregate/requests', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
-                
+
                 // Specific parameterized routes (these must come after static routes)
                 Route::get('/{productionRequest}', [ProductionRequestsMasterController::class, 'show'])->where('productionRequest', '[0-9]+')->name('show');
                 Route::post('/{productionRequest}/submit', [ProductionRequestsMasterController::class, 'submit'])->where('productionRequest', '[0-9]+')->name('submit');
@@ -350,6 +351,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{session}/cancel', [ProductionSessionController::class, 'cancel'])->name('cancel');
                 Route::post('/{session}/issue-ingredients', [ProductionSessionController::class, 'issueIngredients'])->name('issue-ingredients');
                 Route::post('/{session}/record-production', [ProductionSessionController::class, 'recordProduction'])->name('record-production');
+            });
+
+            // Production Recipes
+            Route::prefix('recipes')->name('recipes.')->group(function () {
+                Route::get('/', [RecipeController::class, 'index'])->name('index');
+                Route::get('/create', [RecipeController::class, 'create'])->name('create');
+                Route::post('/', [RecipeController::class, 'store'])->name('store');
+                Route::get('/{recipe}', [RecipeController::class, 'show'])->whereNumber('recipe')->name('show');
+                Route::get('/{recipe}/edit', [RecipeController::class, 'edit'])->whereNumber('recipe')->name('edit');
+                Route::put('/{recipe}', [RecipeController::class, 'update'])->whereNumber('recipe')->name('update');
+                Route::delete('/{recipe}', [RecipeController::class, 'destroy'])->whereNumber('recipe')->name('destroy');
             });
 
         });
