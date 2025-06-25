@@ -16,27 +16,30 @@
 
 
         <!-- Quick Actions -->
-        <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {{-- Production Requests --}}
             <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Production Requests</h2>
                     <p class="text-gray-500 text-sm">Manage branch production requests and approvals</p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <a href="{{ route('admin.production.requests.index') }}"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        class="bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-400 transition text-white px-4 py-2 rounded-lg flex items-center shadow-sm">
                         <i class="fas fa-file-alt mr-2"></i> View All Requests
                     </a>
                     <a href="{{ route('admin.production.requests.create') }}"
-                        class="bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg flex items-center">
+                        class="bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50 focus:ring-2 focus:ring-indigo-200 transition px-4 py-2 rounded-lg flex items-center shadow-sm">
                         <i class="fas fa-plus mr-2"></i> New Request
                     </a>
                     <a href="{{ route('admin.production.requests.manage') }}"
-                        class="bg-white border border-green-600 text-green-600 hover:bg-green-50 px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-cogs mr-2"></i>Manage Requests
+                        class="bg-indigo-50 border border-indigo-500 text-indigo-700 hover:bg-indigo-100 focus:ring-2 focus:ring-indigo-200 transition px-4 py-2 rounded-lg flex items-center shadow-sm">
+                        <i class="fas fa-cogs mr-2"></i> Manage Requests
                     </a>
                 </div>
             </div>
+
+            {{-- Production Orders --}}
             <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Production Orders</h2>
@@ -55,7 +58,7 @@
                 </div>
             </div>
 
-
+            {{-- Production Sessions --}}
             <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Production Sessions</h2>
@@ -73,6 +76,23 @@
                 </div>
             </div>
 
+            {{-- Production Recipes --}}
+            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Recipe Management</h2>
+                    <p class="text-gray-500 text-sm">Manage production recipes and bill of materials</p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{{ route('admin.production.recipes.index') }}"
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-book mr-2"></i> View All Recipes
+                    </a>
+                    <a href="{{ route('admin.production.recipes.create') }}"
+                        class="bg-white border border-blue-500 text-blue-500 hover:bg-blue-50 px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-plus mr-2"></i> New Recipe
+                    </a>
+                </div>
+            </div>
 
         </div>
 
