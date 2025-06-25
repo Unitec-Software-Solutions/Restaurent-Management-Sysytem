@@ -5,335 +5,332 @@
 @section('header-title', 'Production Requests')
 
 @section('content')
-    <div class="p-4 space-y-8">
-        <!-- Navigation Buttons -->
-        <div class="rounded-lg">
-            <x-nav-buttons :items="[
-                ['name' => 'Production', 'link' => route('admin.production.index')],
-                ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
-                ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
-                ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
-                ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
-                ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
-            ]" active="Production Requests" />
-        </div>
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Production Requests</h1>
-                <p class="text-gray-600 mt-1">Manage production requests from branches</p>
+    <div class="p-4 rounded-lg">
+        <!-- Header with navigation buttons -->
+        <div class="justify-between items-center mb-4">
+            <div class="rounded-lg">
+                <x-nav-buttons :items="[
+                    ['name' => 'Production', 'link' => route('admin.production.index')],
+                    ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
+                    ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
+                    ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+                    ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
+                    ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
+                ]" active="Production Requests" />
             </div>
-            <div class="flex items-center gap-3">
-                @if (!Auth::user()->branch_id)
-                    <a href="{{ route('admin.production.requests.manage') }}"
-                        class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
-                        <i class="fas fa-clipboard-check"></i>
-                        Approve Requests
-                        @php
-                            $pendingCount = \App\Models\ProductionRequestMaster::where(
-                                'organization_id',
-                                Auth::user()->organization_id,
-                            )
-                                ->where('status', 'submitted')
-                                ->count();
-                        @endphp
-                        @if ($pendingCount > 0)
-                            <span class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs">{{ $pendingCount }}</span>
-                        @endif
-                    </a>
-                @endif
-                <a href="{{ route('admin.production.requests.create') }}"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
-                    <i class="fas fa-plus"></i>
-                    New Production Request
-                </a>
-            </div>
-        </div>
 
-        @if (session('success'))
-            <div class="mb-6 bg-green-100 text-green-800 p-4 rounded-lg border border-green-200 shadow">
-                <i class="fas fa-check-circle mr-2"></i>
-                {{ session('success') }}
-            </div>
-        @endif
-
-
-        <!-- Enhanced Filters -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Filter Production Requests</h3>
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select name="status"
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="">All Statuses</option>
-                        <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
-                        <option value="submitted" {{ request('status') == 'submitted' ? 'selected' : '' }}>Submitted
-                        </option>
-                        <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
-                        <option value="in_production" {{ request('status') == 'in_production' ? 'selected' : '' }}>In
-                            Production</option>
-                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed
-                        </option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled
-                        </option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
-                    <select name="branch_id"
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value="">All Branches</option>
-                        @foreach ($branches as $branch)
-                            <option value="{{ $branch->id }}"
-                                {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Request Date From</label>
-                    <input type="date" name="date_from" value="{{ request('date_from') }}"
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Request Date To</label>
-                    <input type="date" name="date_to" value="{{ request('date_to') }}"
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Required Date From</label>
-                    <input type="date" name="required_date_from" value="{{ request('required_date_from') }}"
-                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                </div>
-
-                <div class="flex items-end">
-                    <button type="submit"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200">
-                        <i class="fas fa-filter mr-2"></i>Filter
-                    </button>
-                </div>
-            </form>
-
-            <!-- Quick Filter Buttons -->
-            <div class="mt-4 flex flex-wrap gap-2">
-                <a href="{{ route('admin.production.requests.index') }}"
-                    class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full {{ !request()->hasAny(['status', 'branch_id', 'date_from', 'date_to', 'required_date_from']) ? 'bg-blue-100 text-blue-800' : 'text-gray-700' }}">
-                    All
-                </a>
-                <a href="{{ route('admin.production.requests.index', ['status' => 'submitted']) }}"
-                    class="px-3 py-1 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-full">
-                    Pending Approval ({{ $stats['pending_approval'] }})
-                </a>
-                <a href="{{ route('admin.production.requests.index', ['status' => 'approved']) }}"
-                    class="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-800 rounded-full">
-                    Approved ({{ $stats['approved_requests'] }})
-                </a>
-                <a href="{{ route('admin.production.requests.index', ['status' => 'in_production']) }}"
-                    class="px-3 py-1 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-full">
-                    In Production ({{ $stats['in_production'] }})
-                </a>
-                @if (request('required_date_from') || request('required_date_to'))
-                    <span class="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-full">
-                        <i class="fas fa-calendar mr-1"></i>Required Date Filter Active
-                    </span>
-                @endif
-            </div>
-        </div>
-
-        <!-- Requests Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-gray-200">
-                <div class="flex items-center justify-between">
+            <!-- Search and Filter -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <form method="GET" action="{{ route('admin.production.requests.index') }}"
+                    class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Search Input (if applicable, add a search field for request ID or notes) -->
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900">
-                            Production Requests
-                            @if (request()->filled('branch_id'))
-                                - {{ $branches->where('id', request('branch_id'))->first()->name ?? 'Unknown Branch' }}
-                            @endif
-                        </h3>
-                        <p class="text-sm text-gray-500 mt-1">
+                        <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search Request</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" name="search" id="search" value="{{ request('search') }}"
+                                placeholder="Enter request ID or notes" aria-label="Search Request" autocomplete="off"
+                                class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                    <!-- Status Filter -->
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select name="status" id="status"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">All Statuses</option>
+                            <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
+                            <option value="submitted" {{ request('status') == 'submitted' ? 'selected' : '' }}>Submitted
+                            </option>
+                            <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                            <option value="in_production" {{ request('status') == 'in_production' ? 'selected' : '' }}>In
+                                Production</option>
+                            <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed
+                            </option>
+                            <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled
+                            </option>
+                        </select>
+                    </div>
+                    <!-- Branch Filter -->
+                    <div>
+                        <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                        <select name="branch_id" id="branch_id"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">All Branches</option>
+                            @foreach ($branches as $branch)
+                                <option value="{{ $branch->id }}"
+                                    {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                    {{ $branch->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <!-- Date Range -->
+                    <div>
+                        <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Request Date Range</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="date" name="date_from" id="date_from"
+                                value="{{ request('date_from') }}"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="date" name="date_to" id="date_to"
+                                value="{{ request('date_to') }}"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Filter Buttons -->
+                    <div class="flex items-end space-x-2 col-span-full md:col-span-1">
+                        <button type="submit"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-filter mr-2"></i> Filter
+                        </button>
+                        <a href="{{ route('admin.production.requests.index') }}"
+                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-redo mr-2"></i> Reset
+                        </a>
+                    </div>
+
+                    <!-- Additional Filters (Required Date Range) -->
+                    <div>
+                        <label for="required_date_from" class="block text-sm font-medium text-gray-700 mb-1">Required Date Range</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="date" name="required_date_from" id="required_date_from"
+                                value="{{ request('required_date_from') }}"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="date" name="required_date_to" id="required_date_to"
+                                value="{{ request('required_date_to') }}"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Production Request List -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Production Requests</h2>
+                        <p class="text-sm text-gray-500">
                             Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of
                             {{ $requests->total() }} requests
-                            @if (request()->filled('status'))
-                                with status: <span class="font-medium">{{ ucfirst(request('status')) }}</span>
-                            @endif
+                        </p>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Organization: {{ Auth::user()->organization->name }}
                         </p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        @if (request()->hasAny(['status', 'branch_id', 'date_from', 'date_to']))
-                            <a href="{{ route('admin.production.requests.index') }}"
-                                class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg">
-                                <i class="fas fa-times mr-1"></i>Clear Filters
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        @if (!Auth::user()->branch_id)
+                            <a href="{{ route('admin.production.requests.manage') }}"
+                                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                <i class="fas fa-clipboard-check mr-2"></i>
+                                Approve Requests
+                                @php
+                                    $pendingCount = \App\Models\ProductionRequestMaster::where(
+                                        'organization_id',
+                                        Auth::user()->organization_id,
+                                    )
+                                        ->where('status', 'submitted')
+                                        ->count();
+                                @endphp
+                                @if ($pendingCount > 0)
+                                    <span class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingCount }}</span>
+                                @endif
                             </a>
                         @endif
+                        <a href="{{ route('admin.production.requests.create') }}"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-plus mr-2"></i> New Production Request
+                        </a>
                     </div>
                 </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Request Details</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Branch</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Items
-                                Count</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Required Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Progress</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($requests as $request)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div>
-                                            <div class="text-sm font-medium text-gray-900">
-                                                Request #{{ $request->id }}
-                                            </div>
-                                            <div class="text-sm text-gray-500">
-                                                Created: {{ $request->request_date->format('M d, Y') }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ $request->branch->name }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ $request->items->count() }} items</div>
-                                    <div class="text-sm text-gray-500">
-                                        {{ number_format($request->getTotalQuantityRequested()) }} total qty</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ $request->required_date->format('M d, Y') }}
-                                    </div>
-                                    @if ($request->required_date->isPast())
-                                        <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Overdue
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span
-                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $request->getStatusBadgeClass() }}">
-                                        {{ ucfirst($request->status) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    @if ($request->status === 'approved' || $request->status === 'in_production' || $request->status === 'completed')
-                                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                            <div class="bg-blue-600 h-2.5 rounded-full"
-                                                style="width: {{ $request->getProductionProgress() }}%"></div>
-                                        </div>
-                                        <div class="text-xs text-gray-500 mt-1">
-                                            {{ number_format($request->getProductionProgress(), 1) }}% complete</div>
-                                    @else
-                                        <span class="text-sm text-gray-400">-</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <div class="flex items-center space-x-3">
-                                        <a href="{{ route('admin.production.requests.show', $request) }}"
-                                            class="text-blue-600 hover:text-blue-900" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
 
-                                        @if ($request->canBeSubmitted() && $request->created_by_user_id === Auth::id())
-                                            <form method="POST"
-                                                action="{{ route('admin.production.requests.submit', $request) }}"
-                                                class="inline">
-                                                @csrf
-                                                <button type="submit" class="text-green-600 hover:text-green-900"
-                                                    title="Submit">
-                                                    <i class="fas fa-paper-plane"></i>
-                                                </button>
-                                            </form>
-                                        @endif
+                <!-- Quick Filter Buttons -->
+                <div class="border-b px-6 pt-4 pb-4 flex flex-wrap gap-2">
+                    <a href="{{ route('admin.production.requests.index') }}"
+                        class="px-3 py-1 text-sm rounded-full {{ !request()->hasAny(['status', 'branch_id', 'date_from', 'date_to', 'required_date_from', 'required_date_to', 'search']) ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                        All
+                    </a>
+                    <a href="{{ route('admin.production.requests.index', ['status' => 'submitted']) }}"
+                        class="px-3 py-1 text-sm rounded-full bg-yellow-100 hover:bg-yellow-200 text-yellow-800">
+                        Pending Approval ({{ $stats['pending_approval'] }})
+                    </a>
+                    <a href="{{ route('admin.production.requests.index', ['status' => 'approved']) }}"
+                        class="px-3 py-1 text-sm rounded-full bg-green-100 hover:bg-green-200 text-green-800">
+                        Approved ({{ $stats['approved_requests'] }})
+                    </a>
+                    <a href="{{ route('admin.production.requests.index', ['status' => 'in_production']) }}"
+                        class="px-3 py-1 text-sm rounded-full bg-purple-100 hover:bg-purple-200 text-purple-800">
+                        In Production ({{ $stats['in_production'] }})
+                    </a>
+                    @if (request('required_date_from') || request('required_date_to'))
+                        <span class="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-full">
+                            <i class="fas fa-calendar mr-1"></i>Required Date Filter Active
+                        </span>
+                    @endif
+                    @if (request()->hasAny(['status', 'branch_id', 'date_from', 'date_to', 'required_date_from', 'required_date_to', 'search']))
+                        <a href="{{ route('admin.production.requests.index') }}"
+                            class="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-800 rounded-full">
+                            <i class="fas fa-times mr-1"></i>Clear Filters
+                        </a>
+                    @endif
+                </div>
 
-                                        @if ($request->canBeApproved() && !Auth::user()->branch_id)
-                                            <form method="POST"
-                                                action="{{ route('admin.production.requests.approve', $request) }}"
-                                                class="inline">
-                                                @csrf
-                                                <button type="submit" class="text-green-600 hover:text-green-900"
-                                                    title="Approve">
-                                                    <i class="fas fa-check"></i>
-                                            </form>
-                                        @endif
-
-                                        @if ($request->canBeCancelled())
-                                            <form method="POST"
-                                                action="{{ route('admin.production.requests.cancel', $request) }}"
-                                                class="inline"
-                                                onsubmit="return confirm('Are you sure you want to cancel this request?')">
-                                                @csrf
-                                                <button type="submit" class="text-red-600 hover:text-red-900"
-                                                    title="Cancel">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
-                                    <i class="fas fa-clipboard-list text-4xl mb-4 text-gray-300"></i>
-                                    <p class="text-lg font-medium">No production requests found</p>
-                                    <p class="text-sm">Start by creating your first production request</p>
-                                    @if (Auth::user()->branch_id)
-                                        <a href="{{ route('admin.production.requests.create') }}"
-                                            class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200">
-                                            <i class="fas fa-plus mr-2"></i>
-                                            Create Request
-                                        </a>
-                                    @endif
-                                </td>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Request Details</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Branch</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Items Count</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Required Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Progress</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions</th>
                             </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @forelse($requests as $request)
+                                <tr class="hover:bg-gray-50 cursor-pointer"
+                                    onclick="window.location='{{ route('admin.production.requests.show', $request) }}'">
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium text-indigo-600">Request #{{ $request->id }}</div>
+                                        <div class="text-sm text-gray-500">
+                                            Created: {{ $request->request_date->format('d M Y') }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium">{{ $request->branch->name }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div>{{ $request->items->count() }} items</div>
+                                        <div class="text-sm text-gray-500">
+                                            Total: {{ number_format($request->getTotalQuantityRequested()) }} units
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium">{{ $request->required_date->format('d M Y') }}</div>
+                                        @if ($request->required_date->isPast())
+                                            <span
+                                                class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                                Overdue
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span
+                                            class="px-2 py-1 text-xs font-semibold rounded-full {{ $request->getStatusBadgeClass() }}">
+                                            {{ ucfirst($request->status) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @if ($request->status === 'approved' || $request->status === 'in_production' || $request->status === 'completed')
+                                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                                <div class="bg-blue-600 h-2.5 rounded-full"
+                                                    style="width: {{ $request->getProductionProgress() }}%"></div>
+                                            </div>
+                                            <div class="text-xs text-gray-500 mt-1">
+                                                {{ number_format($request->getProductionProgress(), 1) }}% complete</div>
+                                        @else
+                                            <span class="text-sm text-gray-400">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex justify-end space-x-3">
+                                            <a href="{{ route('admin.production.requests.show', $request) }}"
+                                                class="text-indigo-600 hover:text-indigo-800" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+
+                                            @if ($request->canBeSubmitted() && $request->created_by_user_id === Auth::id())
+                                                <form method="POST"
+                                                    action="{{ route('admin.production.requests.submit', $request) }}"
+                                                    class="inline" onsubmit="event.stopPropagation(); return confirm('Are you sure you want to submit this request?');">
+                                                    @csrf
+                                                    <button type="submit" class="text-green-600 hover:text-green-900"
+                                                        title="Submit">
+                                                        <i class="fas fa-paper-plane"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
+
+                                            @if ($request->canBeApproved() && !Auth::user()->branch_id)
+                                                <form method="POST"
+                                                    action="{{ route('admin.production.requests.approve', $request) }}"
+                                                    class="inline" onsubmit="event.stopPropagation(); return confirm('Are you sure you want to approve this request?');">
+                                                    @csrf
+                                                    <button type="submit" class="text-green-600 hover:text-green-900"
+                                                        title="Approve">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
+
+                                            @if ($request->canBeCancelled())
+                                                <form method="POST"
+                                                    action="{{ route('admin.production.requests.cancel', $request) }}"
+                                                    class="inline"
+                                                    onsubmit="event.stopPropagation(); return confirm('Are you sure you want to cancel this request?');">
+                                                    @csrf
+                                                    <button type="submit" class="text-red-600 hover:text-red-900"
+                                                        title="Cancel">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                        <i class="fas fa-clipboard-list text-4xl mb-4 text-gray-300"></i>
+                                        <p class="text-lg font-medium">No production requests found</p>
+                                        <p class="text-sm">Start by creating your first production request</p>
+                                        @if (Auth::user()->branch_id)
+                                            <a href="{{ route('admin.production.requests.create') }}"
+                                                class="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200">
+                                                <i class="fas fa-plus mr-2"></i>
+                                                Create Request
+                                            </a>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if ($requests->hasPages())
+                    <div class="px-6 py-4 bg-white border-t border-gray-200">
+                        {{ $requests->appends(request()->query())->links() }}
+                    </div>
+                @endif
             </div>
 
-            @if ($requests->hasPages())
-                <div class="px-6 py-4 border-t border-gray-200">
-                    {{ $requests->links() }}
+            @if (!Auth::user()->branch_id && $requests->where('status', 'approved')->count() > 0)
+                <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-medium text-blue-900">Ready for Production Planning</h3>
+                            <p class="text-blue-700">You have approved requests that can be aggregated into production orders.
+                            </p>
+                        </div>
+                        <a href="{{ route('admin.production.requests.aggregate') }}"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">
+                            <i class="fas fa-layer-group mr-2"></i>
+                            Aggregate Requests
+                        </a>
+                    </div>
                 </div>
             @endif
         </div>
-
-        @if (!Auth::user()->branch_id && $requests->where('status', 'approved')->count() > 0)
-            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-medium text-blue-900">Ready for Production Planning</h3>
-                        <p class="text-blue-700">You have approved requests that can be aggregated into production orders.
-                        </p>
-                    </div>
-                    <a href="{{ route('admin.production.requests.aggregate') }}"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200">
-                        <i class="fas fa-layer-group mr-2"></i>
-                        Aggregate Requests
-                    </a>
-                </div>
-            </div>
-        @endif
-    </div>
-@endsection
+    @endsection
