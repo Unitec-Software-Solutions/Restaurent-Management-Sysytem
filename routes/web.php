@@ -308,12 +308,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Production Management
         Route::prefix('production')->name('production.')->group(function () {
             Route::post('/calculate-ingredients', [ProductionOrderController::class, 'calculateIngredients'])->name('.calculate-ingredients');
-            Route::get( '/', [ProductionController::class, 'dashboard'])->name('index');
-            Route::get('/capacity', [ProductionController::class, 'getProductionCapacity'])->name('capacity');
-            Route::get('/alerts', [ProductionController::class, 'getProductionAlerts'])->name('alerts');
-            Route::get('/summary', [ProductionController::class, 'getProductionSummary'])->name('summary');
+            Route::post('/calculate-ingredients-from-recipes', [ProductionOrderController::class, 'calculateIngredientsFromRecipes'])->name('calculate-ingredients-from-recipes');
+            Route::get('/recipe-details/{itemId}', [ProductionOrderController::class, 'getRecipeDetails'])->name('recipe-details');
 
-            // Production Requests
+            Route::get( '/', [ProductionController::class, 'dashboard'])->name('index');
+            // Route::get('/capacity', [ProductionController::class, 'getProductionCapacity'])->name('capacity');
+            // Route::get('/alerts', [ProductionController::class, 'getProductionAlerts'])->name('alerts');
+            // Route::get('/summary', [ProductionController::class, 'getProductionSummary'])->name('summary');
+
+            // Production requests
             Route::prefix('requests')->name('requests.')->group(function () {
                 Route::get('/', [ProductionRequestsMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ProductionRequestsMasterController::class, 'create'])->name('create');
@@ -341,6 +344,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{productionOrder}/issue-ingredients', [ProductionOrderController::class, 'issueIngredients'])->name('issue-ingredients');
             });
 
+            // Recipe Management
+            Route::prefix('recipes')->name('recipes.')->group(function () {
+                Route::get('/', [RecipeController::class, 'index'])->name('index');
+                Route::get('/create', [RecipeController::class, 'create'])->name('create');
+                Route::post('/', [RecipeController::class, 'store'])->name('store');
+                Route::get('/{recipe}', [RecipeController::class, 'show'])->name('show');
+                Route::get('/{recipe}/edit', [RecipeController::class, 'edit'])->name('edit');
+                Route::put('/{recipe}', [RecipeController::class, 'update'])->name('update');
+                Route::delete('/{recipe}', [RecipeController::class, 'destroy'])->name('destroy');
+                Route::post('/{recipe}/toggle-status', [RecipeController::class, 'toggleStatus'])->name('toggle-status');
+                Route::get('/{recipe}/production', [RecipeController::class, 'getRecipeForProduction'])->name('production');
+            });
+
             // Production Session routes with ingredient management
             Route::prefix('sessions')->name('sessions.')->group(function () {
                 Route::get('/', [ProductionSessionController::class, 'index'])->name('index');
@@ -353,16 +369,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{session}/record-production', [ProductionSessionController::class, 'recordProduction'])->name('record-production');
             });
 
-            // Production Recipes
-            Route::prefix('recipes')->name('recipes.')->group(function () {
-                Route::get('/', [RecipeController::class, 'index'])->name('index');
-                Route::get('/create', [RecipeController::class, 'create'])->name('create');
-                Route::post('/', [RecipeController::class, 'store'])->name('store');
-                Route::get('/{recipe}', [RecipeController::class, 'show'])->whereNumber('recipe')->name('show');
-                Route::get('/{recipe}/edit', [RecipeController::class, 'edit'])->whereNumber('recipe')->name('edit');
-                Route::put('/{recipe}', [RecipeController::class, 'update'])->whereNumber('recipe')->name('update');
-                Route::delete('/{recipe}', [RecipeController::class, 'destroy'])->whereNumber('recipe')->name('destroy');
-            });
 
         });
 
