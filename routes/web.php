@@ -320,6 +320,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/', [ProductionRequestsMasterController::class, 'store'])->name('store');
                 Route::get('/manage', [ProductionRequestsMasterController::class, 'manage'])->name('manage');
                 Route::get('/aggregate/requests', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
+                Route::get('calculate-ingredients', [ProductionRequestsMasterController::class, 'calculateIngredients'])->name('calculate-ingredients'); // aggregated ingredients calculation - in use
 
                 // Specific parameterized routes (these must come after static routes)
                 Route::get('/{productionRequest}', [ProductionRequestsMasterController::class, 'show'])->where('productionRequest', '[0-9]+')->name('show');
@@ -333,7 +334,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::prefix('orders')->name('orders.')->group(function () {
                 Route::get('/', [ProductionOrderController::class, 'index'])->name('index');
                 Route::get('/aggregate', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
-                Route::post('/', [ProductionOrderController::class, 'store_aggregated'])->name('store');
+                Route::post('/', [ProductionOrderController::class, 'store_aggregated'])->name('store_aggregated');
                 Route::get('/{productionOrder}', [ProductionOrderController::class, 'show'])->name('show');
                 Route::post('/{productionOrder}/approve', [ProductionOrderController::class, 'approve'])->name('approve');
                 Route::post('/{productionOrder}/cancel', [ProductionOrderController::class, 'cancel'])->name('cancel');
