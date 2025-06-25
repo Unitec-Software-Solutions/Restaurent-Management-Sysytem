@@ -2,55 +2,101 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KitchenStation extends Model
 {
-    use HasFactory;    protected $fillable = [
-        'name',
+
+    use HasFactory;
+
+    protected $fillable = [
         'branch_id',
+        'name',
+        'code', // REQUIRED FIELD
         'type',
-        'is_active',
+        'description',
         'order_priority',
+        'max_capacity',
+        'is_active',
         'printer_config',
-        'notes',
-        'max_concurrent_orders',
-        'current_load'
-    ];    protected $casts = [
-        'is_active' => 'boolean',
-        'max_concurrent_orders' => 'integer',
-        'current_load' => 'integer',
-        'order_priority' => 'integer',
-        'printer_config' => 'array'
+        'settings',
+        'notes'
     ];
 
-    // Relationships
-    public function branch()
+    protected $casts = [
+        'printer_config' => 'array',
+        'settings' => 'array',
+        'max_capacity' => 'decimal:2',
+        'is_active' => 'boolean'
+    ];
+
+    /**
+     * Get the branch that owns the kitchen station
+     */
+    public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    public function kots()
+    /**
+     * Get UI color class for status badge
+     */
+    public function getStatusColorAttribute(): string
     {
-        return $this->hasMany(Kot::class, 'station_id');
+        if (!$this->is_active) {
+            return 'bg-red-100 text-red-800'; // Danger - offline
+        }
+
+        $settings = $this->settings ?? [];
+        
+        return match($settings['ui_state'] ?? 'default') {
+            'active' => 'bg-indigo-100 text-indigo-800', // Primary
+            'high-performance' => 'bg-green-100 text-green-800', // Success
+            'maintenance' => 'bg-yellow-100 text-yellow-800', // Warning
+            'offline' => 'bg-red-100 text-red-800', // Danger
+            'premium' => 'bg-purple-100 text-purple-800', // Premium
+            'compact' => 'bg-blue-100 text-blue-800', // Info
+            default => 'bg-gray-100 text-gray-800' // Default
+        };
     }
 
-    public function activeKots()
+    /**
+     * Get UI icon for dashboard cards
+     */
+    public function getIconAttribute(): string
     {
-        return $this->hasMany(Kot::class, 'station_id')
-                    ->whereIn('status', [Kot::STATUS_PENDING, Kot::STATUS_PREPARING]);
+        $settings = $this->settings ?? [];
+        return $settings['ui_icon'] ?? 'fas fa-utensils';
     }
 
-    // Helper methods
-    public function isOverloaded()
+    /**
+     * Get dashboard priority for layout ordering
+     */
+    public function getDashboardPriorityAttribute(): int
     {
-        return $this->current_load >= $this->max_concurrent_orders;
+        $settings = $this->settings ?? [];
+        return $settings['dashboard_priority'] ?? 5;
     }
 
-    public function canAcceptOrder()
+    /**
+     * Check if station is in maintenance mode
+     */
+    public function isInMaintenance(): bool
     {
-        return $this->is_active && !$this->isOverloaded();
+        $settings = $this->settings ?? [];
+        return $settings['maintenance_mode'] ?? false;
+    }
+
+    /**
+     * Check if station supports mobile optimization
+     */
+    public function isMobileOptimized(): bool
+    {
+        $settings = $this->settings ?? [];
+        return $settings['mobile_optimized'] ?? true;
     }
 
     /**
@@ -62,7 +108,7 @@ class KitchenStation extends Model
     }
 
     /**
-     * Scope for specific station type
+     * Scope for stations by type
      */
     public function scopeOfType($query, string $type)
     {
@@ -70,66 +116,10 @@ class KitchenStation extends Model
     }
 
     /**
-     * Get stations ordered by priority
+     * Scope for high priority stations (dashboard ordering)
      */
-    public function scopeOrderedByPriority($query)
+    public function scopeHighPriority($query)
     {
-        return $query->orderBy('order_priority');
-    }
-
-    /**
-     * Check if station can handle specific menu item type
-     */
-    public function canHandle(string $menuItemType): bool
-    {
-        $handlingMap = [
-            'cooking' => ['main_course', 'appetizer'],
-            'prep' => ['salad', 'appetizer', 'dessert'],
-            'beverage' => ['drink', 'cocktail', 'coffee'],
-            'bar' => ['alcoholic', 'cocktail', 'beer', 'wine'],
-            'grill' => ['grilled', 'bbq', 'meat'],
-            'fry' => ['fried', 'deep_fried'],
-            'dessert' => ['dessert', 'ice_cream', 'pastry']
-        ];
-
-        return in_array($menuItemType, $handlingMap[$this->type] ?? []);
-    }
-
-    /**
-     * Get default stations configuration for branch type
-     */
-    public static function getDefaultStationsForBranchType(string $branchType): array
-    {
-        $configurations = [
-            'restaurant' => [
-                ['name' => 'Grill Station', 'type' => 'grill', 'order_priority' => 1],
-                ['name' => 'Fry Station', 'type' => 'fry', 'order_priority' => 2],
-                ['name' => 'Prep Station', 'type' => 'prep', 'order_priority' => 3],
-                ['name' => 'Dessert Station', 'type' => 'dessert', 'order_priority' => 4],
-                ['name' => 'Beverage Station', 'type' => 'beverage', 'order_priority' => 5],
-            ],
-            'cafe' => [
-                ['name' => 'Coffee Station', 'type' => 'beverage', 'order_priority' => 1],
-                ['name' => 'Kitchen Station', 'type' => 'cooking', 'order_priority' => 2],
-                ['name' => 'Pastry Station', 'type' => 'dessert', 'order_priority' => 3],
-            ],
-            'pub' => [
-                ['name' => 'Bar Station', 'type' => 'bar', 'order_priority' => 1],
-                ['name' => 'Kitchen Station', 'type' => 'cooking', 'order_priority' => 2],
-                ['name' => 'Grill Station', 'type' => 'grill', 'order_priority' => 3],
-            ],
-            'bar' => [
-                ['name' => 'Main Bar', 'type' => 'bar', 'order_priority' => 1],
-                ['name' => 'Cocktail Station', 'type' => 'beverage', 'order_priority' => 2],
-                ['name' => 'Snack Prep', 'type' => 'prep', 'order_priority' => 3],
-            ],
-            'bakery' => [
-                ['name' => 'Baking Station', 'type' => 'cooking', 'order_priority' => 1],
-                ['name' => 'Decorating Station', 'type' => 'dessert', 'order_priority' => 2],
-                ['name' => 'Prep Station', 'type' => 'prep', 'order_priority' => 3],
-            ]
-        ];
-
-        return $configurations[$branchType] ?? $configurations['restaurant'];
+        return $query->whereJsonContains('settings->dashboard_priority', [1, 2, 3]);
     }
 }
