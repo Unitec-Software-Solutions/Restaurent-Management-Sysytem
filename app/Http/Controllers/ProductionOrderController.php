@@ -113,6 +113,11 @@ class ProductionOrderController extends Controller
             'selected_requests' => 'required|array|min:1',
             'selected_requests.*' => 'exists:production_requests_master,id',
             'production_notes' => 'nullable|string|max:1000',
+            'recipe_ingredients' => 'nullable|array',
+            'recipe_ingredients.*.ingredient_id' => 'required_with:recipe_ingredients.*|exists:item_master,id',
+            'recipe_ingredients.*.quantity' => 'required_with:recipe_ingredients.*|numeric|min:0.001',
+            'recipe_ingredients.*.notes' => 'nullable|string|max:500',
+            'recipe_ingredients.*.is_edited' => 'nullable|boolean',
             'manual_ingredients' => 'nullable|array',
             'manual_ingredients.*.ingredient_id' => 'required_with:manual_ingredients.*|exists:item_master,id',
             'manual_ingredients.*.quantity' => 'required_with:manual_ingredients.*|numeric|min:0.001',
@@ -179,7 +184,7 @@ class ProductionOrderController extends Controller
                 }
 
                 // Calculate and create ingredient requirements
-                $this->createIngredientRequirements($productionOrder, $aggregatedItems, $request->manual_ingredients ?? []);
+                $this->createIngredientRequirements($productionOrder, $aggregatedItems, $request->recipe_ingredients ?? [], $request->manual_ingredients ?? []);
 
                 // Update production requests status and link to production order
                 ProductionRequestMaster::whereIn('id', $request->selected_requests)
@@ -202,40 +207,55 @@ class ProductionOrderController extends Controller
     /**
      * Create ingredient requirements for production order
      */
-    private function createIngredientRequirements($productionOrder, $aggregatedItems, $manualIngredients = [])
+    private function createIngredientRequirements($productionOrder, $aggregatedItems, $recipeIngredients = [], $manualIngredients = [])
     {
         $ingredientRequirements = [];
 
-        // Get HQ branch for stock calculations
-        $hqBranch = \App\Models\Branch::where('organization_id', Auth::user()->organization_id)
-            ->where('is_head_office', true)
-            ->first();
+        // First, process recipe ingredients (which may have been edited)
+        if (!empty($recipeIngredients)) {
+            foreach ($recipeIngredients as $recipeIngredient) {
+                $ingredientId = $recipeIngredient['ingredient_id'];
+                $quantity = floatval($recipeIngredient['quantity']);
+                $notes = $recipeIngredient['notes'] ?? '';
+                $isEdited = isset($recipeIngredient['is_edited']) && $recipeIngredient['is_edited'];
 
-        // Calculate ingredients from recipes
-        foreach ($aggregatedItems as $itemData) {
-            $recipe = \App\Models\Recipe::where('production_item_id', $itemData['item_id'])
-                ->where('is_active', true)
-                ->with('details.rawMaterialItem')
-                ->first();
+                $ingredient = \App\Models\ItemMaster::find($ingredientId);
 
-            if ($recipe) {
-                $multiplier = $itemData['quantity_to_produce'] / $recipe->yield_quantity;
+                $ingredientRequirements[$ingredientId] = [
+                    'ingredient_item_id' => $ingredientId,
+                    'planned_quantity' => $quantity,
+                    'unit_of_measurement' => $ingredient->unit_of_measurement,
+                    'notes' => $isEdited ? 'Manually adjusted from recipe' . ($notes ? ': ' . $notes : '') : 'From recipe' . ($notes ? ': ' . $notes : ''),
+                    'is_manually_added' => $isEdited
+                ];
+            }
+        } else {
+            // Fallback: Calculate ingredients from recipes if no recipe ingredients provided
+            foreach ($aggregatedItems as $itemData) {
+                $recipe = \App\Models\Recipe::where('production_item_id', $itemData['item_id'])
+                    ->where('is_active', true)
+                    ->with('details.rawMaterialItem')
+                    ->first();
 
-                foreach ($recipe->details as $detail) {
-                    $ingredientId = $detail->raw_material_item_id;
-                    $requiredQuantity = $detail->quantity_required * $multiplier;
+                if ($recipe) {
+                    $multiplier = $itemData['quantity_to_produce'] / $recipe->yield_quantity;
 
-                    if (!isset($ingredientRequirements[$ingredientId])) {
-                        $ingredientRequirements[$ingredientId] = [
-                            'ingredient_item_id' => $ingredientId,
-                            'planned_quantity' => 0,
-                            'unit_of_measurement' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
-                            'notes' => 'From recipe: ' . $recipe->recipe_name,
-                            'is_manually_added' => false
-                        ];
+                    foreach ($recipe->details as $detail) {
+                        $ingredientId = $detail->raw_material_item_id;
+                        $requiredQuantity = $detail->quantity_required * $multiplier;
+
+                        if (!isset($ingredientRequirements[$ingredientId])) {
+                            $ingredientRequirements[$ingredientId] = [
+                                'ingredient_item_id' => $ingredientId,
+                                'planned_quantity' => 0,
+                                'unit_of_measurement' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                                'notes' => 'From recipe: ' . $recipe->recipe_name,
+                                'is_manually_added' => false
+                            ];
+                        }
+
+                        $ingredientRequirements[$ingredientId]['planned_quantity'] += $requiredQuantity;
                     }
-
-                    $ingredientRequirements[$ingredientId]['planned_quantity'] += $requiredQuantity;
                 }
             }
         }
