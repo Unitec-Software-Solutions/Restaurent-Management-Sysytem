@@ -20,6 +20,11 @@ class ProductionRequestsMasterController extends Controller
      */
     public function index(Request $request)
     {
+        // Handle AJAX request for stock information
+        if ($request->ajax() && $request->action === 'get_stock') {
+            return $this->getBranchStock($request);
+        }
+
         $admin = auth('admin')->user();
 
         $query = ProductionRequestMaster::with(['items.item', 'branch'])
@@ -99,14 +104,17 @@ class ProductionRequestsMasterController extends Controller
     {
         $admin = auth('admin')->user() ?? Auth::user();
         $organizationId = $admin->organization_id ?? $request->organization_id;
-        $branchId = $admin->branch_id ?? $request->branch_id;
+
+        // For branch_id: use form input if provided (admin case), otherwise use user's branch_id
+        $branchId = $request->branch_id ?? $admin->branch_id;
 
         if (!$organizationId || !$branchId) {
-            return redirect()->back()->withInput()->withErrors(['error' => 'Organization or Branch not set for this user.']);
+            return redirect()->back()->withInput()->withErrors(['error' => 'Organization or Branch not set. Please select a branch.']);
         }
 
         $request->validate([
             'required_date' => 'required|date|after:today',
+            'branch_id' => 'required|exists:branches,id',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity_requested' => 'required|numeric|min:1',
@@ -306,7 +314,8 @@ class ProductionRequestsMasterController extends Controller
                         $totalIngredients[$ingredientId]['from_items'][] = [
                             'production_item' => $item->item->name,
                             'quantity_needed' => $requiredQuantity,
-                            'notes' => $detail->preparation_notes
+                            'notes' => $detail->preparation_notes,
+                            'recipe_name' => $recipe->recipe_name
                         ];
 
                         // Add to item's ingredient list
@@ -503,5 +512,60 @@ class ProductionRequestsMasterController extends Controller
 
         return redirect()->route('admin.production.requests.manage')
             ->with('success', 'Production request approved successfully.');
+    }
+
+    /**
+     * Get stock information for a specific branch (AJAX endpoint)
+     */
+    public function getBranchStock(Request $request)
+    {
+        if (!$request->ajax() || !$request->has('branch_id')) {
+            return response()->json(['success' => false, 'message' => 'Invalid request']);
+        }
+
+        $branchId = $request->branch_id;
+        $user = Auth::user();
+
+        // Verify branch belongs to user's organization
+        $branch = \App\Models\Branch::where('id', $branchId)
+            ->where('organization_id', $user->organization_id)
+            ->first();
+
+        if (!$branch) {
+            return response()->json(['success' => false, 'message' => 'Branch not found']);
+        }
+
+        // Get production items with stock information
+        $productionItems = \App\Models\ItemMaster::whereHas('category', function($query) {
+            $query->where('name', 'Production Items');
+        })
+        ->where('organization_id', $user->organization_id)
+        ->where('is_active', true)
+        ->get();
+
+        $stockData = [];
+
+        foreach ($productionItems as $item) {
+            $currentStock = $item->transactions()
+                ->where('branch_id', $branchId)
+                ->selectRaw("COALESCE(SUM(CASE
+                    WHEN transaction_type IN ('purchase', 'production', 'adjustment_increase', 'transfer_in') THEN quantity
+                    WHEN transaction_type IN ('sale', 'consumption', 'waste', 'adjustment_decrease', 'transfer_out') THEN -quantity
+                    ELSE 0
+                END), 0) as current_stock")
+                ->value('current_stock') ?? 0;
+
+            $stockData[$item->id] = [
+                'current_stock' => $currentStock,
+                'reorder_level' => $item->reorder_level ?? 0,
+                'unit' => $item->unit_of_measurement,
+                'branch_name' => $branch->name
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'stock_data' => $stockData
+        ]);
     }
 }
