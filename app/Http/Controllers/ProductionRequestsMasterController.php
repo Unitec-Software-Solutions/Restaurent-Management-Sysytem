@@ -10,6 +10,7 @@ use App\Models\Recipe;
 use App\Models\RecipeDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\IngredientStockService;
 use Illuminate\Support\Facades\DB;
 
 class ProductionRequestsMasterController extends Controller
@@ -20,7 +21,7 @@ class ProductionRequestsMasterController extends Controller
     public function index(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         $query = ProductionRequestMaster::with(['items.item', 'branch'])
             ->where('organization_id', $admin->organization_id);
 
@@ -118,7 +119,7 @@ class ProductionRequestsMasterController extends Controller
                 'branch_id' => $branchId,
                 'request_date' => now()->toDateString(),
                 'required_date' => $request->required_date,
-                'status' => 'submitted', // set this to  'draft' to allow edits before submission 
+                'status' => 'submitted', // set this to  'draft' to allow edits before submission
                 'notes' => $request->notes,
                 'created_by_user_id' => $admin->id,
             ]);
@@ -250,6 +251,11 @@ class ProductionRequestsMasterController extends Controller
         $aggregated = [];
         $totalIngredients = [];
 
+        // Get HQ branch for stock calculations
+        $hqBranch = \App\Models\Branch::where('organization_id', Auth::user()->organization_id)
+            ->where('is_head_office', true)
+            ->first();
+
         foreach ($requests as $request) {
             foreach ($request->items as $item) {
                 $itemId = $item->item_id;
@@ -278,15 +284,19 @@ class ProductionRequestsMasterController extends Controller
 
                 if ($recipe) {
                     $multiplier = $item->quantity_approved / $recipe->yield_quantity;
-                    
+
                     foreach ($recipe->details as $detail) {
                         $ingredientId = $detail->raw_material_item_id;
                         $requiredQuantity = $detail->quantity_required * $multiplier;
 
                         if (!isset($totalIngredients[$ingredientId])) {
+                            // Get available stock from HQ branch using IngredientStockService
+                            $availableStock = IngredientStockService::getHQStock($ingredientId);
+
                             $totalIngredients[$ingredientId] = [
                                 'item' => $detail->rawMaterialItem,
                                 'total_required' => 0,
+                                'available_stock' => $availableStock,
                                 'unit' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
                                 'from_items' => []
                             ];
@@ -319,12 +329,48 @@ class ProductionRequestsMasterController extends Controller
     }
 
     /**
+     * Calculate ingredient requirements for selected requests (AJAX endpoint)
+     */
+    public function calculateIngredients(Request $request)
+    {
+        try {
+            $requestIds = explode(',', $request->request_ids);
+
+            $requests = ProductionRequestMaster::with(['items.item', 'branch'])
+                ->where('organization_id', Auth::user()->organization_id)
+                ->where('status', 'approved')
+                ->whereIn('id', $requestIds)
+                ->get();
+
+            if ($requests->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No valid requests found'
+                ]);
+            }
+
+            $aggregatedData = $this->getAggregatedData($requests);
+
+            return response()->json([
+                'success' => true,
+                'aggregatedItems' => $aggregatedData['items'],
+                'ingredients' => $aggregatedData['ingredients']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error calculating ingredients: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Show all production requests for management (HQ only)
      */
     public function manage(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         // For debugging - temporarily allow all authenticated admins
         // TODO: Restore proper access control once tested
         // if (!$admin->is_super_admin && $admin->branch_id !== null) {
@@ -332,7 +378,7 @@ class ProductionRequestsMasterController extends Controller
         // }
 
         $baseQuery = ProductionRequestMaster::with(['items.item', 'branch', 'createdBy', 'approvedBy']);
-        
+
         // Filter by organization for non-super admins
         if (!$admin->is_super_admin) {
             $baseQuery->where('organization_id', $admin->organization_id);
@@ -384,9 +430,9 @@ class ProductionRequestsMasterController extends Controller
         $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
 
         return view('admin.production.requests.manage', compact(
-            'pendingApprovalRequests', 
-            'approvedRequests', 
-            'requests', 
+            'pendingApprovalRequests',
+            'approvedRequests',
+            'requests',
             'branches'
         ));
     }
@@ -397,7 +443,7 @@ class ProductionRequestsMasterController extends Controller
     public function showApprovalForm(ProductionRequestMaster $productionRequest)
     {
         $admin = auth('admin')->user();
-        
+
         // Allow super admin and organization admin (users without branch_id = HQ users)
         if (!$admin->is_super_admin && $admin->branch_id !== null) {
             abort(403, 'Access denied. HQ access required.');
@@ -418,7 +464,7 @@ class ProductionRequestsMasterController extends Controller
     public function processApproval(Request $request, ProductionRequestMaster $productionRequest)
     {
         $admin = auth('admin')->user();
-        
+
         // Allow super admin and organization admin (users without branch_id = HQ users)
         if (!$admin->is_super_admin && $admin->branch_id !== null) {
             abort(403, 'Access denied. HQ access required.');
