@@ -198,6 +198,11 @@ class ProductionOrderController extends Controller
     {
         $ingredientRequirements = [];
 
+        // Get HQ branch for stock calculations
+        $hqBranch = \App\Models\Branch::where('organization_id', Auth::user()->organization_id)
+            ->where('is_head_office', true)
+            ->first();
+
         // Calculate ingredients from recipes
         foreach ($aggregatedItems as $itemData) {
             $recipe = \App\Models\Recipe::where('production_item_id', $itemData['item_id'])
@@ -228,30 +233,52 @@ class ProductionOrderController extends Controller
         }
 
         // Add manual ingredients
-        foreach ($manualIngredients as $ingredientId => $ingredientData) {
-            if (isset($ingredientData['ingredient_item_id']) && isset($ingredientData['planned_quantity'])) {
+        foreach ($manualIngredients as $manualIngredient) {
+            $ingredientId = $manualIngredient['ingredient_id'];
+            $quantity = floatval($manualIngredient['quantity']);
+            $notes = $manualIngredient['notes'] ?? 'Manually added';
+
+            if (!isset($ingredientRequirements[$ingredientId])) {
+                $ingredient = \App\Models\ItemMaster::find($ingredientId);
+
                 $ingredientRequirements[$ingredientId] = [
-                    'ingredient_item_id' => $ingredientData['ingredient_item_id'],
-                    'planned_quantity' => $ingredientData['planned_quantity'],
-                    'unit_of_measurement' => $ingredientData['unit_of_measurement'] ?? '',
-                    'notes' => $ingredientData['notes'] ?? 'Manually added',
+                    'ingredient_item_id' => $ingredientId,
+                    'planned_quantity' => 0,
+                    'unit_of_measurement' => $ingredient->unit_of_measurement,
+                    'notes' => $notes,
                     'is_manually_added' => true
                 ];
             }
+
+            $ingredientRequirements[$ingredientId]['planned_quantity'] += $quantity;
+            $ingredientRequirements[$ingredientId]['is_manually_added'] = true;
+
+            // Update notes to include manual addition
+            if (!empty($notes)) {
+                $existingNotes = $ingredientRequirements[$ingredientId]['notes'];
+                $ingredientRequirements[$ingredientId]['notes'] = $existingNotes . ($existingNotes ? '; ' : '') . $notes;
+            }
         }
 
-        // Create ingredient records
-        foreach ($ingredientRequirements as $ingredient) {
+        // Create ProductionOrderIngredient records
+        foreach ($ingredientRequirements as $requirement) {
             \App\Models\ProductionOrderIngredient::create([
                 'production_order_id' => $productionOrder->id,
-                'ingredient_item_id' => $ingredient['ingredient_item_id'],
-                'planned_quantity' => $ingredient['planned_quantity'],
-                'unit_of_measurement' => $ingredient['unit_of_measurement'],
-                'notes' => $ingredient['notes'],
-                'is_manually_added' => $ingredient['is_manually_added']
+                'ingredient_item_id' => $requirement['ingredient_item_id'],
+                'planned_quantity' => $requirement['planned_quantity'],
+                'issued_quantity' => 0,
+                'consumed_quantity' => 0,
+                'returned_quantity' => 0,
+                'unit_of_measurement' => $requirement['unit_of_measurement'],
+                'notes' => $requirement['notes'],
+                'is_manually_added' => $requirement['is_manually_added']
             ]);
         }
+
+        return $ingredientRequirements;
     }
+
+
 
     /**
      * Display the specified production order
@@ -829,5 +856,99 @@ class ProductionOrderController extends Controller
             'multiplier' => $multiplier,
             'ingredients' => $ingredients
         ]);
+    }
+
+    /**
+     * Store aggregated production order from multiple requests
+     */
+    public function storeAggregated(Request $request)
+    {
+        $request->validate([
+            'selected_requests' => 'required|array|min:1',
+            'selected_requests.*' => 'exists:production_requests_master,id',
+            'production_notes' => 'nullable|string',
+            'manual_ingredients' => 'nullable|array',
+            'manual_ingredients.*.ingredient_id' => 'required|exists:item_master,id',
+            'manual_ingredients.*.quantity' => 'required|numeric|min:0.001',
+            'manual_ingredients.*.notes' => 'nullable|string'
+        ]);
+
+        try {
+            return DB::transaction(function () use ($request) {
+                // Get selected production requests
+                $selectedRequests = ProductionRequestMaster::with(['items.item', 'branch'])
+                    ->where('organization_id', Auth::user()->organization_id)
+                    ->where('status', ProductionRequestMaster::STATUS_APPROVED)
+                    ->whereIn('id', $request->selected_requests)
+                    ->get();
+
+                if ($selectedRequests->isEmpty()) {
+                    throw new \Exception('No valid approved requests found.');
+                }
+
+                // Create production order
+                $productionOrder = ProductionOrder::create([
+                    'organization_id' => Auth::user()->organization_id,
+                    'production_order_number' => $this->generateOrderNumber(),
+                    'production_date' => now()->addDay()->toDateString(),
+                    'status' => ProductionOrder::STATUS_APPROVED,
+                    'notes' => $request->production_notes,
+                    'created_by_user_id' => Auth::id(),
+                    'approved_by_user_id' => Auth::id(),
+                    'approved_at' => now(),
+                ]);
+
+                // Aggregate items by item_id
+                $aggregatedItems = [];
+                $requestIds = [];
+
+                foreach ($selectedRequests as $productionRequest) {
+                    $requestIds[] = $productionRequest->id;
+
+                    foreach ($productionRequest->items as $item) {
+                        $itemId = $item->item_id;
+
+                        if (!isset($aggregatedItems[$itemId])) {
+                            $aggregatedItems[$itemId] = [
+                                'item_id' => $itemId,
+                                'quantity_to_produce' => 0,
+                                'requests' => []
+                            ];
+                        }
+
+                        $aggregatedItems[$itemId]['quantity_to_produce'] += $item->quantity_approved;
+                        $aggregatedItems[$itemId]['requests'][] = $productionRequest->id;
+                    }
+                }
+
+                // Create production order items
+                foreach ($aggregatedItems as $itemData) {
+                    ProductionOrderItem::create([
+                        'production_order_id' => $productionOrder->id,
+                        'item_id' => $itemData['item_id'],
+                        'quantity_to_produce' => $itemData['quantity_to_produce'],
+                        'quantity_produced' => 0,
+                        'notes' => 'Aggregated from requests: ' . implode(', ', $itemData['requests'])
+                    ]);
+                }
+
+                // Calculate and create ingredient requirements (including manual ones)
+                $this->createIngredientRequirements($productionOrder, $aggregatedItems, $request->manual_ingredients ?? []);
+
+                // Update production requests status and link to production order
+                ProductionRequestMaster::whereIn('id', $request->selected_requests)
+                    ->update([
+                        'status' => ProductionRequestMaster::STATUS_IN_PRODUCTION,
+                        'production_order_id' => $productionOrder->id
+                    ]);
+
+                return redirect()->route('admin.production.orders.show', $productionOrder)
+                    ->with('success', 'Production order created successfully from ' . count($request->selected_requests) . ' requests with ingredient requirements.');
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Error creating production order: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 }
