@@ -13,6 +13,8 @@
                 ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
                 ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
                 ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+                ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
+                ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
             ]" active="Production Requests" />
         </div>
         <!-- Header -->
@@ -21,13 +23,31 @@
                 <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Production Requests</h1>
                 <p class="text-gray-600 mt-1">Manage production requests from branches</p>
             </div>
-            @if (Auth::user()->branch_id)
+            <div class="flex items-center gap-3">
+                @if (!Auth::user()->branch_id)
+                    <a href="{{ route('admin.production.requests.manage') }}"
+                        class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
+                        <i class="fas fa-clipboard-check"></i>
+                        Approve Requests
+                        @php
+                            $pendingCount = \App\Models\ProductionRequestMaster::where(
+                                'organization_id',
+                                Auth::user()->organization_id,
+                            )
+                                ->where('status', 'submitted')
+                                ->count();
+                        @endphp
+                        @if ($pendingCount > 0)
+                            <span class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs">{{ $pendingCount }}</span>
+                        @endif
+                    </a>
+                @endif
                 <a href="{{ route('admin.production.requests.create') }}"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
                     <i class="fas fa-plus"></i>
                     New Production Request
                 </a>
-            @endif
+            </div>
         </div>
 
         @if (session('success'))
