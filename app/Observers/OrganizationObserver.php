@@ -133,10 +133,36 @@ class OrganizationObserver
     {
         $defaultStations = $branch->getDefaultKitchenStations();
         
+        $index = 1;
         foreach ($defaultStations as $stationName => $config) {
+            // Generate unique code for kitchen station
+            $typePrefix = match($config['type']) {
+                'cooking' => 'COOK',
+                'prep' => 'PREP',
+                'beverage' => 'BEV',
+                'dessert' => 'DESS',
+                'grill' => 'GRILL',
+                'fry' => 'FRY',
+                'bar' => 'BAR',
+                default => 'MAIN'
+            };
+            
+            $branchCode = str_pad($branch->id, 2, '0', STR_PAD_LEFT);
+            $sequenceCode = str_pad($index, 3, '0', STR_PAD_LEFT);
+            $code = $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
+            
+            // Ensure uniqueness
+            $attempts = 0;
+            while (KitchenStation::where('code', $code)->exists() && $attempts < 100) {
+                $attempts++;
+                $sequenceCode = str_pad($index + $attempts, 3, '0', STR_PAD_LEFT);
+                $code = $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
+            }
+            
             KitchenStation::create([
                 'branch_id' => $branch->id,
                 'name' => $stationName,
+                'code' => $code,
                 'type' => $config['type'],
                 'order_priority' => $config['priority'],
                 'is_active' => true,
@@ -147,6 +173,8 @@ class OrganizationObserver
                 ]),
                 'notes' => 'Auto-created default station',
             ]);
+            
+            $index++;
         }
     }
 
