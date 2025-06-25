@@ -94,6 +94,23 @@
                 </div>
             </div>
 
+            {{-- Ingredient Management --}}
+            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4 opacity-60 pointer-events-none select-none">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Ingredient Management</h2>
+                    <p class="text-gray-500 text-sm">Track ingredient usage and requirements</p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="#" tabindex="-1"
+                        class="bg-purple-500 text-white px-4 py-2 rounded-lg flex items-center cursor-not-allowed">
+                        <i class="fas fa-leaf mr-2"></i> View Ingredients
+                    </a>
+                    <a href="#" tabindex="-1"
+                        class="bg-white border border-purple-500 text-purple-500 px-4 py-2 rounded-lg flex items-center cursor-not-allowed">
+                        <i class="fas fa-plus mr-2"></i> Add Ingredient
+                    </a>
+                </div>
+            </div>
         </div>
 
 
