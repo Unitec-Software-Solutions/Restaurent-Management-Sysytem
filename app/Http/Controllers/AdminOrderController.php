@@ -15,6 +15,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Services\MenuSafetyService;
+use App\Services\EnhancedOrderService;
+use App\Services\EnhancedMenuSchedulingService;
 use Illuminate\Support\Facades\Broadcast;
 
 class AdminOrderController extends Controller
@@ -22,10 +24,17 @@ class AdminOrderController extends Controller
     use Exportable;
 
     protected $menuSafetyService;
+    protected $enhancedOrderService;
+    protected $menuSchedulingService;
 
-    public function __construct(MenuSafetyService $menuSafetyService)
-    {
+    public function __construct(
+        MenuSafetyService $menuSafetyService,
+        EnhancedOrderService $enhancedOrderService,
+        EnhancedMenuSchedulingService $menuSchedulingService
+    ) {
         $this->menuSafetyService = $menuSafetyService;
+        $this->enhancedOrderService = $enhancedOrderService;
+        $this->menuSchedulingService = $menuSchedulingService;
     }
     
     public function index(Request $request)
@@ -76,11 +85,11 @@ class AdminOrderController extends Controller
     public function edit(Order $order)
     {
         $statusOptions = [
-            Order::STATUS_SUBMITTED => 'Submitted',
-            Order::STATUS_PREPARING => 'Preparing',
-            Order::STATUS_READY => 'Ready',
-            Order::STATUS_COMPLETED => 'Completed',
-            Order::STATUS_CANCELLED => 'Cancelled'
+            'submitted' => 'Submitted',
+            'preparing' => 'Preparing',
+            'ready' => 'Ready',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled'
         ];
         return view('admin.orders.edit', compact('order', 'statusOptions'));
     }
@@ -212,90 +221,124 @@ class AdminOrderController extends Controller
     }
 
     /**
-     * Show form to create a takeaway order (admin)
+     * Show the form for creating a new order
      */
-    public function createTakeaway()
+    public function create()
     {
-        $branches = \App\Models\Branch::all();
-        $items = \App\Models\ItemMaster::where('is_menu_item', true)->get();
-        $defaultBranch = $branches->first()->id ?? null;
-        return view('admin.orders.takeaway.create', compact('branches', 'items', 'defaultBranch'));
+        $admin = auth('admin')->user();
+        
+        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id, 
+            fn($q) => $q->where('organization_id', $admin->organization_id)
+        )->active()->get();
+        
+        $menus = Menu::with(['menuItems.category'])
+            ->where('is_active', true)
+            ->when(!$admin->is_super_admin && $admin->branch_id, 
+                fn($q) => $q->where('branch_id', $admin->branch_id)
+            )
+            ->get();
+        
+        return view('admin.orders.create', compact('branches', 'menus'));
     }
 
     /**
-     * Store takeaway order (admin)
+     * Store a newly created order
      */
-    public function storeTakeaway(Request $request)
+    public function store(Request $request)
     {
         $validated = $request->validate([
-            'order_type' => 'required|string',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|max:20',
+            'customer_email' => 'nullable|email|max:255',
             'branch_id' => 'required|exists:branches,id',
-            'order_time' => 'required|date',
-            'customer_name' => 'nullable|string', // allow blank
-            'customer_phone' => 'required|string',
+            'order_type' => 'required|in:dine_in,takeaway,delivery',
+            'special_instructions' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1|max:99',
+            'items.*.special_instructions' => 'nullable|string|max:500'
         ]);
-        $validated['reservation_id'] = null;
-        // Set default if blank
-        if (empty($validated['customer_name']) || trim($validated['customer_name']) === '') {
-            $validated['customer_name'] = 'Not Provided';
-        }
-        $order = Order::create($validated);
-        $this->createOrderItems($order, $validated['items']);
-        return redirect()->route('admin.orders.takeaway.summary', $order->id)
-            ->with('success', 'Order placed successfully!');
-    }
 
-    private function createOrderItems(Order $order, array $items)
-    {
-        $itemIds = collect($items)->pluck('item_id')->unique();
-        $menuItems = \App\Models\ItemMaster::whereIn('id', $itemIds)->get()->keyBy('id');
-        
-        $orderItems = collect($items)->map(function ($item) use ($menuItems, $order) {
-            $menuItem = $menuItems[$item['item_id']];
-            $lineTotal = $menuItem->selling_price * $item['quantity'];
+        try {
+            DB::beginTransaction();
+
+            $order = Order::create([
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone'],
+                'customer_email' => $validated['customer_email'],
+                'branch_id' => $validated['branch_id'],
+                'order_type' => $validated['order_type'],
+                'special_instructions' => $validated['special_instructions'],
+                'status' => 'pending',
+                'total_amount' => 0,
+                'order_number' => 'ORD-' . strtoupper(uniqid()),
+                'admin_id' => auth('admin')->id()
+            ]);
+
+            $totalAmount = 0;
+            foreach ($validated['items'] as $item) {
+                $menuItem = MenuItem::findOrFail($item['menu_item_id']);
+                $subtotal = $menuItem->price * $item['quantity'];
+                
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['menu_item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem->price,
+                    'subtotal' => $subtotal,
+                    'special_instructions' => $item['special_instructions'] ?? null
+                ]);
+                
+                $totalAmount += $subtotal;
+            }
+
+            $order->update(['total_amount' => $totalAmount]);
+
+            DB::commit();
+
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', 'Order created successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Order creation failed: ' . $e->getMessage());
             
-            return [
-                'order_id' => $order->id,
-                'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $menuItem->selling_price,
-                'total_price' => $lineTotal,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        });
-        
-        \App\Models\OrderItem::insert($orderItems->toArray());
-        $subtotal = $orderItems->sum('total_price');
-
-        $tax = $subtotal * 0.10;
-        $order->update([
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'total' => $subtotal + $tax,
-        ]);
+            return back()->withInput()
+                ->with('error', 'Failed to create order. Please try again.');
+        }
     }
 
     /**
-     * Display the summary of an order for a reservation (admin)
+     * Display the specified order
      */
-    public function summary(Reservation $reservation, Order $order)
+    public function show(Order $order)
     {
-        // Validate order belongs to this reservation
-        if ($order->reservation_id !== $reservation->id) {
-            abort(404, 'Order does not belong to this reservation');
-        }
+        $order->load(['orderItems.menuItem.category', 'branch', 'reservation']);
+        
+        return view('admin.orders.show', compact('order'));
+    }
 
-        return view('admin.orders.summary', [
-            'reservation' => $reservation,
-            'order' => $order,
-            'orderItems' => $order->items()->with('menuItem')->get(),
-            'editable' => false,
-        ]);
+    /**
+     * Remove the specified order
+     */
+    public function destroy(Order $order)
+    {
+        try {
+            if ($order->status === 'completed') {
+                return back()->with('error', 'Cannot delete completed orders.');
+            }
+
+            $order->orderItems()->delete();
+            $order->delete();
+
+            return redirect()->route('admin.orders.index')
+                ->with('success', 'Order deleted successfully!');
+
+        } catch (\Exception $e) {
+            Log::error('Order deletion failed: ' . $e->getMessage());
+            
+            return back()->with('error', 'Failed to delete order.');
+        }
     }
 
     public function dashboard()
@@ -376,12 +419,12 @@ class AdminOrderController extends Controller
         $branches = Branch::all();
         $menuItems = ItemMaster::where('is_menu_item', true)->get();
         $statusOptions = [
-            Order::STATUS_SUBMITTED => 'Submitted',
-            Order::STATUS_PREPARING => 'Preparing',
-            Order::STATUS_READY => 'Ready',
-            Order::STATUS_COMPLETED => 'Completed',
-            Order::STATUS_CANCELLED => 'Cancelled'
-        ];
+            'submitted' => 'Submitted',  
+            'preparing' => 'Preparing',
+            'ready' => 'Ready',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled'
+];
 
         return view('admin.orders.edit', compact('order', 'reservation', 'branches', 'menuItems', 'statusOptions'));
     }

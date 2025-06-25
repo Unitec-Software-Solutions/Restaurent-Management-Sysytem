@@ -18,7 +18,7 @@ class AdminController extends Controller
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->is_super_admin || $admin->hasRole('Super Admin');
+        $isSuperAdmin = $admin->isSuperAdmin();
         
         // Basic validation - super admins don't need organization
         if (!$isSuperAdmin && !$admin->organization_id) {

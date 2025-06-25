@@ -22,7 +22,7 @@
             <span>
                 @if($user->creator)
                     {{ $user->creator->name }}
-                    @if(isset($user->creator->is_super_admin) && $user->creator->is_super_admin)
+                    @if(isset($user->creator) && $user->creator->isSuperAdmin())
                         (Super Admin)
                     @endif
                 @else

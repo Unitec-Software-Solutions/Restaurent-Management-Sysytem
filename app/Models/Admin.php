@@ -373,6 +373,84 @@ class Admin extends Authenticatable
     }
 
     /**
+     * Check if admin is a super admin
+     * Uses both the is_super_admin column and Spatie roles for flexibility
+     */
+    public function isSuperAdmin(): bool
+    {
+        // Check the direct column first (fastest)
+        if ($this->is_super_admin) {
+            return true;
+        }
+        
+        // Check if they have the 'Super Admin' role through Spatie
+        try {
+            return $this->hasRole('Super Admin', 'admin');
+        } catch (\Exception $e) {
+            // Fallback if Spatie roles aren't set up
+            return false;
+        }
+    }
+
+    /**
+     * Check if admin has organization-level access
+     * Super admins have global access, regular admins need organization assignment
+     */
+    public function hasOrganizationAccess($organizationId = null): bool
+    {
+        // Super admins have access to all organizations
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        
+        // Regular admins need organization assignment
+        if (!$this->organization_id) {
+            return false;
+        }
+        
+        // If specific organization is requested, check match
+        if ($organizationId !== null) {
+            return $this->organization_id == $organizationId;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Check if admin can manage other admins
+     */
+    public function canManageAdmins(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        
+        try {
+            return $this->hasPermissionTo('manage admins', 'admin');
+        } catch (\Exception $e) {
+            // If permission doesn't exist, fall back to role check
+            return $this->hasRole(['Admin Manager', 'Super Admin'], 'admin');
+        }
+    }
+
+    /**
+     * Check if admin can access system-wide settings
+     */
+    public function canManageSystem(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        
+        try {
+            return $this->hasPermissionTo('manage system', 'admin');
+        } catch (\Exception $e) {
+            // If permission doesn't exist, only super admins can manage system
+            return false;
+        }
+    }
+
+    /**
      * Dashboard data methods following UI/UX metrics
      */
     public function getDashboardStats(): array

@@ -83,6 +83,8 @@ class DatabaseSeeder extends Seeder
         // Re-enable foreign key checks
         if ($databaseType === 'mysql') {
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        } elseif ($databaseType === 'pgsql') {
+            $this->command->info('✅ PostgreSQL truncation completed');
         }
           // Run our stable, tested seeders only
         $this->command->info('🌱 Running core seeders...');

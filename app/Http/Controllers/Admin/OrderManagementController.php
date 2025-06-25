@@ -47,7 +47,7 @@ class OrderManagementController extends Controller
     protected function isSuperAdmin()
     {
         $user = Auth::user();
-        return $user && isset($user->is_super_admin) && $user->is_super_admin;
+        return $user && $user->isSuperAdmin();
     }public function index(Request $request)
     {        $orgId = $this->getOrganizationId();
         

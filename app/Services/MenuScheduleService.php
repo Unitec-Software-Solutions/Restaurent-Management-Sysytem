@@ -331,4 +331,292 @@ class MenuScheduleService
     {
         Cache::forget("menu_stats_{$branchId}");
     }
+
+    /**
+     * Phase 2: Get available menus for specific date and time
+     */
+    public function getAvailableMenusForDate(int $branchId, Carbon $date, Carbon $time = null): array
+    {
+        $time = $time ?? now();
+        
+        return Cache::remember("available_menus_{$branchId}_{$date->format('Y-m-d')}_{$time->format('Hi')}", 300, function () use ($branchId, $date, $time) {
+            $menus = Menu::where('branch_id', $branchId)
+                ->where('is_active', true)
+                ->with(['menuItems' => function ($query) {
+                    $query->where('is_available', true)
+                          ->where('stock_status', '!=', 'out_of_stock');
+                }])
+                ->get();
+                
+            $availableMenus = [];
+            
+            foreach ($menus as $menu) {
+                if ($this->isMenuAvailableAtDateTime($menu, $date, $time)) {
+                    $menuData = $menu->toArray();
+                    $menuData['availability_status'] = $this->getMenuAvailabilityStatus($menu, $date, $time);
+                    $menuData['available_items_count'] = $menu->menuItems->count();
+                    $availableMenus[] = $menuData;
+                }
+            }
+            
+            return $availableMenus;
+        });
+    }
+
+    /**
+     * Check if menu is available at specific date and time
+     */
+    private function isMenuAvailableAtDateTime(Menu $menu, Carbon $date, Carbon $time): bool
+    {
+        // Check date range
+        if ($menu->valid_from && $date->lt($menu->valid_from)) {
+            return false;
+        }
+        
+        if ($menu->valid_until && $date->gt($menu->valid_until)) {
+            return false;
+        }
+        
+        // Check day of week
+        if ($menu->available_days) {
+            $dayOfWeek = $date->dayOfWeek; // 0=Sunday, 6=Saturday
+            $availableDays = json_decode($menu->available_days, true) ?: [];
+            
+            if (!in_array($dayOfWeek, $availableDays)) {
+                return false;
+            }
+        }
+        
+        // Check time window
+        if ($menu->start_time && $menu->end_time) {
+            $startTime = Carbon::createFromTimeString($menu->start_time);
+            $endTime = Carbon::createFromTimeString($menu->end_time);
+            
+            // Handle overnight menus (end time is next day)
+            if ($endTime->lt($startTime)) {
+                $endTime->addDay();
+            }
+            
+            $currentTime = Carbon::createFromTimeString($time->format('H:i:s'));
+            
+            if ($currentTime->lt($startTime) || $currentTime->gt($endTime)) {
+                return false;
+            }
+        }
+        
+        // Check special overrides
+        if ($this->hasSpecialOverride($menu, $date)) {
+            return $this->getSpecialOverrideStatus($menu, $date);
+        }
+        
+        return true;
+    }
+
+    /**
+     * Get menu availability status with details
+     */
+    private function getMenuAvailabilityStatus(Menu $menu, Carbon $date, Carbon $time): array
+    {
+        $status = [
+            'is_available' => true,
+            'availability_type' => 'regular',
+            'restrictions' => [],
+            'special_notes' => null
+        ];
+        
+        // Check for special date override
+        if ($this->hasSpecialOverride($menu, $date)) {
+            $override = $this->getSpecialOverride($menu, $date);
+            $status['availability_type'] = 'special_override';
+            $status['special_notes'] = $override['notes'] ?? null;
+            
+            if (!empty($override['restrictions'])) {
+                $status['restrictions'] = $override['restrictions'];
+            }
+        }
+        
+        // Check time-based restrictions
+        if ($menu->start_time && $menu->end_time) {
+            $startTime = Carbon::createFromTimeString($menu->start_time);
+            $endTime = Carbon::createFromTimeString($menu->end_time);
+            
+            $timeUntilStart = $time->diffInMinutes($startTime, false);
+            $timeUntilEnd = $time->diffInMinutes($endTime, false);
+            
+            if ($timeUntilStart > 0 && $timeUntilStart <= 30) {
+                $status['restrictions'][] = "Available in {$timeUntilStart} minutes";
+            }
+            
+            if ($timeUntilEnd > 0 && $timeUntilEnd <= 30) {
+                $status['restrictions'][] = "Available for {$timeUntilEnd} more minutes";
+            }
+        }
+        
+        return $status;
+    }
+
+    /**
+     * Check for special date overrides
+     */
+    private function hasSpecialOverride(Menu $menu, Carbon $date): bool
+    {
+        if (!$menu->special_schedules) {
+            return false;
+        }
+        
+        $schedules = json_decode($menu->special_schedules, true) ?: [];
+        $dateString = $date->format('Y-m-d');
+        
+        return isset($schedules[$dateString]);
+    }
+
+    /**
+     * Get special override status
+     */
+    private function getSpecialOverrideStatus(Menu $menu, Carbon $date): bool
+    {
+        $override = $this->getSpecialOverride($menu, $date);
+        return $override['is_available'] ?? false;
+    }
+
+    /**
+     * Get special override details
+     */
+    private function getSpecialOverride(Menu $menu, Carbon $date): array
+    {
+        $schedules = json_decode($menu->special_schedules, true) ?: [];
+        $dateString = $date->format('Y-m-d');
+        
+        return $schedules[$dateString] ?? [];
+    }
+
+    /**
+     * Validate menu time windows for ordering
+     */
+    public function validateMenuTimeWindow(int $menuId, Carbon $requestedTime = null): array
+    {
+        $requestedTime = $requestedTime ?? now();
+        $menu = Menu::findOrFail($menuId);
+        
+        $validation = [
+            'is_valid' => false,
+            'message' => '',
+            'available_from' => null,
+            'available_until' => null,
+            'current_status' => 'closed'
+        ];
+        
+        // Check if menu is generally active
+        if (!$menu->is_active) {
+            $validation['message'] = 'This menu is currently inactive';
+            return $validation;
+        }
+        
+        // Check date validity
+        $requestedDate = $requestedTime->copy()->startOfDay();
+        
+        if ($menu->valid_from && $requestedDate->lt(Carbon::parse($menu->valid_from))) {
+            $validation['message'] = 'Menu not yet available';
+            $validation['available_from'] = $menu->valid_from;
+            return $validation;
+        }
+        
+        if ($menu->valid_until && $requestedDate->gt(Carbon::parse($menu->valid_until))) {
+            $validation['message'] = 'Menu no longer available';
+            return $validation;
+        }
+        
+        // Check day of week
+        if ($menu->available_days) {
+            $availableDays = json_decode($menu->available_days, true) ?: [];
+            $dayOfWeek = $requestedTime->dayOfWeek;
+            
+            if (!in_array($dayOfWeek, $availableDays)) {
+                $validation['message'] = 'Menu not available on this day';
+                return $validation;
+            }
+        }
+        
+        // Check time window
+        if ($menu->start_time && $menu->end_time) {
+            $todayStart = $requestedTime->copy()->setTimeFromTimeString($menu->start_time);
+            $todayEnd = $requestedTime->copy()->setTimeFromTimeString($menu->end_time);
+            
+            // Handle overnight menus
+            if ($todayEnd->lt($todayStart)) {
+                $todayEnd->addDay();
+            }
+            
+            $validation['available_from'] = $todayStart->toISOString();
+            $validation['available_until'] = $todayEnd->toISOString();
+            
+            if ($requestedTime->between($todayStart, $todayEnd)) {
+                $validation['is_valid'] = true;
+                $validation['current_status'] = 'open';
+                $validation['message'] = 'Menu is currently available';
+            } else {
+                $validation['current_status'] = 'closed';
+                
+                if ($requestedTime->lt($todayStart)) {
+                    $minutesUntilOpen = $requestedTime->diffInMinutes($todayStart);
+                    $validation['message'] = "Menu opens in {$minutesUntilOpen} minutes";
+                } else {
+                    $validation['message'] = 'Menu is closed for today';
+                }
+            }
+        } else {
+            // No time restrictions
+            $validation['is_valid'] = true;
+            $validation['current_status'] = 'open';
+            $validation['message'] = 'Menu is available all day';
+        }
+        
+        // Check special overrides
+        if ($this->hasSpecialOverride($menu, $requestedDate)) {
+            $override = $this->getSpecialOverride($menu, $requestedDate);
+            
+            if (isset($override['is_available'])) {
+                $validation['is_valid'] = $override['is_available'];
+                $validation['current_status'] = $override['is_available'] ? 'open' : 'closed';
+                $validation['message'] = $override['message'] ?? ($override['is_available'] ? 'Special availability' : 'Special closure');
+            }
+        }
+        
+        return $validation;
+    }
+
+    /**
+     * Get scheduled menus for date range
+     */
+    public function getScheduledMenus(int $branchId, Carbon $startDate, Carbon $endDate): array
+    {
+        $menus = Menu::where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->get();
+            
+        $schedule = [];
+        $currentDate = $startDate->copy();
+        
+        while ($currentDate->lte($endDate)) {
+            $dailyMenus = [];
+            
+            foreach ($menus as $menu) {
+                if ($this->isMenuAvailableAtDateTime($menu, $currentDate, $currentDate)) {
+                    $dailyMenus[] = [
+                        'menu_id' => $menu->id,
+                        'menu_name' => $menu->name,
+                        'start_time' => $menu->start_time,
+                        'end_time' => $menu->end_time,
+                        'menu_type' => $menu->menu_type,
+                        'availability_status' => $this->getMenuAvailabilityStatus($menu, $currentDate, $currentDate)
+                    ];
+                }
+            }
+            
+            $schedule[$currentDate->format('Y-m-d')] = $dailyMenus;
+            $currentDate->addDay();
+        }
+        
+        return $schedule;
+    }
 }

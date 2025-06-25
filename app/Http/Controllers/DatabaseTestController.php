@@ -1,8 +1,8 @@
 <?php
 
-// filepath: app/Http/Controllers/Admin/DatabaseTestController.php
+// filepath: app/Http/Controllers/DatabaseTestController.php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;

@@ -19,13 +19,15 @@ class SubscriptionPlan extends Model
         'trial_period_days',
         'max_branches',
         'max_employees',
-        'features'
+        'features',
+        'is_active'
     ];
     
     protected $casts = [
         'modules' => 'array',
         'features' => 'array',
         'is_trial' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     public function hasFeature(string $feature): bool
@@ -82,5 +84,15 @@ class SubscriptionPlan extends Model
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class, 'plan_id');
+    }
+
+    public function organizations()
+    {
+        return $this->hasMany(Organization::class, 'subscription_plan_id');
+    }
+
+    public function activeSubscriptions()
+    {
+        return $this->hasMany(Subscription::class, 'plan_id')->where('status', 'active');
     }
 }

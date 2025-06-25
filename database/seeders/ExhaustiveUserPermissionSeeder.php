@@ -1,0 +1,502 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\Organization;
+use App\Models\Branch;
+use App\Models\Admin;
+use App\Models\User;
+use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Hash;
+
+
+class ExhaustiveUserPermissionSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $this->command->info('  👥 Creating user permission instances...');
+
+        $organizations = Organization::with(['branches', 'subscriptionPlan'])->get();
+
+        foreach ($organizations as $org) {
+            $this->createUsersForOrganization($org);
+        }
+
+        $this->command->info("  ✅ Created comprehensive user permission scenarios");
+    }
+
+    private function createUsersForOrganization(Organization $org): void
+    {
+        $maxEmployees = $org->subscriptionPlan->max_employees ?? 10;
+        $branches = $org->branches;
+
+        // 1. Create Organization Admin
+        $this->createOrganizationAdmin($org);
+
+        // 2. Create Branch Admins for each branch
+        foreach ($branches as $branch) {
+            $this->createBranchAdmin($org, $branch);
+        }
+
+        // 3. Create various staff roles per branch
+        foreach ($branches as $branch) {
+            $staffCount = min($maxEmployees - 2, 8); // Reserve 2 for admins
+            $this->createBranchStaff($org, $branch, $staffCount);
+        }
+
+        // 4. Create guest users (customers)
+        $this->createGuestUsers($org, 5);
+
+        // 5. Create seasonal/temporary staff if applicable
+        if ($org->business_type === 'resort_restaurant') {
+            $this->createSeasonalStaff($org, $branches->first(), 3);
+        }
+
+        // 6. Create franchise managers if applicable
+        if ($org->business_type === 'restaurant_chain') {
+            $this->createFranchiseManagers($org);
+        }
+    }
+
+    private function createOrganizationAdmin(Organization $org): void
+    {
+        $admin = Admin::create([
+            'name' => $org->contact_person,
+            'email' => $org->email,
+            'password' => Hash::make('admin123'),
+            'phone' => $org->contact_person_phone,
+            'organization_id' => $org->id,
+            'branch_id' => null, // Organization-level access
+            'is_super_admin' => false,
+            'is_active' => true,
+            'status' => 'active',
+            'position' => $org->contact_person_designation,
+            'hired_at' => $org->activated_at ?? now()->subDays(30),
+            'permissions' => json_encode([
+                'manage_organization',
+                'view_all_branches',
+                'manage_users',
+                'view_reports',
+                'manage_subscriptions',
+                'financial_overview'
+            ]),
+        ]);
+
+        // Assign organization admin role
+        $orgAdminRole = $this->getOrCreateRole('org_admin', 'Admin with organization-wide access');
+        $admin->assignRole($orgAdminRole);
+
+        $this->command->info("      ✓ Created Organization Admin: {$admin->name}");
+    }
+
+    private function createBranchAdmin(Organization $org, Branch $branch): void
+    {
+        $admin = Admin::create([
+            'name' => $branch->manager_name ?? $this->generateName(),
+            'email' => $this->generateBranchEmail($branch, 'manager'),
+            'password' => Hash::make('branch123'),
+            'phone' => $branch->manager_phone ?? $this->generatePhone(),
+            'organization_id' => $org->id,
+            'branch_id' => $branch->id,
+            'is_super_admin' => false,
+            'is_active' => true,
+            'status' => 'active',
+            'position' => 'Branch Manager',
+            'hired_at' => $branch->opened_at ?? now()->subDays(15),
+            'permissions' => json_encode([
+                'manage_branch',
+                'manage_staff',
+                'view_orders',
+                'manage_inventory',
+                'view_reports',
+                'manage_reservations',
+                'process_payments'
+            ]),
+        ]);
+
+        // Assign branch admin role
+        $branchAdminRole = $this->getOrCreateRole('branch_admin', 'Admin with branch-level access');
+        $admin->assignRole($branchAdminRole);
+
+        $this->command->info("      ✓ Created Branch Admin: {$admin->name} for {$branch->name}");
+    }
+
+    private function createBranchStaff(Organization $org, Branch $branch, int $staffCount): void
+    {
+        $roles = $this->getStaffRoles();
+        $roleIndex = 0;
+
+        for ($i = 0; $i < $staffCount; $i++) {
+            $role = $roles[$roleIndex % count($roles)];
+            $roleIndex++;
+
+            // Create as User (not Admin) for staff
+            $staff = User::create([
+                'name' => $this->generateName(),
+                'email' => $this->generateBranchEmail($branch, $role['slug'] . ($i + 1)),
+                'password' => Hash::make('staff123'),
+                'phone' => $this->generatePhone(),
+                'organization_id' => $org->id,
+                'branch_id' => $branch->id,
+                'is_active' => true,
+                'status' => 'active',
+                'role' => $role['name'],
+                'position' => $role['position'],
+                'hired_at' => now()->subDays(rand(5, 60)),
+                'hourly_rate' => $role['hourly_rate'],
+                'employment_type' => $role['employment_type'],
+                'shift_preference' => $role['shift_preference'],
+                'skills' => json_encode($role['skills']),
+                'certifications' => json_encode($role['certifications']),
+            ]);
+
+            // Assign role with specific permissions
+            $staffRole = $this->getOrCreateRole($role['slug'], $role['description']);
+            $staff->assignRole($staffRole);
+
+            $this->command->info("      ✓ Created Staff: {$staff->name} ({$role['name']}) for {$branch->name}");
+        }
+    }
+
+    private function createGuestUsers(Organization $org, int $guestCount): void
+    {
+        for ($i = 0; $i < $guestCount; $i++) {
+            $guest = User::create([
+                'name' => $this->generateName(),
+                'email' => $this->generateGuestEmail($org, $i + 1),
+                'password' => Hash::make('guest123'),
+                'phone' => $this->generatePhone(),
+                'organization_id' => $org->id,
+                'branch_id' => null, // Can visit any branch
+                'is_active' => true,
+                'status' => 'customer',
+                'role' => 'Guest',
+                'customer_type' => $this->getCustomerType(),
+                'loyalty_points' => rand(0, 1000),
+                'preferences' => json_encode($this->generateCustomerPreferences()),
+                'visit_frequency' => rand(1, 20),
+                'last_visit' => now()->subDays(rand(1, 30)),
+            ]);
+
+            // Assign guest role
+            $guestRole = $this->getOrCreateRole('guest', 'Customer with ordering and reservation access');
+            $guest->assignRole($guestRole);
+
+            $this->command->info("      ✓ Created Guest User: {$guest->name}");
+        }
+    }
+
+    private function createSeasonalStaff(Organization $org, Branch $branch, int $seasonalCount): void
+    {
+        $seasonalRoles = [
+            ['name' => 'Seasonal Server', 'slug' => 'seasonal_server', 'employment_type' => 'seasonal'],
+            ['name' => 'Beach Bar Attendant', 'slug' => 'beach_bar', 'employment_type' => 'seasonal'],
+            ['name' => 'Event Coordinator', 'slug' => 'event_coord', 'employment_type' => 'seasonal'],
+        ];
+
+        for ($i = 0; $i < $seasonalCount; $i++) {
+            $role = $seasonalRoles[$i % count($seasonalRoles)];
+            
+            $staff = User::create([
+                'name' => $this->generateName(),
+                'email' => $this->generateBranchEmail($branch, 'seasonal' . ($i + 1)),
+                'password' => Hash::make('seasonal123'),
+                'phone' => $this->generatePhone(),
+                'organization_id' => $org->id,
+                'branch_id' => $branch->id,
+                'is_active' => true,
+                'status' => 'seasonal',
+                'role' => $role['name'],
+                'employment_type' => 'seasonal',
+                'contract_start' => now()->subDays(30),
+                'contract_end' => now()->addDays(120),
+                'hired_at' => now()->subDays(30),
+                'hourly_rate' => 800,
+                'shift_preference' => 'flexible',
+            ]);
+
+            $staffRole = $this->getOrCreateRole($role['slug'], 'Seasonal employee with limited access');
+            $staff->assignRole($staffRole);
+
+            $this->command->info("      ✓ Created Seasonal Staff: {$staff->name} ({$role['name']})");
+        }
+    }
+
+    private function createFranchiseManagers(Organization $org): void
+    {
+        $franchiseBranches = $org->branches()->where('type', 'franchise')->get();
+        
+        foreach ($franchiseBranches as $branch) {
+            $manager = Admin::create([
+                'name' => $this->generateName(),
+                'email' => $this->generateBranchEmail($branch, 'franchise.manager'),
+                'password' => Hash::make('franchise123'),
+                'phone' => $this->generatePhone(),
+                'organization_id' => $org->id,
+                'branch_id' => $branch->id,
+                'is_super_admin' => false,
+                'is_active' => true,
+                'status' => 'active',
+                'position' => 'Franchise Manager',
+                'hired_at' => $branch->opened_at ?? now()->subDays(20),
+                'permissions' => json_encode([
+                    'manage_franchise',
+                    'view_franchise_reports',
+                    'manage_franchise_staff',
+                    'local_marketing',
+                    'inventory_management',
+                    'customer_service'
+                ]),
+                'franchise_id' => $branch->franchise_id,
+            ]);
+
+            $franchiseRole = $this->getOrCreateRole('franchise_manager', 'Manager with franchise-specific access');
+            $manager->assignRole($franchiseRole);
+
+            $this->command->info("      ✓ Created Franchise Manager: {$manager->name} for {$branch->name}");
+        }
+    }
+
+    private function getStaffRoles(): array
+    {
+        return [
+            [
+                'name' => 'Head Chef',
+                'slug' => 'head_chef',
+                'position' => 'Kitchen Manager',
+                'description' => 'Kitchen operations manager',
+                'hourly_rate' => 2500,
+                'employment_type' => 'full_time',
+                'shift_preference' => 'morning',
+                'skills' => json_encode(['culinary_arts', 'team_leadership', 'menu_planning']),
+                'certifications' => json_encode(['food_safety', 'culinary_degree']),
+            ],
+            [
+                'name' => 'Sous Chef',
+                'slug' => 'sous_chef',
+                'position' => 'Assistant Chef',
+                'description' => 'Kitchen assistant and supervisor',
+                'hourly_rate' => 2000,
+                'employment_type' => 'full_time',
+                'shift_preference' => 'split',
+                'skills' => json_encode(['cooking', 'food_prep', 'supervision']),
+                'certifications' => json_encode(['food_safety']),
+            ],
+            [
+                'name' => 'Line Cook',
+                'slug' => 'line_cook',
+                'position' => 'Cook',
+                'description' => 'Kitchen line preparation and cooking',
+                'hourly_rate' => 1500,
+                'employment_type' => 'full_time',
+                'shift_preference' => 'evening',
+                'skills' => json_encode(['cooking', 'food_prep', 'station_management']),
+                'certifications' => json_encode(['food_safety']),
+            ],
+            [
+                'name' => 'Head Server',
+                'slug' => 'head_server',
+                'position' => 'Service Manager',
+                'description' => 'Front of house operations',
+                'hourly_rate' => 1800,
+                'employment_type' => 'full_time',
+                'shift_preference' => 'evening',
+                'skills' => json_encode(['customer_service', 'team_leadership', 'pos_systems']),
+                'certifications' => json_encode(['alcohol_service']),
+            ],
+            [
+                'name' => 'Server',
+                'slug' => 'server',
+                'position' => 'Waiter/Waitress',
+                'description' => 'Customer service and order taking',
+                'hourly_rate' => 1200,
+                'employment_type' => 'part_time',
+                'shift_preference' => 'flexible',
+                'skills' => json_encode(['customer_service', 'multitasking', 'communication']),
+                'certifications' => json_encode([]),
+            ],
+            [
+                'name' => 'Cashier',
+                'slug' => 'cashier',
+                'position' => 'Cashier',
+                'description' => 'Payment processing and customer checkout',
+                'hourly_rate' => 1000,
+                'employment_type' => 'part_time',
+                'shift_preference' => 'flexible',
+                'skills' => json_encode(['cash_handling', 'pos_systems', 'customer_service']),
+                'certifications' => json_encode([]),
+            ],
+            [
+                'name' => 'Host/Hostess',
+                'slug' => 'host',
+                'position' => 'Host/Hostess',
+                'description' => 'Guest reception and seating',
+                'hourly_rate' => 1100,
+                'employment_type' => 'part_time',
+                'shift_preference' => 'evening',
+                'skills' => json_encode(['customer_service', 'reservation_systems', 'communication']),
+                'certifications' => json_encode([]),
+            ],
+            [
+                'name' => 'Bartender',
+                'slug' => 'bartender',
+                'position' => 'Bartender',
+                'description' => 'Beverage preparation and bar service',
+                'hourly_rate' => 1600,
+                'employment_type' => 'part_time',
+                'shift_preference' => 'evening',
+                'skills' => json_encode(['mixology', 'customer_service', 'bar_operations']),
+                'certifications' => json_encode(['alcohol_service']),
+            ],
+            [
+                'name' => 'Cleaner',
+                'slug' => 'cleaner',
+                'position' => 'Cleaning Staff',
+                'description' => 'Restaurant cleaning and maintenance',
+                'hourly_rate' => 800,
+                'employment_type' => 'part_time',
+                'shift_preference' => 'morning',
+                'skills' => json_encode(['cleaning', 'maintenance', 'hygiene_standards']),
+                'certifications' => json_encode(['hygiene_training']),
+            ],
+        ];
+    }
+
+    private function getOrCreateRole(string $name, string $description): Role
+    {
+        $role = Role::where('name', $name)->where('guard_name', 'web')->first();
+        
+        if (!$role) {
+            $role = Role::create([
+                'name' => $name,
+                'guard_name' => 'web',
+                'description' => $description,
+            ]);
+
+            // Assign permissions based on role
+            $permissions = $this->getPermissionsForRole($name);
+            if (!empty($permissions)) {
+                $role->givePermissionTo($permissions);
+            }
+        }
+
+        return $role;
+    }
+
+    private function getPermissionsForRole(string $roleName): array
+    {
+        $rolePermissions = [
+            'org_admin' => [
+                'view_dashboard', 'manage_organization', 'view_all_branches',
+                'manage_users', 'view_reports', 'manage_subscriptions',
+                'financial_overview', 'manage_settings'
+            ],
+            'branch_admin' => [
+                'view_dashboard', 'manage_branch', 'manage_staff',
+                'view_orders', 'manage_inventory', 'view_reports',
+                'manage_reservations', 'process_payments'
+            ],
+            'franchise_manager' => [
+                'view_dashboard', 'manage_franchise', 'view_franchise_reports',
+                'manage_franchise_staff', 'local_marketing',
+                'inventory_management', 'customer_service'
+            ],
+            'head_chef' => [
+                'view_dashboard', 'manage_kitchen', 'view_orders',
+                'update_order_status', 'manage_menu', 'inventory_view',
+                'staff_scheduling'
+            ],
+            'sous_chef' => [
+                'view_dashboard', 'view_kitchen_orders', 'update_order_status',
+                'view_menu', 'inventory_view'
+            ],
+            'line_cook' => [
+                'view_kitchen_orders', 'update_order_status', 'view_menu'
+            ],
+            'head_server' => [
+                'view_dashboard', 'manage_reservations', 'view_orders',
+                'create_orders', 'process_payments', 'manage_tables'
+            ],
+            'server' => [
+                'view_orders', 'create_orders', 'take_payments',
+                'view_menu', 'manage_reservations'
+            ],
+            'cashier' => [
+                'process_payments', 'view_orders', 'handle_refunds'
+            ],
+            'host' => [
+                'manage_reservations', 'view_tables', 'customer_service'
+            ],
+            'bartender' => [
+                'view_beverage_orders', 'update_beverage_status', 'inventory_view'
+            ],
+            'cleaner' => [
+                'basic_access'
+            ],
+            'seasonal_server' => [
+                'view_orders', 'create_orders', 'customer_service'
+            ],
+            'seasonal_bar' => [
+                'view_beverage_orders', 'customer_service'
+            ],
+            'event_coord' => [
+                'manage_events', 'manage_reservations', 'customer_service'
+            ],
+            'guest' => [
+                'create_orders', 'make_reservations', 'view_menu', 'customer_account'
+            ],
+        ];
+
+        return $rolePermissions[$roleName] ?? [];
+    }
+
+    // Utility methods
+    private function generateName(): string
+    {
+        $firstNames = ['Saman', 'Kumari', 'Rohan', 'Priya', 'Nimal', 'Madhuri', 'Lasith', 'Chamari', 'Dinesh', 'Shanti', 'Kamal', 'Sanduni', 'Tharaka', 'Nilmini'];
+        $lastNames = ['Silva', 'Perera', 'Fernando', 'Jayawardena', 'Gunawardena', 'Rathnayake', 'Wijesinghe', 'Mendis', 'Jayasuriya', 'Dissanayake'];
+        
+        return $firstNames[array_rand($firstNames)] . ' ' . $lastNames[array_rand($lastNames)];
+    }
+
+    private function generatePhone(): string
+    {
+        return '+94 7' . rand(1, 9) . ' ' . rand(100, 999) . ' ' . rand(1000, 9999);
+    }
+
+    private function generateBranchEmail(Branch $branch, string $role): string
+    {
+        $branchSlug = strtolower(str_replace([' ', '-'], '', $branch->name));
+        $domain = explode('@', $branch->email)[1] ?? 'example.com';
+        return $role . '.' . $branchSlug . '@' . $domain;
+    }
+
+    private function generateGuestEmail(Organization $org, int $number): string
+    {
+        $domain = explode('@', $org->email)[1] ?? 'example.com';
+        return 'customer' . $number . '@guest.' . $domain;
+    }
+
+    private function getCustomerType(): string
+    {
+        $types = ['regular', 'vip', 'occasional', 'new'];
+        return $types[array_rand($types)];
+    }
+
+    private function generateCustomerPreferences(): array
+    {
+        $preferences = [];
+        $options = ['vegetarian', 'vegan', 'gluten_free', 'spicy_food', 'no_dairy', 'window_seating', 'quiet_area'];
+        
+        $prefCount = rand(0, 3);
+        for ($i = 0; $i < $prefCount; $i++) {
+            $pref = $options[array_rand($options)];
+            if (!in_array($pref, $preferences)) {
+                $preferences[] = $pref;
+            }
+        }
+        
+        return $preferences;
+    }
+}

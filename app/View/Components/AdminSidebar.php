@@ -13,12 +13,258 @@ class AdminSidebar extends Component
         //
     }
 
+    /**
+     * Real-time badge count methods
+     */
+    private function getDashboardNotificationCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        $count = 0;
+        
+        // Add pending orders
+        $count += $this->getPendingOrdersCount();
+        
+        // Add low stock items
+        $count += $this->getLowStockItemsCount();
+        
+        // Add today's reservations needing attention
+        $count += $this->getPendingReservationsCount();
+        
+        return min($count, 99); // Cap at 99 for display
+    }
+
+    private function getPendingOrdersCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\Order::whereIn('status', ['pending', 'confirmed', 'preparing']);
+            
+            // Apply scope restrictions
+            if (!$admin->is_super_admin) {
+                if ($admin->branch_id) {
+                    $query->where('branch_id', $admin->branch_id);
+                } elseif ($admin->organization_id) {
+                    $query->whereHas('branch', function ($q) use ($admin) {
+                        $q->where('organization_id', $admin->organization_id);
+                    });
+                }
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getPendingOrganizationsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin || !$admin->is_super_admin) return 0;
+        
+        try {
+            return \App\Models\Organization::where('status', 'pending')->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getActiveBranchesCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\Branch::where('is_active', true);
+            
+            if (!$admin->is_super_admin && $admin->organization_id) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getActiveMenusCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\Menu::where('is_active', true);
+            
+            if (!$admin->is_super_admin) {
+                if ($admin->branch_id) {
+                    $query->where('branch_id', $admin->branch_id);
+                } elseif ($admin->organization_id) {
+                    $query->whereHas('branch', function ($q) use ($admin) {
+                        $q->where('organization_id', $admin->organization_id);
+                    });
+                }
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getLowStockItemsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\InventoryItem::whereRaw('current_stock <= reorder_level');
+            
+            if (!$admin->is_super_admin) {
+                if ($admin->branch_id) {
+                    $query->where('branch_id', $admin->branch_id);
+                } elseif ($admin->organization_id) {
+                    $query->where('organization_id', $admin->organization_id);
+                }
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getTodayReservationsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\Reservation::whereDate('reservation_date', today())
+                ->whereIn('status', ['confirmed', 'pending']);
+            
+            if (!$admin->is_super_admin) {
+                if ($admin->branch_id) {
+                    $query->where('branch_id', $admin->branch_id);
+                } elseif ($admin->organization_id) {
+                    $query->whereHas('branch', function ($q) use ($admin) {
+                        $q->where('organization_id', $admin->organization_id);
+                    });
+                }
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getPendingReservationsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\Reservation::where('status', 'pending');
+            
+            if (!$admin->is_super_admin) {
+                if ($admin->branch_id) {
+                    $query->where('branch_id', $admin->branch_id);
+                } elseif ($admin->organization_id) {
+                    $query->whereHas('branch', function ($q) use ($admin) {
+                        $q->where('organization_id', $admin->organization_id);
+                    });
+                }
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getActiveStaffCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\Admin::where('is_active', true)
+                ->where('is_super_admin', false);
+            
+            if (!$admin->is_super_admin && $admin->organization_id) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getActiveKOTsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+        
+        try {
+            $query = \App\Models\Kot::whereIn('status', ['pending', 'started', 'cooking']);
+            
+            if (!$admin->is_super_admin) {
+                $query->whereHas('order', function ($q) use ($admin) {
+                    if ($admin->branch_id) {
+                        $q->where('branch_id', $admin->branch_id);
+                    } elseif ($admin->organization_id) {
+                        $q->whereHas('branch', function ($subQ) use ($admin) {
+                            $subQ->where('organization_id', $admin->organization_id);
+                        });
+                    }
+                });
+            }
+            
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Update the render method to use enhanced menu items
+     */
     public function render()
     {
         return view('components.admin-sidebar', [
-            'menuItems' => $this->getMenuItems(),
+            'menuItems' => $this->getMenuItemsEnhanced(),
             'currentUser' => Auth::guard('admin')->user(),
+            'sidebarState' => $this->getSidebarState(),
         ]);
+    }
+
+    /**
+     * Get sidebar state (collapsed/expanded) from user preferences
+     */
+    private function getSidebarState(): array
+    {
+        $admin = Auth::guard('admin')->user();
+        
+        $defaultState = [
+            'collapsed' => false,
+            'theme' => 'light',
+            'show_badges' => true,
+            'auto_collapse_mobile' => true
+        ];
+        
+        if (!$admin || !isset($admin->ui_settings)) {
+            return $defaultState;
+        }
+        
+        $uiSettings = is_string($admin->ui_settings) 
+            ? json_decode($admin->ui_settings, true) 
+            : $admin->ui_settings;
+            
+        return array_merge($defaultState, $uiSettings['sidebar'] ?? []);
     }
 
     private function getMenuItems()
@@ -264,43 +510,580 @@ class AdminSidebar extends Component
             'sub_items' => []
         ];
 
-        return collect($menuItems)->filter(function ($item) {
-            return $this->hasPermission($item) && $this->routeExists($item);
-        })->toArray();
+        return $menuItems;
     }
 
-    private function hasPermission($item)
+ 
+    private function getMenuItemsEnhanced()
     {
         $admin = Auth::guard('admin')->user();
         
         if (!$admin) {
-            return false;
+            return [];
         }
 
+        $menuItems = [];
+
+        // Dashboard - Always visible
+        $menuItems[] = [
+            'title' => 'Dashboard',
+            'route' => 'admin.dashboard',
+            'route_params' => [],
+            'icon' => 'layout-dashboard',
+            'icon_type' => 'svg',
+            'permission' => null,
+            'badge' => $this->getDashboardNotificationCount(),
+            'badge_color' => 'indigo',
+            'is_route_valid' => $this->validateRoute('admin.dashboard'),
+            'sub_items' => []
+        ];
+
+        // Organization Management (Super Admin only)
+        if ($admin->is_super_admin) {
+            $menuItems[] = [
+                'title' => 'Organizations',
+                'route' => 'admin.organizations.index',
+                'route_params' => [],
+                'icon' => 'building-office',
+                'icon_type' => 'svg',
+                'permission' => 'organizations.view',
+                'badge' => $this->getPendingOrganizationsCount(),
+                'badge_color' => 'blue',
+                'is_route_valid' => $this->validateRoute('admin.organizations.index'),
+                'sub_items' => [
+                    [
+                        'title' => 'All Organizations',
+                        'route' => 'admin.organizations.index',
+                        'icon' => 'list',
+                        'icon_type' => 'svg',
+                        'permission' => 'organizations.view',
+                        'is_route_valid' => $this->validateRoute('admin.organizations.index')
+                    ],
+                    [
+                        'title' => 'Add Organization',
+                        'route' => 'admin.organizations.create',
+                        'icon' => 'plus',
+                        'icon_type' => 'svg',
+                        'permission' => 'organizations.create',
+                        'is_route_valid' => $this->validateRoute('admin.organizations.create')
+                    ]
+                ]
+            ];
+        }
+
+        // Branches (Organization/Super Admin)
+        if ($admin->organization_id || $admin->is_super_admin) {
+            $branchRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
+            $branchParams = $admin->is_super_admin ? [] : ['organization' => $admin->organization_id];
+            
+            $menuItems[] = [
+                'title' => 'Branches',
+                'route' => $branchRoute,
+                'route_params' => $branchParams,
+                'icon' => 'store',
+                'icon_type' => 'svg',
+                'permission' => 'branches.view',
+                'badge' => $this->getActiveBranchesCount(),
+                'badge_color' => 'green',
+                'is_route_valid' => $this->validateRoute($branchRoute, $branchParams),
+                'sub_items' => $this->getBranchSubItems($admin)
+            ];
+        }
+
+        // Orders with real-time status
+        $menuItems[] = [
+            'title' => 'Orders',
+            'route' => 'admin.orders.index',
+            'route_params' => [],
+            'icon' => 'shopping-cart',
+            'icon_type' => 'svg',
+            'permission' => 'orders.view',
+            'badge' => $this->getPendingOrdersCount(),
+            'badge_color' => 'red',
+            'is_route_valid' => $this->validateRoute('admin.orders.index'),
+            'sub_items' => $this->getOrderSubItems()
+        ];
+
+        // Menu Management
+        if ($this->hasPermission($admin, 'menus.view')) {
+            $menuItems[] = [
+                'title' => 'Menus',
+                'route' => 'admin.menus.index',
+                'route_params' => [],
+                'icon' => 'book-open',
+                'icon_type' => 'svg',
+                'permission' => 'menus.view',
+                'badge' => $this->getActiveMenusCount(),
+                'badge_color' => 'yellow',
+                'is_route_valid' => $this->validateRoute('admin.menus.index'),
+                'sub_items' => $this->getMenuSubItems()
+            ];
+        }
+
+        // Inventory Management
+        if ($this->hasPermission($admin, 'inventory.view')) {
+            $menuItems[] = [
+                'title' => 'Inventory',
+                'route' => 'admin.inventory.index',
+                'route_params' => [],
+                'icon' => 'package',
+                'icon_type' => 'svg',
+                'permission' => 'inventory.view',
+                'badge' => $this->getLowStockItemsCount(),
+                'badge_color' => 'orange',
+                'is_route_valid' => $this->validateRoute('admin.inventory.index'),
+                'sub_items' => $this->getInventorySubItems()
+            ];
+        }
+
+        // Reservations
+        if ($this->hasPermission($admin, 'reservations.view')) {
+            $menuItems[] = [
+                'title' => 'Reservations',
+                'route' => 'admin.reservations.index',
+                'route_params' => [],
+                'icon' => 'calendar',
+                'icon_type' => 'svg',
+                'permission' => 'reservations.view',
+                'badge' => $this->getTodayReservationsCount(),
+                'badge_color' => 'purple',
+                'is_route_valid' => $this->validateRoute('admin.reservations.index'),
+                'sub_items' => $this->getReservationSubItems()
+            ];
+        }
+
+        // Staff Management (Admin level and above)
+        if ($this->hasPermission($admin, 'users.view') && !$this->isStaffLevel($admin)) {
+            $menuItems[] = [
+                'title' => 'Staff',
+                'route' => 'admin.users.index',
+                'route_params' => [],
+                'icon' => 'users',
+                'icon_type' => 'svg',
+                'permission' => 'users.view',
+                'badge' => $this->getActiveStaffCount(),
+                'badge_color' => 'cyan',
+                'is_route_valid' => $this->validateRoute('admin.users.index'),
+                'sub_items' => $this->getStaffSubItems()
+            ];
+        }
+
+        // Reports and Analytics
+        if ($this->hasPermission($admin, 'reports.view')) {
+            $menuItems[] = [
+                'title' => 'Reports',
+                'route' => 'admin.reports.index',
+                'route_params' => [],
+                'icon' => 'chart-bar',
+                'icon_type' => 'svg',
+                'permission' => 'reports.view',
+                'badge' => 0,
+                'badge_color' => 'gray',
+                'is_route_valid' => $this->validateRoute('admin.reports.index'),
+                'sub_items' => $this->getReportSubItems()
+            ];
+        }
+
+        // Kitchen Operations (for branch staff)
+        if ($this->hasPermission($admin, 'kitchen.view')) {
+            $menuItems[] = [
+                'title' => 'Kitchen',
+                'route' => 'admin.kitchen.index',
+                'route_params' => [],
+                'icon' => 'chef-hat',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.view',
+                'badge' => $this->getActiveKOTsCount(),
+                'badge_color' => 'red',
+                'is_route_valid' => $this->validateRoute('admin.kitchen.index'),
+                'sub_items' => $this->getKitchenSubItems()
+            ];
+        }
+
+        // Settings (Admin level and above)
+        if (!$this->isStaffLevel($admin)) {
+            $menuItems[] = [
+                'title' => 'Settings',
+                'route' => 'admin.settings.index',
+                'route_params' => [],
+                'icon' => 'cog',
+                'icon_type' => 'svg',
+                'permission' => 'settings.view',
+                'badge' => 0,
+                'badge_color' => 'gray',
+                'is_route_valid' => $this->validateRoute('admin.settings.index'),
+                'sub_items' => $this->getSettingsSubItems()
+            ];
+        }
+
+        // Filter out items without valid routes or permissions
+        return array_filter($menuItems, function ($item) use ($admin) {
+            return $this->isMenuItemAccessible($item, $admin);
+        });
+    }
+
+    /**
+     * Validate if a route exists and is accessible
+     */
+    private function validateRoute(string $routeName, array $params = []): bool
+    {
+        try {
+            if (!Route::has($routeName)) {
+                return false;
+            }
+            
+            // Try to generate the route URL to ensure parameters are valid
+            route($routeName, $params);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if admin has specific permission
+     */
+    private function hasPermission($admin, string $permission): bool
+    {
+        if (!$admin) {
+            return false;
+        }
+        
+        // Super admins have all permissions
         if ($admin->is_super_admin) {
             return true;
         }
+        
+        // Check using Spatie permissions if admin has hasPermissionTo method
+        if (method_exists($admin, 'hasPermissionTo')) {
+            return $admin->hasPermissionTo($permission);
+        }
+        
+        // Fallback to basic permission check
+        if (method_exists($admin, 'hasPermission')) {
+            return $admin->hasPermission($permission);
+        }
+        
+        return false;
+    }
 
-        if (!isset($item['permission']) || $item['permission'] === null) {
+    /**
+     * Check if admin is staff level (lowest access)
+     */
+    private function isStaffLevel($admin): bool
+    {
+        if (!$admin) {
             return true;
         }
-
-        // Check if admin has permission (implement your permission logic here)
-        return $admin->hasPermission($item['permission']) ?? true;
-    }
-
-    private function routeExists($item)
-    {
-        return Route::has($item['route']);
-    }
-
-    private function getPendingOrdersCount()
-    {
-        try {
-            // Implement your pending orders count logic here
-            return 0;
-        } catch (\Exception $e) {
-            return 0;
+        
+        if ($admin->is_super_admin) {
+            return false;
         }
+        
+        // Check if admin has organization or branch admin roles
+        if ($admin->hasRole(['Admin', 'Organization Admin', 'Branch Admin', 'Branch Manager'])) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Check if menu item is accessible by admin
+     */
+    private function isMenuItemAccessible(array $item, $admin): bool
+    {
+        // Check route validity
+        if (!($item['is_route_valid'] ?? true)) {
+            return false;
+        }
+        
+        // Check permission
+        if ($item['permission'] && !$this->hasPermission($admin, $item['permission'])) {
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Get branch sub-items based on admin level
+     */
+    private function getBranchSubItems($admin): array
+    {
+        $subItems = [];
+        
+        if ($this->hasPermission($admin, 'branches.view')) {
+            $listRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
+            $listParams = $admin->is_super_admin ? [] : ['organization' => $admin->organization_id];
+            
+            $subItems[] = [
+                'title' => 'All Branches',
+                'route' => $listRoute,
+                'route_params' => $listParams,
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'branches.view',
+                'is_route_valid' => $this->validateRoute($listRoute, $listParams)
+            ];
+        }
+        
+        if ($this->hasPermission($admin, 'branches.create')) {
+            // All admins need organization parameter for branch creation
+            // Super admins can choose which organization, regular admins use their own
+            $createRoute = 'admin.branches.create';
+            $organizationId = $admin->is_super_admin 
+                ? ($admin->organization_id ?? null) // Use current org or null for super admin
+                : $admin->organization_id; // Regular admin must use their org
+            
+            // Only show the link if we have an organization context
+            if ($organizationId) {
+                $createParams = ['organization' => $organizationId];
+                
+                $subItems[] = [
+                    'title' => 'Add Branch',
+                    'route' => $createRoute,
+                    'route_params' => $createParams,
+                    'icon' => 'plus',
+                    'icon_type' => 'svg',
+                    'permission' => 'branches.create',
+                    'is_route_valid' => $this->validateRoute($createRoute, $createParams)
+                ];
+            }
+        }
+        
+        return $subItems;
+    }
+
+    /**
+     * Get order sub-items
+     */
+    private function getOrderSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Orders',
+                'route' => 'admin.orders.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'orders.view',
+                'is_route_valid' => $this->validateRoute('admin.orders.index')
+            ],
+            [
+                'title' => 'Takeaway Orders',
+                'route' => 'admin.orders.takeaway.index',
+                'icon' => 'shopping-bag',
+                'icon_type' => 'svg',
+                'permission' => 'orders.view',
+                'is_route_valid' => $this->validateRoute('admin.orders.takeaway.index')
+            ],
+            [
+                'title' => 'Create Order',
+                'route' => 'admin.orders.create',
+                'icon' => 'plus-circle',
+                'icon_type' => 'svg',
+                'permission' => 'orders.create',
+                'is_route_valid' => $this->validateRoute('admin.orders.create')
+            ]
+        ];
+    }
+
+    /**
+     * Get menu sub-items
+     */
+    private function getMenuSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Menus',
+                'route' => 'admin.menus.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'menus.view',
+                'is_route_valid' => $this->validateRoute('admin.menus.index')
+            ],
+            [
+                'title' => 'Menu Items',
+                'route' => 'admin.menu-items.index',
+                'icon' => 'utensils',
+                'icon_type' => 'svg',
+                'permission' => 'menus.view',
+                'is_route_valid' => $this->validateRoute('admin.menu-items.index')
+            ],
+            [
+                'title' => 'Categories',
+                'route' => 'admin.menu-categories.index',
+                'icon' => 'tag',
+                'icon_type' => 'svg',
+                'permission' => 'menus.view',
+                'is_route_valid' => $this->validateRoute('admin.menu-categories.index')
+            ]
+        ];
+    }
+
+    /**
+     * Get inventory sub-items
+     */
+    private function getInventorySubItems(): array
+    {
+        return [
+            [
+                'title' => 'Dashboard',
+                'route' => 'admin.inventory.dashboard',
+                'icon' => 'layout-dashboard',
+                'icon_type' => 'svg',
+                'permission' => 'inventory.view',
+                'is_route_valid' => $this->validateRoute('admin.inventory.dashboard')
+            ],
+            [
+                'title' => 'Items',
+                'route' => 'admin.inventory.items.index',
+                'icon' => 'box',
+                'icon_type' => 'svg',
+                'permission' => 'inventory.view',
+                'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
+            ],
+            [
+                'title' => 'Low Stock Alert',
+                'route' => 'admin.inventory.low-stock',
+                'icon' => 'alert-triangle',
+                'icon_type' => 'svg',
+                'permission' => 'inventory.view',
+                'is_route_valid' => $this->validateRoute('admin.inventory.low-stock')
+            ]
+        ];
+    }
+
+    /**
+     * Get reservation sub-items
+     */
+    private function getReservationSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Reservations',
+                'route' => 'admin.reservations.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'reservations.view',
+                'is_route_valid' => $this->validateRoute('admin.reservations.index')
+            ],
+            [
+                'title' => 'Today\'s Reservations',
+                'route' => 'admin.reservations.today',
+                'icon' => 'calendar-day',
+                'icon_type' => 'svg',
+                'permission' => 'reservations.view',
+                'is_route_valid' => $this->validateRoute('admin.reservations.today')
+            ]
+        ];
+    }
+
+    /**
+     * Get staff sub-items
+     */
+    private function getStaffSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Staff',
+                'route' => 'admin.users.index',
+                'icon' => 'users',
+                'icon_type' => 'svg',
+                'permission' => 'users.view',
+                'is_route_valid' => $this->validateRoute('admin.users.index')
+            ],
+            [
+                'title' => 'Add Staff',
+                'route' => 'admin.users.create',
+                'icon' => 'user-plus',
+                'icon_type' => 'svg',
+                'permission' => 'users.create',
+                'is_route_valid' => $this->validateRoute('admin.users.create')
+            ],
+            [
+                'title' => 'Roles & Permissions',
+                'route' => 'admin.roles.index',
+                'icon' => 'shield',
+                'icon_type' => 'svg',
+                'permission' => 'roles.view',
+                'is_route_valid' => $this->validateRoute('admin.roles.index')
+            ]
+        ];
+    }
+
+    /**
+     * Get kitchen sub-items
+     */
+    private function getKitchenSubItems(): array
+    {
+        return [
+            [
+                'title' => 'Active KOTs',
+                'route' => 'admin.kitchen.kots',
+                'icon' => 'receipt',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.view',
+                'is_route_valid' => $this->validateRoute('admin.kitchen.kots')
+            ],
+            [
+                'title' => 'Kitchen Stations',
+                'route' => 'admin.kitchen.stations',
+                'icon' => 'grid',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.manage',
+                'is_route_valid' => $this->validateRoute('admin.kitchen.stations')
+            ]
+        ];
+    }
+
+    /**
+     * Get report sub-items
+     */
+    private function getReportSubItems(): array
+    {
+        return [
+            [
+                'title' => 'Sales Reports',
+                'route' => 'admin.reports.sales',
+                'icon' => 'trending-up',
+                'icon_type' => 'svg',
+                'permission' => 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.sales')
+            ],
+            [
+                'title' => 'Inventory Reports',
+                'route' => 'admin.reports.inventory',
+                'icon' => 'package',
+                'icon_type' => 'svg',
+                'permission' => 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory')
+            ]
+        ];
+    }
+
+    /**
+     * Get settings sub-items
+     */
+    private function getSettingsSubItems(): array
+    {
+        return [
+            [
+                'title' => 'General Settings',
+                'route' => 'admin.settings.general',
+                'icon' => 'cog',
+                'icon_type' => 'svg',
+                'permission' => 'settings.view',
+                'is_route_valid' => $this->validateRoute('admin.settings.general')
+            ],
+            [
+                'title' => 'Payment Settings',
+                'route' => 'admin.settings.payments',
+                'icon' => 'credit-card',
+                'icon_type' => 'svg',
+                'permission' => 'settings.payments',
+                'is_route_valid' => $this->validateRoute('admin.settings.payments')
+            ]
+        ];
     }
 }

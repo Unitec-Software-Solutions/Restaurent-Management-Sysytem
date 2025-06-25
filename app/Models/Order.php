@@ -9,6 +9,12 @@ use Illuminate\Support\Str;
 
 class Order extends Model
 {
+    const STATUS_SUBMITTED = 'submitted';
+    const STATUS_PREPARING = 'preparing';
+    const STATUS_READY = 'ready';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_CANCELLED = 'cancelled';
+
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -258,4 +264,6 @@ class Order extends Model
 
         return $symbols[$this->currency] ?? $this->currency;
     }
+    
+
 }

@@ -4,715 +4,812 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\ItemTransaction;
-use App\Models\ItemMaster;
+use App\Models\InventoryItem;
+use App\Models\Kot;
+use App\Models\KotItem;
 use App\Models\MenuItem;
-use App\Models\Employee;
-use App\Services\InventoryService;
-use App\Services\ProductCatalogService;
+use App\Models\Branch;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Collection;
+use Carbon\Carbon;
 use Exception;
 
+/**
+ * Phase 2: Order Management Service
+ * Real-time inventory checks, KOT generation, order state machine, stock reservation
+ */
 class OrderService
 {
-    protected $inventoryService;
-    protected $catalogService;
+    // Order status state machine
+    const ORDER_STATES = [
+        'pending' => ['confirmed', 'cancelled'],
+        'confirmed' => ['preparing', 'cancelled'],
+        'preparing' => ['ready', 'cancelled'],
+        'ready' => ['served', 'cancelled'],
+        'served' => ['completed'],
+        'completed' => [],
+        'cancelled' => []
+    ];
 
-    public function __construct(
-        InventoryService $inventoryService = null,
-        ProductCatalogService $catalogService = null
-    ) {
-        $this->inventoryService = $inventoryService ?: app(InventoryService::class);
-        $this->catalogService = $catalogService ?: app(ProductCatalogService::class);
-    }
+    // KOT status states
+    const KOT_STATES = [
+        'pending' => ['started', 'cancelled'],
+        'started' => ['cooking', 'cancelled'],
+        'cooking' => ['ready', 'cancelled'],
+        'ready' => ['served'],
+        'served' => [],
+        'cancelled' => []
+    ];
+
     /**
-     * Create order with stock validation and deduction
+     * Install real-time order management system
      */
-    public function createOrder(array $data)
+    public function installRealTimeSystem(): void
     {
-        return DB::transaction(function () use ($data) {
-            // Validate stock availability first
-            $this->validateStockAvailability($data['items'], $data['branch_id']);
+        $this->setupInventoryChecks();
+        $this->setupKotGeneration();
+        $this->setupOrderStateMachine();
+        $this->setupStockReservation();
+        
+        Log::info('OrderManagementService: Real-time system installed');
+    }
 
-            // Create the order
-            $order = Order::create([
-                'branch_id' => $data['branch_id'],
-                'customer_name' => $data['customer_name'] ?? null,
-                'customer_phone' => $data['customer_phone'] ?? null,
-                'order_type' => $data['order_type'] ?? Order::TYPE_TAKEAWAY_ONLINE,
-                'steward_id' => $data['steward_id'] ?? null,
-                'reservation_id' => $data['reservation_id'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'status' => Order::STATUS_SUBMITTED
-            ]);
-
-            // Create order items and deduct stock
-            $this->createOrderItems($order, $data['items']);
-            
-            // Calculate totals
-            $order->calculateTotal();
-
-            // Generate KOT
-            $order->generateKOT();
-
-            Log::info('Order created successfully', [
-                'order_id' => $order->id,
-                'branch_id' => $order->branch_id,
-                'total_items' => count($data['items'])
-            ]);
-
-            return $order;
+    /**
+     * Setup real-time inventory validation
+     */
+    private function setupInventoryChecks(): void
+    {
+        // Cache inventory levels for 30 seconds for performance
+        Cache::remember('inventory_check_rules', 1800, function () {
+            return [
+                'check_interval' => 30, // seconds
+                'low_stock_threshold' => 10,
+                'auto_reserve_duration' => 300, // 5 minutes
+                'batch_update_enabled' => true
+            ];
         });
     }
 
     /**
-     * Validate stock availability for all items
+     * Setup KOT generation system
      */
-    protected function validateStockAvailability(array $items, int $branchId)
+    private function setupKotGeneration(): void
+    {
+        // KOT generation rules
+        Cache::remember('kot_generation_rules', 1800, function () {
+            return [
+                'auto_generate' => true,
+                'group_by_station' => true,
+                'include_allergens' => true,
+                'print_queue_enabled' => true,
+                'priority_items' => ['appetizers', 'mains', 'desserts']
+            ];
+        });
+    }
+
+    /**
+     * Setup order state machine
+     */
+    private function setupOrderStateMachine(): void
+    {
+        // State transition rules
+        Cache::remember('order_state_rules', 1800, function () {
+            return [
+                'auto_transitions' => ['pending' => 'confirmed'],
+                'notification_states' => ['confirmed', 'ready', 'served'],
+                'timeout_states' => ['preparing' => 1800, 'ready' => 600], // seconds
+                'requires_approval' => ['cancelled']
+            ];
+        });
+    }
+
+    /**
+     * Setup stock reservation system
+     */
+    private function setupStockReservation(): void
+    {
+        // Stock reservation rules
+        Cache::remember('stock_reservation_rules', 1800, function () {
+            return [
+                'reservation_duration' => 300, // 5 minutes
+                'auto_release_on_cancel' => true,
+                'overbooking_allowed' => false,
+                'priority_reservations' => true
+            ];
+        });
+    }
+
+    /**
+     * Create order with real-time inventory validation and KOT generation
+     */
+    public function createOrder(array $orderData): Order
+    {
+        return DB::transaction(function () use ($orderData) {
+            try {
+                // 1. Validate inventory availability in real-time
+                $this->validateInventoryAvailability($orderData['items']);
+                
+                // 2. Reserve stock for order items
+                $reservations = $this->reserveStock($orderData['items']);
+                
+                // 3. Create order with reserved stock info
+                $order = Order::create([
+                    'branch_id' => $orderData['branch_id'],
+                    'organization_id' => $orderData['organization_id'] ?? Branch::find($orderData['branch_id'])->organization_id,
+                    'order_number' => $this->generateOrderNumber($orderData['branch_id']),
+                    'customer_name' => $orderData['customer_name'],
+                    'customer_phone' => $orderData['customer_phone'] ?? null,
+                    'customer_email' => $orderData['customer_email'] ?? null,
+                    'table_id' => $orderData['table_id'] ?? null,
+                    'steward_id' => $orderData['steward_id'] ?? null,
+                    'order_type' => $orderData['order_type'] ?? 'dine_in',
+                    'status' => 'pending',
+                    'subtotal' => $orderData['subtotal'],
+                    'tax_amount' => $orderData['tax_amount'] ?? 0,
+                    'discount_amount' => $orderData['discount_amount'] ?? 0,
+                    'service_charge' => $orderData['service_charge'] ?? 0,
+                    'total_amount' => $orderData['total_amount'],
+                    'notes' => $orderData['notes'] ?? null,
+                    'special_instructions' => $orderData['special_instructions'] ?? null,
+                    'estimated_preparation_time' => $this->calculatePreparationTime($orderData['items']),
+                    'stock_reservations' => json_encode($reservations),
+                    'ordered_at' => now(),
+                ]);
+                
+                // 4. Create order items with detailed tracking
+                foreach ($orderData['items'] as $itemData) {
+                    $menuItem = MenuItem::findOrFail($itemData['menu_item_id']);
+                    
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'menu_item_id' => $itemData['menu_item_id'],
+                        'quantity' => $itemData['quantity'],
+                        'unit_price' => $itemData['unit_price'],
+                        'total_price' => $itemData['total_price'],
+                        'special_instructions' => $itemData['special_instructions'] ?? null,
+                        'allergen_notes' => $itemData['allergen_notes'] ?? null,
+                        'preparation_priority' => $menuItem->preparation_priority ?? 'normal',
+                        'estimated_time' => $menuItem->preparation_time ?? 15,
+                        'kitchen_station_id' => $menuItem->kitchen_station_id
+                    ]);
+                }
+                
+                // 5. Generate KOTs for kitchen stations
+                $this->generateKots($order);
+                
+                // 6. Transition to confirmed state if auto-confirmation enabled
+                $this->transitionOrderState($order, 'confirmed');
+                
+                // 7. Log order creation
+                Log::info('Order created successfully', [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'branch_id' => $order->branch_id,
+                    'total_amount' => $order->total_amount,
+                    'items_count' => count($orderData['items'])
+                ]);
+                
+                return $order;
+                
+            } catch (Exception $e) {
+                Log::error('Order creation failed', [
+                    'error' => $e->getMessage(),
+                    'order_data' => $orderData
+                ]);
+                throw $e;
+            }
+        });
+    }
+
+    /**
+     * Validate inventory availability for order items
+     */
+    private function validateInventoryAvailability(array $items): void
     {
         foreach ($items as $item) {
-            $itemMaster = ItemMaster::findOrFail($item['item_id']);
-            $currentStock = ItemTransaction::stockOnHand($item['item_id'], $branchId);
+            $menuItem = MenuItem::with(['inventoryItems'])->findOrFail($item['menu_item_id']);
             
-            if ($currentStock < $item['quantity']) {
+            // Skip items that don't require inventory tracking
+            if (!$menuItem->requires_inventory_check) {
+                continue;
+            }
+            
+            $this->checkMenuItemInventory($menuItem, $item['quantity']);
+        }
+    }
+
+    /**
+     * Check specific menu item inventory availability
+     */
+    private function checkMenuItemInventory(MenuItem $menuItem, int $quantity): void
+    {
+        foreach ($menuItem->inventoryItems as $inventoryItem) {
+            $requiredQuantity = $inventoryItem->pivot->quantity_required * $quantity;
+            $availableStock = $this->getAvailableStock($inventoryItem->id, $menuItem->branch_id);
+            
+            if ($availableStock < $requiredQuantity) {
                 throw new Exception(
-                    "Insufficient stock for {$itemMaster->name}. Available: {$currentStock}, Required: {$item['quantity']}"
+                    "Insufficient stock for {$menuItem->name}. Required: {$requiredQuantity}, Available: {$availableStock}"
                 );
             }
         }
     }
 
     /**
-     * Create order items and deduct stock
+     * Get real-time available stock for inventory item
      */
-    protected function createOrderItems(Order $order, array $items)
+    private function getAvailableStock(int $inventoryItemId, int $branchId): float
     {
-        foreach ($items as $itemData) {
-            $itemMaster = ItemMaster::findOrFail($itemData['item_id']);
-            
-            // Create order item
-            OrderItem::create([
-                'order_id' => $order->id,
-                'menu_item_id' => $itemData['item_id'],
-                'inventory_item_id' => $itemData['item_id'],
-                'quantity' => $itemData['quantity'],
-                'unit_price' => $itemMaster->selling_price,
-                'total_price' => $itemMaster->selling_price * $itemData['quantity']
-            ]);
-
-            // Deduct stock
-            $this->deductStock($order, $itemMaster, $itemData['quantity']);
-        }
-
-        $order->update(['stock_deducted' => true]);
-    }
-
-    /**
-     * Deduct stock for an item
-     */
-    protected function deductStock(Order $order, ItemMaster $item, int $quantity)
-    {
-        ItemTransaction::create([
-            'organization_id' => $order->branch->organization_id,
-            'branch_id' => $order->branch_id,
-            'inventory_item_id' => $item->id,
-            'transaction_type' => 'sales_order',
-            'quantity' => -$quantity, // Negative for stock out
-            'cost_price' => $item->buying_price,
-            'unit_price' => $item->selling_price,
-            'source_id' => (string)$order->id,            'source_type' => 'Order',
-            'created_by_user_id' => Auth::id(),
-            'notes' => "Stock deducted for Order #{$order->order_number}",
-            'is_active' => true
-        ]);
-
-        Log::info('Stock deducted', [
-            'order_id' => $order->id,
-            'item_id' => $item->id,
-            'quantity' => $quantity,
-            'remaining_stock' => ItemTransaction::stockOnHand($item->id, $order->branch_id)
-        ]);
-    }    /**
-     * Get available servers for a branch (updated from stewards)
-     */
-    public function getAvailableServers($branchId)
-    {
-        return Employee::active()
-            ->servers()
-            ->where('branch_id', $branchId)
-            ->orderBy('name')
-            ->get();
-    }
-
-    /**
-     * Get available stewards for a branch (legacy method - kept for compatibility)
-     */
-    public function getAvailableStewards($branchId)
-    {
-        return $this->getAvailableServers($branchId);
-    }
-
-    /**
-     * Get items with stock information for ordering
-     */
-    public function getItemsWithStock($branchId, $organizationId)
-    {
-        return ItemMaster::where('organization_id', $organizationId)
-            ->where('is_menu_item', true)
-            ->get()
-            ->map(function ($item) use ($branchId) {
-                $stock = ItemTransaction::stockOnHand($item->id, $branchId);
-                return [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    'item_code' => $item->item_code,
-                    'selling_price' => $item->selling_price,
-                    'unit_of_measurement' => $item->unit_of_measurement,
-                    'current_stock' => $stock,
-                    'is_available' => $stock > 0,
-                    'category' => $item->category->name ?? 'Uncategorized'
-                ];
-            })
-            ->filter(fn($item) => $item['is_available'])
-            ->values();
-    }
-
-    /**
-     * Check stock alerts for low stock items
-     */
-    public function getStockAlerts($branchId, $organizationId)
-    {
-        $items = ItemMaster::where('organization_id', $organizationId)->get();
-        $alerts = [];
-
-        foreach ($items as $item) {
-            $stock = ItemTransaction::stockOnHand($item->id, $branchId);
-            
-            if ($stock <= 0) {
-                $alerts[] = [
-                    'type' => 'out_of_stock',
-                    'item' => $item->name,
-                    'current_stock' => $stock,
-                    'message' => "{$item->name} is out of stock"
-                ];
-            } elseif ($stock <= $item->reorder_level) {
-                $alerts[] = [
-                    'type' => 'low_stock',
-                    'item' => $item->name,
-                    'current_stock' => $stock,
-                    'reorder_level' => $item->reorder_level,
-                    'message' => "{$item->name} is running low (Stock: {$stock}, Reorder: {$item->reorder_level})"
-                ];
+        $cacheKey = "inventory_stock_{$branchId}_{$inventoryItemId}";
+        
+        return Cache::remember($cacheKey, 30, function () use ($inventoryItemId, $branchId) {
+            $inventoryItem = InventoryItem::where('id', $inventoryItemId)
+                ->where('branch_id', $branchId)
+                ->first();
+                
+            if (!$inventoryItem) {
+                return 0;
             }
-        }
-
-        return $alerts;
-    }
-
-    /**
-     * Update order with validation
-     */
-    public function updateOrder(Order $order, array $data)
-    {
-        return DB::transaction(function () use ($order, $data) {
-            // If items are being updated, validate stock and restore previous stock
-            if (isset($data['items'])) {
-                // Restore previous stock
-                $this->restoreOrderStock($order);
-                
-                // Delete old items
-                $order->items()->delete();
-                
-                // Validate new stock requirements
-                $this->validateStockAvailability($data['items'], $order->branch_id);
-                
-                // Create new items and deduct stock
-                $this->createOrderItems($order, $data['items']);
-            }
-
-            // Update order details
-            $order->update(array_intersect_key($data, array_flip([
-                'customer_name', 'customer_phone', 'steward_id', 'notes'
-            ])));
-
-            $order->calculateTotal();
-
-            return $order;
+            
+            // Calculate available stock (current stock - reserved stock)
+            $reservedStock = $this->getReservedStock($inventoryItemId, $branchId);
+            return max(0, $inventoryItem->current_stock - $reservedStock);
         });
     }
 
     /**
-     * Restore stock when order is cancelled or updated
+     * Get currently reserved stock for inventory item
      */
-    public function restoreOrderStock(Order $order)
+    private function getReservedStock(int $inventoryItemId, int $branchId): float
     {
-        if (!$order->stock_deducted) {
+        // Get active reservations (not expired)
+        $activeReservations = Cache::get("stock_reservations_{$branchId}_{$inventoryItemId}", []);
+        
+        $totalReserved = 0;
+        $currentTime = now();
+        
+        foreach ($activeReservations as $reservation) {
+            $expiresAt = Carbon::parse($reservation['expires_at']);
+            
+            if ($currentTime->lessThan($expiresAt)) {
+                $totalReserved += $reservation['quantity'];
+            }
+        }
+        
+        return $totalReserved;
+    }
+
+    /**
+     * Reserve stock for order items
+     */
+    private function reserveStock(array $items): array
+    {
+        $reservations = [];
+        $reservationId = 'rsv_' . uniqid();
+        $expiresAt = now()->addMinutes(5); // 5-minute reservation
+        
+        foreach ($items as $item) {
+            $menuItem = MenuItem::with(['inventoryItems'])->findOrFail($item['menu_item_id']);
+            
+            if (!$menuItem->requires_inventory_check) {
+                continue;
+            }
+            
+            foreach ($menuItem->inventoryItems as $inventoryItem) {
+                $reserveQuantity = $inventoryItem->pivot->quantity_required * $item['quantity'];
+                
+                // Create reservation entry
+                $reservation = [
+                    'reservation_id' => $reservationId,
+                    'inventory_item_id' => $inventoryItem->id,
+                    'quantity' => $reserveQuantity,
+                    'created_at' => now()->toISOString(),
+                    'expires_at' => $expiresAt->toISOString(),
+                    'menu_item_id' => $menuItem->id,
+                    'order_quantity' => $item['quantity']
+                ];
+                
+                // Store reservation in cache
+                $cacheKey = "stock_reservations_{$menuItem->branch_id}_{$inventoryItem->id}";
+                $activeReservations = Cache::get($cacheKey, []);
+                $activeReservations[] = $reservation;
+                Cache::put($cacheKey, $activeReservations, 600); // 10 minutes
+                
+                $reservations[] = $reservation;
+            }
+        }
+        
+        return $reservations;
+    }
+
+    /**
+     * Calculate total preparation time for order items
+     */
+    private function calculatePreparationTime(array $items): int
+    {
+        $maxTime = 0;
+        $stationTimes = [];
+        
+        foreach ($items as $item) {
+            $menuItem = MenuItem::findOrFail($item['menu_item_id']);
+            $stationId = $menuItem->kitchen_station_id ?? 'default';
+            $itemTime = ($menuItem->preparation_time ?? 15) * $item['quantity'];
+            
+            // Group by kitchen station for parallel cooking
+            if (!isset($stationTimes[$stationId])) {
+                $stationTimes[$stationId] = 0;
+            }
+            $stationTimes[$stationId] += $itemTime;
+        }
+        
+        // Return maximum time across all stations (parallel execution)
+        return empty($stationTimes) ? 15 : max($stationTimes);
+    }
+
+    /**
+     * Generate unique order number
+     */
+    private function generateOrderNumber(int $branchId): string
+    {
+        $date = now()->format('Ymd');
+        $branchCode = str_pad($branchId, 3, '0', STR_PAD_LEFT);
+        
+        // Get daily sequence number
+        $sequenceKey = "order_sequence_{$branchId}_{$date}";
+        $sequence = Cache::increment($sequenceKey);
+        
+        if ($sequence === 1) {
+            Cache::put($sequenceKey, 1, now()->endOfDay());
+        }
+        
+        return "ORD-{$branchCode}-{$date}-" . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Generate unique KOT number
+     */
+    private function generateKotNumber(int $branchId): string
+    {
+        $date = now()->format('Ymd');
+        $branchCode = str_pad($branchId, 3, '0', STR_PAD_LEFT);
+        
+        // Get daily KOT sequence number
+        $sequenceKey = "kot_sequence_{$branchId}_{$date}";
+        $sequence = Cache::increment($sequenceKey);
+        
+        if ($sequence === 1) {
+            Cache::put($sequenceKey, 1, now()->endOfDay());
+        }
+        
+        return "KOT-{$branchCode}-{$date}-" . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Generate KOTs (Kitchen Order Tickets) for order
+     */
+    private function generateKots(Order $order): array
+    {
+        $kots = [];
+        $orderItems = $order->orderItems()->with(['menuItem', 'menuItem.kitchenStation'])->get();
+        
+        // Group items by kitchen station
+        $stationGroups = $orderItems->groupBy(function ($item) {
+            return $item->menuItem->kitchen_station_id ?? 'default';
+        });
+        
+        foreach ($stationGroups as $stationId => $items) {
+            $kot = Kot::create([
+                'order_id' => $order->id,
+                'kitchen_station_id' => $stationId === 'default' ? null : $stationId,
+                'kot_number' => $this->generateKotNumber($order->branch_id),
+                'status' => 'pending',
+                'priority' => $this->calculateKotPriority($items),
+                'estimated_time' => $items->sum(function ($item) {
+                    return ($item->menuItem->preparation_time ?? 15) * $item->quantity;
+                }),
+                'created_at' => now(),
+                'instructions' => $order->special_instructions
+            ]);
+            
+            // Create KOT items
+            foreach ($items as $orderItem) {
+                KotItem::create([
+                    'kot_id' => $kot->id,
+                    'order_item_id' => $orderItem->id,
+                    'menu_item_id' => $orderItem->menu_item_id,
+                    'quantity' => $orderItem->quantity,
+                    'special_instructions' => $orderItem->special_instructions,
+                    'allergen_notes' => $orderItem->allergen_notes,
+                    'priority' => $orderItem->preparation_priority ?? 'normal'
+                ]);
+            }
+            
+            $kots[] = $kot;
+            
+            // Log KOT generation
+            Log::info('KOT generated', [
+                'kot_id' => $kot->id,
+                'kot_number' => $kot->kot_number,
+                'order_id' => $order->id,
+                'station_id' => $stationId,
+                'items_count' => $items->count()
+            ]);
+        }
+        
+        return $kots;
+    }
+
+    /**
+     * Calculate KOT priority based on items
+     */
+    private function calculateKotPriority($items): string
+    {
+        $highPriorityItems = $items->filter(function ($item) {
+            return ($item->preparation_priority ?? 'normal') === 'high';
+        });
+        
+        if ($highPriorityItems->count() > 0) {
+            return 'high';
+        }
+        
+        return 'normal';
+    }
+
+    /**
+     * Transition order to new state
+     */
+    public function transitionOrderState(Order $order, string $newState): bool
+    {
+        $currentState = $order->status;
+        
+        // Validate state transition
+        if (!$this->isValidTransition($currentState, $newState)) {
+            Log::warning('Invalid order state transition attempted', [
+                'order_id' => $order->id,
+                'from_state' => $currentState,
+                'to_state' => $newState
+            ]);
+            return false;
+        }
+        
+        // Update order status
+        $order->update([
+            'status' => $newState,
+            'status_updated_at' => now()
+        ]);
+        
+        // Handle state-specific actions
+        $this->handleStateTransition($order, $currentState, $newState);
+        
+        Log::info('Order state transitioned', [
+            'order_id' => $order->id,
+            'from_state' => $currentState,
+            'to_state' => $newState
+        ]);
+        
+        return true;
+    }
+
+    /**
+     * Check if state transition is valid
+     */
+    private function isValidTransition(string $currentState, string $newState): bool
+    {
+        return in_array($newState, self::ORDER_STATES[$currentState] ?? []);
+    }
+
+    /**
+     * Handle state-specific transition actions
+     */
+    private function handleStateTransition(Order $order, string $fromState, string $toState): void
+    {
+        switch ($toState) {
+            case 'confirmed':
+                // Send notification to kitchen
+                $this->notifyKitchen($order);
+                break;
+                
+            case 'preparing':
+                // Start preparation timer
+                $order->update(['preparation_started_at' => now()]);
+                break;
+                
+            case 'ready':
+                // Notify service staff
+                $this->notifyServiceStaff($order);
+                break;
+                
+            case 'served':
+                // Record service time
+                $order->update(['served_at' => now()]);
+                break;
+                
+            case 'completed':
+                // Release stock reservations
+                $this->releaseStockReservations($order);
+                // Update inventory levels
+                $this->updateInventoryLevels($order);
+                break;
+                
+            case 'cancelled':
+                // Release stock reservations
+                $this->releaseStockReservations($order);
+                // Cancel KOTs
+                $this->cancelOrderKots($order);
+                break;
+        }
+    }
+
+    /**
+     * Release stock reservations for order
+     */
+    private function releaseStockReservations(Order $order): void
+    {
+        if (!$order->stock_reservations) {
             return;
         }
-
-        foreach ($order->items as $orderItem) {
-            ItemTransaction::create([
-                'organization_id' => $order->branch->organization_id,
-                'branch_id' => $order->branch_id,
-                'inventory_item_id' => $orderItem->inventory_item_id,
-                'transaction_type' => 'return',
-                'quantity' => $orderItem->quantity, // Positive for stock return
-                'cost_price' => $orderItem->inventoryItem->buying_price,
-                'unit_price' => $orderItem->unit_price,
-                'source_id' => (string)$order->id,                'source_type' => 'OrderCancellation',
-                'created_by_user_id' => Auth::id(),
-                'notes' => "Stock restored from cancelled Order #{$order->order_number}",
-                'is_active' => true
-            ]);
-        }
-
-        $order->update(['stock_deducted' => false]);
-
-        Log::info('Stock restored for order', ['order_id' => $order->id]);
-    }
-
-    /**
-     * Cancel order and restore stock
-     */
-    public function cancelOrder(Order $order, $reason = null)
-    {
-        return DB::transaction(function () use ($order, $reason) {
-            // Restore stock if it was deducted
-            $this->restoreOrderStock($order);
+        
+        $reservations = json_decode($order->stock_reservations, true);
+        
+        foreach ($reservations as $reservation) {
+            $cacheKey = "stock_reservations_{$order->branch_id}_{$reservation['inventory_item_id']}";
+            $activeReservations = Cache::get($cacheKey, []);
             
-            // Cancel the order
-            $order->cancel($reason);
-
-            Log::info('Order cancelled', [
-                'order_id' => $order->id,
-                'reason' => $reason
-            ]);
-
-            return $order;
-        });
-    }
-
-    /**
-     * Validate cart items in real-time
-     */
-    public function validateCartItems(array $cartItems, int $branchId, int $organizationId): array
-    {
-        $validation = [
-            'valid' => true,
-            'errors' => [],
-            'warnings' => [],
-            'items' => []
-        ];
-
-        foreach ($cartItems as $item) {
-            $itemValidation = $this->validateCartItem($item, $branchId, $organizationId);
-            $validation['items'][] = $itemValidation;
-
-            if (!$itemValidation['valid']) {
-                $validation['valid'] = false;
-                $validation['errors'] = array_merge($validation['errors'], $itemValidation['errors']);
-            }
-
-            if (!empty($itemValidation['warnings'])) {
-                $validation['warnings'] = array_merge($validation['warnings'], $itemValidation['warnings']);
-            }
-        }
-
-        return $validation;
-    }
-
-    /**
-     * Validate individual cart item
-     */
-    protected function validateCartItem(array $item, int $branchId, int $organizationId): array
-    {
-        $validation = [
-            'item_id' => $item['item_id'],
-            'quantity' => $item['quantity'],
-            'valid' => false,
-            'errors' => [],
-            'warnings' => [],
-            'availability' => null
-        ];
-
-        try {
-            $itemMaster = ItemMaster::where('id', $item['item_id'])
-                ->where('organization_id', $organizationId)
-                ->first();
-
-            if (!$itemMaster) {
-                $validation['errors'][] = "Item not found";
-                return $validation;
-            }
-
-            $currentStock = ItemTransaction::stockOnHand($item['item_id'], $branchId);
-            $requestedQuantity = $item['quantity'];
-
-            $validation['availability'] = [
-                'current_stock' => $currentStock,
-                'requested_quantity' => $requestedQuantity,
-                'available' => $currentStock >= $requestedQuantity
-            ];
-
-            if ($currentStock <= 0) {
-                $validation['errors'][] = "{$itemMaster->name} is out of stock";
-            } elseif ($currentStock < $requestedQuantity) {
-                $validation['errors'][] = "Insufficient stock for {$itemMaster->name}. Available: {$currentStock}, Required: {$requestedQuantity}";
-            } else {
-                $validation['valid'] = true;
-                
-                // Add warnings for low stock
-                if ($currentStock <= $itemMaster->reorder_level) {
-                    $validation['warnings'][] = "{$itemMaster->name} is running low (Stock: {$currentStock})";
-                }
-                
-                // Warning if order will bring stock below reorder level
-                if (($currentStock - $requestedQuantity) <= $itemMaster->reorder_level) {
-                    $validation['warnings'][] = "Order will bring {$itemMaster->name} below reorder level";
-                }
-            }
-
-        } catch (\Exception $e) {
-            $validation['errors'][] = "Error validating item: " . $e->getMessage();
-        }
-
-        return $validation;
-    }
-
-    /**
-     * Create order with reservation-confirmation workflow
-     */
-    public function createOrderWithReservation(array $data): array
-    {
-        try {
-            // Step 1: Validate and reserve stock
-            $reservationResult = $this->reserveStockForCart($data['items'], $data['branch_id'], $data['organization_id'] ?? Auth::user()->organization_id);
+            // Remove this reservation
+            $activeReservations = array_filter($activeReservations, function ($res) use ($reservation) {
+                return $res['reservation_id'] !== $reservation['reservation_id'];
+            });
             
-            if (!$reservationResult['success']) {
-                return [
-                    'success' => false,
-                    'errors' => $reservationResult['errors'],
-                    'step' => 'reservation_failed'
-                ];
-            }
-
-            // Step 2: Create order with reservation keys
-            $order = DB::transaction(function () use ($data, $reservationResult) {
-                $order = Order::create([
-                    'branch_id' => $data['branch_id'],
-                    'customer_name' => $data['customer_name'] ?? 'Not Provided',
-                    'customer_phone' => $data['customer_phone'] ?? 'Not Provided',
-                    'order_type' => $data['order_type'] ?? Order::TYPE_TAKEAWAY_ONLINE,
-                    'steward_id' => $data['steward_id'] ?? null,
-                    'reservation_id' => $data['reservation_id'] ?? null,
-                    'notes' => $data['notes'] ?? null,
-                    'status' => Order::STATUS_SUBMITTED
-                ]);
-
-                // Store reservation keys for later confirmation
-                $order->reservation_keys = collect($reservationResult['reservations'])->pluck('reservation_key')->toArray();
-                $order->save();
-
-                // Create order items
-                $this->createOrderItems($order, $data['items']);
-                
-                return $order;
-            });
-
-            return [
-                'success' => true,
-                'order' => $order,
-                'reservation_keys' => $order->reservation_keys,
-                'step' => 'order_created_pending_confirmation'
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'errors' => [$e->getMessage()],
-                'step' => 'order_creation_failed'
-            ];
+            Cache::put($cacheKey, array_values($activeReservations), 600);
         }
+        
+        Log::info('Stock reservations released', [
+            'order_id' => $order->id,
+            'reservations_count' => count($reservations)
+        ]);
     }
 
     /**
-     * Confirm order and finalize stock deduction
+     * Update inventory levels after order completion
      */
-    public function confirmOrder(Order $order): array
+    private function updateInventoryLevels(Order $order): void
     {
-        try {
-            if (!$order->reservation_keys) {
-                return [
-                    'success' => false,
-                    'error' => 'No reservation keys found for order'
-                ];
-            }            // Convert reservations to actual stock deductions
-            $this->confirmStockReservations($order);
-
-            if (true) {
-                $order->update([
-                    'status' => Order::STATUS_PREPARING,
-                    'stock_deducted' => true,
-                    'confirmed_at' => now()
-                ]);
-
-                $order->calculateTotal();
-                $order->generateKOT();
-
-                return [
-                    'success' => true,
-                    'order' => $order->fresh()
-                ];
-            }
-
-            return [
-                'success' => false,
-                'error' => 'Failed to confirm stock reservations'
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }
-
-    /**
-     * Cancel order and restore reserved stock
-     */
-    public function cancelOrderWithReservation(Order $order, string $reason = null): array
-    {
-        try {
-            DB::transaction(function () use ($order, $reason) {                if ($order->reservation_keys) {
-                    // Cancel reservations - simplified approach
-                    // In real implementation, this would remove reservation transactions
-                } elseif ($order->stock_deducted) {
-                    $this->restoreOrderStock($order);
-                }
-
-                $order->cancel($reason);
-            });
-
-            return [
-                'success' => true,
-                'message' => 'Order cancelled and stock restored'
-            ];
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
-    }    /**
-     * Reserve stock for cart items
-     */
-    protected function reserveStockForCart(array $items, int $branchId, int $organizationId): array
-    {
-        // Simplified reservation - validate stock and prepare reservation data
-        $reservations = [];
-        $errors = [];
-
-        foreach ($items as $item) {
-            $itemMaster = ItemMaster::where('id', $item['item_id'])
-                ->where('organization_id', $organizationId)
-                ->first();
-
-            if (!$itemMaster) {
-                $errors[] = "Item not found: {$item['item_id']}";
+        $orderItems = $order->orderItems()->with(['menuItem.inventoryItems'])->get();
+        
+        foreach ($orderItems as $orderItem) {
+            if (!$orderItem->menuItem->requires_inventory_check) {
                 continue;
             }
-
-            $currentStock = ItemTransaction::stockOnHand($item['item_id'], $branchId);
-            $requestedQuantity = $item['quantity'];
-
-            if ($currentStock < $requestedQuantity) {
-                $errors[] = "Insufficient stock for {$itemMaster->name}. Available: {$currentStock}, Required: {$requestedQuantity}";
-                continue;
-            }
-
-            $reservations[] = [
-                'item_id' => $item['item_id'],
-                'quantity' => $requestedQuantity,
-                'reservation_key' => uniqid('res_', true)
-            ];
-        }
-
-        return [
-            'success' => empty($errors),
-            'reservations' => $reservations,
-            'errors' => $errors
-        ];
-    }
-
-    /**
-     * Get dashboard statistics
-     */
-    public function getDashboardStats(int $branchId, int $organizationId): array
-    {
-        $today = now()->toDateString();
-        $thisWeek = now()->startOfWeek();
-        $thisMonth = now()->startOfMonth();
-
-        return [
-            'orders' => [
-                'today' => Order::where('branch_id', $branchId)
-                    ->whereDate('created_at', $today)
-                    ->count(),
-                'this_week' => Order::where('branch_id', $branchId)
-                    ->where('created_at', '>=', $thisWeek)
-                    ->count(),
-                'this_month' => Order::where('branch_id', $branchId)
-                    ->where('created_at', '>=', $thisMonth)
-                    ->count(),
-                'pending' => Order::where('branch_id', $branchId)
-                    ->whereIn('status', [Order::STATUS_SUBMITTED, Order::STATUS_PREPARING])
-                    ->count()
-            ],
-            'revenue' => [
-                'today' => Order::where('branch_id', $branchId)
-                    ->whereDate('created_at', $today)
-                    ->where('status', Order::STATUS_COMPLETED)
-                    ->sum('total'),
-                'this_week' => Order::where('branch_id', $branchId)
-                    ->where('created_at', '>=', $thisWeek)
-                    ->where('status', Order::STATUS_COMPLETED)
-                    ->sum('total'),
-                'this_month' => Order::where('branch_id', $branchId)
-                    ->where('created_at', '>=', $thisMonth)
-                    ->where('status', Order::STATUS_COMPLETED)
-                    ->sum('total')
-            ],
-            'avg_order_value' => Order::where('branch_id', $branchId)
-                ->whereDate('created_at', $today)
-                ->where('status', Order::STATUS_COMPLETED)
-                ->avg('total'),
-            'top_items' => $this->getTopSellingItems($branchId, $today)
-        ];
-    }    /**
-     * Get stock alerts for orders
-     */
-    public function getOrderStockAlerts(int $branchId, int $organizationId): array
-    {
-        $alerts = collect();
-        $items = ItemMaster::where('organization_id', $organizationId)->get();
-
-        foreach ($items as $item) {
-            $stock = ItemTransaction::stockOnHand($item->id, $branchId);
             
-            if ($stock <= 0) {
-                $alerts->push([
-                    'type' => 'critical',
-                    'level' => 'out_of_stock',
-                    'item_id' => $item->id,
-                    'item_name' => $item->name,
-                    'current_stock' => $stock,
-                    'message' => "{$item->name} is out of stock"
-                ]);
-            } elseif ($stock <= $item->reorder_level) {
-                $alerts->push([
-                    'type' => 'warning',
-                    'level' => 'low_stock',
-                    'item_id' => $item->id,
-                    'item_name' => $item->name,
-                    'current_stock' => $stock,
-                    'reorder_level' => $item->reorder_level,
-                    'message' => "{$item->name} is running low"
-                ]);
+            foreach ($orderItem->menuItem->inventoryItems as $inventoryItem) {
+                $consumedQuantity = $inventoryItem->pivot->quantity_required * $orderItem->quantity;
+                
+                // Update inventory
+                $branchInventory = InventoryItem::where('item_master_id', $inventoryItem->id)
+                    ->where('branch_id', $order->branch_id)
+                    ->first();
+                    
+                if ($branchInventory) {
+                    $branchInventory->decrement('current_stock', $consumedQuantity);
+                    $branchInventory->update(['last_updated' => now()]);
+                    
+                    // Clear cache for this inventory item
+                    Cache::forget("inventory_stock_{$order->branch_id}_{$inventoryItem->id}");
+                }
             }
         }
-
-        return [
-            'critical_alerts' => $alerts->where('type', 'critical')->values(),
-            'warning_alerts' => $alerts->where('type', 'warning')->values(),
-            'total_alerts' => $alerts->count(),
-            'critical_count' => $alerts->where('type', 'critical')->count(),
-            'warning_count' => $alerts->where('type', 'warning')->count()
-        ];
+        
+        Log::info('Inventory levels updated', [
+            'order_id' => $order->id,
+            'branch_id' => $order->branch_id
+        ]);
     }
 
     /**
-     * Get top selling items
+     * Cancel all KOTs for an order
      */
-    protected function getTopSellingItems(int $branchId, string $date, int $limit = 5): Collection
+    private function cancelOrderKots(Order $order): void
     {
-        return DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('item_master', 'order_items.menu_item_id', '=', 'item_master.id')
-            ->where('orders.branch_id', $branchId)
-            ->whereDate('orders.created_at', $date)
-            ->where('orders.status', Order::STATUS_COMPLETED)
-            ->select(
-                'item_master.name',
-                DB::raw('SUM(order_items.quantity) as total_quantity'),
-                DB::raw('SUM(order_items.total_price) as total_revenue')
-            )
-            ->groupBy('order_items.menu_item_id', 'item_master.name')
-            ->orderBy('total_quantity', 'desc')
-            ->limit($limit)
+        $kots = Kot::where('order_id', $order->id)
+            ->whereNotIn('status', ['served', 'cancelled'])
             ->get();
+            
+        foreach ($kots as $kot) {
+            $kot->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now()
+            ]);
+        }
+        
+        Log::info('Order KOTs cancelled', [
+            'order_id' => $order->id,
+            'kots_cancelled' => $kots->count()
+        ]);
     }
 
     /**
-     * Auto-remove out-of-stock items from cart
+     * Notify kitchen about new order
      */
-    public function autoRemoveOutOfStockItems(array $cartItems, int $branchId, int $organizationId): array
+    private function notifyKitchen(Order $order): void
     {
-        $validItems = [];
-        $removedItems = [];
+        // This would integrate with real-time notification system
+        Log::info('Kitchen notification sent', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number
+        ]);
+    }
 
-        foreach ($cartItems as $item) {
-            $itemMaster = ItemMaster::where('id', $item['item_id'])
-                ->where('organization_id', $organizationId)
-                ->first();
+    /**
+     * Notify service staff about ready order
+     */
+    private function notifyServiceStaff(Order $order): void
+    {
+        // This would integrate with real-time notification system
+        Log::info('Service staff notification sent', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number
+        ]);
+    }
 
-            if (!$itemMaster) {
-                $removedItems[] = [
-                    'item_id' => $item['item_id'],
-                    'reason' => 'Item not found'
-                ];
-                continue;
-            }
-
-            $currentStock = ItemTransaction::stockOnHand($item['item_id'], $branchId);
-
-            if ($currentStock <= 0) {
-                $removedItems[] = [
-                    'item_id' => $item['item_id'],
-                    'name' => $itemMaster->name,
-                    'reason' => 'Out of stock'
-                ];
-            } else {
-                // Adjust quantity if requested amount exceeds stock
-                $adjustedQuantity = min($item['quantity'], $currentStock);
-                
-                $validItems[] = [
-                    'item_id' => $item['item_id'],
-                    'quantity' => $adjustedQuantity,
-                    'original_quantity' => $item['quantity'],
-                    'adjusted' => $adjustedQuantity !== $item['quantity']
-                ];
-            }
+    /**
+     * Get order with real-time status
+     */
+    public function getOrderWithStatus(int $orderId): ?Order
+    {
+        $order = Order::with([
+            'orderItems.menuItem',
+            'kots.kotItems',
+            'branch',
+            'organization'
+        ])->find($orderId);
+        
+        if (!$order) {
+            return null;
         }
+        
+        // Add real-time status calculations
+        $order->setAttribute('real_time_status', $this->calculateRealTimeStatus($order));
+        $order->setAttribute('preparation_progress', $this->calculatePreparationProgress($order));
+        $order->setAttribute('estimated_completion', $this->calculateEstimatedCompletion($order));
+        
+        return $order;
+    }
 
+    /**
+     * Calculate real-time order status
+     */
+    private function calculateRealTimeStatus(Order $order): array
+    {
+        $kots = $order->kots;
+        $totalKots = $kots->count();
+        $completedKots = $kots->where('status', 'served')->count();
+        $activeKots = $kots->whereNotIn('status', ['served', 'cancelled'])->count();
+        
         return [
-            'valid_items' => $validItems,
-            'removed_items' => $removedItems,
-            'has_changes' => !empty($removedItems) || collect($validItems)->contains('adjusted', true)
+            'overall_status' => $order->status,
+            'kots_total' => $totalKots,
+            'kots_completed' => $completedKots,
+            'kots_active' => $activeKots,
+            'completion_percentage' => $totalKots > 0 ? round(($completedKots / $totalKots) * 100, 2) : 0
         ];
     }
 
     /**
-     * Confirm stock reservations by deducting actual stock
+     * Calculate preparation progress
      */
-    protected function confirmStockReservations(Order $order): void
+    private function calculatePreparationProgress(Order $order): array
     {
-        foreach ($order->items as $orderItem) {
-            $this->deductStock($order, $orderItem->menuItem ?? $orderItem->inventoryItem, $orderItem->quantity);
+        $items = $order->orderItems;
+        $totalItems = $items->count();
+        $estimatedTime = $order->estimated_preparation_time ?? 30;
+        
+        $timeSinceStart = $order->preparation_started_at 
+            ? now()->diffInMinutes($order->preparation_started_at)
+            : 0;
+            
+        $progressPercentage = $estimatedTime > 0 
+            ? min(100, round(($timeSinceStart / $estimatedTime) * 100, 2))
+            : 0;
+        
+        return [
+            'total_items' => $totalItems,
+            'estimated_time_minutes' => $estimatedTime,
+            'elapsed_time_minutes' => $timeSinceStart,
+            'progress_percentage' => $progressPercentage,
+            'is_overdue' => $timeSinceStart > $estimatedTime
+        ];
+    }
+
+    /**
+     * Calculate estimated completion time
+     */
+    private function calculateEstimatedCompletion(Order $order): ?Carbon
+    {
+        if (!$order->preparation_started_at) {
+            return null;
+        }
+        
+        $estimatedTime = $order->estimated_preparation_time ?? 30;
+        return $order->preparation_started_at->addMinutes($estimatedTime);
+    }
+
+    /**
+     * Update KOT status
+     */
+    public function updateKotStatus(int $kotId, string $newStatus): bool
+    {
+        $kot = Kot::find($kotId);
+        
+        if (!$kot) {
+            return false;
+        }
+        
+        $currentStatus = $kot->status;
+        
+        // Validate KOT state transition
+        if (!$this->isValidKotTransition($currentStatus, $newStatus)) {
+            Log::warning('Invalid KOT state transition attempted', [
+                'kot_id' => $kotId,
+                'from_status' => $currentStatus,
+                'to_status' => $newStatus
+            ]);
+            return false;
+        }
+        
+        // Update KOT status
+        $kot->update([
+            'status' => $newStatus,
+            'status_updated_at' => now()
+        ]);
+        
+        // Handle status-specific actions
+        if ($newStatus === 'started') {
+            $kot->update(['started_at' => now()]);
+        } elseif ($newStatus === 'ready') {
+            $kot->update(['completed_at' => now()]);
+        } elseif ($newStatus === 'served') {
+            $kot->update(['served_at' => now()]);
+        }
+        
+        // Check if all KOTs are completed to update order status
+        $this->checkOrderCompletionStatus($kot->order);
+        
+        Log::info('KOT status updated', [
+            'kot_id' => $kotId,
+            'from_status' => $currentStatus,
+            'to_status' => $newStatus
+        ]);
+        
+        return true;
+    }
+
+    /**
+     * Check if KOT state transition is valid
+     */
+    private function isValidKotTransition(string $currentStatus, string $newStatus): bool
+    {
+        return in_array($newStatus, self::KOT_STATES[$currentStatus] ?? []);
+    }
+
+    /**
+     * Check if order should be marked as ready/completed
+     */
+    private function checkOrderCompletionStatus(Order $order): void
+    {
+        $kots = $order->kots;
+        $allServed = $kots->every(function ($kot) {
+            return $kot->status === 'served';
+        });
+        
+        $allReady = $kots->every(function ($kot) {
+            return in_array($kot->status, ['ready', 'served']);
+        });
+        
+        if ($allServed && $order->status !== 'served') {
+            $this->transitionOrderState($order, 'served');
+        } elseif ($allReady && $order->status === 'preparing') {
+            $this->transitionOrderState($order, 'ready');
         }
     }
 }

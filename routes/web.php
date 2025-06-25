@@ -25,6 +25,7 @@ use App\Http\Controllers\{
     DatabaseTestController,
 };
 use App\Http\Controllers\Admin\MenuController;
+use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Middleware\SuperAdmin;
 
 
@@ -40,6 +41,36 @@ use App\Http\Middleware\SuperAdmin;
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
+
+/*-------------------------------------------------------------------------
+| Guest Routes (Unauthenticated)
+|------------------------------------------------------------------------*/
+Route::prefix('guest')->name('guest.')->group(function () {
+    // Menu browsing
+    Route::get('/menu', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenu'])->name('menu.index');
+    Route::get('/menu/date/{date}', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenuByDate'])->name('menu.date');
+    Route::get('/menu/special', [\App\Http\Controllers\Guest\GuestController::class, 'viewSpecialMenu'])->name('menu.special');
+    
+    // Cart management
+    Route::post('/cart/add', [\App\Http\Controllers\Guest\GuestController::class, 'addToCart'])->name('cart.add');
+    Route::post('/cart/update', [\App\Http\Controllers\Guest\GuestController::class, 'updateCart'])->name('cart.update');
+    Route::delete('/cart/remove/{itemId}', [\App\Http\Controllers\Guest\GuestController::class, 'removeFromCart'])->name('cart.remove');
+    Route::get('/cart', [\App\Http\Controllers\Guest\GuestController::class, 'viewCart'])->name('cart.view');
+    Route::delete('/cart/clear', [\App\Http\Controllers\Guest\GuestController::class, 'clearCart'])->name('cart.clear');
+    
+    // Order creation
+    Route::post('/order/create', [\App\Http\Controllers\Guest\GuestController::class, 'createOrder'])->name('order.create');
+    Route::get('/order/{orderNumber}/track', [\App\Http\Controllers\Guest\GuestController::class, 'trackOrder'])->name('order.track');
+    Route::get('/order/{orderNumber}/details', [\App\Http\Controllers\Guest\GuestController::class, 'orderDetails'])->name('order.details');
+    
+    // Reservations
+    Route::get('/reservation/create', [\App\Http\Controllers\Guest\GuestController::class, 'createReservation'])->name('reservation.create');
+    Route::post('/reservation/store', [\App\Http\Controllers\Guest\GuestController::class, 'storeReservation'])->name('reservation.store');
+    Route::get('/reservation/{confirmationCode}/details', [\App\Http\Controllers\Guest\GuestController::class, 'reservationDetails'])->name('reservation.details');
+    
+    // Guest session management
+    Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
+});
 
 /*-------------------------------------------------------------------------
 | Customer Routes
@@ -85,6 +116,7 @@ Route::middleware(['web'])->group(function () {
 
         // Takeaway Orders
         Route::prefix('takeaway')->name('takeaway.')->group(function () {
+            Route::get('/', [OrderController::class, 'indexTakeaway'])->name('index');
             Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
             Route::post('/store', [OrderController::class, 'storeTakeaway'])->name('store');
             Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
@@ -209,6 +241,28 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/', [GrnDashboardController::class, 'store'])->name('store');
             Route::get('/{grn}', [GrnDashboardController::class, 'show'])->name('show');
         });
+
+        // Orders Management
+        Route::prefix('orders')->name('orders.')->group(function () {
+            Route::get('/', [AdminOrderController::class, 'index'])->name('index');
+            Route::get('/create', [AdminOrderController::class, 'create'])->name('create');
+            Route::post('/', [AdminOrderController::class, 'store'])->name('store');
+            Route::get('/{order}', [AdminOrderController::class, 'show'])->whereNumber('order')->name('show');
+            Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->whereNumber('order')->name('edit');
+            Route::put('/{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
+            Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
+            
+            // Takeaway Orders
+            Route::prefix('takeaway')->name('takeaway.')->group(function () {
+                Route::get('/', [AdminOrderController::class, 'indexTakeaway'])->name('index');
+                Route::get('/create', [AdminOrderController::class, 'createTakeaway'])->name('create');
+                Route::post('/', [AdminOrderController::class, 'storeTakeaway'])->name('store');
+                Route::get('/{order}', [AdminOrderController::class, 'showTakeaway'])->whereNumber('order')->name('show');
+                Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
+                Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
+                Route::delete('/{order}', [AdminOrderController::class, 'destroyTakeaway'])->whereNumber('order')->name('destroy');
+            });
+        });
     });
 });
 
@@ -227,6 +281,12 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
         Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+        
+        // Organization User creation
+        Route::get('users/create', [UserController::class, 'create'])->name('organization.users.create');
+        
+        // Branch-specific User creation
+        Route::get('branches/{branch}/users/create', [UserController::class, 'create'])->name('branch.users.create');
     });
 
     // Global Branches Index (for Super Admin to see all branches)
@@ -240,7 +300,7 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
 
     // Subscription Plans
-    Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+    Route::resource('subscription-plans', SubscriptionPlanController::class);
 });
 
 // Branch summary and regenerate key
@@ -288,7 +348,7 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
 
         // Subscription Plans
-        Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+        Route::resource('subscription-plans', SubscriptionPlanController::class);
 
         Route::resource('subscriptions', \App\Http\Controllers\SubscriptionController::class)->only(['edit', 'update']);
     });
@@ -320,7 +380,7 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
 
     // Subscription Plans
-    Route::resource('subscription-plans', \App\Http\Controllers\SubscriptionPlanController::class);
+    Route::resource('subscription-plans', SubscriptionPlanController::class);
 
 });
 
@@ -346,8 +406,6 @@ Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('/users/{user}/assign-role', [UserController::class, 'assignRoleForm'])->name('users.assign-role');
         Route::post('/users/{user}/assign-role', [UserController::class, 'assignRole'])->name('users.assign-role.store');
-        Route::get('admin/organizations/{organization}/users/create', [UserController::class, 'create'])->name('admin.users.create');
-        Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('admin.branch.users.create');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 });
 
@@ -406,4 +464,103 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
     Route::get('/order-stats', [DatabaseTestController::class, 'getOrderStats']);
     Route::get('/recent-orders', [DatabaseTestController::class, 'getRecentOrders']);
     Route::get('/orders-preview', [DatabaseTestController::class, 'getOrdersPreview']);
+    
+    // Payment Management
+    Route::get('payments', [App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
+    Route::get('payments/create', [App\Http\Controllers\Admin\PaymentController::class, 'create'])->name('payments.create');
+    Route::post('payments', [App\Http\Controllers\Admin\PaymentController::class, 'store'])->name('payments.store');
+    Route::get('payments/{payment}', [App\Http\Controllers\Admin\PaymentController::class, 'show'])->name('payments.show');
+    Route::get('payments/{payment}/edit', [App\Http\Controllers\Admin\PaymentController::class, 'edit'])->name('payments.edit');
+    Route::put('payments/{payment}', [App\Http\Controllers\Admin\PaymentController::class, 'update'])->name('payments.update');
+    Route::delete('payments/{payment}', [App\Http\Controllers\Admin\PaymentController::class, 'destroy'])->name('payments.destroy');
+    Route::get('payments/{payment}/print', [App\Http\Controllers\Admin\PaymentController::class, 'print'])->name('payments.print');
 });
+
+Route::get('customers/index', [App\Http\Controllers\Admin\CustomerController::class, 'index'])->middleware(['auth:admin'])->name('admin.customers.index');
+Route::get('digital-menu/index', [App\Http\Controllers\Admin\DigitalMenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.digital-menu.index');
+Route::get('settings/index', [App\Http\Controllers\Admin\SettingController::class, 'index'])->middleware(['auth:admin'])->name('admin.settings.index');
+Route::get('reports/index', [App\Http\Controllers\Admin\ReportController::class, 'index'])->middleware(['auth:admin'])->name('admin.reports.index');
+Route::get('debug/routes', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes');
+Route::get('debug/routes/test', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.test');
+Route::get('debug/routes/generate', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.generate');
+Route::get('debug/routes/export', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.export');
+Route::get('employees/index', [App\Http\Controllers\Admin\EmployeeController::class, 'index'])->middleware(['auth:admin'])->name('admin.employees.index');
+Route::post('employees/store', [App\Http\Controllers\Admin\EmployeeController::class, 'store'])->middleware(['auth:admin'])->name('admin.employees.store');
+Route::get('employees/show', [App\Http\Controllers\Admin\EmployeeController::class, 'show'])->middleware(['auth:admin'])->name('admin.employees.show');
+Route::put('employees/update', [App\Http\Controllers\Admin\EmployeeController::class, 'update'])->middleware(['auth:admin'])->name('admin.employees.update');
+Route::get('employees/create', [App\Http\Controllers\Admin\EmployeeController::class, 'create'])->middleware(['auth:admin'])->name('admin.employees.create');
+Route::get('employees/restore', [App\Http\Controllers\Admin\EmployeeController::class, 'restore'])->middleware(['auth:admin'])->name('admin.employees.restore');
+Route::get('employees/edit', [App\Http\Controllers\Admin\EmployeeController::class, 'edit'])->middleware(['auth:admin'])->name('admin.employees.edit');
+Route::delete('employees/destroy', [App\Http\Controllers\Admin\EmployeeController::class, 'destroy'])->middleware(['auth:admin'])->name('admin.employees.destroy');
+Route::get('grn/link-payment', [App\Http\Controllers\Admin\GrnController::class, 'link-payment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
+
+Route::get('inventory/gtn/items-with-stock', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
+Route::get('inventory/gtn/update', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
+Route::get('inventory/gtn/print', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.print');
+Route::get('inventory/gtn/edit', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.edit');
+Route::get('inventory/items/restore', [App\Http\Controllers\Admin\InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
+Route::get('inventory/stock/update', [App\Http\Controllers\Admin\InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.update');
+Route::get('inventory/stock/edit', [App\Http\Controllers\Admin\InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.edit');
+Route::get('inventory/stock/show', [App\Http\Controllers\Admin\InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.show');
+Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
+Route::get('menus/bulk/store', [App\Http\Controllers\Admin\MenuController::class, 'bulk'])->middleware(['auth:admin'])->name('admin.menus.bulk.store');
+Route::get('menus/create', [App\Http\Controllers\Admin\MenuController::class, 'create'])->middleware(['auth:admin'])->name('admin.menus.create');
+Route::get('menus/calendar/data', [App\Http\Controllers\Admin\MenuController::class, 'calendar'])->middleware(['auth:admin'])->name('admin.menus.calendar.data');
+Route::post('menus/store', [App\Http\Controllers\Admin\MenuController::class, 'store'])->middleware(['auth:admin'])->name('admin.menus.store');
+Route::get('menus/show', [App\Http\Controllers\Admin\MenuController::class, 'show'])->middleware(['auth:admin'])->name('admin.menus.show');
+Route::put('menus/update', [App\Http\Controllers\Admin\MenuController::class, 'update'])->middleware(['auth:admin'])->name('admin.menus.update');
+Route::get('menus/calendar', [App\Http\Controllers\Admin\MenuController::class, 'calendar'])->middleware(['auth:admin'])->name('admin.menus.calendar');
+Route::get('menus/edit', [App\Http\Controllers\Admin\MenuController::class, 'edit'])->middleware(['auth:admin'])->name('admin.menus.edit');
+Route::get('menus/list', [App\Http\Controllers\Admin\MenuController::class, 'list'])->middleware(['auth:admin'])->name('admin.menus.list');
+Route::get('menus/bulk/create', [App\Http\Controllers\Admin\MenuController::class, 'bulk'])->middleware(['auth:admin'])->name('admin.menus.bulk.create');
+Route::get('menus/preview', [App\Http\Controllers\Admin\MenuController::class, 'preview'])->middleware(['auth:admin'])->name('admin.menus.preview');
+Route::get('orders/archive-old-menus', [App\Http\Controllers\Admin\OrderController::class, 'archive-old-menus'])->middleware(['auth:admin'])->name('admin.orders.archive-old-menus');
+Route::get('orders/menu-safety-status', [App\Http\Controllers\Admin\OrderController::class, 'menu-safety-status'])->middleware(['auth:admin'])->name('admin.orders.menu-safety-status');
+Route::get('orders/reservations/store', [App\Http\Controllers\Admin\OrderController::class, 'reservations'])->middleware(['auth:admin'])->name('admin.orders.reservations.store');
+Route::get('orders/update-cart', [App\Http\Controllers\Admin\OrderController::class, 'update-cart'])->middleware(['auth:admin'])->name('admin.orders.update-cart');
+Route::get('orders/reservations/index', [App\Http\Controllers\Admin\OrderController::class, 'reservations'])->middleware(['auth:admin'])->name('admin.orders.reservations.index');
+Route::get('payments/process', [App\Http\Controllers\PaymentController::class, 'process'])->name('payments.process');
+Route::get('orders/orders/reservations/edit', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.edit');
+Route::get('orders/payment', [App\Http\Controllers\OrderController::class, 'payment'])->name('orders.payment');
+Route::get('orders/takeaway/branch', [App\Http\Controllers\Admin\OrderController::class, 'takeaway'])->middleware(['auth:admin'])->name('admin.orders.takeaway.branch');
+Route::get('orders/dashboard', [App\Http\Controllers\Admin\OrderController::class, 'dashboard'])->middleware(['auth:admin'])->name('admin.orders.dashboard');
+Route::get('check-table-availability', [App\Http\Controllers\Admin\CheckTableAvailabilityController::class, 'index'])->middleware(['auth:admin'])->name('admin.check-table-availability');
+Route::get('orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'reservations'])->middleware(['auth:admin'])->name('admin.orders.reservations.create');
+Route::get('orders/reservations/edit', [App\Http\Controllers\Admin\OrderController::class, 'reservations'])->middleware(['auth:admin'])->name('admin.orders.reservations.edit');
+Route::get('reservations/assign-steward', [App\Http\Controllers\Admin\ReservationController::class, 'assign-steward'])->middleware(['auth:admin'])->name('admin.reservations.assign-steward');
+Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationController::class, 'check-in'])->middleware(['auth:admin'])->name('admin.reservations.check-in');
+Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'check-out'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
+Route::get('orders/orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.create');
+Route::get('roles/assign', [App\Http\Controllers\RoleController::class, 'assign'])->name('roles.assign');
+Route::put('grn/update', [App\Http\Controllers\Admin\GrnController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
+Route::get('grn/print', [App\Http\Controllers\Admin\GrnController::class, 'print'])->middleware(['auth:admin'])->name('admin.grn.print');
+Route::get('grn/edit', [App\Http\Controllers\Admin\GrnController::class, 'edit'])->middleware(['auth:admin'])->name('admin.grn.edit');
+Route::get('grn/verify', [App\Http\Controllers\Admin\GrnController::class, 'verify'])->middleware(['auth:admin'])->name('admin.grn.verify');
+Route::get('purchase-orders/show', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'show'])->middleware(['auth:admin'])->name('admin.purchase-orders.show');
+Route::get('purchase-orders/index', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'index'])->middleware(['auth:admin'])->name('admin.purchase-orders.index');
+Route::post('purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'store'])->middleware(['auth:admin'])->name('admin.purchase-orders.store');
+Route::put('purchase-orders/update', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'update'])->middleware(['auth:admin'])->name('admin.purchase-orders.update');
+Route::get('purchase-orders/create', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'create'])->middleware(['auth:admin'])->name('admin.purchase-orders.create');
+Route::get('purchase-orders/print', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'print'])->middleware(['auth:admin'])->name('admin.purchase-orders.print');
+Route::get('purchase-orders/approve', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'approve'])->middleware(['auth:admin'])->name('admin.purchase-orders.approve');
+Route::get('purchase-orders/edit', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'edit'])->middleware(['auth:admin'])->name('admin.purchase-orders.edit');
+Route::get('suppliers/purchase-orders', [App\Http\Controllers\Admin\SupplierController::class, 'purchase-orders'])->middleware(['auth:admin'])->name('admin.suppliers.purchase-orders');
+Route::get('users/assign-role/store', [App\Http\Controllers\UserController::class, 'assign-role'])->name('users.assign-role.store');
+Route::get('kitchen/orders/index', [App\Http\Controllers\KitchenController::class, 'orders'])->name('kitchen.orders.index');
+Route::get('reservations/index', [App\Http\Controllers\ReservationController::class, 'index'])->name('reservations.index');
+Route::get('orders/show', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
+Route::put('reservations/update', [App\Http\Controllers\ReservationController::class, 'update'])->name('reservations.update');
+Route::get('orders/reservations/summary', [App\Http\Controllers\Admin\OrderController::class, 'reservations'])->middleware(['auth:admin'])->name('admin.orders.reservations.summary');
+Route::get('orders/takeaway/summary', [App\Http\Controllers\Admin\OrderController::class, 'takeaway'])->middleware(['auth:admin'])->name('admin.orders.takeaway.summary');
+Route::get('orders/summary', [App\Http\Controllers\Admin\OrderController::class, 'summary'])->middleware(['auth:admin'])->name('admin.orders.summary');
+Route::get('bills/show', [App\Http\Controllers\Admin\BillController::class, 'show'])->middleware(['auth:admin'])->name('admin.bills.show');
+Route::get('guest/order/confirmation', [App\Http\Controllers\GuestController::class, 'order'])->name('guest.order.confirmation');
+Route::get('guest/reservation/confirmation', [App\Http\Controllers\GuestController::class, 'reservation'])->name('guest.reservation.confirmation');
+Route::get('inventory/items/added-items', [App\Http\Controllers\Admin\InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
+Route::get('payments/create', [App\Http\Controllers\PaymentController::class, 'create'])->name('payments.create');
+Route::get('branch', [App\Http\Controllers\BranchController::class, 'index'])->name('branch');
+Route::get('organization', [App\Http\Controllers\OrganizationController::class, 'index'])->name('organization');
+Route::get('role', [App\Http\Controllers\RoleController::class, 'index'])->name('role');
+Route::get('subscription/expired', [App\Http\Controllers\SubscriptionController::class, 'expired'])->name('subscription.expired');
+Route::get('subscription/upgrade', [App\Http\Controllers\SubscriptionController::class, 'upgrade'])->name('subscription.upgrade');
+Route::get('subscription/required', [App\Http\Controllers\SubscriptionController::class, 'required'])->name('subscription.required');
