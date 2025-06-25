@@ -12,6 +12,7 @@ use App\Models\ProductionOrderIngredient;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\Recipe;
+use App\Models\ItemMaster;
 
 class ProductionOrderController extends Controller
 {
@@ -679,12 +680,12 @@ class ProductionOrderController extends Controller
     }
 
     /**
-     * Calculate ingredients required for production order based on recipes
+     * Calculate ingredients required for production order based on recipes - Enhanced Version
      */
     public function calculateIngredientsFromRecipes(Request $request)
     {
         $request->validate([
-            'production_items' => 'required|array',
+            'production_items' => 'required|array|min:1',
             'production_items.*.item_id' => 'required|exists:item_master,id',
             'production_items.*.quantity' => 'required|numeric|min:0.001',
         ]);
@@ -692,71 +693,90 @@ class ProductionOrderController extends Controller
         $user = Auth::user();
         $ingredientsSummary = [];
         $missingRecipes = [];
+        $totalCost = 0;
 
         foreach ($request->production_items as $productionItem) {
             $itemId = $productionItem['item_id'];
             $quantity = $productionItem['quantity'];
 
-            // Find recipe for this production item
             $recipe = Recipe::where('production_item_id', $itemId)
                 ->where('organization_id', $user->organization_id)
                 ->where('is_active', true)
-                ->with('details.rawMaterialItem')
+                ->with(['details.rawMaterialItem', 'productionItem'])
                 ->first();
 
             if (!$recipe) {
                 $item = ItemMaster::find($itemId);
                 $missingRecipes[] = [
                     'item_id' => $itemId,
-                    'item_name' => $item->name ?? 'Unknown',
-                    'quantity' => $quantity
+                    'item_name' => $item ? $item->name : 'Unknown Item',
+                    'quantity' => $quantity,
+                    'message' => 'No active recipe found for this item'
                 ];
                 continue;
             }
 
-            // Calculate multiplier based on yield
             $multiplier = $quantity / $recipe->yield_quantity;
 
-            // Calculate ingredient requirements
             foreach ($recipe->details as $detail) {
                 $ingredientId = $detail->raw_material_item_id;
                 $requiredQuantity = $detail->quantity_required * $multiplier;
 
                 if (!isset($ingredientsSummary[$ingredientId])) {
+                    $currentStock = $this->getCurrentStock($ingredientId, $user->organization_id);
+                    $buyingPrice = $detail->rawMaterialItem->buying_price ?? 0;
+
                     $ingredientsSummary[$ingredientId] = [
-                        'item' => $detail->rawMaterialItem,
+                        'name' => $detail->rawMaterialItem->name,
                         'total_required' => 0,
-                        'unit_of_measurement' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
-                        'used_in_recipes' => []
+                        'unit' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                        'current_stock' => $currentStock,
+                        'buying_price' => $buyingPrice,
+                        'estimated_cost' => 0,
+                        'used_in_items' => []
                     ];
                 }
 
                 $ingredientsSummary[$ingredientId]['total_required'] += $requiredQuantity;
-                $ingredientsSummary[$ingredientId]['used_in_recipes'][] = [
-                    'recipe_name' => $recipe->recipe_name,
+                $ingredientsSummary[$ingredientId]['estimated_cost'] =
+                    $ingredientsSummary[$ingredientId]['total_required'] * $ingredientsSummary[$ingredientId]['buying_price'];
+
+                $ingredientsSummary[$ingredientId]['used_in_items'][] = [
                     'production_item' => $recipe->productionItem->name,
                     'quantity_needed' => $requiredQuantity,
+                    'recipe_yield' => $recipe->yield_quantity,
                     'production_quantity' => $quantity
+                ];
+
+                $totalCost += $requiredQuantity * $ingredientsSummary[$ingredientId]['buying_price'];
+            }
+        }
+
+        // Add stock analysis for each ingredient
+        $stockAnalysis = [];
+        foreach ($ingredientsSummary as $ingredientId => &$ingredient) {
+            $ingredient['stock_sufficient'] = $ingredient['current_stock'] >= $ingredient['total_required'];
+            $ingredient['stock_difference'] = $ingredient['current_stock'] - $ingredient['total_required'];
+
+            if (!$ingredient['stock_sufficient']) {
+                $stockAnalysis[] = [
+                    'ingredient_id' => $ingredientId,
+                    'ingredient_name' => $ingredient['name'],
+                    'shortage' => abs($ingredient['stock_difference']),
+                    'unit' => $ingredient['unit']
                 ];
             }
         }
 
-        // Check current stock for each ingredient
-        foreach ($ingredientsSummary as $ingredientId => &$ingredient) {
-            $currentStock = $ingredient['item']->getCurrentStock();
-            $ingredient['current_stock'] = $currentStock;
-            $ingredient['shortfall'] = max(0, $ingredient['total_required'] - $currentStock);
-            $ingredient['is_sufficient'] = $currentStock >= $ingredient['total_required'];
-        }
-
         return response()->json([
             'success' => true,
-            'ingredients_summary' => array_values($ingredientsSummary),
+            'ingredients_summary' => $ingredientsSummary,
             'missing_recipes' => $missingRecipes,
+            'stock_analysis' => $stockAnalysis,
             'total_ingredients' => count($ingredientsSummary),
-            'total_shortfall_items' => count(array_filter($ingredientsSummary, function($ing) {
-                return !$ing['is_sufficient'];
-            }))
+            'items_without_recipes' => count($missingRecipes),
+            'estimated_total_cost' => round($totalCost, 2),
+            'ingredients_with_shortage' => count($stockAnalysis)
         ]);
     }
 
