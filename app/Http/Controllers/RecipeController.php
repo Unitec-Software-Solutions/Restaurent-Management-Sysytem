@@ -37,7 +37,7 @@ class RecipeController extends Controller
         ->where('organization_id', Auth::user()->organization_id)
         ->get();
 
-        return view('production.recipes.index', compact('recipes', 'productionItems'));
+        return view('admin.production.recipes.index', compact('recipes', 'productionItems'));
     }
 
     /**
@@ -51,13 +51,15 @@ class RecipeController extends Controller
         ->where('organization_id', Auth::user()->organization_id)
         ->get();
 
+        // Get both Ingredients and Raw Materials
         $rawMaterials = ItemMaster::whereHas('category', function($query) {
-            $query->where('name', 'Raw Materials');
+            $query->whereIn('name', ['Ingredients', 'Raw Materials']);
         })
         ->where('organization_id', Auth::user()->organization_id)
+        ->orderBy('name')
         ->get();
 
-        return view('production.recipes.create', compact('productionItems', 'rawMaterials'));
+        return view('admin.production.recipes.create', compact('productionItems', 'rawMaterials'));
     }
 
     /**
@@ -112,7 +114,7 @@ class RecipeController extends Controller
             }
         });
 
-        return redirect()->route('production.recipes.index')
+        return redirect()->route('admin.production.recipes.index')
             ->with('success', 'Recipe created successfully.');
     }
 
@@ -123,7 +125,7 @@ class RecipeController extends Controller
     {
         $recipe->load(['productionItem', 'details.rawMaterialItem']);
 
-        return view('production.recipes.show', compact('recipe'));
+        return view('admin.production.recipes.show', compact('recipe'));
     }
 
     /**
@@ -139,13 +141,15 @@ class RecipeController extends Controller
         ->where('organization_id', Auth::user()->organization_id)
         ->get();
 
+        // Get both Ingredients and Raw Materials
         $rawMaterials = ItemMaster::whereHas('category', function($query) {
-            $query->where('name', 'Raw Materials');
+            $query->whereIn('name', ['Ingredients', 'Raw Materials']);
         })
         ->where('organization_id', Auth::user()->organization_id)
+        ->orderBy('name')
         ->get();
 
-        return view('production.recipes.edit', compact('recipe', 'productionItems', 'rawMaterials'));
+        return view('admin.production.recipes.edit', compact('recipe', 'productionItems', 'rawMaterials'));
     }
 
     /**
@@ -204,7 +208,7 @@ class RecipeController extends Controller
             }
         });
 
-        return redirect()->route('production.recipes.show', $recipe)
+        return redirect()->route('admin.production.recipes.show', $recipe)
             ->with('success', 'Recipe updated successfully.');
     }
 
@@ -230,7 +234,7 @@ class RecipeController extends Controller
     {
         $recipe->delete();
 
-        return redirect()->route('production.recipes.index')
+        return redirect()->route('admin.admin.production.recipes.index')
             ->with('success', 'Recipe deleted successfully.');
     }
 
