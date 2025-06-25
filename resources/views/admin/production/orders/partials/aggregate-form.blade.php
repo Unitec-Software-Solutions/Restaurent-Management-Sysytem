@@ -6,7 +6,7 @@
 
     <div class="p-6">
         @if (isset($approvedRequests) && $approvedRequests->count() > 0)
-            <form action="{{ route('admin.production.orders.store') }}" method="POST"
+            <form action="{{ route('admin.production.orders.store_aggregated') }}" method="POST"
                 id="aggregateProductionForm">
                 @csrf
 
