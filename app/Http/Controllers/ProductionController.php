@@ -22,31 +22,31 @@ class ProductionController extends Controller
     public function dashboard()
     {
         $user = Auth::user();
-        
+
         // Get pending production requests
         $pendingRequests = $this->getPendingProductionRequests();
-        
+
         // Get active production orders
         $activeOrders = $this->getActiveProductionOrders();
-        
+
         // Get today's production sessions
         $todaySessions = $this->getTodayProductionSessions();
-        
+
         // Get production statistics
         $stats = $this->getProductionStatistics();
-        
+
         // Get low stock production items
         $lowStockItems = $this->getLowStockProductionItems();
-        
+
         // Get recent completed orders
         $recentCompletedOrders = $this->getRecentCompletedOrders();
-        
+
         // Get upcoming production schedule
         $upcomingSchedule = $this->getUpcomingProductionSchedule();
 
         return view('admin.production.dashboard', compact(
             'pendingRequests',
-            'activeOrders', 
+            'activeOrders',
             'todaySessions',
             'stats',
             'lowStockItems',
@@ -61,7 +61,7 @@ class ProductionController extends Controller
     private function getPendingProductionRequests()
     {
         $user = Auth::user();
-        
+
         return ProductionRequestMaster::with(['branch', 'items.item', 'createdBy'])
             ->where('organization_id', $user->organization_id)
             ->where('status', ProductionRequestMaster::STATUS_SUBMITTED)
@@ -77,7 +77,7 @@ class ProductionController extends Controller
     private function getActiveProductionOrders()
     {
         $user = Auth::user();
-        
+
         return ProductionOrder::with(['items.item', 'sessions', 'createdBy'])
             ->where('organization_id', $user->organization_id)
             ->whereIn('status', ['approved', 'in_progress'])
@@ -92,7 +92,7 @@ class ProductionController extends Controller
     private function getTodayProductionSessions()
     {
         $user = Auth::user();
-        
+
         return ProductionSession::with(['productionOrder.items.item', 'supervisor'])
             ->where('organization_id', $user->organization_id)
             ->whereDate('created_at', today())
@@ -161,7 +161,7 @@ class ProductionController extends Controller
     private function getLowStockProductionItems()
     {
         $user = Auth::user();
-        
+
         return ItemMaster::select('item_master.*')
             ->join('item_categories', 'item_master.item_category_id', '=', 'item_categories.id')
             ->where('item_master.organization_id', $user->organization_id)
@@ -179,6 +179,7 @@ class ProductionController extends Controller
                 'purchase', 'production_in', 'adjustment_increase',
                 'sale', 'consumption', 'waste', 'adjustment_decrease'
             ])
+            ->with(['category'])
             ->orderBy('reorder_level', 'desc')
             ->limit(10)
             ->get();
@@ -190,7 +191,7 @@ class ProductionController extends Controller
     private function getRecentCompletedOrders()
     {
         $user = Auth::user();
-        
+
         return ProductionOrder::with(['items.item', 'sessions'])
             ->where('organization_id', $user->organization_id)
             ->where('status', 'completed')
@@ -206,7 +207,7 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
         $nextWeek = now()->addDays(7);
-        
+
         return ProductionOrder::with(['items.item', 'sessions'])
             ->where('organization_id', $user->organization_id)
             ->where('status', 'approved')
@@ -223,7 +224,7 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
         $weekStart = now()->startOfWeek();
-        
+
         $sessions = ProductionSession::where('organization_id', $user->organization_id)
             ->where('status', 'completed')
             ->where('created_at', '>=', $weekStart)
@@ -239,7 +240,7 @@ class ProductionController extends Controller
         foreach ($sessions as $session) {
             $estimatedTime = $session->estimated_duration ?? 480; // Default 8 hours in minutes
             $actualTime = $session->actual_duration ?? $estimatedTime;
-            
+
             $totalPlanned += $estimatedTime;
             $totalActual += $actualTime;
         }
@@ -254,7 +255,7 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
         $monthStart = now()->startOfMonth();
-        
+
         $sessions = ProductionSession::where('organization_id', $user->organization_id)
             ->where('status', 'completed')
             ->where('created_at', '>=', $monthStart)
@@ -270,7 +271,7 @@ class ProductionController extends Controller
         foreach ($sessions as $session) {
             $estimatedTime = $session->estimated_duration ?? 480;
             $actualTime = $session->actual_duration ?? $estimatedTime;
-            
+
             $totalPlanned += $estimatedTime;
             $totalActual += $actualTime;
         }
@@ -372,9 +373,9 @@ class ProductionController extends Controller
     {
         $period = $request->input('period', 'today');
         $dateRange = $this->getDateRangeForPeriod($period);
-        
+
         $stats = $this->getProductionStatistics();
-        
+
         return response()->json([
             'period' => $period,
             'stats' => $stats,
