@@ -319,7 +319,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/create', [ProductionRequestsMasterController::class, 'create'])->name('create');
                 Route::post('/', [ProductionRequestsMasterController::class, 'store'])->name('store');
                 Route::get('/manage', [ProductionRequestsMasterController::class, 'manage'])->name('manage');
-                Route::get('/aggregate/requests', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
+                Route::get('/aggregate', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
                 Route::get('calculate-ingredients', [ProductionRequestsMasterController::class, 'calculateIngredients'])->name('calculate-ingredients'); // aggregated ingredients calculation - in use
 
                 // Specific parameterized routes (these must come after static routes)
