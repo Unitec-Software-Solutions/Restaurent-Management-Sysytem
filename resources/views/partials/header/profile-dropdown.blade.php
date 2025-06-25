@@ -28,10 +28,7 @@
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     Your Profile
                 </a>
-                <a href="{{ route('admin.settings.index') }}"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
-                    Settings
-                </a>
+                {{-- Settings route commented out until implemented --}}
                 <div class="border-t border-gray-100 dark:border-gray-600"></div>
                 
                    
