@@ -125,7 +125,7 @@ class StaffAssignmentService
     /**
      * Get shift schedule for branch
      */
-    public function getShiftSchedule(Branch $branch, Carbon $date = null): array
+    public function getShiftSchedule(Branch $branch, ?Carbon $date = null): array
     {
         if (!$date) {
             $date = Carbon::today();
