@@ -434,6 +434,20 @@ class AdminSidebar extends Component
                 'badge' => 0,
                 'sub_items' => [
                     [
+                        'title' => 'All Organizations',
+                        'route' => 'admin.organizations.index',
+                        'icon' => 'list',
+                        'icon_type' => 'svg',
+                        'permission' => null
+                    ],
+                    [
+                        'title' => 'Create Organization',
+                        'route' => 'admin.organizations.create',
+                        'icon' => 'plus',
+                        'icon_type' => 'svg',
+                        'permission' => null
+                    ],
+                    [
                         'title' => 'Activate Organization',
                         'route' => 'admin.organizations.activate.form',
                         'icon' => 'key',
@@ -488,6 +502,14 @@ class AdminSidebar extends Component
                 'permission' => 'branches.view',
                 'badge' => 0,
                 'sub_items' => [
+                    [
+                        'title' => 'All Branches',
+                        'route' => $branchRoute,
+                        'route_params' => $branchParams,
+                        'icon' => 'list',
+                        'icon_type' => 'svg',
+                        'permission' => 'branches.view'
+                    ],
                     [
                         'title' => 'Activate Branch',
                         'route' => 'admin.branches.activate.form',
