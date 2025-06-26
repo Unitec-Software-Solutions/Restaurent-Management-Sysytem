@@ -162,27 +162,27 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
 
+        // Get HQ branch for stock calculations
+        $hqBranch = \App\Models\Branch::where('organization_id', $user->organization_id)
+            ->where('is_head_office', true)
+            ->first();
+
+        if (!$hqBranch) {
+            return collect();
+        }
+
         return ItemMaster::select('item_master.*')
             ->join('item_categories', 'item_master.item_category_id', '=', 'item_categories.id')
             ->where('item_master.organization_id', $user->organization_id)
             ->where('item_categories.name', 'Production Items')
             ->whereNotNull('item_master.reorder_level')
-            ->whereRaw('(
-                SELECT COALESCE(SUM(CASE
-                    WHEN transaction_type IN (?, ?, ?) THEN quantity
-                    WHEN transaction_type IN (?, ?, ?, ?) THEN -quantity
-                    ELSE 0
-                END), 0)
-                FROM item_transactions
-                WHERE inventory_item_id = item_master.id
-            ) <= item_master.reorder_level', [
-                'purchase', 'production_in', 'adjustment_increase',
-                'sale', 'consumption', 'waste', 'adjustment_decrease'
-            ])
             ->with(['category'])
-            ->orderBy('reorder_level', 'desc')
-            ->limit(10)
-            ->get();
+            ->get()
+            ->filter(function ($item) use ($hqBranch) {
+                $currentStock = ItemTransaction::stockOnHand($item->id, $hqBranch->id);
+                return $currentStock <= $item->reorder_level;
+            })
+            ->take(10);
     }
 
     /**
