@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('staff', function (Blueprint $table) {
-            $table->foreignId('shift_id')->nullable()->after('branch_id')->constrained()->onDelete('set null');
-        });
+        // Check if staff table exists before trying to modify it
+        if (Schema::hasTable('staff')) {
+            Schema::table('staff', function (Blueprint $table) {
+                $table->foreignId('shift_id')->nullable()->after('branch_id')->constrained()->onDelete('set null');
+            });
+        }
     }
 
     /**
@@ -21,9 +24,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('staff', function (Blueprint $table) {
-            $table->dropForeign(['shift_id']);
-            $table->dropColumn('shift_id');
-        });
+        // Check if staff table exists before trying to modify it
+        if (Schema::hasTable('staff')) {
+            Schema::table('staff', function (Blueprint $table) {
+                $table->dropForeign(['shift_id']);
+                $table->dropColumn('shift_id');
+            });
+        }
     }
 };

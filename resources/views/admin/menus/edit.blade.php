@@ -93,7 +93,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Valid From *</label>
-                    <input type="date" name="valid_from" value="{{ old('valid_from', $menu->valid_from->format('Y-m-d')) }}" required
+                    <input type="date" name="valid_from" value="{{ old('valid_from', $menu->valid_from?->format('Y-m-d')) }}" required
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     <p class="text-xs text-gray-500 mt-1">When this menu becomes available</p>
                 </div>
@@ -126,7 +126,11 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                     @php 
                         $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-                        $oldDays = old('available_days', $menu->available_days);
+                        $oldDays = old('available_days', $menu->available_days ?? []);
+                        // Ensure $oldDays is always an array
+                        if (!is_array($oldDays)) {
+                            $oldDays = [];
+                        }
                     @endphp
                     @foreach($days as $day)
                         <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -188,8 +192,10 @@
                                 @endif
                                 <div class="flex justify-between items-center mt-2">
                                     <span class="text-sm font-medium text-green-600">${{ number_format($item->price, 2) }}</span>
-                                    @if($item->category)
-                                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{{ $item->category->name }}</span>
+                                    @if($item->menuCategory)
+                                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{{ $item->menuCategory->name }}</span>
+                                    @elseif($item->category && is_string($item->category))
+                                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{{ $item->category }}</span>
                                     @endif
                                 </div>
                                 @if($item->current_stock !== null)
@@ -218,7 +224,7 @@
         <div class="bg-white rounded-lg shadow-sm p-6">
             <div class="flex justify-between items-center">
                 <div class="text-sm text-gray-500">
-                    Last updated: {{ $menu->updated_at->format('M j, Y g:i A') }}
+                    Last updated: {{ $menu->updated_at ? $menu->updated_at->format('M j, Y g:i A') : 'Not available' }}
                 </div>
                 <div class="flex gap-3">
                     <a href="{{ route('admin.menus.show', $menu) }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg">

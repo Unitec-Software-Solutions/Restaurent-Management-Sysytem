@@ -190,7 +190,7 @@
                 </div>
             </a>
 
-            <a href="{{ route('admin.menus.bulk.create') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <a href="{{ route('admin.menus.bulk-create') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <div class="p-2 bg-purple-100 rounded-lg">
                     <i class="fas fa-copy text-purple-600"></i>
                 </div>

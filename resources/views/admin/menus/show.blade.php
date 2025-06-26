@@ -21,7 +21,7 @@
                     <span class="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">
                         <i class="fas fa-check-circle mr-1"></i> Active
                     </span>
-                @elseif($menu->valid_from > now())
+                @elseif($menu->valid_from && $menu->valid_from > now())
                     <span class="px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
                         <i class="fas fa-clock mr-1"></i> Upcoming
                     </span>
@@ -149,11 +149,15 @@
                         <dd class="mt-1 text-sm text-gray-900">
                             <div class="flex items-center">
                                 <i class="fas fa-calendar mr-2 text-gray-400"></i>
-                                {{ \Carbon\Carbon::parse($menu->valid_from)->format('M j, Y') }}
-                                @if($menu->valid_until)
-                                    - {{ \Carbon\Carbon::parse($menu->valid_until)->format('M j, Y') }}
+                                @if($menu->valid_from)
+                                    {{ \Carbon\Carbon::parse($menu->valid_from)->format('M j, Y') }}
+                                    @if($menu->valid_until)
+                                        - {{ \Carbon\Carbon::parse($menu->valid_until)->format('M j, Y') }}
+                                    @else
+                                        - Ongoing
+                                    @endif
                                 @else
-                                    - Ongoing
+                                    No date specified
                                 @endif
                             </div>
                         </dd>
@@ -176,28 +180,32 @@
                         <dt class="text-sm font-medium text-gray-500">Available Days</dt>
                         <dd class="mt-1">
                             <div class="flex flex-wrap gap-1">
-                                @foreach($menu->available_days as $day)
-                                    <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">
-                                        {{ ucfirst($day) }}
-                                    </span>
-                                @endforeach
+                                @if($menu->available_days && is_array($menu->available_days) && count($menu->available_days) > 0)
+                                    @foreach($menu->available_days as $day)
+                                        <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded">
+                                            {{ ucfirst($day) }}
+                                        </span>
+                                    @endforeach
+                                @else
+                                    <span class="text-sm text-gray-500">No days specified</span>
+                                @endif
                             </div>
                         </dd>
                     </div>
 
-                    @if($menu->createdBy)
+                    @if($menu->creator)
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Created By</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $menu->createdBy->name ?? 'Unknown' }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $menu->creator->name ?? 'Unknown' }}</dd>
                         </div>
                     @endif
 
                     <div>
                         <dt class="text-sm font-medium text-gray-500">Created</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ $menu->created_at->format('M j, Y g:i A') }}</dd>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $menu->created_at ? $menu->created_at->format('M j, Y g:i A') : 'Not available' }}</dd>
                     </div>
 
-                    @if($menu->updated_at->ne($menu->created_at))
+                    @if($menu->updated_at && $menu->created_at && $menu->updated_at->ne($menu->created_at))
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
                             <dd class="mt-1 text-sm text-gray-900">{{ $menu->updated_at->format('M j, Y g:i A') }}</dd>

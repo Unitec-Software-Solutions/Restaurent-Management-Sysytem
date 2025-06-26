@@ -61,6 +61,17 @@
         </div>
         
         <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Shift Type</label>
+            <select name="shift_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                <option value="">All Shifts</option>
+                <option value="morning" {{ request('shift_type') === 'morning' ? 'selected' : '' }}>Morning</option>
+                <option value="evening" {{ request('shift_type') === 'evening' ? 'selected' : '' }}>Evening</option>
+                <option value="night" {{ request('shift_type') === 'night' ? 'selected' : '' }}>Night</option>
+                <option value="flexible" {{ request('shift_type') === 'flexible' ? 'selected' : '' }}>Flexible</option>
+            </select>
+        </div>
+        
+        <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Show Deleted</label>
             <div class="flex items-center h-[42px]">
                 <input type="checkbox" name="show_deleted" value="1" 
@@ -79,6 +90,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role & Branch</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift & Availability</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
@@ -108,6 +120,37 @@
                                 {{ ucfirst($employee->role) }}
                             </div>
                             <div class="text-sm text-gray-500">{{ $employee->branch->name ?? 'No Branch' }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                @if($employee->shift_type)
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                        {{ $employee->shift_type === 'morning' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                        {{ $employee->shift_type === 'evening' ? 'bg-orange-100 text-orange-800' : '' }}
+                                        {{ $employee->shift_type === 'night' ? 'bg-purple-100 text-purple-800' : '' }}
+                                        {{ $employee->shift_type === 'flexible' ? 'bg-blue-100 text-blue-800' : '' }}">
+                                        {{ ucfirst($employee->shift_type) }}
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">No shift</span>
+                                @endif
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                @if($employee->availability_status)
+                                    <span class="px-2 py-1 text-xs rounded-full 
+                                        {{ $employee->availability_status === 'available' ? 'bg-green-100 text-green-700' : '' }}
+                                        {{ $employee->availability_status === 'busy' ? 'bg-red-100 text-red-700' : '' }}
+                                        {{ $employee->availability_status === 'on_break' ? 'bg-yellow-100 text-yellow-700' : '' }}
+                                        {{ $employee->availability_status === 'off_duty' ? 'bg-gray-100 text-gray-700' : '' }}">
+                                        {{ ucfirst(str_replace('_', ' ', $employee->availability_status)) }}
+                                    </span>
+                                    @if($employee->current_workload && $employee->current_workload > 0)
+                                        <span class="ml-1 text-xs text-gray-500">({{ $employee->current_workload }} orders)</span>
+                                    @endif
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
+                            </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{{ $employee->email }}</div>
@@ -164,7 +207,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
+                        <td colspan="7" class="px-6 py-12 text-center">
                             <div class="text-gray-400 text-lg mb-2">
                                 <i class="fas fa-users"></i>
                             </div>

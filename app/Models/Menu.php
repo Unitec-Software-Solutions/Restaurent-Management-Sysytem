@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -19,6 +20,12 @@ class Menu extends Model
         'description',
         'date_from',
         'date_to',
+        'valid_from',
+        'valid_until',
+        'available_days',
+        'start_time',
+        'end_time',
+        'type',
         'is_active',
         'menu_type',
         'days_of_week',
@@ -29,12 +36,18 @@ class Menu extends Model
         'priority',
         'auto_activate',
         'special_occasion',
-        'notes'
+        'notes',
+        'created_by'
     ];
 
     protected $casts = [
         'date_from' => 'date',
         'date_to' => 'date',
+        'valid_from' => 'date',
+        'valid_until' => 'date',
+        'available_days' => 'array',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
         'is_active' => 'boolean',
         'days_of_week' => 'array',
         'activation_time' => 'datetime:H:i',
@@ -45,6 +58,8 @@ class Menu extends Model
     protected $dates = [
         'date_from',
         'date_to',
+        'valid_from',
+        'valid_until',
         'created_at',
         'updated_at',
         'deleted_at'
@@ -80,6 +95,19 @@ class Menu extends Model
         return $this->belongsTo(Organization::class);
     }
 
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'created_by');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+
+    
+
     public function menuItems(): BelongsToMany
     {
         return $this->belongsToMany(MenuItem::class, 'menu_menu_items')
@@ -104,13 +132,21 @@ class Menu extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeInactive($query)
+    {
+        return $query->where('is_active', false);
+    }
+
     public function scopeForDate($query, $date = null)
     {
         $date = $date ?: Carbon::now();
         
         return $query->where(function($q) use ($date) {
             $q->where('date_from', '<=', $date)
-              ->where('date_to', '>=', $date);
+              ->where(function($sq) use ($date) {
+                  $sq->where('date_to', '>=', $date)
+                     ->orWhereNull('date_to');
+              });
         });
     }
 
@@ -152,8 +188,16 @@ class Menu extends Model
             return false;
         }
         
-        // Check day of week
-        if (!empty($this->days_of_week) && !in_array($date->dayOfWeek, $this->days_of_week)) {
+        // Check day of week using available_days field
+        if (!empty($this->available_days) && is_array($this->available_days)) {
+            $dayName = strtolower($date->format('l'));
+            if (!in_array($dayName, $this->available_days)) {
+                return false;
+            }
+        }
+        
+        // Also check old days_of_week field for backward compatibility
+        if (!empty($this->days_of_week) && is_array($this->days_of_week) && !in_array($date->dayOfWeek, $this->days_of_week)) {
             return false;
         }
         

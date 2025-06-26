@@ -50,7 +50,7 @@
 
         <!-- Menu Items by Category -->
         @if($menu->menuItems->count() > 0)
-            @foreach($menu->menuItems->groupBy('category.name') as $categoryName => $items)
+            @foreach($menu->menuItems->groupBy('menuCategory.name') as $categoryName => $items)
                 <div class="mb-8">
                     @if($categoryName)
                         <h2 class="text-2xl font-bold text-gray-900 mb-6 pb-2 border-b-2 border-indigo-200">
@@ -127,11 +127,20 @@
                                     </div>
                                 </div>
                                 
-                                @if($item->allergens && count($item->allergens) > 0)
+                                @php
+                                    $allergens = null;
+                                    if ($item->allergen_info && is_array($item->allergen_info)) {
+                                        $allergens = $item->allergen_info;
+                                    } elseif ($item->allergens) {
+                                        $allergens = is_array($item->allergens) ? $item->allergens : explode(',', $item->allergens);
+                                    }
+                                @endphp
+                                
+                                @if($allergens && count($allergens) > 0)
                                     <div class="mt-3 pt-3 border-t border-gray-200">
                                         <p class="text-xs text-gray-500">
                                             <i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
-                                            Contains: {{ implode(', ', $item->allergens) }}
+                                            Contains: {{ implode(', ', array_filter($allergens)) }}
                                         </p>
                                     </div>
                                 @endif
@@ -160,18 +169,26 @@
                     <div>
                         <h4 class="font-medium text-gray-700 mb-2">Available Days</h4>
                         <p class="text-gray-600">
-                            {{ implode(', ', array_map('ucfirst', $menu->available_days)) }}
+                            @if($menu->available_days && is_array($menu->available_days) && count($menu->available_days) > 0)
+                                {{ implode(', ', array_map('ucfirst', $menu->available_days)) }}
+                            @else
+                                No days specified
+                            @endif
                         </p>
                     </div>
                     
                     <div>
                         <h4 class="font-medium text-gray-700 mb-2">Service Period</h4>
                         <p class="text-gray-600">
-                            {{ \Carbon\Carbon::parse($menu->valid_from)->format('M j, Y') }}
-                            @if($menu->valid_until)
-                                - {{ \Carbon\Carbon::parse($menu->valid_until)->format('M j, Y') }}
+                            @if($menu->valid_from)
+                                {{ \Carbon\Carbon::parse($menu->valid_from)->format('M j, Y') }}
+                                @if($menu->valid_until)
+                                    - {{ \Carbon\Carbon::parse($menu->valid_until)->format('M j, Y') }}
+                                @else
+                                    - Ongoing
+                                @endif
                             @else
-                                - Ongoing
+                                No dates specified
                             @endif
                         </p>
                     </div>

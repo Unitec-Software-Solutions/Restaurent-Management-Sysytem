@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <form method="POST" action="{{ route('admin.menus.bulk.store') }}" class="space-y-6">
+    <form method="POST" action="{{ route('admin.menus.bulk-store') }}" class="space-y-6">
         @csrf
 
         <!-- Template Configuration -->
@@ -181,14 +181,14 @@
             <!-- Items Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto" id="items-grid">
                 @foreach($categories as $category)
-                    @if($category->items->count() > 0)
+                    @if($category->menuItems && $category->menuItems->count() > 0)
                         <div class="col-span-full">
                             <h4 class="font-semibold text-gray-800 text-sm mb-2 border-b border-gray-200 pb-1">
                                 {{ $category->name }}
                             </h4>
                         </div>
                         
-                        @foreach($category->items as $item)
+                        @foreach($category->menuItems as $item)
                             <div class="item-card border border-gray-200 rounded-lg p-3 hover:bg-gray-50" 
                                  data-category="{{ $category->id }}" data-name="{{ strtolower($item->name) }}">
                                 <label class="flex items-start cursor-pointer">

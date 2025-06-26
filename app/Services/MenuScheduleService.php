@@ -420,15 +420,13 @@ class MenuScheduleService
         $status = [
             'is_available' => true,
             'availability_type' => 'regular',
-            'restrictions' => [],
-            'special_notes' => null
+            'restrictions' => []
         ];
         
         // Check for special date override
         if ($this->hasSpecialOverride($menu, $date)) {
             $override = $this->getSpecialOverride($menu, $date);
             $status['availability_type'] = 'special_override';
-            $status['special_notes'] = $override['notes'] ?? null;
             
             if (!empty($override['restrictions'])) {
                 $status['restrictions'] = $override['restrictions'];

@@ -177,8 +177,10 @@
                                 @endif
                                 <div class="flex justify-between items-center mt-2">
                                     <span class="text-sm font-medium text-green-600">${{ number_format($item->price, 2) }}</span>
-                                    @if($item->category)
-                                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{{ $item->category->name }}</span>
+                                    @if($item->menuCategory)
+                                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{{ $item->menuCategory->name }}</span>
+                                    @elseif($item->category && is_string($item->category))
+                                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{{ $item->category }}</span>
                                     @endif
                                 </div>
                                 @if($item->current_stock !== null)

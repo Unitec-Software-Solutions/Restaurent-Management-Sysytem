@@ -2504,7 +2504,7 @@ return array (
       ),
       155 => 
       array (
-        'name' => 'admin.menus.bulk.store',
+        'name' => 'admin.menus.bulk-store',
         'uri' => 'menus/bulk/store',
         'methods' => 
         array (

@@ -136,9 +136,13 @@
                         <div class="flex items-center text-sm text-gray-500">
                             <i class="fas fa-calendar-alt w-4"></i>
                             <span class="ml-2">
-                                {{ \Carbon\Carbon::parse($menu->valid_from)->format('M j, Y') }}
-                                @if($menu->valid_until)
-                                    - {{ \Carbon\Carbon::parse($menu->valid_until)->format('M j, Y') }}
+                                @if($menu->valid_from)
+                                    {{ \Carbon\Carbon::parse($menu->valid_from)->format('M j, Y') }}
+                                    @if($menu->valid_until)
+                                        - {{ \Carbon\Carbon::parse($menu->valid_until)->format('M j, Y') }}
+                                    @endif
+                                @else
+                                    No dates set
                                 @endif
                             </span>
                         </div>
@@ -160,7 +164,13 @@
 
                         <div class="flex items-center text-sm text-gray-500">
                             <i class="fas fa-calendar-week w-4"></i>
-                            <span class="ml-2">{{ implode(', ', array_map('ucfirst', $menu->available_days)) }}</span>
+                            <span class="ml-2">
+                                @if($menu->available_days && is_array($menu->available_days))
+                                    {{ implode(', ', array_map('ucfirst', $menu->available_days)) }}
+                                @else
+                                    All days
+                                @endif
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -236,14 +246,26 @@
 <script>
 function activateMenu(menuId) {
     if (confirm('Are you sure you want to activate this menu?')) {
-        fetch(`/admin/menus/${menuId}/activate`, {
+        fetch(`/menus/${menuId}/activate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                // If not JSON, it might be a redirect (authentication issue)
+                if (response.status === 302 || response.status === 401 || response.status === 419) {
+                    throw new Error('Authentication required. Please refresh the page and try again.');
+                }
+                throw new Error(`Server error: ${response.status}`);
+            }
+        })
         .then(data => {
             if (data.success) {
                 location.reload();
@@ -253,21 +275,33 @@ function activateMenu(menuId) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Failed to activate menu');
+            alert(error.message || 'Failed to activate menu');
         });
     }
 }
 
 function deactivateMenu(menuId) {
     if (confirm('Are you sure you want to deactivate this menu?')) {
-        fetch(`/admin/menus/${menuId}/deactivate`, {
+        fetch(`/menus/${menuId}/deactivate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                // If not JSON, it might be a redirect (authentication issue)
+                if (response.status === 302 || response.status === 401 || response.status === 419) {
+                    throw new Error('Authentication required. Please refresh the page and try again.');
+                }
+                throw new Error(`Server error: ${response.status}`);
+            }
+        })
         .then(data => {
             if (data.success) {
                 location.reload();
@@ -277,7 +311,7 @@ function deactivateMenu(menuId) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Failed to deactivate menu');
+            alert(error.message || 'Failed to deactivate menu');
         });
     }
 }

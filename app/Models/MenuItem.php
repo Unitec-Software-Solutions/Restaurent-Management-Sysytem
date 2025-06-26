@@ -38,8 +38,6 @@ class MenuItem extends Model
         'calories',
         'ingredients',
         'is_active',
-        'category',
-        'category_id',
         'kitchen_station_id',
         'is_vegan',
         'allergen_info',
@@ -59,6 +57,7 @@ class MenuItem extends Model
         'is_featured' => 'boolean',
         'preparation_time' => 'integer',
         'display_order' => 'integer',
+        'allergens' => 'array',
         'allergen_info' => 'array',
         'nutritional_info' => 'array'
     ];
@@ -66,9 +65,9 @@ class MenuItem extends Model
     /**
      * Relationships following UI/UX guidelines
      */
-    public function category(): BelongsTo
+    public function menuCategory(): BelongsTo
     {
-        return $this->belongsTo(MenuCategory::class, 'category_id');
+        return $this->belongsTo(MenuCategory::class, 'menu_category_id');
     }
 
     public function kitchenStation(): BelongsTo

@@ -248,7 +248,7 @@ Route::adminGroup(function () {
     
     // Menu management
     Route::get('menus/index', [MenuController::class, 'index'])->name('menus.index');
-    Route::get('menus/bulk/store', [MenuController::class, 'bulkStore'])->name('menus.bulk.store');
+    Route::get('menus/bulk/store', [MenuController::class, 'bulkStore'])->name('menus.bulk-store');
     Route::get('menus/create', [MenuController::class, 'create'])->name('menus.create');
     Route::get('menus/calendar/data', [MenuController::class, 'calendarData'])->name('menus.calendar.data');
     Route::post('menus/store', [MenuController::class, 'store'])->name('menus.store');

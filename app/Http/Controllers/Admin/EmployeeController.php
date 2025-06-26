@@ -74,6 +74,10 @@ class EmployeeController extends Controller
 
         if ($request->has('branch_id') && $request->branch_id) {
             $query->where('branch_id', $request->branch_id);
+        }
+
+        if ($request->has('shift_type') && $request->shift_type) {
+            $query->where('shift_type', $request->shift_type);
         }        if ($request->has('status')) {
             $isActive = $request->status === 'active';
             $query->where('is_active', $isActive);
@@ -136,7 +140,16 @@ class EmployeeController extends Controller
             'address' => 'nullable|string',
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
-            'is_active' => 'boolean',        ]);
+            'is_active' => 'boolean',
+            // New shift and staff fields
+            'shift_type' => 'nullable|in:morning,evening,night,flexible',
+            'shift_start_time' => 'nullable|date_format:H:i',
+            'shift_end_time' => 'nullable|date_format:H:i',
+            'hourly_rate' => 'nullable|numeric|min:0',
+            'department' => 'nullable|string|max:255',
+            'availability_status' => 'nullable|in:available,busy,on_break,off_duty',
+            'current_workload' => 'nullable|integer|min:0',
+        ]);
 
         // Validate branch belongs to organization (skip for super admin)
         if ($orgId !== null) {
@@ -221,7 +234,16 @@ class EmployeeController extends Controller
             'address' => 'nullable|string',
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
-            'is_active' => 'boolean',        ]);
+            'is_active' => 'boolean',
+            // New shift and staff fields
+            'shift_type' => 'nullable|in:morning,evening,night,flexible',
+            'shift_start_time' => 'nullable|date_format:H:i',
+            'shift_end_time' => 'nullable|date_format:H:i',
+            'hourly_rate' => 'nullable|numeric|min:0',
+            'department' => 'nullable|string|max:255',
+            'availability_status' => 'nullable|in:available,busy,on_break,off_duty',
+            'current_workload' => 'nullable|integer|min:0',
+        ]);
 
         // Validate branch belongs to organization (skip for super admin)
         if ($orgId !== null) {
@@ -334,5 +356,98 @@ class EmployeeController extends Controller
             ->get();
 
         return response()->json($servers);
+    }
+
+    /**
+     * Get available employees for shift assignment
+     */
+    public function getAvailableForShift(Request $request)
+    {
+        $shiftType = $request->get('shift_type', 'flexible');
+        $department = $request->get('department');
+        $branchId = $request->get('branch_id');
+
+        $query = Employee::available()
+            ->where('branch_id', $branchId)
+            ->byShift($shiftType);
+
+        if ($department) {
+            $query->byDepartment($department);
+        }
+
+        $employees = $query->get(['id', 'name', 'current_workload', 'shift_type', 'department']);
+
+        return response()->json([
+            'employees' => $employees,
+            'count' => $employees->count()
+        ]);
+    }
+
+    /**
+     * Update employee availability status
+     */
+    public function updateAvailability(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'availability_status' => 'required|in:available,busy,on_break,off_duty'
+        ]);
+
+        $employee->update([
+            'availability_status' => $request->availability_status
+        ]);
+
+        // Reset workload if going off duty
+        if ($request->availability_status === 'off_duty') {
+            $employee->update(['current_workload' => 0]);
+        }
+
+        $statusName = ucfirst(str_replace('_', ' ', $request->availability_status));
+        
+        return redirect()
+            ->route('admin.employees.show', $employee)
+            ->with('success', "Employee availability updated to: {$statusName}");
+    }
+
+    /**
+     * Get shift schedule for branch
+     */
+    public function getShiftSchedule(Request $request)
+    {
+        $branchId = $request->get('branch_id');
+        $date = $request->get('date', now()->format('Y-m-d'));
+
+        $employees = Employee::where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->get()
+            ->groupBy('shift_type');
+
+        $schedule = [];
+        foreach (['morning', 'evening', 'night', 'flexible'] as $shift) {
+            $shiftEmployees = $employees->get($shift, collect());
+            $schedule[$shift] = [
+                'count' => $shiftEmployees->count(),
+                'available' => $shiftEmployees->where('availability_status', 'available')->count(),
+                'busy' => $shiftEmployees->where('availability_status', 'busy')->count(),
+                'on_break' => $shiftEmployees->where('availability_status', 'on_break')->count(),
+                'off_duty' => $shiftEmployees->where('availability_status', 'off_duty')->count(),
+                'employees' => $shiftEmployees->map(function($emp) {
+                    return [
+                        'id' => $emp->id,
+                        'name' => $emp->name,
+                        'department' => $emp->department,
+                        'availability_status' => $emp->availability_status,
+                        'current_workload' => $emp->current_workload,
+                        'shift_start_time' => $emp->shift_start_time,
+                        'shift_end_time' => $emp->shift_end_time,
+                    ];
+                })
+            ];
+        }
+
+        return response()->json([
+            'date' => $date,
+            'branch_id' => $branchId,
+            'schedule' => $schedule
+        ]);
     }
 }

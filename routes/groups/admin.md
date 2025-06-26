@@ -161,7 +161,7 @@ Total routes: 206
 | GET, HEAD | inventory/stock/edit | admin.inventory.stock.edit | App\Http\Controllers\Admin\InventoryController@stock | web, auth:admin |
 | GET, HEAD | inventory/stock/show | admin.inventory.stock.show | App\Http\Controllers\Admin\InventoryController@stock | web, auth:admin |
 | GET, HEAD | menus/index | admin.menus.index | App\Http\Controllers\Admin\MenuController@index | web, auth:admin |
-| GET, HEAD | menus/bulk/store | admin.menus.bulk.store | App\Http\Controllers\Admin\MenuController@bulk | web, auth:admin |
+| GET, HEAD | menus/bulk/store | admin.menus.bulk-store | App\Http\Controllers\Admin\MenuController@bulk | web, auth:admin |
 | GET, HEAD | menus/create | admin.menus.create | App\Http\Controllers\Admin\MenuController@create | web, auth:admin |
 | GET, HEAD | menus/calendar/data | admin.menus.calendar.data | App\Http\Controllers\Admin\MenuController@calendar | web, auth:admin |
 | POST | menus/store | admin.menus.store | App\Http\Controllers\Admin\MenuController@store | web, auth:admin |
