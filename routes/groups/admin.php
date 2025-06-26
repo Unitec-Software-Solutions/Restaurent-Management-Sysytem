@@ -26,7 +26,7 @@ use App\Http\Controllers\RealtimeDashboardController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\DatabaseTestController;
 use App\Http\Controllers\Admin\CustomerController;
-use App\Http\Controllers\Admin\DigitalMenuController;
+// use App\Http\Controllers\Admin\DigitalMenuController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\DebugController;
@@ -227,7 +227,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     
     // Enhanced admin modules
     Route::get('customers/index', [CustomerController::class, 'index'])->name('customers.index');
-    Route::get('digital-menu/index', [DigitalMenuController::class, 'index'])->name('digital-menu.index');
+    // Route::get('digital-menu/index', [DigitalMenuController::class, 'index'])->name('digital-menu.index');
     Route::get('settings/index', [SettingController::class, 'index'])->name('settings.index');
     Route::get('reports/index', [ReportController::class, 'index'])->name('reports.index');
     Route::get('debug/routes', [DebugController::class, 'routes'])->name('debug.routes');

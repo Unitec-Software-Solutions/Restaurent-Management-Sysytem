@@ -135,7 +135,7 @@ Total routes: 206
 | GET, HEAD | admin/orders-preview | admin. | App\Http\Controllers\DatabaseTestController@getOrdersPreview | web, auth:admin |
 | GET, HEAD | branch/users/create | admin.branch.users.create | App\Http\Controllers\Admin\BranchController@users | web, auth:admin |
 | GET, HEAD | customers/index | admin.customers.index | App\Http\Controllers\Admin\CustomerController@index | web, auth:admin |
-| GET, HEAD | digital-menu/index | admin.digital-menu.index | App\Http\Controllers\Admin\DigitalMenuController@index | web, auth:admin |
+<!-- | GET, HEAD | digital-menu/index | admin.digital-menu.index | App\Http\Controllers\Admin\DigitalMenuController@index | web, auth:admin | -->
 | GET, HEAD | settings/index | admin.settings.index | App\Http\Controllers\Admin\SettingController@index | web, auth:admin |
 | GET, HEAD | reports/index | admin.reports.index | App\Http\Controllers\Admin\ReportController@index | web, auth:admin |
 | GET, HEAD | debug/routes | admin.debug.routes | App\Http\Controllers\Admin\DebugController@routes | web, auth:admin |

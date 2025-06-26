@@ -2089,22 +2089,22 @@ return array (
           1 => 'auth:admin',
         ),
       ),
-      129 => 
-      array (
-        'name' => 'admin.digital-menu.index',
-        'uri' => 'digital-menu/index',
-        'methods' => 
-        array (
-          0 => 'GET',
-          1 => 'HEAD',
-        ),
-        'action' => 'App\\Http\\Controllers\\Admin\\DigitalMenuController@index',
-        'middleware' => 
-        array (
-          0 => 'web',
-          1 => 'auth:admin',
-        ),
-      ),
+      // 129 => 
+      // array (
+      //   'name' => 'admin.digital-menu.index',
+      //   'uri' => 'digital-menu/index',
+      //   'methods' => 
+      //   array (
+      //     0 => 'GET',
+      //     1 => 'HEAD',
+      //   ),
+      //   'action' => 'App\\Http\\Controllers\\Admin\\DigitalMenuController@index',
+      //   'middleware' => 
+      //   array (
+      //     0 => 'web',
+      //     1 => 'auth:admin',
+      //   ),
+      // ),
       130 => 
       array (
         'name' => 'admin.settings.index',
