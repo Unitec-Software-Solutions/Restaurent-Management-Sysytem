@@ -7,6 +7,7 @@ use App\Models\ProductionRequestMaster;
 use App\Models\ProductionOrder;
 use App\Models\ProductionSession;
 use App\Models\ItemMaster;
+use App\Models\ItemTransaction;
 use App\Models\Recipe;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,7 @@ class KitchenProductionController extends Controller
                 ->count(),
             'approved' => ProductionRequestMaster::where('organization_id', $user->organization_id)
                 ->where('status', 'approved')
+                ->where('quantity_approved', '>', 0)
                 ->count(),
             'in_production' => ProductionRequestMaster::where('organization_id', $user->organization_id)
                 ->where('status', 'in_production')
@@ -64,21 +66,17 @@ class KitchenProductionController extends Controller
 
         // Production items with low stock
         $lowStockItems = ItemMaster::where('organization_id', $user->organization_id)
-            ->productionItems()
-            ->where(function($query) {
-                $query->whereNotNull('reorder_level')
-                    ->whereRaw('(
-                        SELECT COALESCE(SUM(CASE
-                            WHEN transaction_type IN ("purchase", "production", "adjustment_increase") THEN quantity
-                            WHEN transaction_type IN ("sale", "consumption", "waste", "adjustment_decrease") THEN -quantity
-                            ELSE 0
-                        END), 0)
-                        FROM item_transactions
-                        WHERE inventory_item_id = item_master.id
-                    ) <= reorder_level');
+            ->whereHas('category', function($query) {
+                $query->where('name', 'Production Items');
             })
-            ->take(10)
-            ->get();
+            ->whereNotNull('reorder_level')
+            ->with(['category'])
+            ->get()
+            ->filter(function ($item) {
+                $currentStock = ItemTransaction::stockOnHand($item->id);
+                return $currentStock <= $item->reorder_level;
+            })
+            ->take(10);
 
         return view('production.dashboard', compact(
             'productionRequests',
