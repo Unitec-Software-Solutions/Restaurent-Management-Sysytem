@@ -47,9 +47,10 @@ Route::get('/', function () {
 |------------------------------------------------------------------------*/
 Route::prefix('guest')->name('guest.')->group(function () {
     // Menu browsing
-    Route::get('/menu', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenu'])->name('menu.index');
-    Route::get('/menu/date/{date}', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenuByDate'])->name('menu.date');
-    Route::get('/menu/special', [\App\Http\Controllers\Guest\GuestController::class, 'viewSpecialMenu'])->name('menu.special');
+    Route::get('/menu/branches', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenu'])->name('menu.branch-selection');
+    Route::get('/menu/{branchId?}', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenu'])->name('menu.view');
+    Route::get('/menu/{branchId}/date/{date}', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenuByDate'])->name('menu.date');
+    Route::get('/menu/{branchId}/special', [\App\Http\Controllers\Guest\GuestController::class, 'viewSpecialMenu'])->name('menu.special');
     
     // Cart management
     Route::post('/cart/add', [\App\Http\Controllers\Guest\GuestController::class, 'addToCart'])->name('cart.add');
@@ -58,15 +59,17 @@ Route::prefix('guest')->name('guest.')->group(function () {
     Route::get('/cart', [\App\Http\Controllers\Guest\GuestController::class, 'viewCart'])->name('cart.view');
     Route::delete('/cart/clear', [\App\Http\Controllers\Guest\GuestController::class, 'clearCart'])->name('cart.clear');
     
-    // Order creation
+    // Order management
     Route::post('/order/create', [\App\Http\Controllers\Guest\GuestController::class, 'createOrder'])->name('order.create');
+    Route::get('/order/{orderId}/confirmation/{token}', [\App\Http\Controllers\Guest\GuestController::class, 'orderConfirmation'])->name('order.confirmation');
     Route::get('/order/{orderNumber}/track', [\App\Http\Controllers\Guest\GuestController::class, 'trackOrder'])->name('order.track');
     Route::get('/order/{orderNumber}/details', [\App\Http\Controllers\Guest\GuestController::class, 'orderDetails'])->name('order.details');
     
     // Reservations
-    Route::get('/reservation/create', [\App\Http\Controllers\Guest\GuestController::class, 'createReservation'])->name('reservation.create');
-    Route::post('/reservation/store', [\App\Http\Controllers\Guest\GuestController::class, 'storeReservation'])->name('reservation.store');
-    Route::get('/reservation/{confirmationCode}/details', [\App\Http\Controllers\Guest\GuestController::class, 'reservationDetails'])->name('reservation.details');
+    Route::get('/reservations/create/{branchId?}', [\App\Http\Controllers\Guest\GuestController::class, 'showReservationForm'])->name('reservations.create');
+    Route::post('/reservations/store', [\App\Http\Controllers\Guest\GuestController::class, 'createReservation'])->name('reservations.store');
+    Route::get('/reservations/{confirmationNumber}/confirmation', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmation'])->name('reservations.confirmation');
+    Route::get('/reservations/{reservationId}/confirmation/{token}', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmationById'])->name('reservation.confirmation');
     
     // Guest session management
     Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
@@ -492,7 +495,7 @@ Route::get('employees/create', [App\Http\Controllers\Admin\EmployeeController::c
 Route::get('employees/restore', [App\Http\Controllers\Admin\EmployeeController::class, 'restore'])->middleware(['auth:admin'])->name('admin.employees.restore');
 Route::get('employees/edit', [App\Http\Controllers\Admin\EmployeeController::class, 'edit'])->middleware(['auth:admin'])->name('admin.employees.edit');
 Route::delete('employees/destroy', [App\Http\Controllers\Admin\EmployeeController::class, 'destroy'])->middleware(['auth:admin'])->name('admin.employees.destroy');
-Route::get('grn/link-payment', [App\Http\Controllers\Admin\GrnController::class, 'link-payment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
+Route::get('grn/link-payment', [App\Http\Controllers\Admin\GrnController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
 
 Route::get('inventory/gtn/items-with-stock', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
 Route::get('inventory/gtn/update', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
@@ -527,9 +530,9 @@ Route::get('orders/dashboard', [App\Http\Controllers\Admin\OrderController::clas
 Route::get('check-table-availability', [App\Http\Controllers\Admin\CheckTableAvailabilityController::class, 'index'])->middleware(['auth:admin'])->name('admin.check-table-availability');
 Route::get('orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'reservations'])->middleware(['auth:admin'])->name('admin.orders.reservations.create');
 Route::get('orders/reservations/edit', [App\Http\Controllers\Admin\OrderController::class, 'reservations'])->middleware(['auth:admin'])->name('admin.orders.reservations.edit');
-Route::get('reservations/assign-steward', [App\Http\Controllers\Admin\ReservationController::class, 'assign-steward'])->middleware(['auth:admin'])->name('admin.reservations.assign-steward');
-Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationController::class, 'check-in'])->middleware(['auth:admin'])->name('admin.reservations.check-in');
-Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'check-out'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
+Route::get('reservations/assign-steward', [App\Http\Controllers\Admin\ReservationController::class, 'assignSteward'])->middleware(['auth:admin'])->name('admin.reservations.assign-steward');
+Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationController::class, 'checkIn'])->middleware(['auth:admin'])->name('admin.reservations.check-in');
+Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'checkOut'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
 Route::get('orders/orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.create');
 Route::get('roles/assign', [App\Http\Controllers\RoleController::class, 'assign'])->name('roles.assign');
 Route::put('grn/update', [App\Http\Controllers\Admin\GrnController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
@@ -544,8 +547,8 @@ Route::get('purchase-orders/create', [App\Http\Controllers\Admin\PurchaseOrderCo
 Route::get('purchase-orders/print', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'print'])->middleware(['auth:admin'])->name('admin.purchase-orders.print');
 Route::get('purchase-orders/approve', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'approve'])->middleware(['auth:admin'])->name('admin.purchase-orders.approve');
 Route::get('purchase-orders/edit', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'edit'])->middleware(['auth:admin'])->name('admin.purchase-orders.edit');
-Route::get('suppliers/purchase-orders', [App\Http\Controllers\Admin\SupplierController::class, 'purchase-orders'])->middleware(['auth:admin'])->name('admin.suppliers.purchase-orders');
-Route::get('users/assign-role/store', [App\Http\Controllers\UserController::class, 'assign-role'])->name('users.assign-role.store');
+Route::get('suppliers/purchase-orders', [App\Http\Controllers\Admin\SupplierController::class, 'purchaseOrders'])->middleware(['auth:admin'])->name('admin.suppliers.purchase-orders');
+Route::get('users/assign-role/store', [App\Http\Controllers\UserController::class, 'assignRoleStore'])->name('users.assign-role.store');
 Route::get('kitchen/orders/index', [App\Http\Controllers\KitchenController::class, 'orders'])->name('kitchen.orders.index');
 Route::get('reservations/index', [App\Http\Controllers\ReservationController::class, 'index'])->name('reservations.index');
 Route::get('orders/show', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
@@ -554,8 +557,6 @@ Route::get('orders/reservations/summary', [App\Http\Controllers\Admin\OrderContr
 Route::get('orders/takeaway/summary', [App\Http\Controllers\Admin\OrderController::class, 'takeaway'])->middleware(['auth:admin'])->name('admin.orders.takeaway.summary');
 Route::get('orders/summary', [App\Http\Controllers\Admin\OrderController::class, 'summary'])->middleware(['auth:admin'])->name('admin.orders.summary');
 Route::get('bills/show', [App\Http\Controllers\Admin\BillController::class, 'show'])->middleware(['auth:admin'])->name('admin.bills.show');
-Route::get('guest/order/confirmation', [App\Http\Controllers\GuestController::class, 'order'])->name('guest.order.confirmation');
-Route::get('guest/reservation/confirmation', [App\Http\Controllers\GuestController::class, 'reservation'])->name('guest.reservation.confirmation');
 Route::get('inventory/items/added-items', [App\Http\Controllers\Admin\InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
 Route::get('payments/create', [App\Http\Controllers\PaymentController::class, 'create'])->name('payments.create');
 Route::get('branch', [App\Http\Controllers\BranchController::class, 'index'])->name('branch');

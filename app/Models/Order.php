@@ -9,11 +9,40 @@ use Illuminate\Support\Str;
 
 class Order extends Model
 {
+    // Order Status Constants
+    const STATUS_PENDING = 'pending';
+    const STATUS_CONFIRMED = 'confirmed';
     const STATUS_SUBMITTED = 'submitted';
     const STATUS_PREPARING = 'preparing';
     const STATUS_READY = 'ready';
     const STATUS_COMPLETED = 'completed';
     const STATUS_CANCELLED = 'cancelled';
+
+    // Order Type Constants
+    const TYPE_DINE_IN = 'dine_in';
+    const TYPE_TAKEAWAY = 'takeaway';
+    const TYPE_DELIVERY = 'delivery';
+    
+    // Detailed Order Type Constants (as requested)
+    const TYPE_TAKEAWAY_IN_CALL = 'takeaway_in_call';
+    const TYPE_TAKEAWAY_ONLINE = 'takeaway_online';
+    const TYPE_TAKEAWAY_WALKIN_SCHEDULED = 'takeaway_walkin_scheduled';
+    const TYPE_TAKEAWAY_WALKIN_DEMAND = 'takeaway_walkin_demand';
+    const TYPE_DINEIN_ONLINE = 'dinein_online';
+    const TYPE_DINEIN_INCALL = 'dinein_incall';
+    const TYPE_DINEIN_WALKIN_SCHEDULED = 'dinein_walkin_scheduled';
+    const TYPE_DINEIN_WALKIN_DEMAND = 'dinein_walkin_demand';
+
+    // Payment Status Constants
+    const PAYMENT_STATUS_PENDING = 'pending';
+    const PAYMENT_STATUS_PAID = 'paid';
+    const PAYMENT_STATUS_PARTIAL = 'partial';
+    const PAYMENT_STATUS_REFUNDED = 'refunded';
+
+    // Payment Method Constants
+    const PAYMENT_METHOD_CASH = 'cash';
+    const PAYMENT_METHOD_CARD = 'card';
+    const PAYMENT_METHOD_DIGITAL = 'digital';
 
     use HasFactory, SoftDeletes;
 

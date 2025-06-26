@@ -102,7 +102,7 @@ class AppServiceProvider extends ServiceProvider
                     \$url = route(\$route);
                     \$attrStr = '';
                     foreach (\$attributes as \$key => \$value) {
-                        \$attrStr .= \" {\$key}='{$value}'\";
+                        \$attrStr .= \" {\$key}='{\$value}'\";
                     }
                     echo \"<a href='{\$url}'{\$attrStr}>{\$text}</a>\";
                 } else {

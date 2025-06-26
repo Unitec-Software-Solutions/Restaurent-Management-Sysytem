@@ -1,5 +1,9 @@
 <?php
 
+// admin routes - Updated to use modern [Controller::class, 'method'] syntax
+// Updated on: 2025-01-27
+// Total routes: 206
+
 use Illuminate\Support\Facades\Route;
 
 // Controller imports for modern syntax
@@ -41,24 +45,9 @@ use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\BillController;
 
-// admin routes - Updated to use modern    // Authentication routes
-    Route::get('auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
-    Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('login');
-    Route::post('login', [AdminAuthController::class, 'login'])->name('login.submit');
-    Route::post('logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
-    
-    // Main admin routes
-    Route::get('dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-    Route::get('profile', [AdminController::class, 'profile'])->name('profile.index');
-    Route::get('testpage', [AdminTestPageController::class, 'index'])->name('testpage');
-    
-    // Reservations
-    Route::get('reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
-
-
-Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::adminGroup(function () {
     // Authentication routes
-    Route::get('auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
+    Route::get('admin/auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
     Route::get('admin/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('admin/login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('admin/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');

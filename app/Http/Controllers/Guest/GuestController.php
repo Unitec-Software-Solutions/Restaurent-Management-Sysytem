@@ -413,67 +413,6 @@ class GuestController extends Controller
     /**
      * Book table reservation (guest)
      */
-    public function bookReservation(Request $request)
-    {
-        $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:20',
-            'customer_email' => 'nullable|email|max:255',
-            'party_size' => 'required|integer|min:1|max:20',
-            'reservation_date' => 'required|date|after_or_equal:today',
-            'reservation_time' => 'required|date_format:H:i',
-            'special_requests' => 'nullable|string|max:1000'
-        ]);
-
-        $branch = Branch::active()->findOrFail($validated['branch_id']);
-
-        // Check branch capacity
-        $requestedDateTime = Carbon::parse($validated['reservation_date'] . ' ' . $validated['reservation_time']);
-        
-        if (!$this->isTimeSlotAvailable($branch->id, $requestedDateTime, $validated['party_size'])) {
-            return back()->withErrors([
-                'reservation_time' => 'The requested time slot is not available. Please choose a different time.'
-            ]);
-        }
-
-        try {
-            $guestSessionId = $this->guestSessionService->getOrCreateGuestId();
-
-            $reservation = Reservation::create([
-                'branch_id' => $validated['branch_id'],
-                'customer_name' => $validated['customer_name'],
-                'customer_phone' => $validated['customer_phone'],
-                'customer_email' => $validated['customer_email'],
-                'party_size' => $validated['party_size'],
-                'reservation_date' => $validated['reservation_date'],
-                'reservation_time' => $validated['reservation_time'],
-                'special_requests' => $validated['special_requests'],
-                'status' => 'pending',
-                'guest_session_id' => $guestSessionId,
-                'source' => 'guest_website',
-                'created_at' => now()
-            ]);
-
-            // Generate confirmation token
-            $token = Str::random(32);
-            Session::put("reservation_token_{$reservation->id}", $token);
-
-            return redirect()->route('guest.reservation.confirmation', [
-                'reservation' => $reservation->id,
-                'token' => $token
-            ])->with('success', 'Your reservation request has been submitted!');
-
-        } catch (\Exception $e) {
-            Log::error('Guest reservation creation failed', [
-                'error' => $e->getMessage(),
-                'data' => $validated
-            ]);
-
-            return back()->withErrors(['reservation' => 'Failed to create reservation. Please try again.']);
-        }
-    }
-
     /**
      * Show reservation confirmation by ID and token (legacy route)
      */
