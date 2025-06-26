@@ -469,99 +469,155 @@ class AdminOrderController extends Controller
     }
 
     /**
-     * Show the form for editing a takeaway order (admin)
+     * Show the form for creating a new takeaway order (admin)
      */
-    public function editTakeaway($id)
+    public function createTakeaway()
     {
-        $order = Order::with('items.menuItem')->findOrFail($id);
-        $items = ItemMaster::where('is_menu_item', true)->get();
-        $branches = Branch::all();
+        $admin = auth('admin')->user();
+        
+        // Get available branches based on admin permissions
+        if ($admin->is_super_admin) {
+            $branches = Branch::active()->get();
+            $defaultBranch = null;
+        } elseif ($admin->branch_id) {
+            $branches = Branch::where('id', $admin->branch_id)->active()->get();
+            $defaultBranch = $admin->branch_id;
+        } elseif ($admin->organization_id) {
+            $branches = Branch::where('organization_id', $admin->organization_id)->active()->get();
+            $defaultBranch = $branches->first()?->id;
+        } else {
+            return redirect()->route('admin.dashboard')->with('error', 'Access denied. No branch assigned.');
+        }
 
-        $subtotal = $order->items->sum(function ($item) {
-            return $item->menuItem->selling_price * $item->quantity;
-        });
-        $tax = $subtotal * 0.10;
-        $total = $subtotal + $tax;
+        // Get menu items
+        $menuItems = ItemMaster::where('is_menu_item', true)
+            ->where('active', true)
+            ->get();
 
-        $cart = [
-            'items' => $order->items->map(function ($item) {
-                return [
-                    'item_id' => $item->menuItem->id,
-                    'quantity' => $item->quantity,
-                ];
-            })->toArray(),
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'total' => $total,
-        ];
-
-        return view('orders.takeaway.edit', compact('order', 'items', 'branches', 'cart'));
+        return view('admin.orders.takeaway.create', [
+            'branches' => $branches,
+            'menuItems' => $menuItems,
+            'defaultBranch' => $defaultBranch,
+            'orderType' => 'takeaway_walk_in_demand'
+        ]);
     }
 
     /**
-     * Update a takeaway order (admin)
+     * Store a new takeaway order (admin)
      */
-    public function updateTakeaway(Request $request, Order $order)
+    public function storeTakeaway(Request $request)
     {
+        $admin = auth('admin')->user();
+        
         $data = $request->validate([
-            'order_type' => 'required|string',
+            'order_type' => 'required|in:takeaway_walk_in_demand,takeaway_in_call_scheduled,takeaway_online_scheduled',
             'branch_id' => 'required|exists:branches,id',
-            'order_time' => 'required|date',
-            'customer_name' => 'nullable|string', // allow blank
-            'customer_phone' => 'required|string',
+            'order_time' => 'required|date|after_or_equal:now',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'status' => 'required|in:active,submitted,preparing,ready,completed,cancelled'
+            'items.*.quantity' => 'required|integer|min:1'
         ]);
-        // Set default if blank
-        if (empty($data['customer_name']) || trim($data['customer_name']) === '') {
-            $data['customer_name'] = 'Not Provided';
+
+        // Validate admin can access this branch
+        if (!$admin->is_super_admin && $admin->branch_id && $data['branch_id'] != $admin->branch_id) {
+            return back()->withErrors(['branch_id' => 'Access denied to this branch.']);
         }
-        // Remove old items
-        $order->orderItems()->delete();
-        $subtotal = 0;
-        foreach ($data['items'] as $item) {
-            $menuItem = ItemMaster::find($item['item_id']);
-            $lineTotal = $menuItem->selling_price * $item['quantity'];
-            $subtotal += $lineTotal;
-            OrderItem::create([
-                'order_id' => $order->id,
-                'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $menuItem->selling_price,
-                'total_price' => $lineTotal,
+
+        DB::beginTransaction();
+        try {
+            // Set default customer name if empty
+            if (empty($data['customer_name']) || trim($data['customer_name']) === '') {
+                $data['customer_name'] = 'Not Provided';
+            }
+
+            // Create order
+            $order = Order::create([
+                'order_type' => $data['order_type'],
+                'branch_id' => $data['branch_id'],
+                'order_time' => $data['order_time'],
+                'customer_name' => $data['customer_name'],
+                'customer_phone' => $data['customer_phone'],
+                'status' => 'active',
+                'placed_by_admin' => true,
+                'created_by_admin_id' => $admin->id,
+                'takeaway_id' => 'TW' . now()->format('YmdHis') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT)
             ]);
+
+            // Add order items
+            $subtotal = 0;
+            foreach ($data['items'] as $item) {
+                $menuItem = ItemMaster::find($item['item_id']);
+                $lineTotal = $menuItem->selling_price * $item['quantity'];
+                $subtotal += $lineTotal;
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['item_id'],
+                    'inventory_item_id' => $item['item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem->selling_price,
+                    'total_price' => $lineTotal,
+                ]);
+            }
+
+            // Calculate totals
+            $tax = $subtotal * 0.10;
+            $order->update([
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'total' => $subtotal + $tax,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.orders.takeaway.summary', $order->id)
+                ->with('success', 'Takeaway order created successfully! Order ID: ' . $order->takeaway_id);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Takeaway order creation failed: ' . $e->getMessage());
+            return back()->withInput()->withErrors(['error' => 'Failed to create order. Please try again.']);
         }
-        $tax = $subtotal * 0.10;
-        $order->update([
-            'order_type' => $data['order_type'],
-            'branch_id' => $data['branch_id'],
-            'order_time' => $data['order_time'],
-            'customer_name' => $data['customer_name'],
-            'customer_phone' => $data['customer_phone'],
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'total' => $subtotal + $tax,
-            'status' => $data['status'],
-        ]);
-        return redirect()->route('admin.orders.takeaway.index')->with('success', 'Takeaway order updated successfully.');
     }
 
     /**
-     * Display the summary of a takeaway order (admin)
+     * Display takeaway orders index (admin)
      */
-    public function takeawaySummary(Order $order)
+    public function indexTakeaway()
     {
-        // Load related items and menu items
-        $order->load(['items.menuItem', 'branch']);
-        return view('admin.orders.takeaway.summary', [
-            'order' => $order,
-        ]);
+        $admin = auth('admin')->user();
+        
+        $query = Order::with(['branch'])
+            ->where('order_type', 'like', 'takeaway%');
+
+        // Apply admin permissions
+        if (!$admin->is_super_admin) {
+            if ($admin->branch_id) {
+                $query->where('branch_id', $admin->branch_id);
+            } elseif ($admin->organization_id) {
+                $query->whereHas('branch', fn($q) => $q->where('organization_id', $admin->organization_id));
+            }
+        }
+
+        $orders = $query->latest()->paginate(15);
+
+        return view('admin.orders.takeaway.index', compact('orders'));
     }
 
-    // Delete takeaway order (admin)
+    /**
+     * Display a specific takeaway order (admin)
+     */
+    public function showTakeaway(Order $order)
+    {
+        $order->load(['items.menuItem', 'branch']);
+        return view('admin.orders.takeaway.show', compact('order'));
+    }
+
+    /**
+     * Delete takeaway order (admin)
+     */
     public function destroyTakeaway(Order $order)
     {
         $order->orderItems()->delete();
