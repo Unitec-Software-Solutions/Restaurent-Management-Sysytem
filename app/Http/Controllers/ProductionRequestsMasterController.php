@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\IngredientStockService;
 use Illuminate\Support\Facades\DB;
+use App\Models\ItemTransaction;
 
 class ProductionRequestsMasterController extends Controller
 {
@@ -468,7 +469,7 @@ class ProductionRequestsMasterController extends Controller
     }
 
     /**
-     * Process approval of production request
+     * Process approval of production request (Allow higher approved quantities)
      */
     public function processApproval(Request $request, ProductionRequestMaster $productionRequest)
     {
@@ -485,7 +486,7 @@ class ProductionRequestsMasterController extends Controller
 
         $request->validate([
             'items' => 'required|array',
-            'items.*.quantity_approved' => 'required|numeric|min:0',
+            'items.*.quantity_approved' => 'required|numeric|min:0', // Removed max constraint
             'approval_notes' => 'nullable|string|max:500'
         ]);
 
@@ -546,14 +547,7 @@ class ProductionRequestsMasterController extends Controller
         $stockData = [];
 
         foreach ($productionItems as $item) {
-            $currentStock = $item->transactions()
-                ->where('branch_id', $branchId)
-                ->selectRaw("COALESCE(SUM(CASE
-                    WHEN transaction_type IN ('purchase', 'production', 'adjustment_increase', 'transfer_in') THEN quantity
-                    WHEN transaction_type IN ('sale', 'consumption', 'waste', 'adjustment_decrease', 'transfer_out') THEN -quantity
-                    ELSE 0
-                END), 0) as current_stock")
-                ->value('current_stock') ?? 0;
+            $currentStock = ItemTransaction::stockOnHand($item->id, $branchId);
 
             $stockData[$item->id] = [
                 'current_stock' => $currentStock,
