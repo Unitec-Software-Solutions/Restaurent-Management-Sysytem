@@ -37,7 +37,7 @@ class MenuSystemService
         // Implementation for daily menu determination
     }
 
-    public function getDailyMenu(Branch $branch, Carbon $date = null): array
+    public function getDailyMenu(Branch $branch, ?Carbon $date = null): array
     {
         $date = $date ?? Carbon::now();
         $cacheKey = "daily_menu_{$branch->id}_{$date->format('Y-m-d')}";
