@@ -445,9 +445,9 @@
                         <div class="ml-4 flex flex-col gap-2">
                             ${isEdited ?
                                 `<button type="button" onclick="resetIngredientQuantity('${ingredientId}')"
-                                                                     class="text-blue-600 hover:text-blue-800 text-xs">
-                                                                <i class="fas fa-undo mr-1"></i>Reset
-                                                             </button>` : ''}
+                                                                         class="text-blue-600 hover:text-blue-800 text-xs">
+                                                                    <i class="fas fa-undo mr-1"></i>Reset
+                                                                 </button>` : ''}
                         </div>
                     </div>
                 `;
