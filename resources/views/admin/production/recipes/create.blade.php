@@ -207,6 +207,12 @@
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Unit <span class="text-red-500">*</span></label>
+                    <input type="text" name="raw_materials[INDEX][unit_of_measurement]"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="kg, liters, pieces">
+                </div>
+                <div class="flex-1">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Preparation Notes</label>
                     <input type="text" name="raw_materials[INDEX][preparation_notes]"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
