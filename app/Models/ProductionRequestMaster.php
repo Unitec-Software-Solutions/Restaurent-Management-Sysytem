@@ -88,11 +88,11 @@ class ProductionRequestMaster extends Model
     }
 
     /**
-     * Get total quantity approved for all items
+     * Get total quantity approved for all items (can exceed requested)
      */
     public function getTotalQuantityApproved()
     {
-        return $this->items->sum('quantity_approved');
+        return $this->items->sum('quantity_approved') ?? 0;
     }
 
     /**
