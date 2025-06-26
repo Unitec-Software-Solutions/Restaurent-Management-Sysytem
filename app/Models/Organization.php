@@ -87,6 +87,15 @@ class Organization extends Model
         return $this->belongsTo(SubscriptionPlan::class);
     }
 
+    /**
+     * Alias for subscriptionPlan relationship for compatibility
+     * Used by OrganizationController@summary
+     */
+    public function plan()
+    {
+        return $this->belongsTo(SubscriptionPlan::class, 'subscription_plan_id');
+    }
+
     public function itemCategories()
     {
         return $this->hasMany(ItemCategory::class);
