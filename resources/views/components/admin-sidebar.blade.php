@@ -232,29 +232,58 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('[data-submenu-toggle]').forEach(toggle => {
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
-            const submenuId = this.getAttribute('data-submenu-toggle');
-            const submenu = document.querySelector(`[data-submenu="${submenuId}"]`);
+            const route = this.getAttribute('data-submenu-toggle');
+            const submenu = document.querySelector(`[data-submenu="${route}"]`);
+            const chevron = this;
             
             if (submenu) {
-                submenu.classList.toggle('hidden');
-                this.classList.toggle('rotate-180');
+                const isHidden = submenu.classList.contains('hidden');
                 
-                // Store submenu state in localStorage
-                const isOpen = !submenu.classList.contains('hidden');
-                localStorage.setItem(`submenu-${submenuId}`, isOpen ? 'open' : 'closed');
+                if (isHidden) {
+                    submenu.classList.remove('hidden');
+                    chevron.classList.add('rotate-180');
+                    localStorage.setItem(`submenu-${route}`, 'open');
+                } else {
+                    submenu.classList.add('hidden');
+                    chevron.classList.remove('rotate-180');
+                    localStorage.setItem(`submenu-${route}`, 'closed');
+                }
             }
         });
     });
 
-    // Restore submenu states from localStorage
+    // Set active states for current routes
+    const currentRoute = '{{ request()->route()->getName() }}';
+    const currentPath = '{{ request()->path() }}';
+    
+    // Handle parent menu active states based on sub-items
     document.querySelectorAll('[data-submenu]').forEach(submenu => {
-        const route = submenu.getAttribute('data-submenu');
-        const state = localStorage.getItem(`submenu-${route}`);
-        const toggle = document.querySelector(`[data-submenu-toggle="${route}"]`);
+        const subLinks = submenu.querySelectorAll('a[data-route]');
+        let hasActiveChild = false;
         
-        if (state === 'open') {
+        subLinks.forEach(link => {
+            const linkRoute = link.getAttribute('data-route');
+            if (currentRoute === linkRoute || currentRoute.startsWith(linkRoute + '.')) {
+                hasActiveChild = true;
+                link.classList.add('bg-white', 'text-gray-700', 'border-white');
+                link.classList.remove('bg-transparent', 'text-white', 'border-white', 'hover:bg-white/10');
+            }
+        });
+        
+        if (hasActiveChild) {
+            const route = submenu.getAttribute('data-submenu');
+            const parentLink = document.querySelector(`a[href*="${route}"]`);
+            const toggle = document.querySelector(`[data-submenu-toggle="${route}"]`);
+            
+            if (parentLink) {
+                parentLink.classList.add('bg-white', 'text-gray-700', 'border-white');
+                parentLink.classList.remove('bg-transparent', 'text-white', 'border-white', 'hover:bg-white/10');
+            }
+            
+            // Auto-expand submenu if child is active
             submenu.classList.remove('hidden');
             if (toggle) toggle.classList.add('rotate-180');
+            localStorage.setItem(`submenu-${route}`, 'open');
         }
     });
 
