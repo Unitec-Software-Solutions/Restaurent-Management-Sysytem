@@ -2,6 +2,8 @@
 
 require_once 'vendor/autoload.php';
 
+use Illuminate\Support\Facades\DB;
+
 // Initialize Laravel
 $app = require_once 'bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
