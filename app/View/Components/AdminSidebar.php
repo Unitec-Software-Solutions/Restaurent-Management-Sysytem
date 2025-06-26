@@ -566,6 +566,14 @@ class AdminSidebar extends Component
                         'icon_type' => 'svg',
                         'permission' => 'organizations.create',
                         'is_route_valid' => $this->validateRoute('admin.organizations.create')
+                    ],
+                    [
+                        'title' => 'Activate Organization',
+                        'route' => 'admin.organizations.activate.form',
+                        'icon' => 'key',
+                        'icon_type' => 'svg',
+                        'permission' => 'organizations.activate',
+                        'is_route_valid' => $this->validateRoute('admin.organizations.activate.form')
                     ]
                 ]
             ];
@@ -850,6 +858,19 @@ class AdminSidebar extends Component
                     'is_route_valid' => $this->validateRoute($createRoute, $createParams)
                 ];
             }
+        }
+        
+        // Add branch activation option
+        if ($this->hasPermission($admin, 'branches.activate')) {
+            $subItems[] = [
+                'title' => 'Activate Branch',
+                'route' => 'admin.branches.activate.form',
+                'route_params' => [],
+                'icon' => 'key',
+                'icon_type' => 'svg',
+                'permission' => 'branches.activate',
+                'is_route_valid' => $this->validateRoute('admin.branches.activate.form')
+            ];
         }
         
         return $subItems;
