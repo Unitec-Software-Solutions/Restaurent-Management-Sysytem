@@ -10,12 +10,12 @@ use Illuminate\Support\Facades\Auth;
 class ProductionRequestItemController extends Controller
 {
     /**
-     * Update quantity approved for a production request item (HQ only)
+     * Update quantity approved for a production request item (Can exceed requested)
      */
     public function updateApproved(Request $request, ProductionRequestItem $item)
     {
         $request->validate([
-            'quantity_approved' => 'required|numeric|min:0|max:' . $item->quantity_requested
+            'quantity_approved' => 'required|numeric|min:0' // Removed max constraint
         ]);
 
         $item->update([
