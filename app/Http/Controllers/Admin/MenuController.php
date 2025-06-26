@@ -233,7 +233,6 @@ class MenuController extends Controller
                 'description' => $validated['description'],
                 'type' => $validated['type'],
                 'branch_id' => $validated['branch_id'],
-                'organization_id' => $validated['organization_id'] ?? Auth::user()->organization_id ?? 1,
                 'date_from' => $validated['valid_from'],
                 'date_to' => $validated['valid_until'],
                 'valid_from' => $validated['valid_from'],
