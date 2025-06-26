@@ -156,7 +156,7 @@ class OrderService
     /**
      * Update order status with validation
      */
-    public function updateOrderStatus(Order $order, string $newStatus, string $reason = null): Order
+    public function updateOrderStatus(Order $order, string $newStatus, ?string $reason = null): Order
     {
         $currentStatus = $order->status;
 
