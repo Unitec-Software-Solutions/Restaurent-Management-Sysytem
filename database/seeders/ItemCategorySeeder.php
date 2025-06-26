@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ItemCategory;
-use App\Models\Organizations;
+use App\Models\Organization;
 use Illuminate\Database\Seeder;
 
 class ItemCategorySeeder extends Seeder
@@ -13,10 +13,14 @@ class ItemCategorySeeder extends Seeder
      */
     public function run(): void
     {
-        $organizations = Organizations::where('is_active', true)->take(5)->get();
 
-        if ($organizations->isEmpty()) {
-            $this->command->error('❌ No active organizations found to seed item categories.');
+        $organizations = Organization::where('is_active', true)->take(5)->get();
+
+        $Organization = Organization::where('is_active', true)->take(5)->get();
+
+
+        if ($Organization->isEmpty()) {
+            $this->command->error('❌ No active Organization found to seed item categories.');
             return;
         }
 
@@ -58,7 +62,7 @@ class ItemCategorySeeder extends Seeder
             ],
         ];
 
-        foreach ($organizations as $org) {
+        foreach ($Organization as $org) {
             foreach ($baseCategories as $category) {
                 // Adjust code and name to be unique per organization
                 $uniqueCode = $category['code'] . $org->id;
@@ -83,7 +87,7 @@ class ItemCategorySeeder extends Seeder
             }
         }
 
-        $this->command->info("  ✅ Seeded item categories for {$organizations->count()} organizations.");
+        $this->command->info("  ✅ Seeded item categories for {$Organization->count()} Organization.");
         $this->command->info("  Total Item Categories in the database: " . ItemCategory::count());
     }
 }

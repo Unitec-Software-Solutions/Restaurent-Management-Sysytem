@@ -700,9 +700,8 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        console.log('Audit Trail:', data.data);
-                        // You can implement a modal to show the audit trail
-                        alert('Audit trail logged to console. Check browser console for details.');
+                        // Show audit trail in modal or alert
+                        alert('Audit trail loaded successfully.');
                     } else {
                         alert('Error: ' + data.error);
                     }

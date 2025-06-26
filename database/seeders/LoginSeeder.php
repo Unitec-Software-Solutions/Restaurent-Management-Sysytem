@@ -13,90 +13,33 @@ class LoginSeeder extends Seeder
      */
     public function run(): void
     {
-        // Admin user  admin@restaurant.com / admin123
-        User::firstOrCreate(
-            ['email' => 'admin@restaurant.com'],
+        $organization = \App\Models\Organization::first();
+        $role = \App\Models\Role::first();
+
+        // Super Admin: always seed, even if no org/role
+        User::updateOrCreate(
+            ['email' => 'superadmin@rms.com'],
             [
-                'name' => 'Admin User',
-                'password' => Hash::make('admin123'),
-                'phone_number' => '1234567890',
-                'user_type' => 'admin',
-                'is_registered' => true,
+                'name' => 'Super Admin',
+                'password' => Hash::make('password'),
                 'is_active' => true,
-                'email_verified_at' => now(),
+                'is_registered' => true,
+                'role_id' => $role ? $role->id : null,
+                'organization_id' => $organization ? $organization->id : null,
+                'is_admin' => true,
+                'created_by' => null,
+                'is_super_admin' => true,
             ]
         );
 
-        // Manager user manager@restaurant.com / manager123
-        User::firstOrCreate(
-            ['email' => 'manager@restaurant.com'],
-            [
-                'name' => 'Manager User',
-                'password' => Hash::make('manager123'),
-                'phone_number' => '2345678901',
-                'user_type' => 'manager',
-                'is_registered' => true,
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
+        $this->command->info('  ✅ Super Admin user seeded successfully.');
 
-        // Chef user chef@restaurant.com / chef123
-        User::firstOrCreate(
-            ['email' => 'chef@restaurant.com'],
-            [
-                'name' => 'Chef User',
-                'password' => Hash::make('chef123'),
-                'phone_number' => '3456789012',
-                'user_type' => 'chef',
-                'is_registered' => true,
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
-
-        // Waiter user waiter@restaurant.com / waiter123
-        User::firstOrCreate(
-            ['email' => 'waiter@restaurant.com'],
-            [
-                'name' => 'Waiter User',
-                'password' => Hash::make('waiter123'),
-                'phone_number' => '4567890123',
-                'user_type' => 'waiter',
-                'is_registered' => true,
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
-
-        // Cashier user cashier@restaurant.com / cashier123
-        User::firstOrCreate(
-            ['email' => 'cashier@restaurant.com'],
-            [
-                'name' => 'Cashier User',
-                'password' => Hash::make('cashier123'),
-                'phone_number' => '5678901234',
-                'user_type' => 'cashier',
-                'is_registered' => true,
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
-
-        // Customer user customer@example.com / customer123
-        User::firstOrCreate(
-            ['email' => 'customer@example.com'],
-            [
-                'name' => 'Customer User',
-                'password' => Hash::make('customer123'),
-                'phone_number' => '6789012345',
-                'user_type' => 'customer',
-                'is_registered' => true,
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
-
-        $this->command->info('  ✅ Login users seeded successfully.');
+        // Optionally, add a warning if no org/role
+        if (!$organization) {
+            $this->command->warn('⚠️ No organizations found. Super Admin seeded with organization_id = null.');
+        }
+        if (!$role) {
+            $this->command->warn('⚠️ No roles found. Super Admin seeded with role_id = null.');
+        }
     }
 }

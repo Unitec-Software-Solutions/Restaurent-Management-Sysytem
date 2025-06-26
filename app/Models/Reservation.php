@@ -45,6 +45,11 @@ class Reservation extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function organization()
+    {
+        return $this->hasOneThrough(Organization::class, Branch::class, 'id', 'id', 'branch_id', 'organization_id');
+    }
+
     public function tables()
     {
         return $this->belongsToMany(Table::class, 'reservation_tables');

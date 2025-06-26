@@ -16,6 +16,7 @@
         "laravel/ui": "^4.6",
         "orangehill/iseed": "^3.1",
         "phpoffice/phpspreadsheet": "^4.2",
+        "spatie/laravel-permission": "^6.19",
         "twilio/sdk": "^8.5"
     },
     "require-dev": {

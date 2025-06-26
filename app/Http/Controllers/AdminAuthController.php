@@ -23,7 +23,8 @@ class AdminAuthController extends Controller
         if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
             $admin = auth('admin')->user();
-            return redirect()->intended(route('admin.dashboard')); // Redirect to admin dashboard
+            
+            return redirect()->intended(route('admin.dashboard'));
         }
 
         return back()->withErrors([
@@ -37,14 +38,9 @@ class AdminAuthController extends Controller
         $request->session()->flush(); // Clear all session data
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        \Cookie::queue(\Cookie::forget(config('session.cookie'))); // Explicitly remove session cookie
+        Cookie::queue(Cookie::forget(config('session.cookie'))); // Explicitly remove session cookie
         return redirect()->route('admin.login');
     }
-
-    // public function adminLogoutPage()
-    // {
-    //     return view('admin.auth.logout');
-    // }
 
     public function adminLogout(Request $request)
     {
@@ -52,7 +48,7 @@ class AdminAuthController extends Controller
         $request->session()->flush();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        \Cookie::queue(\Cookie::forget(config('session.cookie')));
+        Cookie::queue(Cookie::forget(config('session.cookie')));
         return redirect()->route('admin.login')->with('success', 'You have been logged out.');
     }
 }

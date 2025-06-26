@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\Organizations;
+use App\Models\Organization;
 use App\Models\ItemCategory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class ItemMaster extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasFactory;
 
     protected $table = 'item_master';
 
@@ -39,7 +41,7 @@ class ItemMaster extends Model
         'buying_price'    => 'decimal:2',
         'selling_price'   => 'decimal:2',
     ];
-    
+
     /**
      * Relationships
      */
@@ -55,7 +57,7 @@ class ItemMaster extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organizations::class, 'organization_id');
+        return $this->belongsTo(Organization::class, 'organization_id');
     }
 
     /**
@@ -64,6 +66,38 @@ class ItemMaster extends Model
     public function transactions()
     {
         return $this->hasMany(ItemTransaction::class, 'inventory_item_id');
+    }
+
+    /**
+     * Production request items relationship
+     */
+    public function productionRequestItems()
+    {
+        return $this->hasMany(ProductionRequestItem::class, 'item_id');
+    }
+
+    /**
+     * Production order items relationship
+     */
+    public function productionOrderItems()
+    {
+        return $this->hasMany(ProductionOrderItem::class, 'item_id');
+    }
+
+    /**
+     * Recipes where this item is the production item
+     */
+    public function productionRecipes()
+    {
+        return $this->hasMany(Recipe::class, 'production_item_id');
+    }
+
+    /**
+     * Recipe details where this item is a raw material
+     */
+    public function rawMaterialRecipes()
+    {
+        return $this->hasMany(RecipeDetail::class, 'raw_material_item_id');
     }
 
     /**
@@ -76,13 +110,13 @@ class ItemMaster extends Model
 
     /**
      * Accessor Example: Get Image if available in attributes
-     */    
+     */
     public function getImageUrlAttribute()
     {
         if (isset($this->attributes['attributes']['img'])) {
             return asset('storage/'.$this->attributes['attributes']['img']);
         }
-        return asset('resources\\assets\\image.png'); // Default image if not set
+        return asset('storage/default.png');
     }
 
 
@@ -104,6 +138,24 @@ class ItemMaster extends Model
     public function scopePerishable($query)
     {
         return $query->where('is_perishable', true);
+    }
+
+    /**
+     * Scope to get production items only
+     */
+    public function scopeProductionItems($query)
+    {
+        return $query->whereHas('category', function($q) {
+            $q->where('name', 'Production Items');
+        });
+    }
+
+    // New scope for raw materials
+    public function scopeRawMaterials($query)
+    {
+        return $query->whereHas('category', function($q) {
+            $q->where('name', 'Raw Materials');
+        });
     }
 
     // In ItemMaster model
