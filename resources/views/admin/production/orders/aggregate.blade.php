@@ -1,23 +1,57 @@
 @extends('layouts.admin')
 
-@section('title', 'Create Production Order')
+@section('title', 'Aggregate Production Requests')
 
-@section('header-title', 'Create Production Order')
+@section('header-title', 'Aggregate Production Requests')
+
 @section('content')
     <div class="p-4 rounded-lg">
+        <!-- Header with navigation buttons -->
+        <div class="justify-between items-center mb-4">
+            <div class="rounded-lg">
+                <x-nav-buttons :items="[
+                    ['name' => 'Production', 'link' => route('admin.production.index')],
+                    ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
+                    ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
+                    ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+                    ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
+                    ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
+                ]" active="Production Orders" />
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div class="flex">
+                    <i class="fas fa-exclamation-triangle text-red-400 mr-2 mt-0.5"></i>
+                    <div>
+                        <h3 class="text-sm font-medium text-red-800">Validation Errors</h3>
+                        <ul class="mt-2 text-sm text-red-700 list-disc pl-5">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Main Content Card -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Card Header -->
             <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-semibold text-gray-900">Create Production Order</h2>
-                    <p class="text-gray-600 mt-1">Aggregate approved production requests into a single order</p>
+                    <p class="text-sm text-gray-500 mt-1">Aggregate approved production requests into a single efficient
+                        order</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Organization: {{ Auth::user()->organization->name }}
+                    </p>
                 </div>
-
                 <div class="flex gap-2">
                     <a href="{{ route('admin.production.orders.index') }}"
                         class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-arrow-left mr-2"></i> Back to Production Orders
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Orders
                     </a>
                 </div>
             </div>
@@ -26,80 +60,89 @@
             <form action="{{ route('admin.production.orders.store_aggregated') }}" method="POST" class="p-6"
                 id="createProductionOrderForm">
                 @csrf
-                @if ($errors->any())
-                    <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
-                        <h3 class="font-medium mb-2">Validation Errors</h3>
-                        <ul class="list-disc pl-5">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-
-                @csrf
 
                 <!-- Production Details -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Production Details</h2>
+                <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Production Details</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Production Date *</label>
-                            <input type="date" name="production_date" required
+                            <label for="production_date" class="block text-sm font-medium text-gray-700 mb-2">
+                                Production Date <span class="text-red-500">*</span>
+                            </label>
+                            <input type="date" name="production_date" id="production_date" required
                                 value="{{ old('production_date', now()->addDay()->toDateString()) }}"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                min="{{ now()->format('Y-m-d') }}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Production Notes</label>
-                            <textarea name="production_notes" rows="3" placeholder="Special instructions for production..."
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ old('production_notes') }}</textarea>
+                            <label for="production_notes" class="block text-sm font-medium text-gray-700 mb-2">
+                                Production Notes
+                            </label>
+                            <textarea name="production_notes" id="production_notes" rows="3"
+                                placeholder="Special instructions for production team..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('production_notes') }}</textarea>
                         </div>
                     </div>
                 </div>
 
                 <!-- Production Requests Selection -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-gray-900">Select Production Requests</h2>
+                        <h3 class="text-lg font-semibold  text-gray-900">Select Production Requests</h3>
                         <div class="flex gap-2">
-                            <button type="button" id="selectAllBtn" class="text-blue-600 hover:text-blue-800 text-sm">
+                            <button type="button" id="selectAllBtn"
+                                class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
                                 Select All
                             </button>
-                            <button type="button" id="clearAllBtn" class="text-red-600 hover:text-red-800 text-sm">
+                            <span class="text-gray-300">|</span>
+                            <button type="button" id="clearAllBtn"
+                                class="text-sm text-red-600 hover:text-red-800 font-medium">
                                 Clear All
                             </button>
                         </div>
                     </div>
 
                     @if ($requests->isEmpty())
-                        <div class="text-center py-8">
-                            <i class="fas fa-inbox text-4xl text-gray-400 mb-4"></i>
-                            <p class="text-gray-600">No approved production requests found.</p>
+                        <div class="text-center py-12">
+                            <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-lg font-medium text-gray-900">No approved production requests found</p>
+                            <p class="text-sm text-gray-500">Approved requests will appear here for aggregation</p>
                             <a href="{{ route('admin.production.requests.index') }}"
-                                class="text-blue-600 hover:text-blue-800">
-                                View all requests
+                                class="mt-4 inline-flex items-center text-indigo-600 hover:text-indigo-800">
+                                <i class="fas fa-arrow-left mr-2"></i>View all requests
                             </a>
                         </div>
                     @else
-                        <div class="space-y-4" id="requestsList">
+                        <div class="space-y-3 grid-cols-2 " id="requestsList">
                             @foreach ($requests as $request)
-                                <div class="border border-gray-200 rounded-lg p-4 request-item">
+                                <div
+                                    class="border border-gray-200 rounded-lg p-4 request-item hover:bg-gray-50 transition duration-150">
                                     <div class="flex items-start justify-between">
                                         <div class="flex items-start gap-3">
                                             <input type="checkbox" name="selected_requests[]" value="{{ $request->id }}"
-                                                class="mt-1 request-checkbox">
-                                            <div>
-                                                <h3 class="font-medium text-gray-900">
-                                                    Request #{{ $request->id }} - {{ $request->branch->name }}
-                                                </h3>
-                                                <p class="text-sm text-gray-600">
+                                                class="mt-1 request-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-2">
+                                                    <h4 class="font-medium text-gray-900">
+                                                        Request #{{ $request->id }}
+                                                    </h4>
+                                                    <span class="text-sm text-gray-500">•</span>
+                                                    <span
+                                                        class="text-sm font-medium text-gray-700">{{ $request->branch->name }}</span>
+                                                </div>
+                                                <p class="text-sm text-gray-600 mb-3">
                                                     Required by: {{ $request->required_date->format('M d, Y') }}
+                                                    @if ($request->required_date->isPast())
+                                                        <span
+                                                            class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                                            Overdue
+                                                        </span>
+                                                    @endif
                                                 </p>
-                                                <div class="mt-2">
+                                                <div class="flex flex-wrap gap-2">
                                                     @foreach ($request->items as $item)
                                                         <span
-                                                            class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mb-1">
+                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                                                             {{ $item->item->name }}:
                                                             {{ number_format($item->quantity_approved) }}
                                                         </span>
@@ -107,7 +150,8 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                        <span
+                                            class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                                             {{ ucfirst($request->status) }}
                                         </span>
                                     </div>
@@ -118,61 +162,61 @@
                 </div>
 
                 <!-- Aggregated Items Preview -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6" id="aggregatedItemsSection"
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6" id="aggregatedItemsSection"
                     style="display: none;">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Aggregated Production Items</h2>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-layer-group text-blue-600 mr-2"></i>
+                        Aggregated Production Items
+                    </h3>
                     <div id="aggregatedItemsList" class="space-y-3"></div>
                 </div>
 
                 <!-- Ingredients Requirements -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6" id="ingredientsSection"
+                <div class="bg-green-50 border border-green-200 rounded-xl p-6 mb-6" id="ingredientsSection"
                     style="display: none;">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-gray-900">Ingredient Requirements</h2>
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-leaf text-green-600 mr-2"></i>
+                            Ingredient Requirements
+                        </h3>
                         <button type="button" id="addIngredientBtn"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
                             <i class="fas fa-plus mr-2"></i>Add Manual Ingredient
                         </button>
-                    </div> <!-- Recipe-based Ingredients -->
+                    </div>
+
+                    <!-- Recipe-based Ingredients -->
                     <div id="recipeIngredientsSection">
-                        <h3 class="text-md font-medium text-gray-800 mb-3">From Recipes (Editable)</h3>
+                        <h4 class="text-md font-medium text-gray-800 mb-3">From Recipes</h4>
                         <div id="ingredientsList" class="space-y-3"></div>
                     </div>
 
                     <!-- Manual Ingredients -->
                     <div id="manualIngredientsSection" style="display: none;">
-                        <h3 class="text-md font-medium text-gray-800 mb-3 mt-6">Manual Ingredients</h3>
+                        <h4 class="text-md font-medium text-gray-800 mb-3 mt-6">Manual Ingredients</h4>
                         <div id="manualIngredientsList" class="space-y-3"></div>
                     </div>
-                </div> <!-- Recipe and Manual Ingredients (Hidden Form Fields) -->
+                </div>
+
+                <!-- Hidden Form Fields -->
                 <div id="recipeIngredientsContainer"></div>
                 <div id="manualIngredientsContainer"></div>
 
                 <!-- Actions -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="bg-gray-50 rounded-xl p-6">
                     <div class="flex items-center justify-end gap-4">
                         <a href="{{ route('admin.production.orders.index') }}"
-                            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                            Cancel
+                            class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center">
+                            <i class="fas fa-times mr-2"></i>Cancel
                         </a>
                         <button type="submit" id="createOrderBtn" disabled
-                            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg">
+                            class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg flex items-center">
                             <i class="fas fa-plus mr-2"></i>Create Production Order
                         </button>
                     </div>
                 </div>
-
-
-
-
-
-
-
             </form>
         </div>
-    </div>
-
-    </div>
     </div>
 
     <!-- Add Ingredient Modal -->
@@ -445,9 +489,9 @@
                         <div class="ml-4 flex flex-col gap-2">
                             ${isEdited ?
                                 `<button type="button" onclick="resetIngredientQuantity('${ingredientId}')"
-                                                                         class="text-blue-600 hover:text-blue-800 text-xs">
-                                                                    <i class="fas fa-undo mr-1"></i>Reset
-                                                                 </button>` : ''}
+                                                                                 class="text-blue-600 hover:text-blue-800 text-xs">
+                                                                            <i class="fas fa-undo mr-1"></i>Reset
+                                                                         </button>` : ''}
                         </div>
                     </div>
                 `;
