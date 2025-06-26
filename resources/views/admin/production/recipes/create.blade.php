@@ -187,9 +187,10 @@
     <!-- Ingredient Template (Hidden) -->
     <div id="ingredientTemplate" style="display: none;">
         <div class="ingredient-row border border-gray-200 rounded-lg p-4 mb-4">
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Raw Material</label>
+            <div class="flex flex-col md:flex-row md:items-end gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Raw Material <span
+                            class="text-red-500">*</span></label>
                     <select name="raw_materials[INDEX][item_id]" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Select Raw Material</option>
@@ -198,25 +199,20 @@
                         @endforeach
                     </select>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity Required</label>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity Required <span
+                            class="text-red-500">*</span></label>
                     <input type="number" name="raw_materials[INDEX][quantity_required]" min="0.001" step="0.001"
                         required
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                    <input type="text" name="raw_materials[INDEX][unit_of_measurement]"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="kg, liters, pieces">
-                </div>
-                <div>
+                <div class="flex-1">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Preparation Notes</label>
                     <input type="text" name="raw_materials[INDEX][preparation_notes]"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="chopped, diced, etc.">
                 </div>
-                <div class="flex items-end">
+                <div class="flex-shrink-0 flex items-end">
                     <button type="button"
                         class="remove-ingredient bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition duration-200">
                         <i class="fas fa-trash"></i>
