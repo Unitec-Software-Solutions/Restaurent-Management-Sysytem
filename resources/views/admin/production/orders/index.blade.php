@@ -229,6 +229,7 @@
                             </a>
                         @endif
                     @endif
+
                     <a href="{{ route('admin.production.sessions.index') }}"
                         class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-play mr-2"></i>
