@@ -110,11 +110,11 @@ try {
             if ($menu->activation_time || $menu->deactivation_time) {
                 $currentTime = $now->format('H:i');
                 
-                if ($menu->activation_time && $currentTime < $menu->activation_time->format('H:i')) {
+                if ($menu->activation_time && $currentTime < (is_object($menu->activation_time) ? $menu->activation_time->format('H:i') : $menu->activation_time)) {
                     echo "    * Current time is before activation time\n";
                 }
                 
-                if ($menu->deactivation_time && $currentTime > $menu->deactivation_time->format('H:i')) {
+                if ($menu->deactivation_time && $currentTime > (is_object($menu->deactivation_time) ? $menu->deactivation_time->format('H:i') : $menu->deactivation_time)) {
                     echo "    * Current time is after deactivation time\n";
                 }
             }
