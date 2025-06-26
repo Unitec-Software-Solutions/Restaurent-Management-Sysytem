@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class SupplierPaymentMaster extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'supp_payments_master';
 
@@ -48,7 +49,7 @@ class SupplierPaymentMaster extends Model
 
     public function organization(): BelongsTo
     {
-        return $this->belongsTo(Organizations::class);
+        return $this->belongsTo(Organization::class);
     }
 
     public function purchaseOrder(): BelongsTo

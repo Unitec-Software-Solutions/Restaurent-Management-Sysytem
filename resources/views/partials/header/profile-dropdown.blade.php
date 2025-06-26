@@ -26,20 +26,20 @@
             <div class="py-1">
                 <a href="{{ route('admin.profile.index') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
-                    Your Profile
+                    <i class="fas fa-user-circle mr-2"></i> Your Profile
                 </a>
                 <a href="{{ route('admin.settings.index') }}"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
-                    Settings
+                    <i class="fas fa-cog mr-2"></i> Settings
                 </a>
                 <div class="border-t border-gray-100 dark:border-gray-600"></div>
-                
-                   
-                    <button  onclick="toggleLogoutModal()"
-                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#6A71F0]">
-                        <span>Sign Out</span>
-                    </button>
-              
+
+
+                <button onclick="toggleLogoutModal()"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Sign Out
+                </button>
+
             </div>
         </div>
     </div>

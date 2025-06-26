@@ -8,90 +8,129 @@ use App\Models\OrderItem;
 use App\Models\ItemMaster;
 use App\Models\Reservation;
 use App\Models\Branch;
+use App\Models\Employee;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderController extends Controller
 {
     // List all orders for a reservation (dine-in)
     public function index(Request $request)
-{
-    $phone = $request->input('phone');
-    $reservationId = $request->input('reservation_id');
+    {
+        $phone = $request->input('phone');
+        $reservationId = $request->input('reservation_id');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $status = $request->input('status');
+        $branchId = $request->input('branch_id');
+        $export = $request->input('export');
 
-    // Active reservations (reservation time is in the future)
-    $activeReservations = Reservation::when($phone, function ($query) use ($phone) {
-            return $query->where('phone', $phone);
-        })
-        ->whereRaw('(date > ? OR (date = ? AND end_time >= ?))', [
-            now()->toDateString(),
-            now()->toDateString(),
-            now()->toTimeString()
-        ])
-        ->with(['orders' => function($query) {
-            $query->where('status', '!=', 'completed')->latest();
-        }])
-        ->latest()
-        ->get();
+        // Date filter setup
+        if (!$startDate && !$endDate) {
+            $startDate = now()->startOfDay()->toDateString();
+            $endDate = now()->endOfDay()->toDateString();
+        }
 
-    // Past reservations (reservation time is in the past)
-    $pastReservations = Reservation::when($phone, function ($query) use ($phone) {
-            return $query->where('phone', $phone);
-        })
-        ->whereRaw('(date < ? OR (date = ? AND end_time < ?))', [
-            now()->toDateString(),
-            now()->toDateString(),
-            now()->toTimeString()
-        ])
-        ->with(['orders' => function($query) {
-            $query->where('status', 'completed')->latest();
-        }])
-        ->latest()
-        ->get();
+        // Query for orders with filters
+        $ordersQuery = Order::query()
+            ->with(['items.menuItem', 'steward', 'reservation', 'branch'])
+            ->when($startDate, fn($q) => $q->whereDate('order_date', '>=', $startDate))
+            ->when($endDate, fn($q) => $q->whereDate('order_date', '<=', $endDate))
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->when($reservationId, fn($q) => $q->where('reservation_id', $reservationId))
+            ->orderBy('order_date', 'desc')
+            ->orderBy('created_at', 'desc');
 
-    // Fetch orders for a specific reservation if reservation_id is provided
-    $orders = collect();
-    $grandTotals = ['total' => 0];
-    if ($reservationId) {
-        $orders = \App\Models\Order::where('reservation_id', $reservationId)->with('items')->latest()->paginate(10);
-        $grandTotals['total'] = $orders->sum('total');
-    } else {
-        // Return an empty paginator if no reservation_id
-        $orders = new LengthAwarePaginator([], 0, 10);
+        // Export functionality
+        if ($export) {
+            return $this->exportOrders($ordersQuery->get(), $export);
+        }
+
+        $orders = $ordersQuery->paginate(15);
+
+        // Active reservations (reservation time is in the future)
+        $activeReservations = Reservation::when($phone, function ($query) use ($phone) {
+                return $query->where('phone', $phone);
+            })
+            ->whereRaw('(date > ? OR (date = ? AND end_time >= ?))', [
+                now()->toDateString(),
+                now()->toDateString(),
+                now()->toTimeString()
+            ])
+            ->with(['orders' => function($query) {
+                $query->where('status', '!=', 'completed')->latest();
+            }])
+            ->latest()
+            ->get();
+
+        // Past reservations (reservation time is in the past)
+        $pastReservations = Reservation::when($phone, function ($query) use ($phone) {
+                return $query->where('phone', $phone);
+            })
+            ->whereRaw('(date < ? OR (date = ? AND end_time < ?))', [
+                now()->toDateString(),
+                now()->toDateString(),
+                now()->toTimeString()
+            ])
+            ->with(['orders' => function($query) {
+                $query->where('status', 'completed')->latest();
+            }])
+            ->latest()
+            ->get();
+
+        // Fetch orders for a specific reservation if reservation_id is provided
+        $grandTotals = ['total' => 0];
+        if ($reservationId) {
+            $grandTotals['total'] = $orders->sum('total');
+        }
+
+        // Get available stewards
+        $stewards = Employee::whereHas('roles', function($query) {
+                $query->where('name', 'steward');
+            })
+            ->where('is_active', true)
+            ->get();
+
+        // Get branches for filter
+        $branches = Branch::where('is_active', true)->get();
+
+        return view('orders.index', [
+            'activeReservations' => $activeReservations,
+            'pastReservations' => $pastReservations,
+            'orders' => $orders,
+            'reservationId' => $reservationId,
+            'grandTotals' => $grandTotals,
+            'phone' => $phone,
+            'stewards' => $stewards,
+            'branches' => $branches,
+            'filters' => compact('startDate', 'endDate', 'status', 'branchId'),
+        ]);
     }
-
-    return view('orders.index', [
-        'activeReservations' => $activeReservations,
-        'pastReservations' => $pastReservations,
-        'orders' => $orders,
-        'reservationId' => $reservationId,
-        'grandTotals' => $grandTotals,
-        'phone' => $phone
-    ]);
-}
 
     // Show order creation form (dine-in, under reservation)
     public function create(Request $request)
     {
-        $reservationId = $request->input('reservation_id');
-        $menuItems = ItemMaster::where('is_menu_item', true)->get();
-        $branches = Branch::all();
-
+        $reservationId = $request->query('reservation');
         $reservation = null;
         if ($reservationId) {
-            $reservation = Reservation::find($reservationId);
+            $reservation = \App\Models\Reservation::find($reservationId);
         }
+        
+        $menuItems = \App\Models\ItemMaster::where('is_menu_item', true)
+            ->with('category')
+            ->get();
 
-        // Initialize cart data
-        $cart = [
-            'items' => [],
-            'subtotal' => 0,
-            'tax' => 0,
-            'total' => 0
-        ];
+        // Get available stewards
+        $stewards = Employee::whereHas('roles', function($query) {
+                $query->where('name', 'steward');
+            })
+            ->where('is_active', true)
+            ->get();
 
-        return view('orders.create', compact('reservationId', 'menuItems', 'branches', 'reservation', 'cart'));
+        return view('orders.create', compact('reservation', 'menuItems', 'stewards'));
     }
 
     // Store new order (dine-in, under reservation)
@@ -104,55 +143,97 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'customer_name' => 'required_without:reservation_id|nullable|string|max:255',
             'customer_phone' => 'required_without:reservation_id|nullable|string|max:20',
+            'steward_id' => 'nullable|exists:employees,id',
         ]);
 
-        $reservation = null;
-        if (!empty($data['reservation_id'])) {
-            $reservation = Reservation::find($data['reservation_id']);
-        }
+        return DB::transaction(function () use ($data) {
+            $reservation = null;
+            if (!empty($data['reservation_id'])) {
+                $reservation = Reservation::find($data['reservation_id']);
+            }
 
-        $order = Order::create([
-            'reservation_id' => $reservation ? $reservation->id : null,
-            'branch_id'      => $reservation ? $reservation->branch_id : null,
-            'customer_name'  => $reservation ? $reservation->name : $data['customer_name'],
-            'customer_phone' => $reservation ? $reservation->phone : $data['customer_phone'],
-            'order_type'     => $reservation ? ($reservation->order_type ?? 'dine_in_online_scheduled') : ($data['order_type'] ?? 'dine_in_online_scheduled'),
-            'status'         => Order::STATUS_ACTIVE,
-        ]);
+            // Stock validation - check all items before creating order
+            $stockErrors = [];
+            foreach ($data['items'] as $item) {
+                $inventoryItem = ItemMaster::find($item['item_id']);
+                if (!$inventoryItem) continue;
+                
+                $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $reservation->branch_id);
+                if ($currentStock < $item['quantity']) {
+                    $stockErrors[] = "Insufficient stock for {$inventoryItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                }
+            }
 
-        $subtotal = 0;
-        foreach ($data['items'] as $item) {
-            $inventoryItem = ItemMaster::find($item['item_id']);
-            if (!$inventoryItem) continue;
-            
-            $lineTotal = $inventoryItem->selling_price * $item['quantity'];
-            $subtotal += $lineTotal;
+            if (!empty($stockErrors)) {
+                throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
+            }
 
-            OrderItem::create([
-                'order_id' => $order->id,
-                'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $inventoryItem->selling_price,
-                'total_price' => $lineTotal,
+            $order = Order::create([
+                'reservation_id' => $reservation ? $reservation->id : null,
+                'branch_id'      => $reservation ? $reservation->branch_id : null,
+                'customer_name'  => $reservation ? $reservation->name : $data['customer_name'],
+                'customer_phone' => $reservation ? $reservation->phone : $data['customer_phone'],
+                'order_type'     => $reservation ? ($reservation->order_type ?? 'dine_in_online_scheduled') : ($data['order_type'] ?? 'dine_in_online_scheduled'),
+                'status'         => Order::STATUS_SUBMITTED,
+                'steward_id'     => $data['steward_id'] ?? null,
             ]);
-        }
 
-        $tax = $subtotal * 0.10;
-        $discount = 0;
-        $total = $subtotal + $tax - $discount;
+            $subtotal = 0;
+            foreach ($data['items'] as $item) {
+                $inventoryItem = ItemMaster::find($item['item_id']);
+                if (!$inventoryItem) continue;
+                
+                $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                $subtotal += $lineTotal;
 
-        $order->update([
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'discount' => $discount,
-            'total' => $total,
-        ]);
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['item_id'],
+                    'inventory_item_id' => $item['item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $inventoryItem->selling_price,
+                    'total_price' => $lineTotal,
+                ]);
 
-        return redirect()->route('orders.index', [
-            'phone' => $order->customer_phone,
-            'reservation_id' => $order->reservation_id
-        ])->with('success', 'Order created successfully!');
+                // Deduct stock immediately upon order submission
+                \App\Models\ItemTransaction::create([
+                    'organization_id' => $reservation->organization_id ?? Auth::user()->organization_id,
+                    'branch_id' => $reservation->branch_id,
+                    'inventory_item_id' => $item['item_id'],
+                    'transaction_type' => 'sales_order',
+                    'quantity' => -$item['quantity'], // Negative for stock deduction
+                    'cost_price' => $inventoryItem->buying_price,
+                    'unit_price' => $inventoryItem->selling_price,
+                    'source_id' => $order->id,
+                    'source_type' => 'Order',
+                    'created_by_user_id' => Auth::id(),
+                    'notes' => "Stock deducted for Order #{$order->id}",
+                    'is_active' => true,
+                ]);
+            }
+
+            $tax = $subtotal * 0.13; // 13% VAT
+            $serviceCharge = $subtotal * 0.10; // 10% service charge
+            $discount = 0;
+            $total = $subtotal + $tax + $serviceCharge - $discount;
+
+            $order->update([
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'service_charge' => $serviceCharge,
+                'discount' => $discount,
+                'total' => $total,
+                'stock_deducted' => true,
+            ]);
+
+            // Generate KOT immediately
+            $order->generateKOT();
+
+            return redirect()->route('orders.index', [
+                'phone' => $order->customer_phone,
+                'reservation_id' => $order->reservation_id
+            ])->with('success', 'Order created successfully! Stock deducted and KOT generated.');
+        });
     }
 
     // View order details
@@ -181,41 +262,98 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        $order->orderItems()->delete();
-        $subtotal = 0;
-        
-        foreach ($data['items'] as $item) {
-            $inventoryItem = ItemMaster::find($item['item_id']);
-            if (!$inventoryItem) continue;
+        return DB::transaction(function () use ($data, $order) {
+            // First, reverse previous stock deductions if order was already processed
+            if ($order->stock_deducted) {
+                foreach ($order->orderItems as $orderItem) {
+                    \App\Models\ItemTransaction::create([
+                        'organization_id' => $order->reservation->organization_id ?? Auth::user()->organization_id,
+                        'branch_id' => $order->branch_id,
+                        'inventory_item_id' => $orderItem->inventory_item_id,
+                        'transaction_type' => 'order_adjustment',
+                        'quantity' => $orderItem->quantity, // Positive to add back stock
+                        'cost_price' => $orderItem->inventoryItem->buying_price ?? 0,
+                        'unit_price' => $orderItem->unit_price,
+                        'source_id' => $order->id,
+                        'source_type' => 'Order',
+                        'created_by_user_id' => Auth::id(),
+                        'notes' => "Stock reversed for Order #{$order->id} update",
+                        'is_active' => true,
+                    ]);
+                }
+            }
+
+            // Stock validation for new items
+            $stockErrors = [];
+            foreach ($data['items'] as $item) {
+                $inventoryItem = ItemMaster::find($item['item_id']);
+                if (!$inventoryItem) continue;
+                
+                $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $order->branch_id);
+                if ($currentStock < $item['quantity']) {
+                    $stockErrors[] = "Insufficient stock for {$inventoryItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                }
+            }
+
+            if (!empty($stockErrors)) {
+                throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
+            }
+
+            // Delete old order items
+            $order->orderItems()->delete();
+            $subtotal = 0;
             
-            $lineTotal = $inventoryItem->selling_price * $item['quantity'];
-            $subtotal += $lineTotal;
+            // Create new order items and deduct stock
+            foreach ($data['items'] as $item) {
+                $inventoryItem = ItemMaster::find($item['item_id']);
+                if (!$inventoryItem) continue;
+                
+                $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                $subtotal += $lineTotal;
+                
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['item_id'],
+                    'inventory_item_id' => $item['item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $inventoryItem->selling_price,
+                    'total_price' => $lineTotal,
+                ]);
+
+                // Deduct stock for new quantities
+                \App\Models\ItemTransaction::create([
+                    'organization_id' => $order->reservation->organization_id ?? Auth::user()->organization_id,
+                    'branch_id' => $order->branch_id,
+                    'inventory_item_id' => $item['item_id'],
+                    'transaction_type' => 'sales_order',
+                    'quantity' => -$item['quantity'], // Negative for stock deduction
+                    'cost_price' => $inventoryItem->buying_price,
+                    'unit_price' => $inventoryItem->selling_price,
+                    'source_id' => $order->id,
+                    'source_type' => 'Order',
+                    'created_by_user_id' => Auth::id(),
+                    'notes' => "Stock deducted for updated Order #{$order->id}",
+                    'is_active' => true,
+                ]);
+            }
+
+            $tax = $subtotal * 0.13; // 13% VAT
+            $service = $subtotal * 0.10; // 10% service charge
+            $total = $subtotal + $tax + $service;
             
-            OrderItem::create([
-                'order_id' => $order->id,
-                'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $inventoryItem->selling_price,
-                'total_price' => $lineTotal,
+            $order->update([
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'service_charge' => $service,
+                'total' => $total,
+                'stock_deducted' => true,
             ]);
-        }
 
-        $tax = $subtotal * 0.1;
-        $service = $subtotal * 0.05;
-        $total = $subtotal + $tax + $service;
-        
-        $order->update([
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'service_charge' => $service,
-            'total' => $total,
-        ]);
-
-        return redirect()->route('orders.index', [
-            'phone' => $order->customer_phone,
-            'reservation_id' => $order->reservation_id
-        ])->with('success', 'Order updated successfully.');
+            return redirect()->route('orders.index', [
+                'phone' => $order->customer_phone,
+                'reservation_id' => $order->reservation_id
+            ])->with('success', 'Order updated successfully. Stock adjusted.');
+        });
     }
 
     // Delete order (dine-in, under reservation)
@@ -490,5 +628,147 @@ class OrderController extends Controller
             ->with('success', 'Takeaway order deleted successfully.');
     }
 
+    /**
+     * Generate and print KOT (Kitchen Order Ticket)
+     */
+    public function printKOT(Order $order)
+    {
+        // Update order to mark KOT as generated
+        $order->update(['kot_generated' => true]);
+        
+        return view('orders.kot-print', compact('order'));
+    }
 
+    /**
+     * Generate and print bill
+     */
+    public function printBill(Order $order)
+    {
+        // Mark order as completed and bill generated
+        $order->update([
+            'bill_generated' => true,
+            'status' => Order::STATUS_COMPLETED,
+            'completed_at' => now()
+        ]);
+        
+        return view('orders.bill-print', compact('order'));
+    }
+
+    /**
+     * Mark order as preparing and generate KOT
+     */
+    public function markAsPreparing(Order $order)
+    {
+        return DB::transaction(function () use ($order) {
+            $order->markAsPreparing();
+            
+            // Generate KOT if not already generated
+            if (!$order->kot_generated) {
+                $order->generateKOT();
+            }
+            
+            return redirect()->back()->with('success', 'Order marked as preparing and KOT generated.');
+        });
+    }
+
+    /**
+     * Mark order as ready
+     */
+    public function markAsReady(Order $order)
+    {
+        $order->markAsReady();
+        return redirect()->back()->with('success', 'Order marked as ready.');
+    }
+
+    /**
+     * Complete order and generate bill
+     */
+    public function completeOrder(Order $order)
+    {
+        return DB::transaction(function () use ($order) {
+            $order->markAsCompleted();
+            
+            return redirect()->route('orders.print-bill', $order)
+                ->with('success', 'Order completed. Bill generated.');
+        });
+    }
+
+    /**
+     * Get stock alert for order items
+     */
+    public function checkStock(Request $request)
+    {
+        $itemId = $request->input('item_id');
+        $quantity = $request->input('quantity');
+        $branchId = $request->input('branch_id');
+
+        $currentStock = \App\Models\ItemTransaction::stockOnHand($itemId, $branchId);
+        $item = ItemMaster::find($itemId);
+        
+        $response = [
+            'item_name' => $item->name,
+            'current_stock' => $currentStock,
+            'requested_quantity' => $quantity,
+            'available' => $currentStock >= $quantity,
+            'is_low_stock' => $currentStock <= $item->reorder_level,
+            'reorder_level' => $item->reorder_level
+        ];
+
+        if ($currentStock < $quantity) {
+            $response['error'] = "Insufficient stock. Available: {$currentStock}, Required: {$quantity}";
+        } elseif ($currentStock <= $item->reorder_level) {
+            $response['warning'] = "Low stock alert. Current: {$currentStock}, Reorder level: {$item->reorder_level}";
+        }
+
+        return response()->json($response);
+    }
+
+    /**
+     * Export orders to CSV or Excel
+     */
+    protected function exportOrders($orders, $format)
+    {
+        $filename = 'orders_' . now()->format('Y-m-d_H-i-s');
+        
+        if ($format === 'csv') {
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
+            ];
+
+            $callback = function() use ($orders) {
+                $file = fopen('php://output', 'w');
+                fputcsv($file, [
+                    'Order ID', 'Date', 'Customer Name', 'Phone', 'Branch', 
+                    'Order Type', 'Status', 'Steward', 'Items Count', 
+                    'Subtotal', 'Tax', 'Service Charge', 'Total'
+                ]);
+
+                foreach ($orders as $order) {
+                    fputcsv($file, [
+                        $order->order_number,
+                        $order->order_date->format('Y-m-d H:i:s'),
+                        $order->customer_name,
+                        $order->customer_phone,
+                        $order->branch->name ?? '',
+                        str_replace('_', ' ', $order->order_type),
+                        ucfirst($order->status),
+                        $order->steward ? $order->steward->first_name . ' ' . $order->steward->last_name : '',
+                        $order->items->count(),
+                        number_format($order->subtotal, 2),
+                        number_format($order->tax, 2),
+                        number_format($order->service_charge, 2),
+                        number_format($order->total, 2),
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        }
+
+        // For Excel format (if needed in future)
+        return response()->json(['error' => 'Excel export not yet implemented'], 501);
+    }
 }

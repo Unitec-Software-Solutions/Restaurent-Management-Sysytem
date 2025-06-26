@@ -7,7 +7,7 @@ use App\Models\GoodsTransferItem;
 use App\Models\Branch;
 use App\Models\ItemMaster;
 use App\Models\Employee;
-use App\Models\Organizations;
+use App\Models\Organization;
 use App\Models\ItemTransaction;
 use App\Models\GrnMaster;
 use App\Services\GTNService;
@@ -78,7 +78,7 @@ class GoodsTransferNoteController extends Controller
 
         $gtns = $query->latest()->paginate(15);
 
-        $organization = Organizations::find($orgId);
+        $organization = Organization::find($orgId);
         $branches = Branch::where('organization_id', $orgId)->active()->get();
         $items = ItemMaster::where('organization_id', $orgId)->active()->get();
 
@@ -109,7 +109,7 @@ class GoodsTransferNoteController extends Controller
             'branches' => Branch::where('organization_id', $orgId)->active()->get(),
             'items' => ItemMaster::where('organization_id', $orgId)->active()->get(),
             'employees' => Employee::where('organization_id', $orgId)->get(),
-            'organization' => Organizations::find($orgId),
+            'organization' => Organization::find($orgId),
             'nextGtnNumber' => $nextGtnNumber,
         ]);
     }
@@ -167,7 +167,7 @@ class GoodsTransferNoteController extends Controller
             'branches' => Branch::where('organization_id', $orgId)->active()->get(),
             'items' => ItemMaster::where('organization_id', $orgId)->active()->get(),
             'employees' => Employee::where('organization_id', $orgId)->get(),
-            'organization' => Organizations::find($orgId)
+            'organization' => Organization::find($orgId)
         ]);
     }
 

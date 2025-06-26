@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\{User, Organizations, Branch, ItemMaster, ItemTransaction};
+use App\Models\{User, Organization, Branch, ItemMaster, ItemTransaction};
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -12,7 +12,7 @@ class ItemTransactionSeeder extends Seeder
     public function run(): void
     {
         $users = User::pluck('id')->toArray();
-        $orgs = Organizations::pluck('id')->toArray();
+        $orgs = Organization::pluck('id')->toArray();
         $branches = Branch::pluck('id')->toArray();
         $items = ItemMaster::with('category')->get();
 

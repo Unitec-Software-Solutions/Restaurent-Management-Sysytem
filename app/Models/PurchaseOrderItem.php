@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrderItem extends Model
 {
+    use HasFactory;
+
     // Status constants
     const STATUS_PENDING = 'Pending';
     const STATUS_RECEIVED = 'Received';
@@ -40,7 +43,6 @@ class PurchaseOrderItem extends Model
         'buying_price',
         'previous_buying_price', // Added
         'quantity',
-        'quantity_received',
         'line_total',
         'po_status'
     ];
@@ -53,7 +55,6 @@ class PurchaseOrderItem extends Model
     protected $casts = [
         'buying_price' => 'decimal:4',
         'quantity' => 'decimal:2',
-        'quantity_received' => 'decimal:2',
         'line_total' => 'decimal:2',
         'previous_buying_price' => 'decimal:4',
     ];

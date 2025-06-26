@@ -13,35 +13,51 @@ class Branch extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'organization_id',
         'name',
+        'slug',
+        'organization_id',
         'address',
         'phone',
-        'email',
         'opening_time',
         'closing_time',
         'total_capacity',
         'reservation_fee',
         'cancellation_fee',
+        'contact_person',
+        'contact_person_designation',
+        'contact_person_phone',
         'is_active',
+        'activation_key',
+        'activated_at',
+        'is_head_office',
+        'type',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
     protected $casts = [
         'is_active' => 'boolean',
+        'is_head_office' => 'boolean',
         'opening_time' => 'datetime',
         'closing_time' => 'datetime',
         'reservation_fee' => 'decimal:2',
         'cancellation_fee' => 'decimal:2',
     ];
-    
-    /**
-     * Get the inventory transactions for the branch.
-     */
+
+    // Relationships
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    public function roles(): HasMany
+    {
+        return $this->hasMany(Role::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
@@ -52,6 +68,22 @@ class Branch extends Model
         return $this->hasMany(Table::class);
     }
 
+    public function kitchenStations(): HasMany
+    {
+        return $this->hasMany(KitchenStation::class);
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function admins(): HasMany
+    {
+        return $this->hasMany(Admin::class);
+    }
+
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -87,9 +119,58 @@ class Branch extends Model
     {
         return $query->where('organization_id', $organizationId);
     }
-    
-    public function organization(): BelongsTo
+
+    // Activation Key Logic
+    public function activate()
     {
-        return $this->belongsTo(Organizations::class);
+        $this->update(['is_active' => true]);
     }
-} 
+
+    public function deactivate()
+    {
+        $this->update(['is_active' => false]);
+    }
+
+    public function isSystemActive()
+    {
+        return $this->organization->is_active && $this->is_active;
+    }
+
+    /**
+     * Helper methods for branch type management
+     */
+    public function isHeadOffice(): bool
+    {
+        return $this->is_head_office;
+    }
+
+    public function getDefaultKitchenStations(): array
+    {
+        $defaultStations = [
+            'Hot Kitchen' => ['type' => 'cooking', 'priority' => 1],
+            'Cold Kitchen' => ['type' => 'prep', 'priority' => 2],
+            'Grill Station' => ['type' => 'grill', 'priority' => 3],
+            'Fry Station' => ['type' => 'fry', 'priority' => 4],
+            'Dessert Station' => ['type' => 'dessert', 'priority' => 5],
+        ];
+
+        // Add beverage/bar stations for appropriate types
+        if (in_array($this->type, ['bar', 'pub', 'restaurant'])) {
+            $defaultStations['Bar Station'] = ['type' => 'bar', 'priority' => 6];
+            $defaultStations['Beverage Station'] = ['type' => 'beverage', 'priority' => 7];
+        }
+
+        return $defaultStations;
+    }
+
+    /**
+     * Manually trigger the automated setup for this branch
+     * 
+     * @return void
+     */
+    public function setupAutomation(): void
+    {
+        $automationService = app(\App\Services\BranchAutomationService::class);
+        $automationService->setupNewBranch($this);
+    }
+}

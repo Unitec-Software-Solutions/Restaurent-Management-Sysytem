@@ -4,42 +4,91 @@ namespace App\Http\Controllers;
 
 use App\Models\Reservation;
 use App\Models\Payment;
-use App\Models\Branch;
 use App\Models\Table;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ReservationConfirmed;
 use App\Mail\ReservationRejected;
-use App\Mail\ReservationConfirmationMail;
-use App\Mail\ReservationCancellationMail;
-use App\Services\SmsService;
-use Illuminate\Support\Facades\DB;
 use App\Models\Employee;
+use Illuminate\Support\Facades\DB;
 
 class AdminReservationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $admin = auth('admin')->user();
+        
+        // Get filter parameters
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $status = $request->input('status');
+        $branchId = $request->input('branch_id');
+        $phone = $request->input('phone');
+        $export = $request->input('export');
 
-        if (!$admin) {
-            return redirect()->route('admin.login')->with('error', 'You must be logged in to access this page.');
+        // Date filter setup
+        if (!$startDate && !$endDate) {
+            $startDate = now()->startOfDay()->toDateString();
+            $endDate = now()->addDays(30)->toDateString();
         }
 
-        if (!$admin->branch || !$admin->branch->id) {
-            return redirect()->route('admin.dashboard')->with('error', 'Branch information is missing for this user.');
+        // Base query with user permissions
+        $query = \App\Models\Reservation::with(['branch', 'organization', 'steward', 'tables']);
+        
+        if ($admin->is_super_admin) { 
+            // Super admin can see all reservations
+        } elseif ($admin->branch_id) {
+            $query->where('branch_id', $admin->branch_id);
+        } elseif ($admin->organization_id) {
+            $query->where('organization_id', $admin->organization_id);
+        } else {
+            $reservations = collect()->paginate(20);
+            return view('admin.reservations.index', compact('reservations'));
         }
 
-        $query = Reservation::with(['tables', 'branch', 'user'])
-            ->where('branch_id', $admin->branch->id);
-
-        if (request('phone')) {
-            $query->where('phone', request('phone'));
+        // Apply filters
+        if ($startDate) {
+            $query->whereDate('date', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('date', '<=', $endDate);
+        }
+        if ($status) {
+            $query->where('status', $status);
+        }
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+        if ($phone) {
+            $query->where('phone', 'like', "%{$phone}%");
         }
 
-        $reservations = $query->get();
+        $query->orderBy('date', 'desc')->orderBy('start_time', 'desc');
 
-        return view('admin.reservations.index', compact('reservations'));
+        // Export functionality
+        if ($export) {
+            return $this->exportReservations($query->get(), $export);
+        }
+
+        $reservations = $query->paginate(20);
+
+        // Get filter options
+        $branches = \App\Models\Branch::where('is_active', true)->get();
+        $stewards = \App\Models\Employee::whereHas('roles', function($query) {
+                $query->where('name', 'steward');
+            })
+            ->where('is_active', true)
+            ->get();
+
+        $filters = [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'status' => $status,
+            'branchId' => $branchId,
+            'phone' => $phone,
+        ];
+
+        return view('admin.reservations.index', compact('reservations', 'branches', 'stewards', 'filters'));
     }
 
     public function pending()
@@ -105,7 +154,7 @@ class AdminReservationController extends Controller
     public function edit(Reservation $reservation)
     {
         $admin = auth('admin')->user();
-        $reservation->load(['branch', 'tables', 'employee']); // Load relationships
+        $reservation->load(['branch', 'tables', 'employee']); 
 
         $tables = Table::where('branch_id', $admin->branch->id)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
@@ -360,7 +409,7 @@ public function update(Request $request, Reservation $reservation)
         $start_time = $now->format('H:i');
         $end_time = $now->copy()->addHours(2)->format('H:i');
 
-        $nextId = \DB::table('reservations')->max('id') + 1;
+        $nextId = DB::table('reservations')->max('id') + 1;
         $defaultName = 'customer ' . $nextId . '';
 
         $stewards = Employee::where('branch_id', $admin->branch->id)->get();
@@ -513,4 +562,57 @@ public function createOrder(Reservation $reservation)
     // (You can customize this as needed for your order creation flow)
     return redirect()->route('admin.orders.reservations.create', ['reservation' => $reservation->id]);
 }
+
+/**
+     * Export reservations based on filters
+     */
+    private function exportReservations($reservations, $format)
+    {
+        if ($format === 'csv') {
+            $filename = 'reservations_' . now()->format('Y-m-d_H-i-s') . '.csv';
+            
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ];
+
+            $callback = function() use ($reservations) {
+                $file = fopen('php://output', 'w');
+                
+                // CSV Headers
+                fputcsv($file, [
+                    'ID', 'Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time',
+                    'Number of People', 'Status', 'Branch', 'Steward', 'Tables',
+                    'Reservation Fee', 'Cancellation Fee', 'Created At'
+                ]);
+
+                // CSV Data
+                foreach ($reservations as $reservation) {
+                    fputcsv($file, [
+                        $reservation->id,
+                        $reservation->name,
+                        $reservation->phone,
+                        $reservation->email,
+                        $reservation->date,
+                        $reservation->start_time,
+                        $reservation->end_time,
+                        $reservation->number_of_people,
+                        ucfirst($reservation->status),
+                        $reservation->branch?->name ?? 'N/A',
+                        $reservation->steward?->name ?? 'N/A',
+                        $reservation->tables?->pluck('number')->implode(', ') ?? 'N/A',
+                        number_format($reservation->reservation_fee ?? 0, 2),
+                        number_format($reservation->cancellation_fee ?? 0, 2),
+                        $reservation->created_at->format('Y-m-d H:i:s'),
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        }
+
+        return redirect()->back()->with('error', 'Invalid export format');
+    }
 }

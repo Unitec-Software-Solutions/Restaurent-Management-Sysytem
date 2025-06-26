@@ -50,7 +50,7 @@ class ItemTransaction extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organizations::class);
+        return $this->belongsTo(Organization::class);
     }
 
     public function branch()

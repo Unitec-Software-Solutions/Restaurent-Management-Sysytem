@@ -2,6 +2,38 @@
 
 @section('header-title', 'Goods Received Note Details')
 @section('content')
+
+    {{-- Debug Info Card for GRN Show --}}
+    @if (config('app.debug'))
+        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-medium text-emerald-800">🔍 GRN Debug Info</h3>
+                <a href="{{ route('admin.grn.show', $grn->grn_id ?? 0) }}?debug=1"
+                    class="text-xs text-emerald-600 hover:text-emerald-800">
+                    Full Debug (debug=1)
+                </a>
+            </div>
+            <div class="text-xs text-emerald-700 mt-2 grid grid-cols-4 gap-4">
+                <div>
+                    <p><strong>GRN Variable:</strong> {{ isset($grn) ? 'Set' : 'NOT SET' }}</p>
+                    <p><strong>GRN Number:</strong> {{ $grn->grn_number ?? 'N/A' }}</p>
+                </div>
+                <div>
+                    <p><strong>Items Count:</strong> {{ isset($grn) ? $grn->grnItems->count() : 'N/A' }}</p>
+                    <p><strong>Total Amount:</strong> Rs. {{ number_format($grn->total_amount ?? 0, 2) }}</p>
+                </div>
+                <div>
+                    <p><strong>Supplier:</strong> {{ $grn->supplier->name ?? 'N/A' }}</p>
+                    <p><strong>PO Number:</strong> {{ $grn->purchaseOrder->po_number ?? 'N/A' }}</p>
+                </div>
+                <div>
+                    <p><strong>Status:</strong> {{ $grn->status ?? 'N/A' }}</p>
+                    <p><strong>Received By:</strong> {{ $grn->receivedByUser->name ?? 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="p-4 rounded-lg">
         <!-- Back and Action Buttons -->
         <div class="flex justify-between items-center mb-6">
@@ -170,7 +202,8 @@
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-gray-900 font-semibold">Balance:</span>
-                        <span class="font-bold text-lg {{ $grn->balance_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
+                        <span
+                            class="font-bold text-lg {{ $grn->balance_amount > 0 ? 'text-red-600' : 'text-green-600' }}">
                             Rs. {{ number_format($grn->balance_amount, 2) }}
                         </span>
                     </div>
@@ -281,10 +314,15 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-right text-sm">
-                                    <div class="font-semibold">Rs. {{ number_format($item->line_total, 2) }}</div>
+                                    @php
+                                        $lineTotalBeforeDiscount = $item->accepted_quantity * $item->buying_price;
+                                        $discountAmount = ($item->discount_received / 100) * $lineTotalBeforeDiscount;
+                                        $finalLineTotal = $lineTotalBeforeDiscount - $discountAmount;
+                                    @endphp
+                                    <div class="font-semibold">Rs. {{ number_format($finalLineTotal, 2) }}</div>
                                     @if (($item->discount_received ?? 0) > 0)
                                         <div class="text-xs text-gray-500 line-through">
-                                            Rs. {{ number_format($item->line_total_before_discount, 2) }}
+                                            Rs. {{ number_format($lineTotalBeforeDiscount, 2) }}
                                         </div>
                                     @endif
                                 </td>
