@@ -138,14 +138,15 @@
                     <!-- Available Production Items -->
                     <div class="grid grid-cols-1 gap-4" id="productionItemsList">
                         @foreach ($productionItems as $item)
-                            <div class="production-item border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors duration-200"
-                                data-item-id="{{ $item->id }}" data-item-name="{{ $item->name }}">
+                            <div class="production-item border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors duration-200 cursor-pointer select-none"
+                                data-item-id="{{ $item->id }}" data-item-name="{{ $item->name }}"
+                                onclick="toggleItemSelection('{{ $item->id }}')">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center space-x-4">
                                         <div class="flex-shrink-0">
                                             <input type="checkbox" name="items[{{ $item->id }}][selected]"
                                                 value="1"
-                                                class="item-checkbox h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                                                class="item-checkbox h-5 w-5 text-indigo-600 border-2 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 checked:bg-indigo-600 checked:border-indigo-600 pointer-events-none"
                                                 data-item-id="{{ $item->id }}">
                                             <input type="hidden" name="items[{{ $item->id }}][item_id]"
                                                 value="{{ $item->id }}">
@@ -163,18 +164,10 @@
                                                     // For stock display, use user's branch if they have one, otherwise show HQ stock for admins
 $stockBranchId = $user->branch_id ?? null;
 if ($stockBranchId) {
-    $currentStock =
-        $item
-            ->transactions()
-            ->where('branch_id', $stockBranchId)
-            ->selectRaw(
-                "COALESCE(SUM(CASE
-                                                                    WHEN transaction_type IN ('purchase', 'production', 'adjustment_increase', 'transfer_in') THEN quantity
-                                                                    WHEN transaction_type IN ('sale', 'consumption', 'waste', 'adjustment_decrease', 'transfer_out') THEN -quantity
-                                                                    ELSE 0
-                                                                END), 0) as current_stock",
-            )
-            ->value('current_stock') ?? 0;
+    $currentStock = \App\Models\ItemTransaction::stockOnHand(
+        $item->id,
+        $stockBranchId,
+    );
     $stockLocation = $userBranch
         ? $userBranch->name
         : 'Current Branch';
@@ -211,7 +204,7 @@ if ($stockBranchId) {
                                     </div>
 
                                     <!-- Quantity Input -->
-                                    <div class="flex-shrink-0 ml-4">
+                                    <div class="flex-shrink-0 ml-4" onclick="event.stopPropagation()">
                                         <div class="flex items-center space-x-2">
                                             <label class="text-sm font-medium text-gray-700">Quantity:</label>
                                             <div class="flex items-center space-x-1">
@@ -238,7 +231,8 @@ if ($stockBranchId) {
                                         <div class="mt-2">
                                             <input type="text" name="items[{{ $item->id }}][notes]"
                                                 class="item-notes w-full text-sm rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                                placeholder="Notes for this item..." disabled>
+                                                placeholder="Notes for this item..." disabled
+                                                onclick="event.stopPropagation()">
                                         </div>
                                     </div>
                                 </div>
@@ -282,6 +276,23 @@ if ($stockBranchId) {
                 const totalQuantity = document.getElementById('totalQuantity');
                 const itemSearch = document.getElementById('itemSearch');
                 const branchSelect = document.querySelector('select[name="branch_id"]');
+
+                // Add global function for item selection toggle
+                window.toggleItemSelection = function(itemId) {
+                    const checkbox = document.querySelector(`input[data-item-id="${itemId}"].item-checkbox`);
+                    if (checkbox && !checkbox.disabled) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+
+                        // Add visual feedback for touch devices
+                        const itemContainer = checkbox.closest('.production-item');
+                        if (checkbox.checked) {
+                            itemContainer.classList.add('bg-indigo-50', 'border-indigo-400');
+                        } else {
+                            itemContainer.classList.remove('bg-indigo-50', 'border-indigo-400');
+                        }
+                    }
+                };
 
                 // Handle branch selection change for admins
                 if (branchSelect) {
@@ -350,6 +361,14 @@ if ($stockBranchId) {
                     checkbox.addEventListener('change', function() {
                         const itemId = this.dataset.itemId;
                         const isChecked = this.checked;
+                        const itemContainer = this.closest('.production-item');
+
+                        // Update visual state
+                        if (isChecked) {
+                            itemContainer.classList.add('bg-indigo-50', 'border-indigo-400');
+                        } else {
+                            itemContainer.classList.remove('bg-indigo-50', 'border-indigo-400');
+                        }
 
                         // Enable/disable quantity controls
                         const quantityInput = document.querySelector(
