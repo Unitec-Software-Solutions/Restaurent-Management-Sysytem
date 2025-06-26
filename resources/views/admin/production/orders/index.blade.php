@@ -93,7 +93,37 @@
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+
+                <!-- Search Input (if applicable, add a search field for request ID or notes) -->
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search Order</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" id="search" value="{{ request('search') }}"
+                            placeholder="Enter order ID" aria-label="Search Order" autocomplete="off"
+                            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Items -->
+                <div>
+                    <label for="item_id" class="block text-sm font-medium text-gray-700 mb-1">Items</label>
+                    <select name="item_id" id="item_id"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <option value="">All Items</option>
+                        @foreach ($productionItems as $item)
+                            <option value="{{ $item->id }}" {{ request('item_id') == $item->id ? 'selected' : '' }}>
+                                {{ $item->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" id="status"
@@ -110,30 +140,36 @@
                     </select>
                 </div>
 
+                <!-- Sort By -->
                 <div>
-                    <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Production Date From</label>
-                    <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                </div>
-
-                <div>
-                    <label for="date_to" class="block text-sm font-medium text-gray-700 mb-1">Production Date To</label>
-                    <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                </div>
-
-                <div>
-                    <label for="item_id" class="block text-sm font-medium text-gray-700 mb-1">Items</label>
-                    <select name="item_id" id="item_id"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        <option value="">All Items</option>
-                        @foreach ($productionItems as $item)
-                            <option value="{{ $item->id }}" {{ request('item_id') == $item->id ? 'selected' : '' }}>
-                                {{ $item->name }}
-                            </option>
-                        @endforeach
+                    <label for="sort_by" class="block text-sm font-medium text-gray-400 mb-1">Sort By</label>
+                    <select name="sort_by" id="sort_by"
+                        class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-400" disabled>
+                        <option value="">Default</option>
+                        <option value="name_asc" {{ request('sort_by') == 'name_asc' ? 'selected' : '' }}>
+                            Name (A-Z)</option>
+                        <option value="name_desc" {{ request('sort_by') == 'name_desc' ? 'selected' : '' }}>
+                            Name (Z-A)</option>
+                        <option value="price_asc" {{ request('sort_by') == 'price_asc' ? 'selected' : '' }}>
+                            Price (Low to High)</option>
+                        <option value="price_desc" {{ request('sort_by') == 'price_desc' ? 'selected' : '' }}>
+                            Price (High to Low)</option>
                     </select>
                 </div>
+
+                <!-- Production Date Range -->
+                <div>
+                    <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Production Date
+                        Range</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+
 
                 <div class="flex items-end gap-3">
                     <button type="submit"
