@@ -230,7 +230,7 @@ class ProductionOrder extends Model
     {
         $totalPlanned = $this->items->sum('quantity');
         $totalCompleted = $this->sessions->sum('quantity_produced');
-        
+
         return $totalPlanned > 0 ? ($totalCompleted / $totalPlanned) * 100 : 0;
     }
 
