@@ -30,7 +30,7 @@
                 </div>
             </div>
 
-            @if(config('app.debug'))
+            {{-- @if(config('app.debug'))
                 <div class="mt-4 p-3 bg-blue-50 rounded border-l-4 border-blue-400">
                     <h4 class="text-sm font-medium text-blue-900 mb-2">
                         <i class="fas fa-bug mr-1"></i> Debug Information
@@ -41,7 +41,7 @@
                         <div>User Agent: {{ substr(request()->userAgent(), 0, 60) }}...</div>
                     </div>
                 </div>
-            @endif
+            @endif --}}
         </div>
 
         <!-- Route Suggestions -->

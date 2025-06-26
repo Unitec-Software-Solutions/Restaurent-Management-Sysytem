@@ -170,7 +170,7 @@
                 </ul>
 
                 {{-- Debug Information (only in development) --}}
-                @if(config('app.debug'))
+                {{-- @if(config('app.debug'))
                     <div class="mt-6 p-3 bg-black/20 rounded-lg">
                         <h4 class="text-xs font-semibold mb-2 text-white/80">Debug Info</h4>
                         <div class="text-xs text-white/60 space-y-1">
@@ -180,7 +180,7 @@
                             <div id="auth-status" class="text-green-400">Checking...</div>
                         </div>
                     </div>
-                @endif
+                @endif --}}
             </div>
         </div>
 

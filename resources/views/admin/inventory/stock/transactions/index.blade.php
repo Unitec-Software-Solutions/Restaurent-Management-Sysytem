@@ -14,7 +14,7 @@
 @section('content')
 
 {{-- Debug Info Card for Stock Transactions --}}
-@if(config('app.debug'))
+{{-- @if(config('app.debug'))
     <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-indigo-800">🔍 Stock Transactions Debug Info</h3>
@@ -42,7 +42,7 @@
             </div>
         </div>
     </div>
-@endif
+@endif --}}
 
     <div class="p-4 rounded-lg">
         <!-- Header with navigation buttons -->

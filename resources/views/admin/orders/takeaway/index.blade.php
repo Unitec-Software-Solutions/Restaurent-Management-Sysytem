@@ -3,7 +3,7 @@
 @section('content')
 
 {{-- Debug Info Card for Takeaway Orders --}}
-@if(config('app.debug'))
+{{-- @if(config('app.debug'))
     <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-cyan-800">🔍 Takeaway Orders Debug Info</h3>
@@ -31,7 +31,7 @@
             </div>
         </div>
     </div>
-@endif
+@endif --}}
 
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white shadow-md rounded-lg p-6 mb-6">

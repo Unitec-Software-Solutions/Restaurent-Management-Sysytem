@@ -3,7 +3,7 @@
 @section('content')
 
 {{-- Debug Info Card for Order Show --}}
-@if(config('app.debug'))
+{{-- @if(config('app.debug'))
     <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-orange-800">🔍 Order Debug Info</h3>
@@ -31,7 +31,7 @@
             </div>
         </div>
     </div>
-@endif
+@endif --}}
 
 <div class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">

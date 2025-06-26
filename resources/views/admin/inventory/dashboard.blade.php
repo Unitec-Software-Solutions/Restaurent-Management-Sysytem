@@ -9,7 +9,7 @@
 @section('content')
 
 {{-- Header Navigation --}}
-@if(config('app.debug'))
+{{-- @if(config('app.debug'))
     <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-green-800">🔍 Inventory Dashboard Debug Info</h3>
@@ -37,7 +37,7 @@
             </div>
         </div>
     </div>
-@endif
+@endif --}}
 
     <div class="p-4 rounded-lg">
         <!-- Header with navigation buttons -->

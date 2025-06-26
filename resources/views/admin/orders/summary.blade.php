@@ -4,7 +4,7 @@
 @section('content')
 
 {{-- Debug Info Card for Order Summary --}}
-@if(config('app.debug'))
+{{-- @if(config('app.debug'))
     <div class="bg-pink-50 border border-pink-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-pink-800">🔍 Order Summary Debug Info</h3>
@@ -31,7 +31,7 @@
             </div>
         </div>
     </div>
-@endif
+@endif --}}
 
 <div class="container mx-auto px-4 py-8 bg-gray-50">
     <!-- Receipt Card -->

@@ -13,7 +13,7 @@
         ]" active="Suppliers Management" />
 
         {{-- Debug Info Card --}}
-        @if(config('app.debug'))
+        {{-- @if(config('app.debug'))
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-medium text-blue-800">🔍 Suppliers Debug Info</h3>
@@ -35,7 +35,7 @@
                     </div>
                 </div>
             </div>
-        @endif
+        @endif --}}
 
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Header -->

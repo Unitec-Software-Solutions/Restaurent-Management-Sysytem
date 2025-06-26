@@ -5,7 +5,7 @@
 @section('content')
     <div class="p-4 rounded-lg">
         {{-- Debug Info Card for Inventory Items --}}
-        @if(config('app.debug'))
+        {{-- @if(config('app.debug'))
             <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-medium text-green-800">🔍 Inventory Items Debug Info</h3>
@@ -29,7 +29,7 @@
                     </div>
                 </div>
             </div>
-        @endif
+        @endif --}}
 
         <!-- Header with navigation buttons -->
         <div class="  justify-between items-center mb-4">
