@@ -17,50 +17,7 @@
             </div>
         </div>
 
-        <!-- Header and Actions -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900">Production Orders</h2>
-                    <p class="text-sm text-gray-500">Manage kitchen production orders and sessions</p>
-                </div>
 
-                <div class="flex flex-col sm:flex-row gap-3">
-                    @if (!Auth::user()->branch_id)
-                        <a href="{{ route('admin.production.requests.manage') }}"
-                            class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
-                            <i class="fas fa-clipboard-check mr-2"></i>
-                            Pending Requests
-                            @php
-                                $pendingCount = \App\Models\ProductionRequestMaster::where(
-                                    'organization_id',
-                                    Auth::user()->organization_id,
-                                )
-                                    ->where('status', 'submitted')
-                                    ->count();
-                            @endphp
-                            @if ($pendingCount > 0)
-                                <span class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingCount }}</span>
-                            @endif
-                        </a>
-
-                        @if ($pendingRequests > 0)
-                            <a href="{{ route('admin.production.requests.aggregate') }}"
-                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                                <i class="fas fa-layer-group mr-2"></i>
-                                Aggregate Requests
-                                <span class="bg-green-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingRequests }}</span>
-                            </a>
-                        @endif
-                    @endif
-                    <a href="{{ route('admin.production.sessions.index') }}"
-                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-play mr-2"></i>
-                        Production Sessions
-                    </a>
-                </div>
-            </div>
-        </div>
 
         @if (session('success'))
             <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 mt-4">
@@ -72,7 +29,7 @@
         @endif
 
         <!-- KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 mt-4">
+        {{-- <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 mt-4">
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
@@ -132,14 +89,15 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" id="status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <select name="status" id="status"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                         <option value="">All Statuses</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
                         <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
@@ -166,7 +124,8 @@
 
                 <div>
                     <label for="item_id" class="block text-sm font-medium text-gray-700 mb-1">Items</label>
-                    <select name="item_id" id="item_id" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <select name="item_id" id="item_id"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                         <option value="">All Items</option>
                         @foreach ($productionItems as $item)
                             <option value="{{ $item->id }}" {{ request('item_id') == $item->id ? 'selected' : '' }}>
@@ -191,6 +150,53 @@
 
         <!-- Production Orders Table -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <!-- Header and Actions -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Production Orders</h2>
+                        <p class="text-sm text-gray-500">Manage kitchen production orders and sessions</p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        @if (!Auth::user()->branch_id)
+                            <a href="{{ route('admin.production.requests.manage') }}"
+                                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                <i class="fas fa-clipboard-check mr-2"></i>
+                                Pending Requests
+                                @php
+                                    $pendingCount = \App\Models\ProductionRequestMaster::where(
+                                        'organization_id',
+                                        Auth::user()->organization_id,
+                                    )
+                                        ->where('status', 'submitted')
+                                        ->count();
+                                @endphp
+                                @if ($pendingCount > 0)
+                                    <span
+                                        class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingCount }}</span>
+                                @endif
+                            </a>
+
+                            @if ($pendingRequests > 0)
+                                <a href="{{ route('admin.production.requests.aggregate') }}"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                    <i class="fas fa-layer-group mr-2"></i>
+                                    Aggregate Requests
+                                    <span
+                                        class="bg-green-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingRequests }}</span>
+                                </a>
+                            @endif
+                        @endif
+                        <a href="{{ route('admin.production.sessions.index') }}"
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-play mr-2"></i>
+                            Production Sessions
+                        </a>
+                    </div>
+
+                </div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-700">
                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
