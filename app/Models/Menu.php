@@ -46,12 +46,12 @@ class Menu extends Model
         'valid_from' => 'date',
         'valid_until' => 'date',
         'available_days' => 'array',
-        'start_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
+        'start_time' => 'string',
+        'end_time' => 'string',
         'is_active' => 'boolean',
         'days_of_week' => 'array',
-        'activation_time' => 'datetime:H:i',
-        'deactivation_time' => 'datetime:H:i',
+        'activation_time' => 'string',
+        'deactivation_time' => 'string',
         'auto_activate' => 'boolean',
     ];
 
@@ -220,11 +220,11 @@ class Menu extends Model
         if ($this->activation_time || $this->deactivation_time) {
             $currentTime = $now->format('H:i');
             
-            if ($this->activation_time && $currentTime < $this->activation_time->format('H:i')) {
+            if ($this->activation_time && $currentTime < $this->activation_time) {
                 return false;
             }
             
-            if ($this->deactivation_time && $currentTime > $this->deactivation_time->format('H:i')) {
+            if ($this->deactivation_time && $currentTime > $this->deactivation_time) {
                 return false;
             }
         }
