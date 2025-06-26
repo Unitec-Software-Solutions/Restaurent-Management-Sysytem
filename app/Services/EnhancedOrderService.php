@@ -281,7 +281,7 @@ class EnhancedOrderService
     /**
      * Update order status with state machine validation
      */
-    public function updateOrderStatus(Order $order, string $newStatus, string $reason = null): bool
+    public function updateOrderStatus(Order $order, string $newStatus, ?string $reason = null): bool
     {
         $currentStatus = $order->status;
 
