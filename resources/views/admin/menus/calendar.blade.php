@@ -270,7 +270,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     modalEdit.addEventListener('click', function() {
         if (currentEditingMenu) {
-            window.location.href = `/admin/menus/${currentEditingMenu}/edit`;
+            // Use Laravel route helper to generate proper URL
+            window.location.href = `{{ url('menus') }}/${currentEditingMenu}/edit`;
         }
     });
 
