@@ -335,7 +335,7 @@ class MenuScheduleService
     /**
      * Phase 2: Get available menus for specific date and time
      */
-    public function getAvailableMenusForDate(int $branchId, Carbon $date, Carbon $time = null): array
+    public function getAvailableMenusForDate(int $branchId, Carbon $date, ?Carbon $time = null): array
     {
         $time = $time ?? now();
         
@@ -493,7 +493,7 @@ class MenuScheduleService
     /**
      * Validate menu time windows for ordering
      */
-    public function validateMenuTimeWindow(int $menuId, Carbon $requestedTime = null): array
+    public function validateMenuTimeWindow(int $menuId, ?Carbon $requestedTime = null): array
     {
         $requestedTime = $requestedTime ?? now();
         $menu = Menu::findOrFail($menuId);
