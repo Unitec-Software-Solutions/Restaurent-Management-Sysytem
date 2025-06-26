@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class Organization extends Model
 {
@@ -36,17 +37,56 @@ class Organization extends Model
     ];
 
     /**
-     * Boot method to generate activation key
+     * Boot method to set defaults and generate activation key
      */
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($organization) {
+            // Default status: Organization must default to "inactive"
+            if (!isset($organization->is_active)) {
+                $organization->is_active = false;
+            }
+            
             if (empty($organization->activation_key)) {
                 $organization->activation_key = Str::uuid();
             }
         });
+
+        static::updating(function ($organization) {
+            // If organization becomes inactive, deactivate all branches
+            if (!$organization->is_active && $organization->isDirty('is_active')) {
+                $organization->branches()->update(['is_active' => false]);
+            }
+        });
+
+        static::updated(function ($organization) {
+            // Additional logging for status changes
+            if ($organization->isDirty('is_active')) {
+                Log::info('Organization status changed', [
+                    'organization_id' => $organization->id,
+                    'old_status' => $organization->getOriginal('is_active') ? 'active' : 'inactive',
+                    'new_status' => $organization->is_active ? 'active' : 'inactive'
+                ]);
+            }
+        });
+    }
+
+    /**
+     * Accessor: Ensure consistent status checking
+     */
+    public function getIsActiveAttribute($value)
+    {
+        return (bool) $value;
+    }
+
+    /**
+     * Mutator: Ensure boolean conversion for status
+     */
+    public function setIsActiveAttribute($value)
+    {
+        $this->attributes['is_active'] = (bool) $value;
     }
 
     /**
