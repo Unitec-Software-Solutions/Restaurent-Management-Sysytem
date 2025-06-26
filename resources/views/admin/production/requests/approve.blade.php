@@ -156,7 +156,7 @@
                                                 value="{{ old('items.' . $item->id . '.quantity_approved', $item->quantity_approved ?: $item->quantity_requested) }}"
                                                 class="approved-qty w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                 placeholder="Can exceed requested">
-                                                
+
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <select name="items[{{ $item->id }}][status]"
@@ -179,13 +179,15 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button"
                                                     class="approve-item text-green-600 hover:text-green-900"
-                                                    data-item-id="{{ $item->id }}" data-requested="{{ $item->quantity_requested }}"
+                                                    data-item-id="{{ $item->id }}"
+                                                    data-requested="{{ $item->quantity_requested }}"
                                                     title="Approve Requested Quantity">
                                                     <i class="fas fa-check"></i>
                                                 </button>
                                                 <button type="button"
                                                     class="enhance-item text-blue-600 hover:text-blue-900"
-                                                    data-item-id="{{ $item->id }}" data-requested="{{ $item->quantity_requested }}"
+                                                    data-item-id="{{ $item->id }}"
+                                                    data-requested="{{ $item->quantity_requested }}"
                                                     title="Approve 120% of Requested">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
