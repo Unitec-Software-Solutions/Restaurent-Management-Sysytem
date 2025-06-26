@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use App\Models\MenuItem;
 use App\Models\MenuCategory;
 
+
 // Bootstrap Laravel
 $app = new Application(realpath(__DIR__));
 $app->singleton(
@@ -24,7 +25,7 @@ $app->singleton(
 );
 $app->singleton(
     Illuminate\Contracts\Debug\ExceptionHandler::class,
-    \App\Exceptions\Handler::class
+    Illuminate\Foundation\Exceptions\Handler::class
 );
 
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
@@ -99,7 +100,7 @@ try {
     if ($testItem) {
         echo "Testing menu item: '{$testItem->name}'\n";
         try {
-            $categoryRelation = $testItem->category;
+            $categoryRelation = $testItem->menuCategory;
             if ($categoryRelation) {
                 echo "✅ Category relationship works: {$categoryRelation->name}\n";
             } else {
