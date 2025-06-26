@@ -266,7 +266,6 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('menus/show', [MenuController::class, 'show'])->name('menus.show');
     Route::put('menus/update', [MenuController::class, 'update'])->name('menus.update');
     Route::get('menus/calendar', [MenuController::class, 'calendar'])->name('menus.calendar');
-    Route::get('menus/edit', [MenuController::class, 'edit'])->name('menus.edit');
     Route::get('menus/list', [MenuController::class, 'list'])->name('menus.list');
     Route::get('menus/bulk/create', [MenuController::class, 'bulkCreate'])->name('menus.bulk.create');
     Route::get('menus/preview', [MenuController::class, 'preview'])->name('menus.preview');
