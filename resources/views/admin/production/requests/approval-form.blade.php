@@ -36,9 +36,15 @@
                 </div>
             @endif
 
-            <!-- Request Summary -->
+            <!-- Request Summary and Enhanced Approval -->
             <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Request Summary</h2>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <strong>Flexible Approval:</strong> You can approve quantities higher than requested if operationally beneficial.
+                    </p>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div>
@@ -82,8 +88,7 @@
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
                     <div class="p-6 border-b border-gray-200">
                         <h2 class="text-xl font-semibold text-gray-900">Items to Approve</h2>
-                        <p class="text-sm text-gray-600 mt-1">Set the approved quantities for each item. You can approve
-                            partial quantities if needed.</p>
+                        <p class="text-sm text-gray-600 mt-1">Set the approved quantities for each item. You can approve higher quantities than requested if needed.</p>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -120,9 +125,10 @@
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <input type="number" name="items[{{ $item->item_id }}][quantity_approved]"
                                                 value="{{ old('items.' . $item->item_id . '.quantity_approved', $item->quantity_requested) }}"
-                                                step="0.01" min="0" max="{{ $item->quantity_requested }}"
-                                                class="w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                                required>
+                                                step="0.01" min="0"
+                                                class="w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                placeholder="Can exceed requested" required>
+                                            
                                         </td>
                                         <td class="px-6 py-4">
                                             <input type="text" name="items[{{ $item->item_id }}][notes]"
@@ -134,8 +140,14 @@
                                             <button type="button"
                                                 onclick="approveAll({{ $item->item_id }}, {{ $item->quantity_requested }})"
                                                 class="text-green-600 hover:text-green-900 mr-2"
-                                                title="Approve Full Quantity">
+                                                title="Approve Requested Quantity">
                                                 <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button"
+                                                onclick="approveEnhanced({{ $item->item_id }}, {{ $item->quantity_requested }})"
+                                                class="text-blue-600 hover:text-blue-900 mr-2"
+                                                title="Approve 120% of Requested">
+                                                <i class="fas fa-plus"></i>
                                             </button>
                                             <button type="button" onclick="rejectItem({{ $item->item_id }})"
                                                 class="text-red-600 hover:text-red-900" title="Reject Item">
@@ -152,18 +164,13 @@
                 <!-- Approval Notes -->
                 <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Approval Notes</h3>
-                    <textarea name="approval_notes" rows="3" placeholder="Optional notes about this approval..."
+                    <textarea name="approval_notes" rows="3" placeholder="Optional notes about this approval, especially if quantities were enhanced..."
                         class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">{{ old('approval_notes') }}</textarea>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        {{-- <button type="button" onclick="approveAllItems()"
-                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition duration-200">
-                            <i class="fas fa-check-double mr-2"></i>Approve All (Full Quantities)
-                        </button> --}}
-
                         <button type="submit"
                             class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200">
                             <i class="fas fa-check mr-2"></i>Approve Request
@@ -182,6 +189,11 @@
     <script>
         function approveAll(itemId, requestedQty) {
             document.querySelector(`input[name="items[${itemId}][quantity_approved]"]`).value = requestedQty;
+        }
+
+        function approveEnhanced(itemId, requestedQty) {
+            const enhancedQty = requestedQty * 1.2; // 120% of requested
+            document.querySelector(`input[name="items[${itemId}][quantity_approved]"]`).value = enhancedQty.toFixed(2);
         }
 
         function rejectItem(itemId) {
