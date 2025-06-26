@@ -169,7 +169,25 @@ class OrderController extends Controller
         return DB::transaction(function () use ($data) {
             $reservation = null;
             if (!empty($data['reservation_id'])) {
-                $reservation = Reservation::find($data['reservation_id']);
+                $reservation = Reservation::with('branch.organization')->find($data['reservation_id']);
+                
+                // Enhanced: Validate reservation and branch/organization status
+                if (!$reservation) {
+                    throw new \Exception('Reservation not found');
+                }
+                
+                if (!in_array($reservation->status, ['confirmed', 'checked_in'])) {
+                    throw new \Exception('Orders can only be created for confirmed or checked-in reservations');
+                }
+                
+                if (!$reservation->branch->is_active || !$reservation->branch->organization->is_active) {
+                    throw new \Exception('Cannot create orders for inactive branch or organization');
+                }
+                
+                // Check time constraints for reservation orders
+                if ($reservation->date < now()->toDateString()) {
+                    throw new \Exception('Cannot create orders for past reservations');
+                }
             }
 
             // Stock validation - check all items before creating order
