@@ -268,7 +268,7 @@ class RouteGroupService
     /**
      * Export route groups to files
      */
-    public function exportRouteGroups(string $outputPath = null): array
+    public function exportRouteGroups(?string $outputPath = null): array
     {
         $outputPath = $outputPath ?: base_path('routes/groups');
         $organized = $this->organizeRoutes();
