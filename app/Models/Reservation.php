@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Payment;
+use Carbon\Carbon;
 
 class Reservation extends Model
 {
@@ -48,6 +49,53 @@ class Reservation extends Model
     public function organization()
     {
         return $this->hasOneThrough(Organization::class, Branch::class, 'id', 'id', 'branch_id', 'organization_id');
+    }
+
+    /**
+     * Get organization safely with null handling
+     */
+    public function getOrganizationAttribute()
+    {
+        return $this->branch?->organization;
+    }
+
+    /**
+     * Check if reservation time conflicts with another reservation
+     */
+    public function conflictsWith(Reservation $other): bool
+    {
+        if ($this->branch_id !== $other->branch_id || $this->date !== $other->date) {
+            return false;
+        }
+
+        $thisStart = Carbon::parse($this->date . ' ' . $this->start_time->format('H:i'));
+        $thisEnd = Carbon::parse($this->date . ' ' . $this->end_time->format('H:i'));
+        $otherStart = Carbon::parse($other->date . ' ' . $other->start_time->format('H:i'));
+        $otherEnd = Carbon::parse($other->date . ' ' . $other->end_time->format('H:i'));
+
+        // Add 15-minute buffer
+        $bufferStart = $otherStart->copy()->subMinutes(15);
+        $bufferEnd = $otherEnd->copy()->addMinutes(15);
+
+        return $thisStart->lt($bufferEnd) && $thisEnd->gt($bufferStart);
+    }
+
+    /**
+     * Check if reservation can be modified
+     */
+    public function canBeModified(): bool
+    {
+        return in_array($this->status, ['pending', 'confirmed']) &&
+               Carbon::parse($this->date . ' ' . $this->start_time->format('H:i'))->isFuture();
+    }
+
+    /**
+     * Check if reservation can be cancelled
+     */
+    public function canBeCancelled(): bool
+    {
+        return in_array($this->status, ['pending', 'confirmed', 'waitlisted']) &&
+               Carbon::parse($this->date . ' ' . $this->start_time->format('H:i'))->isFuture();
     }
 
     public function tables()
