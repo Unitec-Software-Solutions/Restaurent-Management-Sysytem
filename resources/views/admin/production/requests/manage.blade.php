@@ -1,59 +1,64 @@
 @extends('layouts.admin')
 
-@section('title', 'Production Orders')
-@section('header-title', 'Kitchen Production Management')
+@section('title', 'Manage Production Requests')
+
+@section('header-title', 'Manage Production Requests')
 
 @section('content')
-    <div class="p-4 space-y-8">
-        <!-- Navigation Buttons -->
-        <div class="rounded-lg">
-            <x-nav-buttons :items="[
-                ['name' => 'Production', 'link' => route('admin.production.index')],
-                ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
-                ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
-                ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
-                ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
-                ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
-            ]" active="Production Orders" />
-        </div>
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
-                    Production Request Management
-                </h1>
-                <p class="text-gray-600 mt-1">Manage and approve production requests</p>
-            </div>
-
-            <div class="flex items-center gap-3">
-                @if (!Auth::user()->branch_id)
-                    @if ($approvedRequests->count() > 0)
-                        <a href="{{ route('admin.production.requests.aggregate') }}"
-                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
-                            <i class="fas fa-layer-group"></i>
-                            Aggregate Requests
-                            <span
-                                class="bg-green-800 text-white px-2 py-1 rounded-full text-xs">{{ $approvedRequests->count() }}</span>
-                        </a>
-                    @endif
-                @endif
-                <a href="{{ route('admin.production.orders.index') }}"
-                    class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg shadow transition duration-200 flex items-center gap-2">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Back to Orders
-                </a>
+    <div class="p-4 rounded-lg">
+        <!-- Header with navigation buttons -->
+        <div class="justify-between items-center mb-4">
+            <div class="rounded-lg">
+                <x-nav-buttons :items="[
+                    ['name' => 'Production', 'link' => route('admin.production.index')],
+                    ['name' => 'Production Requests', 'link' => route('admin.production.requests.index')],
+                    ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
+                    ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
+                    ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
+                    ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
+                ]" active="Production Requests" />
             </div>
         </div>
 
         @if (session('success'))
-            <div class="mb-6 bg-green-100 text-green-800 p-4 rounded-lg border border-green-200 shadow">
-                <i class="fas fa-check-circle mr-2"></i>
-                {{ session('success') }}
+            <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-0.5"></i>
+                    <div class="text-sm text-green-800">{{ session('success') }}</div>
+                </div>
             </div>
         @endif
 
-        <!-- Tab Navigation -->
-        <div class="bg-white rounded-xl shadow-sm mb-6">
+        <!-- Main Content -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <!-- Header -->
+            <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Production Request Management</h2>
+                    <p class="text-sm text-gray-500 mt-1">Review and approve production requests from branches</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Organization: {{ Auth::user()->organization->name }}
+                    </p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    @if (!Auth::user()->branch_id && $approvedRequests->count() > 0)
+                        <a href="{{ route('admin.production.requests.aggregate') }}"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-layer-group mr-2"></i>
+                            Aggregate Requests
+                            <span class="bg-green-800 text-white px-2 py-1 rounded-full text-xs ml-2">
+                                {{ $approvedRequests->count() }}
+                            </span>
+                        </a>
+                    @endif
+                    <a href="{{ route('admin.production.requests.index') }}"
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Requests
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8 px-6">
                     <button
@@ -80,19 +85,10 @@
                     </button>
                 </nav>
             </div>
-        </div>
 
-        <!-- Tab Content -->
-
-        <!-- Pending Approval Tab -->
-        <div id="pending-approval" class="tab-content hidden">
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-900">Requests Pending Approval</h2>
-                    <p class="text-sm text-gray-600 mt-1">Review and approve production requests from branches</p>
-                </div>
-
-                <!-- Pending Approval Tab Content -->
+            <!-- Tab Content -->
+            <!-- Pending Approval Tab -->
+            <div id="pending-approval" class="tab-content hidden">
                 @if ($pendingApprovalRequests->count() > 0)
                     <div class="overflow-x-auto">
                         <table class="w-full">
@@ -111,83 +107,82 @@
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Required Date</th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody class="divide-y divide-gray-200">
                                 @foreach ($pendingApprovalRequests as $request)
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-gray-900">Request #{{ $request->id }}
+                                        <td class="px-6 py-4">
+                                            <div class="font-medium text-indigo-600">Request #{{ $request->id }}</div>
+                                            <div class="text-sm text-gray-500">{{ $request->request_date->format('d M Y') }}
                                             </div>
-                                            <div class="text-sm text-gray-500">
-                                                {{ $request->request_date->format('M d, Y') }}</div>
                                             @if ($request->notes)
-                                                <div class="text-xs text-gray-400 mt-1 max-w-48 truncate">
+                                                <div class="text-sm text-gray-400 mt-1 max-w-48 truncate">
                                                     {{ $request->notes }}</div>
                                             @endif
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ $request->branch->name }}</div>
-                                            <div class="text-sm text-gray-500">
-                                                {{ $request->createdBy->name ?? 'Unknown' }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ $request->items->count() }} items
+                                        <td class="px-6 py-4">
+                                            <div class="font-medium">{{ $request->branch->name }}</div>
+                                            <div class="text-sm text-gray-500">{{ $request->createdBy->name ?? 'Unknown' }}
                                             </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div>{{ $request->items->count() }} items</div>
                                             <div class="text-sm text-gray-500">
                                                 {{ number_format($request->getTotalQuantityRequested()) }} total qty
                                             </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">
-                                                {{ $request->required_date->format('M d, Y') }}</div>
+                                        <td class="px-6 py-4">
+                                            <div class="font-medium">{{ $request->required_date->format('d M Y') }}</div>
                                             @if ($request->required_date->isPast())
                                                 <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 mt-1">
                                                     Overdue
                                                 </span>
                                             @elseif($request->required_date->isToday())
                                                 <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                    class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800 mt-1">
                                                     Today
                                                 </span>
                                             @elseif($request->required_date->isTomorrow())
                                                 <span
-                                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                    class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 mt-1">
                                                     Tomorrow
                                                 </span>
                                             @endif
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div class="flex items-center space-x-3">
+                                        <td class="px-6 py-4 text-right">
+                                            <div class="flex justify-end space-x-3">
+                                                
+
+
                                                 <a href="{{ route('admin.production.requests.show', $request) }}"
-                                                    class="text-blue-600 hover:text-blue-900" title="View Details">
+                                                    class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 <a href="{{ route('admin.production.requests.show-approval', $request) }}"
-                                                    class="text-green-600 hover:text-green-900"
-                                                    title="Approve with Details">
+                                                    class="text-blue-600 hover:text-blue-800" title="Detailed Approval">
                                                     <i class="fas fa-check-circle"></i>
                                                 </a>
                                                 <form method="POST"
                                                     action="{{ route('admin.production.requests.approve', $request) }}"
-                                                    class="inline">
+                                                    class="inline"
+                                                    onsubmit="event.stopPropagation(); return confirm('Approve all items with requested quantities?');">
                                                     @csrf
                                                     <button type="submit" class="text-green-600 hover:text-green-900"
-                                                        title="Quick Approve (all requested quantities)"
-                                                        onclick="return confirm('Approve all items with requested quantities?')">
+                                                        title="Quick Approve">
                                                         <i class="fas fa-check-double"></i>
                                                     </button>
                                                 </form>
                                                 <form method="POST"
                                                     action="{{ route('admin.production.requests.cancel', $request) }}"
-                                                    class="inline">
+                                                    class="inline"
+                                                    onsubmit="event.stopPropagation(); return confirm('Are you sure you want to reject this request?');">
                                                     @csrf
                                                     <button type="submit" class="text-red-600 hover:text-red-900"
-                                                        title="Reject Request"
-                                                        onclick="return confirm('Are you sure you want to reject this request?')">
+                                                        title="Reject">
                                                         <i class="fas fa-times"></i>
                                                     </button>
                                                 </form>
@@ -199,32 +194,24 @@
                         </table>
                     </div>
                 @else
-                    <div class="p-6 text-center text-gray-500">
+                    <div class="p-12 text-center text-gray-500">
                         <i class="fas fa-clipboard-check text-4xl mb-4 text-gray-300"></i>
                         <p class="text-lg font-medium">No requests pending approval</p>
                         <p class="text-sm">All production requests have been processed</p>
                     </div>
                 @endif
             </div>
-        </div>
 
-        <!-- Approved Requests Tab -->
-        <div id="approved-requests" class="tab-content hidden">
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-xl font-semibold text-gray-900">Approved Requests</h2>
-                    <p class="text-sm text-gray-600 mt-1">Approved requests ready for production aggregation</p>
-                </div>
-
+            <!-- Approved Requests Tab -->
+            <div id="approved-requests" class="tab-content hidden">
                 @if ($approvedRequests->count() > 0)
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead class="bg-gray-50">
                                 <tr>
-
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Request</th>
+                                        Request Details</th>
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Branch</th>
@@ -235,37 +222,35 @@
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Approved Date</th>
                                     <th
-                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Actions</th>
                                 </tr>
                             </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
+                            <tbody class="divide-y divide-gray-200">
                                 @foreach ($approvedRequests as $request)
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-gray-900">#{{ $request->id }}</div>
+                                        <td class="px-6 py-4">
+                                            <div class="font-medium text-indigo-600">#{{ $request->id }}</div>
                                             <div class="text-sm text-gray-500">
-                                                {{ $request->request_date->format('M d, Y') }}</div>
+                                                {{ $request->request_date->format('d M Y') }}</div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ $request->branch->name }}</div>
+                                        <td class="px-6 py-4">
+                                            <div class="font-medium">{{ $request->branch->name }}</div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">{{ $request->items->count() }} items
+                                        <td class="px-6 py-4">
+                                            <div>{{ $request->items->count() }} items</div>
+                                            <div class="text-sm text-gray-500">
+                                                {{ number_format($request->getTotalQuantityApproved(), 2) }} approved qty
                                             </div>
-                                            <div class="text-sm text-gray-500">
-                                                {{ number_format($request->getTotalQuantityApproved(), 2) }} approved
-                                                qty</div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <div class="text-sm text-gray-900">
-                                                {{ $request->approved_at->format('M d, Y') }}</div>
-                                            <div class="text-sm text-gray-500">
-                                                {{ $request->approvedBy->name ?? 'N/A' }}</div>
+                                        <td class="px-6 py-4">
+                                            <div class="font-medium">{{ $request->approved_at->format('d M Y') }}</div>
+                                            <div class="text-sm text-gray-500">{{ $request->approvedBy->name ?? 'N/A' }}
+                                            </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <td class="px-6 py-4 text-right">
                                             <a href="{{ route('admin.production.requests.show', $request) }}"
-                                                class="text-blue-600 hover:text-blue-900">
+                                                class="text-indigo-600 hover:text-indigo-800">
                                                 <i class="fas fa-eye mr-1"></i>View
                                             </a>
                                         </td>
@@ -274,30 +259,15 @@
                             </tbody>
                         </table>
                     </div>
-
-                    {{-- <div class="p-6 border-t border-gray-200">
-                            <button type="button" id="aggregateSelectedBtn"
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200 disabled:bg-gray-400"
-                                disabled>
-                                <i class="fas fa-layer-group mr-2"></i>Aggregate Selected for Production
-                            </button>
-                        </div> --}}
                 @else
                     <div class="text-center py-12">
-                        <i class="fas fa-box text-gray-300 text-6xl mb-4"></i>
-                        <h3 class="text-lg font-medium text-gray-900">No approved requests</h3>
-                        <p class="text-gray-500">Approved requests will appear here ready for production.</p>
+                        <i class="fas fa-box text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-lg font-medium text-gray-900">No approved requests</p>
+                        <p class="text-sm text-gray-500">Approved requests will appear here ready for production</p>
                     </div>
                 @endif
             </div>
         </div>
-
-        <!-- Aggregate Production Tab -->
-        <div id="aggregate-production" class="tab-content hidden">
-            <!-- Include the existing aggregate functionality here -->
-            @include('admin.production.orders.partials.aggregate-form')
-        </div>
-    </div>
     </div>
 
     @push('scripts')
