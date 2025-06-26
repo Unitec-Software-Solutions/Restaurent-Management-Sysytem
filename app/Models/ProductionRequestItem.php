@@ -13,7 +13,7 @@ class ProductionRequestItem extends Model
         'production_request_master_id',
         'item_id',
         'quantity_requested',
-        'quantity_approved',
+        'quantity_approved', // Can be higher than quantity_requested if needed
         'quantity_produced',
         'quantity_distributed',
         'notes'
