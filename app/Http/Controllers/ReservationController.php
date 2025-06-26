@@ -6,6 +6,7 @@ use App\Models\Reservation;
 use App\Models\Branch;
 use App\Models\Payment;
 use App\Models\Table;
+use App\Services\ReservationAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,13 @@ use Illuminate\Support\Facades\Mail;
 
 class ReservationController extends Controller
 {
+    protected $reservationAvailabilityService;
+
+    public function __construct(ReservationAvailabilityService $reservationAvailabilityService)
+    {
+        $this->reservationAvailabilityService = $reservationAvailabilityService;
+    }
+
     public function create(Request $request)
     {
         $branches = Branch::where('is_active', true)->get();
@@ -55,85 +63,82 @@ class ReservationController extends Controller
                 'comments' => 'nullable|string|max:1000',
             ]);
 
-            $branch = Branch::findOrFail($validated['branch_id']);
+            $branch = Branch::with('organization')->findOrFail($validated['branch_id']);
 
-            // Check if the time is within branch operating hours
-            $branchOpenTime = Carbon::parse($branch->opening_time)->format('H:i');
-            $branchCloseTime = Carbon::parse($branch->closing_time)->format('H:i');
-
-            if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
-                return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')']);
+            // Enhanced: Check branch and organization status
+            if (!$branch->is_active || !$branch->organization->is_active) {
+                return back()->withErrors(['branch' => 'Selected branch is not currently available for reservations.']);
             }
 
-            // For same-day reservations, ensure start time is at least 30 minutes from now
-            if ($validated['date'] === now()->format('Y-m-d')) {
-                $minStartTime = now()->addMinutes(30)->format('H:i');
-                if ($validated['start_time'] < $minStartTime) {
-                    return back()->withErrors(['time' => 'For same-day reservations, start time must be at least 30 minutes from now.']);
-                }
-            }
-
-            // Enhanced: Use checkTableAvailability for robust capacity check
-            if (!$this->checkTableAvailability(
+            // Enhanced: Use comprehensive availability checking
+            $availabilityCheck = $this->reservationAvailabilityService->checkTimeSlotAvailability(
+                $validated['branch_id'],
                 $validated['date'],
                 $validated['start_time'],
                 $validated['end_time'],
-                $validated['number_of_people'],
-                $branch->id
-            )) {
-                throw new \Exception('No available tables for selected time');
+                $validated['number_of_people']
+            );
+
+            if (!$availabilityCheck['available']) {
+                $errorMessage = $availabilityCheck['message'];
+                
+                // If there are conflicts, show them
+                if (!empty($availabilityCheck['conflicts'])) {
+                    $conflictDetails = collect($availabilityCheck['conflicts'])
+                        ->map(fn($conflict) => "• {$conflict['start_time']}-{$conflict['end_time']} ({$conflict['people']} people)")
+                        ->join("\n");
+                    $errorMessage .= "\n\nConflicting reservations:\n" . $conflictDetails;
+                }
+
+                return back()->withErrors(['availability' => $errorMessage])
+                           ->withInput();
             }
 
-            // Find available tables (for assignment)
-            $tables = Table::where('branch_id', $branch->id)
-                ->available($validated['date'], $validated['start_time'], $validated['end_time'])
-                ->orderBy('capacity', 'asc')
-                ->get();
-
-            $required = $validated['number_of_people'];
-            $selectedTables = [];
-            $sum = 0;
-            foreach ($tables as $table) {
-                $selectedTables[] = $table;
-                $sum += $table->capacity;
-                if ($sum >= $required) break;
-            }
-            if ($sum < $required) {
-                throw new \Exception('No available tables for selected time');
-            }
-
-            
+            // Create reservation with default status as pending
             $reservation = Reservation::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone'],
+                'branch_id' => $validated['branch_id'],
                 'date' => $validated['date'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
+                'start_time' => Carbon::parse($validated['date'] . ' ' . $validated['start_time']),
+                'end_time' => Carbon::parse($validated['date'] . ' ' . $validated['end_time']),
                 'number_of_people' => $validated['number_of_people'],
                 'comments' => $validated['comments'],
-                'reservation_fee' => $branch->reservation_fee,
-                'cancellation_fee' => $branch->cancellation_fee,
                 'status' => 'pending',
-                'branch_id' => $branch->id,
+                'reservation_fee' => $branch->reservation_fee ?? 0,
+                'user_id' => optional(auth())->id(),
             ]);
 
-            // Assign tables
-            $reservation->tables()->sync(collect($selectedTables)->pluck('id'));
+            // Assign tables if available
+            if (!empty($availabilityCheck['table_assignment']['assigned_tables'])) {
+                $tableIds = collect($availabilityCheck['table_assignment']['assigned_tables'])
+                    ->pluck('id');
+                $reservation->tables()->sync($tableIds);
+            }
 
             DB::commit();
-            return redirect()->route('reservations.summary', $reservation)
-                ->with('success', 'Your reservation has been created successfully.');
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-            return back()->withErrors($e->errors())->withInput();
+            Log::info('Reservation created successfully', [
+                'reservation_id' => $reservation->id,
+                'branch_id' => $branch->id,
+                'customer' => $reservation->name,
+                'date' => $reservation->date,
+                'time' => $reservation->start_time->format('H:i') . '-' . $reservation->end_time->format('H:i')
+            ]);
+
+            return redirect()->route('reservations.show', $reservation)
+                           ->with('success', 'Reservation created successfully! You will receive a confirmation email shortly.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Reservation creation failed: ' . $e->getMessage());
-            return back()
-                ->withErrors(['error' => $e->getMessage()])
-                ->withInput();
+            Log::error('Reservation creation failed', [
+                'error' => $e->getMessage(),
+                'data' => $validated ?? []
+            ]);
+            
+            return back()->withErrors(['error' => 'Failed to create reservation. Please try again.'])
+                       ->withInput();
         }
     }
 
