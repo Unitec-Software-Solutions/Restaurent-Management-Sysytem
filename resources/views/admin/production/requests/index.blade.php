@@ -183,7 +183,7 @@
                     @endif
                     <a href="{{ route('admin.production.requests.create') }}"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-plus mr-2"></i> New Production Request
+                        <i class="fas fa-plus mr-2"></i> Production Request
                     </a>
                 </div>
             </div>
@@ -194,20 +194,41 @@
                     class="px-3 py-1 text-sm rounded-full {{ !request()->hasAny(['status', 'branch_id', 'date_from', 'date_to', 'required_date_from', 'required_date_to', 'search']) ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
                     All
                 </a>
-                <a href="{{ route('admin.production.requests.index', ['status' => 'submitted']) }}"
-                    class="px-3 py-1 text-sm rounded-full bg-yellow-100 hover:bg-yellow-200 text-yellow-800">
-                    Pending Approval ({{ $stats['pending_approval'] }})
+                {{-- <a href="{{ route('admin.production.requests.index', ['status' => 'draft']) }}"
+                    class="px-3 py-1 text-sm rounded-full {{ request('status') == 'draft' ? 'bg-gray-200 text-gray-900 font-medium' : 'bg-gray-100 hover:bg-gray-200 text-gray-700' }}">
+                    Draft ({{ $stats['draft'] ?? 0 }})
                 </a>
+                <a href="{{ route('admin.production.requests.index', ['status' => 'submitted']) }}"
+                    class="px-3 py-1 text-sm rounded-full {{ request('status') == 'submitted' ? 'bg-blue-200 text-blue-900 font-medium' : 'bg-blue-100 hover:bg-blue-200 text-blue-800' }}">
+                    Submitted ({{ $stats['submitted'] ?? 0 }})
+                </a> --}}
                 <a href="{{ route('admin.production.requests.index', ['status' => 'approved']) }}"
-                    class="px-3 py-1 text-sm rounded-full bg-green-100 hover:bg-green-200 text-green-800">
-                    Approved ({{ $stats['approved_requests'] }})
+                    class="px-3 py-1 text-sm rounded-full {{ request('status') == 'approved' ? 'bg-green-200 text-green-900 font-medium' : 'bg-green-100 hover:bg-green-200 text-green-800' }}">
+                    Approved ({{ $stats['approved_requests'] ?? 0 }})
                 </a>
                 <a href="{{ route('admin.production.requests.index', ['status' => 'in_production']) }}"
-                    class="px-3 py-1 text-sm rounded-full bg-purple-100 hover:bg-purple-200 text-purple-800">
-                    In Production ({{ $stats['in_production'] }})
+                    class="px-3 py-1 text-sm rounded-full {{ request('status') == 'in_production' ? 'bg-orange-200 text-orange-900 font-medium' : 'bg-orange-100 hover:bg-orange-200 text-orange-800' }}">
+                    In Production ({{ $stats['in_production'] ?? 0 }})
                 </a>
+                <a href="{{ route('admin.production.requests.index', ['status' => 'completed']) }}"
+                    class="px-3 py-1 text-sm rounded-full {{ request('status') == 'completed' ? 'bg-emerald-200 text-emerald-900 font-medium' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' }}">
+                    Completed ({{ $stats['completed'] ?? 0 }})
+                </a>
+                <a href="{{ route('admin.production.requests.index', ['status' => 'cancelled']) }}"
+                    class="px-3 py-1 text-sm rounded-full {{ request('status') == 'cancelled' ? 'bg-red-200 text-red-900 font-medium' : 'bg-red-100 hover:bg-red-200 text-red-800' }}">
+                    Cancelled ({{ $stats['cancelled'] ?? 0 }})
+                </a>
+                <a href="{{ route('admin.production.requests.index', ['status' => 'rejected']) }}"
+                    class="px-3 py-1 text-sm rounded-full {{ request('status') == 'rejected' ? 'bg-purple-200 text-purple-900 font-medium' : 'bg-purple-100 hover:bg-purple-200 text-purple-800' }}">
+                    Rejected ({{ $stats['rejected'] ?? 0 }})
+                </a>
+                @if (request('date_from') || request('date_to'))
+                    <span class="px-3 py-1 text-sm bg-amber-100 text-amber-800 rounded-full">
+                        <i class="fas fa-calendar mr-1"></i>Request Date Filter Active
+                    </span>
+                @endif
                 @if (request('required_date_from') || request('required_date_to'))
-                    <span class="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-full">
+                    <span class="px-3 py-1 text-sm bg-amber-100 text-amber-800 rounded-full">
                         <i class="fas fa-calendar mr-1"></i>Required Date Filter Active
                     </span>
                 @endif
@@ -241,8 +262,8 @@
                                 Required Date</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Progress</th>
+                            {{-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Progress</th> --}}
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions</th>
                         </tr>
@@ -276,11 +297,19 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <span
-                                        class="px-2 py-1 text-xs font-semibold rounded-full {{ $request->getStatusBadgeClass() }}">
+                                        class="px-2 py-1 text-xs font-semibold rounded-full
+                                        @if ($request->status == 'draft') bg-gray-100 text-gray-800
+                                        @elseif($request->status == 'submitted') bg-blue-100 text-blue-800
+                                        @elseif($request->status == 'approved') bg-green-100 text-green-800
+                                        @elseif($request->status == 'in_production') bg-orange-100 text-orange-800
+                                        @elseif($request->status == 'completed') bg-emerald-100 text-emerald-800
+                                        @elseif($request->status == 'cancelled') bg-red-100 text-red-800
+                                        @elseif($request->status == 'rejected') bg-purple-100 text-purple-800
+                                        @else bg-gray-100 text-gray-800 @endif">
                                         {{ ucfirst($request->status) }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4">
+                                {{-- <td class="px-6 py-4">
                                     @if ($request->status === 'approved' || $request->status === 'in_production' || $request->status === 'completed')
                                         <div class="w-full bg-gray-200 rounded-full h-2.5">
                                             <div class="bg-blue-600 h-2.5 rounded-full"
@@ -291,7 +320,7 @@
                                     @else
                                         <span class="text-sm text-gray-400">-</span>
                                     @endif
-                                </td>
+                                </td> --}}
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end space-x-3">
                                         <a href="{{ route('admin.production.requests.show', $request) }}"
