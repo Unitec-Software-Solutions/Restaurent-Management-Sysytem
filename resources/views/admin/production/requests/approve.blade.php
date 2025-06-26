@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Approve Production Request')
+@section('title', 'Approve Production Request - Flexible Quantities')
 
 @section('content')
     <div class="container mx-auto px-4 py-8">
@@ -13,6 +13,10 @@
                     </h1>
                     <p class="text-gray-600 mt-1">{{ $productionRequest->branch->name }} -
                         {{ $productionRequest->request_date->format('M d, Y') }}</p>
+                    <p class="text-sm text-blue-600 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        You can approve quantities higher than requested if needed for operational efficiency.
+                    </p>
                 </div>
                 <div class="flex items-center gap-3">
                     <span
@@ -82,7 +86,7 @@
             </div>
 
             <!-- Approval Form -->
-            <form action="{{ route('admin.production.requests.process-approval', $productionRequest) }}" method="POST"
+            <form action="{{ route('admin.production.requests.processApproval', $productionRequest) }}" method="POST"
                 id="approvalForm">
                 @csrf
 
@@ -90,11 +94,16 @@
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
                     <div class="p-6 border-b border-gray-200">
                         <div class="flex items-center justify-between">
-                            <h2 class="text-xl font-semibold text-gray-900">Items for Approval</h2>
+                            <div>
+                                <h2 class="text-xl font-semibold text-gray-900">Items for Approval</h2>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    You can approve quantities higher than requested if operationally beneficial.
+                                </p>
+                            </div>
                             <div class="flex items-center gap-3">
                                 <button type="button" id="approveAllBtn"
                                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
-                                    <i class="fas fa-check mr-1"></i>Approve All
+                                    <i class="fas fa-check mr-1"></i>Approve All Requested
                                 </button>
                                 <button type="button" id="rejectAllBtn"
                                     class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
@@ -143,9 +152,11 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <input type="number" name="items[{{ $item->id }}][quantity_approved]"
-                                                step="0.01" min="0" max="{{ $item->quantity_requested }}"
+                                                step="0.01" min="0"
                                                 value="{{ old('items.' . $item->id . '.quantity_approved', $item->quantity_approved ?: $item->quantity_requested) }}"
-                                                class="approved-qty w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                                class="approved-qty w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                placeholder="Can exceed requested">
+                                                
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <select name="items[{{ $item->id }}][status]"
@@ -153,6 +164,9 @@
                                                 <option value="approved"
                                                     {{ $item->quantity_approved > 0 ? 'selected' : '' }}>Approved
                                                 </option>
+                                                <option value="enhanced"
+                                                    {{ $item->quantity_approved > $item->quantity_requested ? 'selected' : '' }}>
+                                                    Enhanced</option>
                                                 <option value="partial"
                                                     {{ $item->quantity_approved > 0 && $item->quantity_approved < $item->quantity_requested ? 'selected' : '' }}>
                                                     Partial</option>
@@ -165,8 +179,15 @@
                                             <div class="flex items-center gap-2">
                                                 <button type="button"
                                                     class="approve-item text-green-600 hover:text-green-900"
-                                                    data-item-id="{{ $item->id }}" title="Approve Full Quantity">
+                                                    data-item-id="{{ $item->id }}" data-requested="{{ $item->quantity_requested }}"
+                                                    title="Approve Requested Quantity">
                                                     <i class="fas fa-check"></i>
+                                                </button>
+                                                <button type="button"
+                                                    class="enhance-item text-blue-600 hover:text-blue-900"
+                                                    data-item-id="{{ $item->id }}" data-requested="{{ $item->quantity_requested }}"
+                                                    title="Approve 120% of Requested">
+                                                    <i class="fas fa-plus"></i>
                                                 </button>
                                                 <button type="button" class="reject-item text-red-600 hover:text-red-900"
                                                     data-item-id="{{ $item->id }}" title="Reject Item">
@@ -186,7 +207,7 @@
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Approval Notes</h3>
                     <textarea name="approval_notes" rows="4"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Add any notes regarding this approval...">{{ old('approval_notes') }}</textarea>
+                        placeholder="Add any notes regarding this approval, especially if quantities were enhanced beyond requested amounts...">{{ old('approval_notes') }}</textarea>
                 </div>
 
                 <!-- Form Actions -->
@@ -214,7 +235,7 @@
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Approve all items
+                // Approve all items with requested quantities
                 document.getElementById('approveAllBtn').addEventListener('click', function() {
                     document.querySelectorAll('.approved-qty').forEach(input => {
                         const row = input.closest('tr');
@@ -237,9 +258,8 @@
                 // Individual item approval
                 document.querySelectorAll('.approve-item').forEach(btn => {
                     btn.addEventListener('click', function() {
-                        const itemId = this.dataset.itemId;
                         const row = this.closest('tr');
-                        const requestedQty = parseFloat(row.cells[1].textContent.replace(/,/g, ''));
+                        const requestedQty = parseFloat(this.dataset.requested);
                         const approvedQtyInput = row.querySelector('.approved-qty');
                         const statusSelect = row.querySelector('.item-status');
 
@@ -248,10 +268,23 @@
                     });
                 });
 
+                // Individual item enhancement (120% of requested)
+                document.querySelectorAll('.enhance-item').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const row = this.closest('tr');
+                        const requestedQty = parseFloat(this.dataset.requested);
+                        const enhancedQty = requestedQty * 1.2; // 120% of requested
+                        const approvedQtyInput = row.querySelector('.approved-qty');
+                        const statusSelect = row.querySelector('.item-status');
+
+                        approvedQtyInput.value = enhancedQty.toFixed(2);
+                        statusSelect.value = 'enhanced';
+                    });
+                });
+
                 // Individual item rejection
                 document.querySelectorAll('.reject-item').forEach(btn => {
                     btn.addEventListener('click', function() {
-                        const itemId = this.dataset.itemId;
                         const row = this.closest('tr');
                         const approvedQtyInput = row.querySelector('.approved-qty');
                         const statusSelect = row.querySelector('.item-status');
@@ -273,6 +306,8 @@
                             statusSelect.value = 'rejected';
                         } else if (approvedQty === requestedQty) {
                             statusSelect.value = 'approved';
+                        } else if (approvedQty > requestedQty) {
+                            statusSelect.value = 'enhanced';
                         } else {
                             statusSelect.value = 'partial';
                         }
