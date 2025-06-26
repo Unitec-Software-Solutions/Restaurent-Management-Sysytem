@@ -516,7 +516,7 @@ class InventoryService
     /**
      * Get real-time menu availability for display
      */
-    public function getMenuAvailability(int $branchId, array $menuItemIds = null): array
+    public function getMenuAvailability(int $branchId, ?array $menuItemIds = null): array
     {
         $query = MenuItem::with(['recipes.ingredient', 'category'])
             ->where('branch_id', $branchId)
