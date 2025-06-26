@@ -6,7 +6,7 @@ use App\Services\OrderService;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\Facade;
 
-// Initialize Laravel container
+
 $app = new Container();
 Container::setInstance($app);
 Facade::setFacadeApplication($app);
