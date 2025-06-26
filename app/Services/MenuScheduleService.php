@@ -380,7 +380,9 @@ class MenuScheduleService
         // Check day of week
         if ($menu->available_days) {
             $dayOfWeek = $date->dayOfWeek; // 0=Sunday, 6=Saturday
-            $availableDays = json_decode($menu->available_days, true) ?: [];
+            $availableDays = is_array($menu->available_days)
+                ? $menu->available_days
+                : (json_decode($menu->available_days, true) ?: []);
             
             if (!in_array($dayOfWeek, $availableDays)) {
                 return false;
