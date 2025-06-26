@@ -102,7 +102,7 @@ class ProductionOrderController extends Controller
     }
 
     /**
-     * Store a newly created production order from aggregated requests
+     * Store a newly created production order from aggregated requests (handles higher approved quantities)
      */
     public function store_aggregated(Request $request)
     {
@@ -149,7 +149,7 @@ class ProductionOrderController extends Controller
                     'created_by_user_id' => Auth::id(),
                 ]);
 
-                // Aggregate items by item_id
+                // Aggregate items by item_id (approved quantities can exceed requested)
                 $aggregatedItems = [];
                 $requestIds = [];
 
@@ -167,6 +167,7 @@ class ProductionOrderController extends Controller
                             ];
                         }
 
+                        // Use approved quantity (which can be higher than requested)
                         $aggregatedItems[$itemId]['quantity_to_produce'] += $item->quantity_approved;
                         $aggregatedItems[$itemId]['requests'][] = $productionRequest->id;
                     }
