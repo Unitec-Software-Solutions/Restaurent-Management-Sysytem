@@ -1,9 +1,12 @@
 @extends('layouts.admin')
 
+@section('title', 'Production Orders')
+
 @section('header-title', 'Production Orders')
+
 @section('content')
     <div class="p-4 rounded-lg">
-        <!-- Navigation Buttons -->
+        <!-- Header with navigation buttons -->
         <div class="justify-between items-center mb-4">
             <div class="rounded-lg">
                 <x-nav-buttons :items="[
@@ -77,8 +80,8 @@
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                            <i class="fas fa-percentage text-purple-600 text-lg"></i>
+                        <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-percentage text-indigo-600 text-lg"></i>
                         </div>
                     </div>
                     <div class="ml-4">
@@ -93,10 +96,9 @@
 
         <!-- Filters -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-
-                <!-- Search Input (if applicable, add a search field for request ID or notes) -->
+            <form method="GET" action="{{ route('admin.production.orders.index') }}"
+                class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Search Input -->
                 <div>
                     <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search Order</label>
                     <div class="relative">
@@ -109,11 +111,11 @@
                     </div>
                 </div>
 
-                <!-- Items -->
+                <!-- Items Filter -->
                 <div>
                     <label for="item_id" class="block text-sm font-medium text-gray-700 mb-1">Items</label>
                     <select name="item_id" id="item_id"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="">All Items</option>
                         @foreach ($productionItems as $item)
                             <option value="{{ $item->id }}" {{ request('item_id') == $item->id ? 'selected' : '' }}>
@@ -127,7 +129,7 @@
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" id="status"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="">All Statuses</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
                         <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
@@ -157,6 +159,18 @@
                     </select>
                 </div>
 
+                <!-- Filter Buttons -->
+                <div class="flex items-end space-x-2 col-span-full md:col-span-1">
+                    <button type="submit"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-filter mr-2"></i> Filter
+                    </button>
+                    <a href="{{ route('admin.production.orders.index') }}"
+                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-redo mr-2"></i> Reset
+                    </a>
+                </div>
+
                 <!-- Production Date Range -->
                 <div>
                     <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Production Date
@@ -168,159 +182,172 @@
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                 </div>
-
-
-
-                <div class="flex items-end gap-3">
-                    <button type="submit"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-filter mr-2"></i>Filter
-                    </button>
-                    <a href="{{ route('admin.production.orders.index') }}"
-                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-redo mr-2"></i>Reset
-                    </a>
-                </div>
             </form>
         </div>
 
-        <!-- Production Orders Table -->
+        <!-- Production Orders List -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <!-- Header and Actions -->
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-semibold text-gray-900">Production Orders</h2>
-                        <p class="text-sm text-gray-500">Manage kitchen production orders and sessions</p>
-                    </div>
+            <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Production Orders</h2>
+                    <p class="text-sm text-gray-500">
+                        Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }} of
+                        {{ $orders->total() }} orders
+                    </p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Organization: {{ Auth::user()->organization->name }}
+                    </p>
+                </div>
 
-                    <div class="flex flex-col sm:flex-row gap-3">
-                        @if (!Auth::user()->branch_id)
-                            <a href="{{ route('admin.production.requests.manage') }}"
-                                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
-                                <i class="fas fa-clipboard-check mr-2"></i>
-                                Pending Requests
-                                @php
-                                    $pendingCount = \App\Models\ProductionRequestMaster::where(
-                                        'organization_id',
-                                        Auth::user()->organization_id,
-                                    )
-                                        ->where('status', 'submitted')
-                                        ->count();
-                                @endphp
-                                @if ($pendingCount > 0)
-                                    <span
-                                        class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingCount }}</span>
-                                @endif
-                            </a>
-
-                            @if ($pendingRequests > 0)
-                                <a href="{{ route('admin.production.requests.aggregate') }}"
-                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                                    <i class="fas fa-layer-group mr-2"></i>
-                                    Aggregate Requests
-                                    <span
-                                        class="bg-green-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingRequests }}</span>
-                                </a>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    @if (!Auth::user()->branch_id)
+                        <a href="{{ route('admin.production.requests.manage') }}"
+                            class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-clipboard-check mr-2"></i>
+                            Approve Requests
+                            @php
+                                $pendingCount = \App\Models\ProductionRequestMaster::where(
+                                    'organization_id',
+                                    Auth::user()->organization_id,
+                                )
+                                    ->where('status', 'submitted')
+                                    ->count();
+                            @endphp
+                            @if ($pendingCount > 0)
+                                <span
+                                    class="bg-orange-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingCount }}</span>
                             @endif
-                        @endif
-                        <a href="{{ route('admin.production.sessions.index') }}"
-                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
-                            <i class="fas fa-play mr-2"></i>
-                            Production Sessions
                         </a>
-                    </div>
 
+                        @if ($pendingRequests > 0)
+                            <a href="{{ route('admin.production.requests.aggregate') }}"
+                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                <i class="fas fa-layer-group mr-2"></i>
+                                Aggregate Requests
+                                <span
+                                    class="bg-green-800 text-white px-2 py-1 rounded-full text-xs ml-2">{{ $pendingRequests }}</span>
+                            </a>
+                        @endif
+                    @endif
+                    <a href="{{ route('admin.production.sessions.index') }}"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-play mr-2"></i>
+                        Production Sessions
+                    </a>
                 </div>
             </div>
+
+            <!-- Quick Filter Buttons -->
+            <div class="border-b px-6 pt-4 pb-4 flex flex-wrap gap-2">
+                <a href="{{ route('admin.production.orders.index') }}"
+                    class="px-3 py-1 text-sm rounded-full {{ !request()->hasAny(['status', 'item_id', 'date_from', 'date_to', 'search']) ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                    All
+                </a>
+                <a href="{{ route('admin.production.orders.index', ['status' => 'approved']) }}"
+                    class="px-3 py-1 text-sm rounded-full bg-green-100 hover:bg-green-200 text-green-800">
+                    Approved
+                </a>
+                <a href="{{ route('admin.production.orders.index', ['status' => 'in_production']) }}"
+                    class="px-3 py-1 text-sm rounded-full bg-indigo-100 hover:bg-indigo-200 text-indigo-800">
+                    In Production
+                </a>
+                <a href="{{ route('admin.production.orders.index', ['status' => 'completed']) }}"
+                    class="px-3 py-1 text-sm rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800">
+                    Completed
+                </a>
+                <a href="{{ route('admin.production.orders.index', ['status' => 'cancelled']) }}"
+                    class="px-3 py-1 text-sm rounded-full bg-orange-100 hover:bg-orange-200 text-orange-800">
+                    Cancelled
+                </a>
+                @if (request('date_from') || request('date_to'))
+                    <span class="px-3 py-1 text-sm bg-orange-100 text-orange-800 rounded-full">
+                        <i class="fas fa-calendar mr-1"></i>Date Filter Active
+                    </span>
+                @endif
+                @if (request()->hasAny(['status', 'item_id', 'date_from', 'date_to', 'search']))
+                    <a href="{{ route('admin.production.orders.index') }}"
+                        class="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-800 rounded-full">
+                        <i class="fas fa-times mr-1"></i>Clear Filters
+                    </a>
+                @endif
+            </div>
+
             <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left text-gray-700">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3">Order Details</th>
-                            <th class="px-4 py-3">Production Date</th>
-                            <th class="px-4 py-3">Items</th>
-                            <th class="px-4 py-3">From Requests</th>
-                            <th class="px-4 py-3">Status</th>
-                            <th class="px-4 py-3">Progress</th>
-                            <th class="px-4 py-3">Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Order Details</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Production Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Items</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                From Requests</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($orders as $order)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3">
-                                    <div class="font-medium text-gray-900">
+                            <tr class="hover:bg-gray-50 cursor-pointer"
+                                onclick="window.location='{{ route('admin.production.orders.show', $order) }}'">
+                                <td class="px-6 py-4">
+                                    <div class="font-medium text-indigo-600">
                                         Production Order #{{ $order->id }}
                                     </div>
-                                    <div class="text-xs text-gray-500">
-                                        Created: {{ $order->created_at->format('M d, Y') }}
+                                    <div class="text-sm text-gray-500">
+                                        Created: {{ $order->created_at->format('d M Y') }}
                                     </div>
                                     @if ($order->production_notes)
-                                        <div class="text-xs text-gray-400 mt-1 max-w-48 truncate">
+                                        <div class="text-sm text-gray-400 mt-1 max-w-48 truncate">
                                             {{ $order->production_notes }}
                                         </div>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
-                                    <div class="text-sm text-gray-900">{{ $order->production_date->format('M d, Y') }}
+                                <td class="px-6 py-4">
+                                    <div class="font-medium">{{ $order->production_date->format('d M Y') }}
                                     </div>
                                     @if ($order->expected_completion_date)
-                                        <div class="text-xs text-gray-500">
-                                            Expected: {{ $order->expected_completion_date->format('M d, Y') }}
+                                        <div class="text-sm text-gray-500">
+                                            Expected: {{ $order->expected_completion_date->format('d M Y') }}
                                         </div>
                                     @endif
                                     @if ($order->production_date->isPast() && $order->status !== 'completed')
                                         <span
-                                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
+                                            class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 mt-1">
                                             Overdue
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
-                                    <div class="text-sm text-gray-900">{{ $order->items->count() }} unique items</div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ number_format($order->getTotalQuantityOrdered()) }} total qty</div>
-                                    <div class="text-xs text-gray-400 max-w-48 truncate mt-1">
+                                <td class="px-6 py-4">
+                                    <div>{{ $order->items->count() }} items</div>
+                                    <div class="text-sm text-gray-500">
+                                        Total: {{ number_format($order->getTotalQuantityOrdered()) }} units</div>
+                                    <div class="text-sm text-gray-400 max-w-48 truncate mt-1">
                                         {{ $order->items->pluck('item.name')->join(', ') }}
                                     </div>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <div class="text-sm text-gray-900">
+                                <td class="px-6 py-4">
+                                    <div class="font-medium">
                                         {{ $order->productionRequests ? $order->productionRequests->count() : 0 }} requests
                                     </div>
-                                    <div class="text-xs text-gray-500">
+                                    <div class="text-sm text-gray-500">
                                         {{ $order->productionRequests ? $order->productionRequests->pluck('branch.name')->unique()->join(', ') : 'N/A' }}
                                     </div>
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-6 py-4">
                                     <span
-                                        class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ $order->getStatusBadgeClass() }}">
+                                        class="px-2 py-1 text-xs font-semibold rounded-full {{ $order->getStatusBadgeClass() }}">
                                         {{ ucfirst(str_replace('_', ' ', $order->status)) }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    @if (in_array($order->status, ['approved', 'in_production', 'completed']))
-                                        <div class="w-full bg-gray-200 rounded-full h-2">
-                                            <div class="bg-blue-600 h-2 rounded-full"
-                                                style="width: {{ $order->getProductionProgress() }}%"></div>
-                                        </div>
-                                        <div class="text-xs text-gray-500 mt-1">
-                                            {{ number_format($order->getProductionProgress(), 1) }}% complete</div>
-                                        @if ($order->activeSessions->count() > 0)
-                                            <div class="text-xs text-green-600 mt-1">
-                                                <i class="fas fa-play mr-1"></i>{{ $order->activeSessions->count() }}
-                                                active session(s)
-                                            </div>
-                                        @endif
-                                    @else
-                                        <span class="text-xs text-gray-400">-</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center space-x-3">
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex justify-end space-x-3">
                                         <a href="{{ route('admin.production.orders.show', $order) }}"
-                                            class="text-blue-600 hover:text-blue-800" title="View Details">
+                                            class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
 
@@ -334,7 +361,8 @@
                                         @if ($order->canBeApproved())
                                             <form method="POST"
                                                 action="{{ route('admin.production.orders.approve', $order) }}"
-                                                class="inline">
+                                                class="inline"
+                                                onsubmit="event.stopPropagation(); return confirm('Are you sure you want to approve this order?');">
                                                 @csrf
                                                 <button type="submit" class="text-green-600 hover:text-green-800"
                                                     title="Approve">
@@ -347,7 +375,7 @@
                                             <form method="POST"
                                                 action="{{ route('admin.production.orders.cancel', $order) }}"
                                                 class="inline"
-                                                onsubmit="return confirm('Are you sure you want to cancel this order?')">
+                                                onsubmit="event.stopPropagation(); return confirm('Are you sure you want to cancel this order?');">
                                                 @csrf
                                                 <button type="submit" class="text-red-600 hover:text-red-800"
                                                     title="Cancel">
@@ -360,7 +388,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                                     <i class="fas fa-industry text-4xl mb-4 text-gray-300"></i>
                                     <p class="text-lg font-medium">No production orders found</p>
                                     <p class="text-sm">Start by aggregating approved production requests</p>
@@ -380,7 +408,7 @@
 
             @if ($orders->hasPages())
                 <div class="px-6 py-4 bg-white border-t border-gray-200">
-                    {{ $orders->links() }}
+                    {{ $orders->appends(request()->query())->links() }}
                 </div>
             @endif
         </div>
@@ -408,16 +436,16 @@
                     @endif
                 </div>
 
-                <div class="bg-purple-50 border border-purple-200 rounded-xl p-6">
+                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
                     <div class="flex items-center mb-4">
-                        <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                            <i class="fas fa-play text-purple-600 text-lg"></i>
+                        <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-play text-indigo-600 text-lg"></i>
                         </div>
-                        <h3 class="text-lg font-semibold text-purple-900">Production Sessions</h3>
+                        <h3 class="text-lg font-semibold text-indigo-900">Production Sessions</h3>
                     </div>
-                    <p class="text-purple-700 mb-4">Manage active production sessions and track real-time progress.</p>
+                    <p class="text-indigo-700 mb-4">Manage active production sessions and track real-time progress.</p>
                     <a href="{{ route('admin.production.sessions.index') }}"
-                        class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition duration-200">
+                        class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition duration-200">
                         <i class="fas fa-tasks mr-2"></i>
                         Manage Sessions
                     </a>
