@@ -168,7 +168,7 @@ class ItemTransactionController extends Controller
                 'category' => optional($item->category)->name ?? '-',
                 'reorder_level' => $item->reorder_level,
                 'stock' => $stock,
-                'status' => $stock <= $item->reorder_level ? 'Warning' : 'OK',
+                'status' => $stock <= ($item->reorder_level ?? 0) ? 'Warning' : 'OK',
             ];
         });
 
