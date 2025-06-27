@@ -98,10 +98,11 @@ class ProductionSessionController extends Controller
     {
         $session->load(['productionOrder.items.item', 'supervisor']);
 
-        // Get recipes for production items
+        // Get production recipes for production items
         $recipes = Recipe::whereIn('production_item_id',
             $session->productionOrder->items->pluck('item_id')
         )->with('details.rawMaterialItem')->get();
+
         return view('admin.production.sessions.show', compact('session', 'recipes'));
     }
 

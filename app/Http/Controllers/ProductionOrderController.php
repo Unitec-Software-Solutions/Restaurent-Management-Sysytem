@@ -231,7 +231,7 @@ class ProductionOrderController extends Controller
                 ];
             }
         } else {
-            // Fallback: Calculate ingredients from recipes if no recipe ingredients provided
+            // Fallback: Calculate ingredients from production recipes if no recipe ingredients provided
             foreach ($aggregatedItems as $itemData) {
                 $recipe = \App\Models\Recipe::where('production_item_id', $itemData['item_id'])
                     ->where('is_active', true)

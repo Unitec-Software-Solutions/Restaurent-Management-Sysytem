@@ -210,7 +210,7 @@ class ProductionOrder extends Model
 
     public function getEstimatedDuration()
     {
-        // Calculate based on recipes if available
+        // Calculate based on production recipes if available
         $totalTime = 0;
         foreach ($this->items as $item) {
             $recipe = Recipe::where('production_item_id', $item->item_id)->first();

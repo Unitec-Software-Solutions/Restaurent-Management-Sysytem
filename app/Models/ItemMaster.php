@@ -85,7 +85,7 @@ class ItemMaster extends Model
     }
 
     /**
-     * Recipes where this item is the production item
+     * Production recipes where this item is the production item
      */
     public function productionRecipes()
     {
@@ -93,7 +93,7 @@ class ItemMaster extends Model
     }
 
     /**
-     * Recipe details where this item is a raw material
+     * Production recipe details where this item is a raw material
      */
     public function rawMaterialRecipes()
     {
