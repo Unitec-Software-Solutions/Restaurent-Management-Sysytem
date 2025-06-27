@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('recipes', function (Blueprint $table) {
+        Schema::create('production_recipes', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('organization_id');
             $table->unsignedBigInteger('production_item_id'); // FK to item master
@@ -41,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('recipes');
+        Schema::dropIfExists('production_recipes');
     }
 };

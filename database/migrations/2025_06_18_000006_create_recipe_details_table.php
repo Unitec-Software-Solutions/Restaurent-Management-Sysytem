@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('recipe_details', function (Blueprint $table) {
+        Schema::create('production_recipe_details', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('recipe_id');
             $table->unsignedBigInteger('raw_material_item_id'); // FK to item master for the ingredient/raw material
@@ -20,7 +20,7 @@ return new class extends Migration
             $table->text('preparation_notes')->nullable();
             $table->timestamps();
 
-            $table->foreign('recipe_id')->references('id')->on('recipes');
+            $table->foreign('recipe_id')->references('id')->on('production_recipes');
             $table->foreign('raw_material_item_id')->references('id')->on('item_master');
 
             $table->index(['recipe_id', 'raw_material_item_id']);
@@ -32,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('recipe_details');
+        Schema::dropIfExists('production_recipe_details');
     }
 };

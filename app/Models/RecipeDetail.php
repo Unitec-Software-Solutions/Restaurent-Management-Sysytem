@@ -9,6 +9,8 @@ class RecipeDetail extends Model
 {
     use HasFactory;
 
+    protected $table = 'production_recipe_details';
+
     protected $fillable = [
         'recipe_id',
         'raw_material_item_id',

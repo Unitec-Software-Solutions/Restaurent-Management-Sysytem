@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 class RecipeController extends Controller
 {
     /**
-     * Display a listing of recipes
+     * Display a listing of production recipes
      */
     public function index(Request $request)
     {
