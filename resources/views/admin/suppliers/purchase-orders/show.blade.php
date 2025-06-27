@@ -2,15 +2,14 @@
 
 @section('header-title', 'Purchase Order Details')
 @section('content')
-    ])
-@endif
+
 
 {{-- Debug Info Card for PO Show --}}
 {{-- @if(config('app.debug'))
     <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-purple-800">🔍 Purchase Order Debug Info</h3>
-            <a href="{{ route('admin.purchase-orders.show', $po->po_id ?? 0) }}?debug=1" 
+            <a href="{{ route('admin.purchase-orders.show', $po->po_id ?? 0) }}?debug=1"
                class="text-xs text-purple-600 hover:text-purple-800">
                 Full Debug (@dd)
             </a>

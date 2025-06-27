@@ -13,7 +13,7 @@
     <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-green-800">🔍 Inventory Dashboard Debug Info</h3>
-            <a href="{{ route('admin.inventory.dashboard', ['debug' => 1]) }}" 
+            <a href="{{ route('admin.inventory.dashboard', ['debug' => 1]) }}"
                class="text-xs text-green-600 hover:text-green-800">
                 Full Debug (@dd)
             </a>

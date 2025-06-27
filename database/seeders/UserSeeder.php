@@ -109,6 +109,6 @@ class UserSeeder extends Seeder
             );
         }
 
-        $this->command->info('✅ User types seeded: Super Admin, Org Admin, Branch Admin, Staff, Regular User.');
+        $this->command->info('  ✅ User types seeded: Super Admin, Org Admin, Branch Admin, Staff, Regular User.');
     }
 }

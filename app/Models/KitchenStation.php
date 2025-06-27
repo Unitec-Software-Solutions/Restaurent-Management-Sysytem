@@ -51,7 +51,7 @@ class KitchenStation extends Model
         }
 
         $settings = $this->settings ?? [];
-        
+
         return match($settings['ui_state'] ?? 'default') {
             'active' => 'bg-indigo-100 text-indigo-800', // Primary
             'high-performance' => 'bg-green-100 text-green-800', // Success

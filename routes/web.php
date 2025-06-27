@@ -14,6 +14,8 @@ use App\Http\Controllers\{
     ItemTransactionController,
     OrderController,
     SupplierController,
+    SupplierPaymentController,
+    PurchaseOrderController,
     AdminOrderController,
     OrganizationController,
     RoleController,
@@ -23,11 +25,17 @@ use App\Http\Controllers\{
     RealtimeDashboardController,
     AdminTestPageController,
     DatabaseTestController,
+    ProductionRequestsMasterController,
+    ProductionOrderController,
+    ProductionRequestItemController,
+    ProductionSessionController,
+    ProductionController,
+    ProductionRecipeController,
 };
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Middleware\SuperAdmin;
-
+use App\Models\ProductionRecipe;
 
 /*-------------------------------------------------------------------------
 | Debug Routes - Removed in production refactoring
@@ -51,26 +59,26 @@ Route::prefix('guest')->name('guest.')->group(function () {
     Route::get('/menu/{branchId?}', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenu'])->name('menu.view');
     Route::get('/menu/{branchId}/date/{date}', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenuByDate'])->name('menu.date');
     Route::get('/menu/{branchId}/special', [\App\Http\Controllers\Guest\GuestController::class, 'viewSpecialMenu'])->name('menu.special');
-    
+
     // Cart management
     Route::post('/cart/add', [\App\Http\Controllers\Guest\GuestController::class, 'addToCart'])->name('cart.add');
     Route::post('/cart/update', [\App\Http\Controllers\Guest\GuestController::class, 'updateCart'])->name('cart.update');
     Route::delete('/cart/remove/{itemId}', [\App\Http\Controllers\Guest\GuestController::class, 'removeFromCart'])->name('cart.remove');
     Route::get('/cart', [\App\Http\Controllers\Guest\GuestController::class, 'viewCart'])->name('cart.view');
     Route::delete('/cart/clear', [\App\Http\Controllers\Guest\GuestController::class, 'clearCart'])->name('cart.clear');
-    
+
     // Order management
     Route::post('/order/create', [\App\Http\Controllers\Guest\GuestController::class, 'createOrder'])->name('order.create');
     Route::get('/order/{orderId}/confirmation/{token}', [\App\Http\Controllers\Guest\GuestController::class, 'orderConfirmation'])->name('order.confirmation');
     Route::get('/order/{orderNumber}/track', [\App\Http\Controllers\Guest\GuestController::class, 'trackOrder'])->name('order.track');
     Route::get('/order/{orderNumber}/details', [\App\Http\Controllers\Guest\GuestController::class, 'orderDetails'])->name('order.details');
-    
+
     // Reservations
     Route::get('/reservations/create/{branchId?}', [\App\Http\Controllers\Guest\GuestController::class, 'showReservationForm'])->name('reservations.create');
     Route::post('/reservations/store', [\App\Http\Controllers\Guest\GuestController::class, 'createReservation'])->name('reservations.store');
     Route::get('/reservations/{confirmationNumber}/confirmation', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmation'])->name('reservations.confirmation');
     Route::get('/reservations/{reservationId}/confirmation/{token}', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmationById'])->name('reservation.confirmation');
-    
+
     // Guest session management
     Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
 });
@@ -108,7 +116,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('edit');
         Route::delete('/{order}', [OrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
         Route::put('/{order}', [OrderController::class, 'update'])->whereNumber('order')->name('update');
-        
+
         // Stock checking
         Route::post('/check-stock', [OrderController::class, 'checkStock'])->name('check-stock');
         Route::post('/{order}/print-kot', [OrderController::class, 'printKOT'])->name('print-kot');
@@ -152,7 +160,7 @@ if (config('app.debug')) {
             'session_data' => session()->all()
         ];
     })->middleware('auth:admin');
-    
+
     Route::get('/debug/session', function() {
         return [
             'session_driver' => config('session.driver'),
@@ -184,7 +192,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Reservations Management
         Route::resource('reservations', AdminReservationController::class);
-        
+
         // Inventory Management - Remove duplicate middleware
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('/', [ItemDashboardController::class, 'index'])->name('index');
@@ -205,7 +213,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
-                
+
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
@@ -231,7 +239,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit');
             Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
             Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
-            
+
             // JSON endpoints for testing
             Route::get('/{supplier}/pending-grns', [SupplierController::class, 'pendingGrns']);
             Route::get('/{supplier}/pending-pos', [SupplierController::class, 'pendingPos']);
@@ -242,7 +250,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [GrnDashboardController::class, 'index'])->name('index');
             Route::get('/create', [GrnDashboardController::class, 'create'])->name('create');
             Route::post('/', [GrnDashboardController::class, 'store'])->name('store');
-            Route::get('/{grn}', [GrnDashboardController::class, 'show'])->name('show');
+            Route::get('/{grn}', [GrnDashboardController::class, 'show'])->whereNumber('grn')->name('show');
+            Route::get('/{grn}/edit', [GrnDashboardController::class, 'edit'])->whereNumber('grn')->name('edit');
+            Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
+            Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->whereNumber('grn')->name('verify');
+            Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
+            Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
         });
 
         // Orders Management
@@ -254,13 +267,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->whereNumber('order')->name('edit');
             Route::put('/{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
             Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
-            
+
             // AJAX endpoints for OrderManagementController
             Route::get('/ajax/items-with-stock', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getItemsWithStock'])->name('ajax.items-with-stock');
             Route::get('/ajax/stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStewards'])->name('ajax.stewards');
             Route::get('/ajax/available-stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getAvailableStewards'])->name('ajax.available-stewards');
             Route::get('/ajax/stock-alerts', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStockAlerts'])->name('ajax.stock-alerts');
-            
+
             // Takeaway Orders
             Route::prefix('takeaway')->name('takeaway.')->group(function () {
                 Route::get('/', [AdminOrderController::class, 'indexTakeaway'])->name('index');
@@ -272,8 +285,110 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::delete('/{order}', [AdminOrderController::class, 'destroyTakeaway'])->whereNumber('order')->name('destroy');
             });
         });
+
+        // Payments
+        Route::prefix('payments')->name('payments.')->group(function () {
+            Route::get('/', [SupplierPaymentController::class, 'index'])->name('index');
+            Route::get('/create', [SupplierPaymentController::class, 'create'])->name('create');
+            Route::post('/', [SupplierPaymentController::class, 'store'])->name('store');
+            Route::get('/{payment}', [SupplierPaymentController::class, 'show'])->name('show');
+            Route::get('/{payment}/edit', [SupplierPaymentController::class, 'edit'])->name('edit');
+            Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
+            Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
+            Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
+            // AJAX routes for pending GRNs and POs
+        });
+
+        // Purchase Orders
+        Route::prefix('purchase-orders')->name('purchase-orders.')->group(function () {
+            Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');
+            Route::get('/create', [PurchaseOrderController::class, 'create'])->name('create');
+            Route::post('/', [PurchaseOrderController::class, 'store'])->name('store');
+            Route::get('/{po}', [PurchaseOrderController::class, 'show'])->name('show');
+            Route::get('/{po}/edit', [PurchaseOrderController::class, 'edit'])->name('edit');
+            Route::post('/{po}/approve', [PurchaseOrderController::class, 'approve'])->name('approve');
+            Route::get('/{id}/print', [PurchaseOrderController::class, 'print'])->name('print');
+        });
+
+        // Production Management
+        Route::prefix('production')->name('production.')->group(function () {
+            Route::post('/calculate-ingredients', [ProductionOrderController::class, 'calculateIngredients'])->name('calculate-ingredients');
+            Route::post('/calculate-ingredients-from-recipes', [ProductionOrderController::class, 'calculateIngredientsFromRecipes'])->name('calculate-ingredients-from-recipes');
+            Route::get('/recipe-details/{itemId}', [ProductionOrderController::class, 'getRecipeDetails'])->name('recipe-details');
+
+            Route::get( '/', [ProductionController::class, 'dashboard'])->name('index');
+
+            // Production requests
+            Route::prefix('requests')->name('requests.')->group(function () {
+                Route::get('/', [ProductionRequestsMasterController::class, 'index'])->name('index');
+                Route::get('/create', [ProductionRequestsMasterController::class, 'create'])->name('create');
+                Route::post('/', [ProductionRequestsMasterController::class, 'store'])->name('store');
+                Route::get('/manage', [ProductionRequestsMasterController::class, 'manage'])->name('manage');
+                Route::get('/aggregate', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
+                Route::get('calculate-ingredients', [ProductionRequestsMasterController::class, 'calculateIngredients'])->name('calculate-ingredients'); // aggregated ingredients calculation - in use
+
+                // Specific parameterized routes (these must come after static routes)
+                Route::get('/{productionRequest}', [ProductionRequestsMasterController::class, 'show'])->where('productionRequest', '[0-9]+')->name('show');
+                Route::post('/{productionRequest}/submit', [ProductionRequestsMasterController::class, 'submit'])->where('productionRequest', '[0-9]+')->name('submit');
+                Route::get('/{productionRequest}/approve', [ProductionRequestsMasterController::class, 'showApprovalForm'])->where('productionRequest', '[0-9]+')->name('show-approval');
+                Route::post('/{productionRequest}/approve', [ProductionRequestsMasterController::class, 'processApproval'])->where('productionRequest', '[0-9]+')->name('approve');
+                Route::post('/{productionRequest}/cancel', [ProductionRequestsMasterController::class, 'cancel'])->where('productionRequest', '[0-9]+')->name('cancel');
+            });
+
+            // Production Orders (HQ)
+            Route::prefix('orders')->name('orders.')->group(function () {
+                Route::get('/', [ProductionOrderController::class, 'index'])->name('index');
+                Route::get('/aggregate', [ProductionRequestsMasterController::class, 'aggregate'])->name('aggregate');
+                Route::post('/', [ProductionOrderController::class, 'store_aggregated'])->name('store_aggregated');
+                Route::get('/{productionOrder}', [ProductionOrderController::class, 'show'])->name('show');
+                Route::post('/{productionOrder}/approve', [ProductionOrderController::class, 'approve'])->name('approve');
+                Route::post('/{productionOrder}/cancel', [ProductionOrderController::class, 'cancel'])->name('cancel');
+                // Production Orders - Enhanced with ingredient management
+                Route::post('/{productionOrder}/issue-ingredients', [ProductionOrderController::class, 'issueIngredients'])->name('issue-ingredients');
+            });
+
+            // Recipe Management
+            Route::prefix('recipes')->name('recipes.')->group(function () {
+                Route::get('/', [ProductionRecipeController::class, 'index'])->name('index');
+                Route::get('/create', [ProductionRecipeController::class, 'create'])->name('create');
+                Route::post('/', [ProductionRecipeController::class, 'store'])->name('store');
+                Route::get('/{recipe}', [ProductionRecipeController::class, 'show'])->name('show');
+                Route::get('/{recipe}/edit', [ProductionRecipeController::class, 'edit'])->name('edit');
+                Route::put('/{recipe}', [ProductionRecipeController::class, 'update'])->name('update');
+                Route::delete('/{recipe}', [ProductionRecipeController::class, 'destroy'])->name('destroy');
+                Route::post('/{recipe}/toggle-status', [ProductionRecipeController::class, 'toggleStatus'])->name('toggle-status');
+                Route::get('/{recipe}/production', [ProductionRecipeController::class, 'getRecipeForProduction'])->name('production');
+            });
+
+            // Production Session routes with ingredient management
+            Route::prefix('sessions')->name('sessions.')->group(function () {
+                Route::get('/', [ProductionSessionController::class, 'index'])->name('index');
+                Route::get('/create', [ProductionSessionController::class, 'create'])->name('create');
+                Route::post('/', [ProductionSessionController::class, 'store'])->name('store');
+                Route::get('/{session}', [ProductionSessionController::class, 'show'])->name('show');
+                Route::post('/{session}/start', [ProductionSessionController::class, 'start'])->name('start');
+                Route::post('/{session}/cancel', [ProductionSessionController::class, 'cancel'])->name('cancel');
+                Route::post('/{session}/issue-ingredients', [ProductionSessionController::class, 'issueIngredients'])->name('issue-ingredients');
+                Route::post('/{session}/record-production', [ProductionSessionController::class, 'recordProduction'])->name('record-production');
+            });
+
+
+        });
+
+
+        // Additional Admin Routes
+        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
+        Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
+        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
+        Route::get('/customers', function () {return view('admin.customers.index');})->name('customers.index');
+        Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
+        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
+        Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
+
     });
+
 });
+
 
 // Super Admin Routes
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
@@ -290,10 +405,10 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
         Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
-        
+
         // Organization User creation
         Route::get('users/create', [UserController::class, 'create'])->name('organization.users.create');
-        
+
         // Branch-specific User creation
         Route::get('branches/{branch}/users/create', [UserController::class, 'create'])->name('branch.users.create');
     });
@@ -427,7 +542,7 @@ Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     Route::post('/validate-cart', [AdminOrderController::class, 'validateCart']);
     Route::get('/menu-alternatives/{item}', [AdminOrderController::class, 'getMenuAlternatives']);
     Route::get('/real-time-availability/{branch}', [AdminOrderController::class, 'getRealTimeAvailability']);
-    
+
     // Product catalog APIs
     Route::get('/menu-items/{branch}', [AdminOrderController::class, 'getMenuItems']);
     Route::get('/inventory-items/{branch}', [AdminOrderController::class, 'getInventoryItems']);
@@ -447,7 +562,7 @@ Route::prefix('admin/orders')->middleware(['auth:admin'])->group(function () {
 |------------------------------------------------------------------------*/
 Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () {
     Route::get('/realtime-inventory', [RealtimeDashboardController::class, 'index'])->name('admin.dashboard.realtime-inventory');
-    
+
     // API endpoints for dashboard
     Route::get('/api/recent-orders', [RealtimeDashboardController::class, 'getRecentOrdersApi']);
     Route::get('/api/low-stock-items', [RealtimeDashboardController::class, 'getLowStockItemsApi']);
@@ -473,7 +588,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
     Route::get('/order-stats', [DatabaseTestController::class, 'getOrderStats']);
     Route::get('/recent-orders', [DatabaseTestController::class, 'getRecentOrders']);
     Route::get('/orders-preview', [DatabaseTestController::class, 'getOrdersPreview']);
-    
+
     // Payment Management
     Route::get('payments', [App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
     Route::get('payments/create', [App\Http\Controllers\Admin\PaymentController::class, 'create'])->name('payments.create');

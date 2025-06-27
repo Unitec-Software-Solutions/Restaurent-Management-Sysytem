@@ -24,7 +24,7 @@ class Admin extends Authenticatable
         'password',
         'organization_id',
         'branch_id',
-        'role', 
+        'role',
         'current_role_id',
         'department',
         'job_title',
@@ -82,7 +82,7 @@ class Admin extends Authenticatable
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($admin) {
             // Set default UI settings following the UI/UX guidelines
             if (empty($admin->ui_settings)) {
@@ -96,7 +96,7 @@ class Admin extends Authenticatable
                     'show_help_tips' => true,
                 ];
             }
-            
+
             if (empty($admin->preferences)) {
                 $admin->preferences = [
                     'timezone' => 'Asia/Colombo',
@@ -137,7 +137,7 @@ class Admin extends Authenticatable
         ];
 
         $roleName = $roleMapping[$this->role] ?? $this->role;
-        
+
         try {
             $spatieRole = \Spatie\Permission\Models\Role::where('name', $roleName)
                 ->where('guard_name', 'admin')
@@ -225,7 +225,7 @@ class Admin extends Authenticatable
                         'class' => 'bg-purple-100 text-purple-800'
                     ];
                 }
-                
+
                 return match($this->status) {
                     'active' => [
                         'text' => 'Active',
@@ -263,7 +263,7 @@ class Admin extends Authenticatable
                         'class' => 'bg-indigo-100 text-indigo-800'
                     ];
                 }
-                
+
                 // Fallback to legacy role
                 if ($this->role) {
                     return [
@@ -271,7 +271,7 @@ class Admin extends Authenticatable
                         'class' => 'bg-blue-100 text-blue-800'
                     ];
                 }
-                
+
                 return [
                     'text' => 'No Role',
                     'class' => 'bg-gray-100 text-gray-800'
@@ -287,13 +287,13 @@ class Admin extends Authenticatable
                 if ($this->profile_image) {
                     return asset('storage/' . $this->profile_image);
                 }
-                
+
                 // Generate avatar with initials following UI/UX guidelines
                 $initials = collect(explode(' ', $this->name))
                     ->take(2)
                     ->map(fn($word) => strtoupper(substr($word, 0, 1)))
                     ->join('');
-                
+
                 return "https://ui-avatars.com/api/?name={$initials}&background=6366f1&color=fff&size=128";
             }
         );
@@ -307,7 +307,7 @@ class Admin extends Authenticatable
         if ($this->is_super_admin) {
             return true;
         }
-        
+
         return $this->organization_id === $organizationId;
     }
 
@@ -316,13 +316,13 @@ class Admin extends Authenticatable
         if ($this->is_super_admin) {
             return true;
         }
-        
+
         if ($this->branch_id === null) {
             // Organization admin can access all branches in their organization
             $branch = Branch::find($branchId);
             return $branch && $branch->organization_id === $this->organization_id;
         }
-        
+
         return $this->branch_id === $branchId;
     }
 
@@ -337,7 +337,7 @@ class Admin extends Authenticatable
     public function incrementFailedLogins(): void
     {
         $this->increment('failed_login_attempts');
-        
+
         // Lock account after 5 failed attempts
         if ($this->failed_login_attempts >= 5) {
             $this->update([
@@ -382,7 +382,7 @@ class Admin extends Authenticatable
         if ($this->is_super_admin) {
             return true;
         }
-        
+
         // Check if they have the 'Super Admin' role through Spatie
         try {
             return $this->hasRole('Super Admin', 'admin');
@@ -402,17 +402,17 @@ class Admin extends Authenticatable
         if ($this->isSuperAdmin()) {
             return true;
         }
-        
+
         // Regular admins need organization assignment
         if (!$this->organization_id) {
             return false;
         }
-        
+
         // If specific organization is requested, check match
         if ($organizationId !== null) {
             return $this->organization_id == $organizationId;
         }
-        
+
         return true;
     }
 
@@ -424,7 +424,7 @@ class Admin extends Authenticatable
         if ($this->isSuperAdmin()) {
             return true;
         }
-        
+
         try {
             return $this->hasPermissionTo('manage admins', 'admin');
         } catch (\Exception $e) {
@@ -441,7 +441,7 @@ class Admin extends Authenticatable
         if ($this->isSuperAdmin()) {
             return true;
         }
-        
+
         try {
             return $this->hasPermissionTo('manage system', 'admin');
         } catch (\Exception $e) {

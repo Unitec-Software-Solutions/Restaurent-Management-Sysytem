@@ -13,12 +13,12 @@
 
 @section('content')
 
-{{-- Debug Info Card for Stock Transactions --}}
-{{-- @if(config('app.debug'))
+    {{-- Debug Info Card for Stock Transactions --}}
+    {{-- @if (config('app.debug'))
     <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-indigo-800">🔍 Stock Transactions Debug Info</h3>
-            <a href="{{ route('admin.inventory.stock.transactions.index', array_merge(request()->query(), ['debug' => 1])) }}" 
+            <a href="{{ route('admin.inventory.stock.transactions.index', array_merge(request()->query(), ['debug' => 1])) }}"
                class="text-xs text-indigo-600 hover:text-indigo-800">
                 Full Debug (@dd)
             </a>
@@ -59,16 +59,12 @@
             </div>
 
             <!-- Filters with Export -->
-            <x-module-filters 
-                :action="route('admin.inventory.stock.transactions.index')"
-                :export-permission="'export_inventory'"
-                :export-filename="'inventory_transactions_export.xlsx'">
-                
+            <x-module-filters :action="route('admin.inventory.stock.transactions.index')" :export-permission="'export_inventory'" :export-filename="'inventory_transactions_export.xlsx'">
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
                     <div class="relative">
-                        <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Item name or code"
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Item name or code"
                             class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                     </div>
@@ -90,32 +86,34 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
-                    <div class="relative">
-                        <select name="transaction_type"
-                            class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-                            <option value="">All Types</option>
-                            @foreach ([
-        'purchase_order' => 'Purchase Order',
-        'sales_order' => 'Sales Order',
-        'adjustment' => 'Adjustment',
-        'audit' => 'Audit',
-        'gtn_outgoing' => 'GTN Outgoing',
-        'gtn_incoming' => 'GTN Incoming',
-        'gtn_rejection' => 'GTN Rejection',
-        'write_off' => 'Write Off',
-        'transfer' => 'Transfer',
-        'usage' => 'Usage',
-    ] as $value => $label)
-                                <option value="{{ $value }}"
-                                    {{ request('transaction_type') == $value ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
+                        <div class="relative">
+                            <select name="transaction_type"
+                                class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                <option value="">All Types</option>
+                                @foreach ([
+            'purchase_order' => 'Purchase Order',
+            'sales_order' => 'Sales Order',
+            'adjustment' => 'Adjustment',
+            'audit' => 'Audit',
+            'gtn_outgoing' => 'GTN Outgoing',
+            'gtn_incoming' => 'GTN Incoming',
+            'gtn_rejection' => 'GTN Rejection',
+            'write_off' => 'Write Off',
+            'transfer' => 'Transfer',
+            'usage' => 'Usage',
+            'production_issue' => 'Production Issue',
+            'production_in' => 'Production In',
+        ] as $value => $label)
+                                    <option value="{{ $value }}"
+                                        {{ request('transaction_type') == $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
@@ -207,6 +205,8 @@
                                             'write_off' => 'bg-red-100 text-red-800',
                                             'transfer' => 'bg-indigo-100 text-indigo-800',
                                             'usage' => 'bg-purple-100 text-purple-800',
+                                            'production_issue' => 'bg-orange-100 text-orange-800',
+                                            'production_in' => 'bg-green-100 text-green-800',
                                         ];
                                         $isIn = !$controller->isStockOut($tx->transaction_type);
                                     @endphp
