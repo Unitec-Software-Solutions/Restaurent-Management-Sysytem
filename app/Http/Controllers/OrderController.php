@@ -17,6 +17,7 @@ use App\Services\OrderService;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -448,45 +449,104 @@ class OrderController extends Controller
         $data = $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'order_time' => 'required|date|after_or_equal:now',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.quantity' => 'required|integer|min:1'
+            'items.*.quantity' => 'required|integer|min:1',
+            'special_instructions' => 'nullable|string|max:1000'
         ]);
 
-        $order = Order::create([
-            'order_type' => 'takeaway_online_scheduled',
-            'branch_id' => $data['branch_id'],
-            'order_time' => $data['order_time'],
-            'status' => 'active',
-            'placed_by_admin' => false
-        ]);
+        return DB::transaction(function () use ($data) {
+            try {
+                // Validate branch is active
+                $branch = Branch::find($data['branch_id']);
+                if (!$branch || !$branch->is_active) {
+                    throw new \Exception('Selected branch is not available');
+                }
 
-        $subtotal = 0;
-        foreach ($data['items'] as $item) {
-            $menuItem = ItemMaster::find($item['item_id']);
-            $total = $menuItem->selling_price * $item['quantity'];
+                // Stock validation - check all items before creating order
+                $stockErrors = [];
+                foreach ($data['items'] as $item) {
+                    $inventoryItem = ItemMaster::find($item['item_id']);
+                    if (!$inventoryItem || !$inventoryItem->is_active) {
+                        $itemName = $inventoryItem ? $inventoryItem->name : 'Unknown';
+                        $stockErrors[] = "Item {$itemName} is not available";
+                        continue;
+                    }
+                    
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $data['branch_id']);
+                    if ($currentStock < $item['quantity']) {
+                        $stockErrors[] = "Insufficient stock for {$inventoryItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                    }
 
-            OrderItem::create([
-                'order_id' => $order->id,
-                'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $menuItem->selling_price,
-                'total_price' => $total
-            ]);
+                    // Check for low stock warnings
+                    if ($currentStock <= ($inventoryItem->reorder_level ?? 10)) {
+                        Log::warning("Low stock alert for item {$inventoryItem->name} at branch {$branch->name}. Current: {$currentStock}");
+                    }
+                }
 
-            $subtotal += $total;
-        }
+                if (!empty($stockErrors)) {
+                    throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
+                }
 
-        $tax = $subtotal * 0.10;
-        $order->update([
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'total' => $subtotal + $tax
-        ]);
+                // Create order
+                $order = Order::create([
+                    'order_type' => 'takeaway_online_scheduled',
+                    'branch_id' => $data['branch_id'],
+                    'order_time' => $data['order_time'],
+                    'customer_name' => $data['customer_name'],
+                    'customer_phone' => $data['customer_phone'],
+                    'special_instructions' => $data['special_instructions'],
+                    'status' => 'draft', // Start as draft
+                    'placed_by_admin' => false,
+                    'takeaway_id' => 'TK' . str_pad(Order::count() + 1, 6, '0', STR_PAD_LEFT)
+                ]);
 
-        return redirect()->route('orders.takeaway.summary', ['order' => $order->id])
-            ->with('success', 'Takeaway order created! ID: ' . $order->takeaway_id);
+                $subtotal = 0;
+                foreach ($data['items'] as $item) {
+                    $inventoryItem = ItemMaster::find($item['item_id']);
+                    if (!$inventoryItem) continue;
+                    
+                    $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                    $subtotal += $lineTotal;
+
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'menu_item_id' => $item['item_id'],
+                        'inventory_item_id' => $item['item_id'],
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $inventoryItem->selling_price,
+                        'total_price' => $lineTotal
+                    ]);
+
+                    // Reserve stock (don't deduct yet until submission)
+                    if (!$this->inventoryService->reserveStockForOrder($order->id, $item['item_id'], $data['branch_id'], $item['quantity'])) {
+                        throw new \Exception("Failed to reserve stock for {$inventoryItem->name}");
+                    }
+                }
+
+                // Calculate totals
+                $tax = $subtotal * 0.10;
+                $serviceCharge = $subtotal * 0.05; // 5% service charge for takeaway
+                $total = $subtotal + $tax + $serviceCharge;
+
+                $order->update([
+                    'subtotal' => $subtotal,
+                    'tax' => $tax,
+                    'service_charge' => $serviceCharge,
+                    'total' => $total,
+                    'stock_reserved' => true
+                ]);
+
+                return redirect()->route('orders.takeaway.summary', ['order' => $order->id])
+                    ->with('success', 'Takeaway order created! ID: ' . $order->takeaway_id);
+                    
+            } catch (\Exception $e) {
+                Log::error('Takeaway order creation failed: ' . $e->getMessage());
+                throw $e;
+            }
+        });
     }
 
     public function summary(Order $order)
@@ -808,5 +868,219 @@ class OrderController extends Controller
 
         // For Excel format (if needed in future)
         return response()->json(['error' => 'Excel export not yet implemented'], 501);
+    }
+
+    // List takeaway orders (customer)
+    public function indexTakeaway(Request $request)
+    {
+        $phone = $request->input('phone');
+        $branchId = $request->input('branch_id');
+        $status = $request->input('status');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        // Query for takeaway orders
+        $ordersQuery = Order::query()
+            ->where('order_type', 'takeaway_online_scheduled')
+            ->with(['items.menuItem', 'branch'])
+            ->when($phone, fn($q) => $q->where('customer_phone', $phone))
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($startDate, fn($q) => $q->whereDate('created_at', '>=', $startDate))
+            ->when($endDate, fn($q) => $q->whereDate('created_at', '<=', $endDate))
+            ->orderBy('created_at', 'desc');
+
+        $orders = $ordersQuery->paginate(15);
+        $branches = Branch::where('is_active', true)->get();
+
+        // Summary statistics
+        $totalOrders = $ordersQuery->count();
+        $totalAmount = $ordersQuery->sum('total');
+        
+        return view('orders.takeaway.index', compact(
+            'orders', 
+            'branches', 
+            'phone', 
+            'branchId', 
+            'status', 
+            'startDate', 
+            'endDate',
+            'totalOrders',
+            'totalAmount'
+        ));
+    }
+
+    /**
+     * Add another order for the same reservation/customer
+     */
+    public function addAnother(Request $request)
+    {
+        $reservationId = $request->input('reservation_id');
+        $phone = $request->input('phone');
+        
+        if ($reservationId) {
+            return redirect()->route('orders.create', ['reservation_id' => $reservationId]);
+        }
+        
+        if ($phone) {
+            return redirect()->route('orders.takeaway.create', ['phone' => $phone]);
+        }
+        
+        return redirect()->route('orders.create');
+    }
+
+    /**
+     * Get available menu items for ordering with stock and KOT status
+     */
+    public function getAvailableMenuItems(Request $request)
+    {
+        $branchId = $request->input('branch_id', Auth::user()->branch_id);
+        $categoryId = $request->input('category_id');
+        $type = $request->input('type'); // 'buy_sell', 'kot', 'all'
+        
+        $query = ItemMaster::with(['category', 'branch'])
+            ->where('branch_id', $branchId)
+            ->where('is_active', true);
+            
+        // Filter by category if specified
+        if ($categoryId) {
+            $query->where('menu_category_id', $categoryId);
+        }
+        
+        // Filter by type if specified
+        if ($type && $type !== 'all') {
+            if ($type === 'buy_sell') {
+                $query->where('item_type', 'Buy & Sell');
+            } elseif ($type === 'kot') {
+                $query->where('item_type', 'KOT');
+            }
+        }
+        
+        $menuItems = $query->get()->filter(function ($item) {
+            // Validate buy/sell prices for all items
+            if (empty($item->buying_price) || empty($item->selling_price) || $item->selling_price <= 0) {
+                return false;
+            }
+            
+            // Check menu attributes for menu items
+            if ($item->is_menu_item) {
+                $attributes = is_array($item->attributes) ? $item->attributes : [];
+                $requiredAttrs = ['cuisine_type', 'prep_time_minutes'];
+                
+                foreach ($requiredAttrs as $attr) {
+                    if (empty($attributes[$attr])) {
+                        return false;
+                    }
+                }
+            }
+            
+            // Additional stock validation for Buy & Sell items
+            if ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) {
+                return false;
+            }
+            
+            return true;
+        })->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->item_name,
+                'price' => $item->selling_price,
+                'category' => $item->category->category_name ?? 'Uncategorized',
+                'type' => $item->item_type,
+                'stock_quantity' => $item->item_type === 'Buy & Sell' ? $item->current_stock : null,
+                'is_available' => $item->item_type === 'KOT' ? true : ($item->current_stock > 0),
+                'description' => $item->description,
+                'image_url' => $item->image_path,
+                'display_stock' => $item->item_type === 'Buy & Sell',
+                'display_kot_badge' => $item->item_type === 'KOT',
+                'buying_price' => $item->buying_price,
+                'has_valid_prices' => !empty($item->buying_price) && !empty($item->selling_price) && $item->selling_price > 0
+            ];
+        });
+        
+        return response()->json([
+            'success' => true,
+            'data' => $menuItems,
+            'total' => $menuItems->count()
+        ]);
+    }
+
+    /**
+     * Get menu items filtered by specific type
+     */
+    public function getMenuItemsByType(Request $request)
+    {
+        $type = $request->input('type', 'all'); // 'buy_sell', 'kot', 'all'
+        $branchId = $request->input('branch_id', Auth::user()->branch_id);
+        $search = $request->input('search');
+        
+        $query = ItemMaster::with(['category'])
+            ->where('branch_id', $branchId)
+            ->where('is_active', true);
+            
+        // Apply type filter
+        if ($type !== 'all') {
+            if ($type === 'buy_sell') {
+                $query->where('item_type', 'Buy & Sell')
+                      ->where('current_stock', '>', 0); // Only show items with stock
+            } elseif ($type === 'kot') {
+                $query->where('item_type', 'KOT');
+            }
+        }
+        
+        // Apply search filter
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('item_name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+        
+        $items = $query->orderBy('item_name')->get();
+        
+        $formattedItems = $items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->item_name,
+                'price' => $item->selling_price,
+                'type' => $item->item_type,
+                'category' => $item->category->category_name ?? 'Uncategorized',
+                'stock_quantity' => $item->item_type === 'Buy & Sell' ? $item->current_stock : null,
+                'is_kot_item' => $item->item_type === 'KOT',
+                'is_buy_sell_item' => $item->item_type === 'Buy & Sell',
+                'is_available' => $item->item_type === 'KOT' || $item->current_stock > 0,
+                'stock_status' => $this->getStockStatus($item),
+                'description' => $item->description
+            ];
+        });
+        
+        return response()->json([
+            'success' => true,
+            'data' => $formattedItems,
+            'type_filter' => $type,
+            'total' => $formattedItems->count()
+        ]);
+    }
+
+    /**
+     * Helper method to get stock status for display
+     */
+    private function getStockStatus($item)
+    {
+        if ($item->item_type === 'KOT') {
+            return 'available'; // KOT items are always available
+        }
+        
+        if ($item->item_type === 'Buy & Sell') {
+            if ($item->current_stock <= 0) {
+                return 'out_of_stock';
+            } elseif ($item->current_stock <= 5) {
+                return 'low_stock';
+            } else {
+                return 'in_stock';
+            }
+        }
+        
+        return 'unknown';
     }
 }
