@@ -3,20 +3,20 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Recipe;
-use App\Models\RecipeDetail;
+use App\Models\ProductionRecipe;
+use App\Models\ProductionRecipeDetail;
 use App\Models\ItemMaster;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class RecipeController extends Controller
+class ProductionRecipeController extends Controller
 {
     /**
      * Display a listing of production recipes
      */
     public function index(Request $request)
     {
-        $query = Recipe::with(['productionItem', 'details.rawMaterialItem'])
+        $query = ProductionRecipe::with(['productionItem', 'details.rawMaterialItem'])
             ->where('organization_id', Auth::user()->organization_id);
 
         // Apply filters
@@ -87,7 +87,7 @@ class RecipeController extends Controller
         DB::transaction(function () use ($request) {
             $totalTime = ($request->preparation_time ?? 0) + ($request->cooking_time ?? 0);
 
-            $recipe = Recipe::create([
+            $recipe = ProductionRecipe::create([
                 'organization_id' => Auth::user()->organization_id,
                 'production_item_id' => $request->production_item_id,
                 'recipe_name' => $request->recipe_name,
@@ -104,7 +104,7 @@ class RecipeController extends Controller
             ]);
 
             foreach ($request->raw_materials as $rawMaterial) {
-                RecipeDetail::create([
+                ProductionRecipeDetail::create([
                     'recipe_id' => $recipe->id,
                     'raw_material_item_id' => $rawMaterial['item_id'],
                     'quantity_required' => $rawMaterial['quantity_required'],
@@ -121,7 +121,7 @@ class RecipeController extends Controller
     /**
      * Display the specified recipe
      */
-    public function show(Recipe $recipe)
+    public function show(ProductionRecipe $recipe)
     {
         $recipe->load(['productionItem', 'details.rawMaterialItem']);
 
@@ -131,7 +131,7 @@ class RecipeController extends Controller
     /**
      * Show the form for editing the specified recipe
      */
-    public function edit(Recipe $recipe)
+    public function edit(ProductionRecipe $recipe)
     {
         $recipe->load('details');
 
@@ -155,7 +155,7 @@ class RecipeController extends Controller
     /**
      * Update the specified recipe
      */
-    public function update(Request $request, Recipe $recipe)
+    public function update(Request $request, ProductionRecipe $recipe)
     {
         $request->validate([
             'production_item_id' => 'required|exists:item_master,id',
@@ -198,7 +198,7 @@ class RecipeController extends Controller
 
             // Create new recipe details
             foreach ($request->raw_materials as $rawMaterial) {
-                RecipeDetail::create([
+                ProductionRecipeDetail::create([
                     'recipe_id' => $recipe->id,
                     'raw_material_item_id' => $rawMaterial['item_id'],
                     'quantity_required' => $rawMaterial['quantity_required'],
@@ -215,7 +215,7 @@ class RecipeController extends Controller
     /**
      * Toggle recipe active status
      */
-    public function toggleStatus(Recipe $recipe)
+    public function toggleStatus(ProductionRecipe $recipe)
     {
         $recipe->update([
             'is_active' => !$recipe->is_active,
@@ -230,18 +230,18 @@ class RecipeController extends Controller
     /**
      * Remove the specified recipe
      */
-    public function destroy(Recipe $recipe)
+    public function destroy(ProductionRecipe $recipe)
     {
         $recipe->delete();
 
-        return redirect()->route('admin.admin.production.recipes.index')
+        return redirect()->route('admin.production.recipes.index')
             ->with('success', 'Recipe deleted successfully.');
     }
 
     /**
      * Get recipe details for production calculation
      */
-    public function getRecipeForProduction(Request $request, Recipe $recipe)
+    public function getRecipeForProduction(Request $request, ProductionRecipe $recipe)
     {
         $quantity = $request->input('quantity', 1);
         $multiplier = $quantity / $recipe->yield_quantity;
