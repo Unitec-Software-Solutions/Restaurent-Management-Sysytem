@@ -6,8 +6,8 @@ use App\Models\ProductionRequestMaster;
 use App\Models\ProductionRequestItem;
 use App\Models\ItemMaster;
 use App\Models\Branch;
-use App\Models\Recipe;
-use App\Models\RecipeDetail;
+use App\Models\ProductionRecipe;
+use App\Models\ProductionRecipeDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\IngredientStockService;
@@ -286,7 +286,7 @@ class ProductionRequestsMasterController extends Controller
                 ];
 
                 // Calculate ingredients from recipe
-                $recipe = \App\Models\Recipe::where('production_item_id', $itemId)
+                $recipe = \App\Models\ProductionRecipe::where('production_item_id', $itemId)
                     ->where('is_active', true)
                     ->with('details.rawMaterialItem')
                     ->first();
