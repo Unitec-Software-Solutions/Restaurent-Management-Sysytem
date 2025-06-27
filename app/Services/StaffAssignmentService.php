@@ -10,9 +10,10 @@ use Illuminate\Support\Collection;
 
 class StaffAssignmentService
 {
-    const SHIFT_DAY = 'day';
+    const SHIFT_MORNING = 'morning';
     const SHIFT_EVENING = 'evening';
     const SHIFT_NIGHT = 'night';
+    const SHIFT_FLEXIBLE = 'flexible';
 
     /**
      * Auto-assign staff based on current shift and workload
@@ -46,7 +47,7 @@ class StaffAssignmentService
         $hour = Carbon::now()->hour;
         
         if ($hour >= 6 && $hour < 15) {
-            return self::SHIFT_DAY;
+            return self::SHIFT_MORNING;
         } elseif ($hour >= 15 && $hour < 22) {
             return self::SHIFT_EVENING;
         } else {
@@ -61,12 +62,13 @@ class StaffAssignmentService
     {
         $query = Employee::where('branch_id', $branch->id)
             ->where('is_active', true)
+            ->available()
             ->whereIn('role', ['waiter', 'steward', 'server']);
 
         if ($shift) {
             $query->where(function($q) use ($shift) {
-                $q->where('shift_preference', $shift)
-                  ->orWhereNull('shift_preference'); // Include flexible staff
+                $q->where('shift_type', $shift)
+                  ->orWhere('shift_type', 'flexible'); // Include flexible staff
             });
         }
 
@@ -79,14 +81,10 @@ class StaffAssignmentService
     protected function selectBestStaffMember(Collection $staff, Order $order): Employee
     {
         $staffWithWorkload = $staff->map(function ($employee) {
-            $currentOrders = Order::where('steward_id', $employee->id)
-                ->whereIn('status', [Order::STATUS_SUBMITTED, Order::STATUS_PREPARING])
-                ->count();
-
             return [
                 'employee' => $employee,
-                'current_workload' => $currentOrders,
-                'priority_score' => $this->calculatePriorityScore($employee, $currentOrders)
+                'current_workload' => $employee->current_workload,
+                'priority_score' => $this->calculatePriorityScore($employee, $employee->current_workload)
             ];
         });
 
@@ -103,19 +101,19 @@ class StaffAssignmentService
     {
         $score = $currentWorkload * 10; // Base workload penalty
         
-        // Experience bonus (lower score is better)
-        if ($employee->experience_years && $employee->experience_years > 2) {
+        // Experience bonus (if years_experience field exists)
+        if (isset($employee->years_experience) && $employee->years_experience > 2) {
             $score -= 5;
         }
         
-        // Performance rating bonus
+        // Performance rating bonus (if performance_rating field exists)
         if (isset($employee->performance_rating) && $employee->performance_rating > 4) {
             $score -= 3;
         }
         
         // Shift preference match bonus
         $currentShift = $this->getCurrentShift();
-        if ($employee->shift_preference === $currentShift) {
+        if ($employee->shift_type === $currentShift) {
             $score -= 2;
         }
         
@@ -125,23 +123,23 @@ class StaffAssignmentService
     /**
      * Get shift schedule for branch
      */
-    public function getShiftSchedule(Branch $branch, Carbon $date = null): array
+    public function getShiftSchedule(Branch $branch, ?Carbon $date = null): array
     {
         if (!$date) {
             $date = Carbon::today();
         }
 
-        $dayShift = $this->getAvailableStaff($branch, self::SHIFT_DAY);
+        $morningShift = $this->getAvailableStaff($branch, self::SHIFT_MORNING);
         $eveningShift = $this->getAvailableStaff($branch, self::SHIFT_EVENING);
         $nightShift = $this->getAvailableStaff($branch, self::SHIFT_NIGHT);
 
         return [
             'date' => $date->format('Y-m-d'),
             'shifts' => [
-                self::SHIFT_DAY => [
+                self::SHIFT_MORNING => [
                     'hours' => '06:00 - 15:00',
-                    'staff_count' => $dayShift->count(),
-                    'staff' => $dayShift->pluck('name', 'id')->toArray()
+                    'staff_count' => $morningShift->count(),
+                    'staff' => $morningShift->pluck('name', 'id')->toArray()
                 ],
                 self::SHIFT_EVENING => [
                     'hours' => '15:00 - 22:00',
@@ -250,7 +248,7 @@ class StaffAssignmentService
     protected function getShiftHours(string $shift): array
     {
         switch ($shift) {
-            case self::SHIFT_DAY:
+            case self::SHIFT_MORNING:
                 return ['start' => '06:00:00', 'end' => '15:00:00'];
             case self::SHIFT_EVENING:
                 return ['start' => '15:00:00', 'end' => '22:00:00'];
@@ -264,7 +262,7 @@ class StaffAssignmentService
     protected function getShiftDurationHours(string $shift): int
     {
         switch ($shift) {
-            case self::SHIFT_DAY:
+            case self::SHIFT_MORNING:
             case self::SHIFT_EVENING:
                 return 9;
             case self::SHIFT_NIGHT:

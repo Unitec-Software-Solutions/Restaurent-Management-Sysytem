@@ -34,6 +34,20 @@ class User extends Authenticatable
     ];
 
     /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            // Super admins should not be bound to organizations
+            if ($user->is_super_admin) {
+                $user->organization_id = null;
+                $user->branch_id = null;
+            }
+        });
+    }
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>

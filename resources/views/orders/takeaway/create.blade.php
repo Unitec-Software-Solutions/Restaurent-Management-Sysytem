@@ -91,9 +91,23 @@
                                     
                                     <label for="item_{{ $item->id }}" class="ml-3 flex-1">
                                         <div class="flex justify-between items-center">
-                                            <span class="font-medium text-gray-800">{{ $item->name }}</span>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="font-medium text-gray-800">{{ $item->name }}</span>
+                                                @if($item->item_type === 'KOT')
+                                                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>
+                                                @endif
+                                            </div>
                                             <span class="text-blue-600 font-semibold">LKR {{ number_format($item->selling_price, 2) }}</span>
                                         </div>
+                                        @if($item->item_type === 'KOT')
+                                            <div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>
+                                        @elseif($item->item_type === 'Buy & Sell')
+                                            @if($item->current_stock > 0)
+                                                <div class="text-xs text-green-600 font-medium mt-1">In Stock ({{ $item->current_stock }})</div>
+                                            @else
+                                                <div class="text-xs text-red-600 font-medium mt-1">Out of Stock</div>
+                                            @endif
+                                        @endif
                                     </label>
                                     
                                     <div class="flex items-center">

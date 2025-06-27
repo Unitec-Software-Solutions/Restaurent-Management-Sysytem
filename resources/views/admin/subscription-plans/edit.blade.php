@@ -21,15 +21,22 @@
             <input type="text" id="name" name="name" value="{{ old('name', $subscriptionPlan->name) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200" required>
         </div>
         <div>
-            <label class="block mb-2 font-semibold text-gray-700">Modules <span class="text-red-500">*</span></label>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <label class="block mb-2 font-semibold text-gray-700">Modules <span class="text-red-500">*</span></label>            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 @php
-                    $selectedModules = is_array($subscriptionPlan->modules) ? $subscriptionPlan->modules : json_decode($subscriptionPlan->modules, true) ?? [];
+                    $selectedModules = $subscriptionPlan->getModulesArray();
+                    $selectedModuleIds = [];
+                    foreach ($selectedModules as $moduleData) {
+                        if (is_numeric($moduleData)) {
+                            $selectedModuleIds[] = $moduleData;
+                        } elseif (is_array($moduleData) && isset($moduleData['id'])) {
+                            $selectedModuleIds[] = $moduleData['id'];
+                        }
+                    }
                 @endphp
                 @foreach($modules as $module)
                     <label class="flex items-center space-x-2 bg-gray-50 px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-50 transition">
                         <input type="checkbox" name="modules[]" value="{{ $module->id }}"
-                            {{ in_array($module->id, $selectedModules) ? 'checked' : '' }} class="accent-blue-600">
+                            {{ in_array($module->id, $selectedModuleIds) ? 'checked' : '' }} class="accent-blue-600">
                         <span>{{ $module->name }}</span>
                     </label>
                 @endforeach

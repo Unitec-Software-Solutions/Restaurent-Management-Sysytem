@@ -10,76 +10,46 @@
             ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
         ]" active="Purchase Orders" />
 
-        <!-- Filters -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <form method="GET" action="{{ route('admin.purchase-orders.index') }}"
-                class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <!-- Search -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                    <div class="relative">
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="PO Number, Supplier"
-                            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                    </div>
-                </div>
+        <!-- Filters with Export -->
+        <x-module-filters 
+            :action="route('admin.purchase-orders.index')"
+            :export-permission="'export_purchase_orders'"
+            :export-filename="'purchase_orders_export.xlsx'">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Status</option>
+                    <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="Approved" {{ request('status') == 'Approved' ? 'selected' : '' }}>Approved</option>
+                    <option value="Received" {{ request('status') == 'Received' ? 'selected' : '' }}>Received</option>
+                </select>
+            </div>
 
-                <!-- Status Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Status</option>
-                        <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="Approved" {{ request('status') == 'Approved' ? 'selected' : '' }}>Approved</option>
-                        <option value="Received" {{ request('status') == 'Received' ? 'selected' : '' }}>Received</option>
-                    </select>
-                </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+                <select name="supplier" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Suppliers</option>
+                    @foreach ($suppliers as $supplier)
+                        <option value="{{ $supplier->id }}" {{ request('supplier') == $supplier->id ? 'selected' : '' }}>
+                            {{ $supplier->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-                <!-- Supplier Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                    <select name="supplier"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Suppliers</option>
-                        @foreach ($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}"
-                                {{ request('supplier') == $supplier->id ? 'selected' : '' }}>
-                                {{ $supplier->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Branch Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <select name="branch"
-                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Branches</option>
-                        @foreach ($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ request('branch') == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Filter Buttons -->
-                <div class="flex items-end space-x-2">
-                    <button type="submit"
-                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-filter mr-2"></i> Filter
-                    </button>
-                    @if (request()->anyFilled(['search', 'status', 'supplier', 'branch']))
-                        <a href="{{ route('admin.purchase-orders.index') }}"
-                            class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                            Clear
-                        </a>
-                    @endif
-                </div>
-            </form>
-        </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <select name="branch" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Branches</option>
+                    @foreach ($branches as $branch)
+                        <option value="{{ $branch->id }}" {{ request('branch') == $branch->id ? 'selected' : '' }}>
+                            {{ $branch->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        </x-module-filters>
 
         <!-- PO Table -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">

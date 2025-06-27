@@ -87,6 +87,9 @@
                                                     class="mt-1 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded item-check"
                                                     data-item-id="{{ $item->id }}">
                                                 <label for="item{{ $item->id }}" class="font-medium text-gray-700">{{ $item->name }}</label>
+                                                @if($item->item_type === 'KOT')
+                                                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>
+                                                @endif
                                             </div>
                                             <div class="ml-6 text-sm text-gray-600">
                                                 Rs. {{ number_format($item->selling_price, 2) }}
@@ -94,7 +97,17 @@
                                                 <p class="mt-1 text-gray-500 text-xs">{{ $item->description }}</p>
                                                 @endif
                                                 <div class="stock-indicator mt-1">
-                                                    <span class="text-gray-400 text-xs">Checking stock...</span>
+                                                    @if($item->item_type === 'KOT')
+                                                        <span class="text-green-600 text-xs font-medium bg-green-50 px-2 py-1 rounded">✓ Always Available</span>
+                                                    @elseif($item->item_type === 'Buy & Sell')
+                                                        @if($item->current_stock > 0)
+                                                            <span class="text-green-600 text-xs font-medium">In Stock ({{ $item->current_stock }})</span>
+                                                        @else
+                                                            <span class="text-red-600 text-xs font-medium">Out of Stock</span>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-gray-400 text-xs">Checking stock...</span>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>

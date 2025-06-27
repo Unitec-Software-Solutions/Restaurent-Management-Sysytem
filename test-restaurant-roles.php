@@ -1,4 +1,5 @@
 <?php
+use Illuminate\Support\Facades\Schema;
 // Restaurant Role System Test Script
 
 echo "Restaurant Role System Test Results\n";

@@ -8,6 +8,7 @@ use App\Models\Supplier;
 use App\Models\ItemMaster;
 use App\Models\Branch;
 use App\Models\Organization;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseOrderController extends Controller
 {
+    use Exportable;
+
     // Get current user's organization ID with validation
     protected function getOrganizationId()
     {
@@ -32,7 +35,7 @@ class PurchaseOrderController extends Controller
             ->with(['supplier', 'branch', 'user', 'items']);
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $orgId = $this->getOrganizationId();
 
@@ -55,33 +58,21 @@ class PurchaseOrderController extends Controller
             ->where('is_active', true)
             ->get();
 
+        // Build query with filters
+        $query = $this->baseQuery();
+
+        // Apply filters using the trait
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'purchase_orders_export.xlsx', [
+                'PO Number', 'Supplier', 'Branch', 'Status', 'Total Amount', 'Order Date', 'Created At'
+            ]);
+        }
+
         // Filtered POs
-        $purchaseOrders = $this->baseQuery()
-            ->when(request('search'), function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('po_number', 'like', '%' . $search . '%')
-                        ->orWhereHas('supplier', function ($q) use ($search) {
-                            $q->where('name', 'like', '%' . $search . '%');
-                        });
-                });
-            })
-            ->when(request('status'), function ($query, $status) {
-                $query->where('status', $status);
-            })
-            ->when(request('supplier'), function ($query, $supplierId) {
-                $query->where('supplier_id', $supplierId);
-            })
-            ->when(request('branch'), function ($query, $branchId) {
-                $query->where('branch_id', $branchId);
-            })
-            ->when(request('from_date'), function ($query, $fromDate) {
-                $query->whereDate('order_date', '>=', $fromDate);
-            })
-            ->when(request('to_date'), function ($query, $toDate) {
-                $query->whereDate('order_date', '<=', $toDate);
-            })
-            ->orderBy('order_date', 'desc')
-            ->paginate(15);
+        $purchaseOrders = $query->orderBy('order_date', 'desc')->paginate(15);
 
         return view('admin.suppliers.purchase-orders.index', compact(
             'stats',
@@ -364,6 +355,14 @@ class PurchaseOrderController extends Controller
             'organization' => $organization,
             'printedDate' => now()->format('M d, Y H:i')
         ]);
+    }
+
+    /**
+     * Get searchable columns for purchase orders
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['po_number'];
     }
 
 }

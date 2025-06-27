@@ -14,6 +14,7 @@
                                     <i class="fas fa-utensils mr-3 bg-white/20 p-2 rounded-lg"></i>
                                     <span>Place Order</span>
                                 </h1>
+                                @if(isset($reservation) && $reservation)
                                 <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                                     <div class="flex items-center text-black-100">
                                         <i class="fas fa-user mr-2 w-5"></i>
@@ -36,18 +37,27 @@
                                         <span class="ml-1">{{ $reservation->start_time }} - {{ $reservation->end_time }}</span>
                                     </div>
                                 </div>
+                                @else
+                                <div class="mt-3">
+                                    <p class="text-gray-600">Creating a new order</p>
+                                </div>
+                                @endif
                             </div>
+                            @if(isset($reservation) && $reservation)
                             <div class="bg-white/20 rounded-xl p-3 text-center flex flex-col justify-center items-center">
                                 <div class="text-black-100 text-sm font-semibold">Reservation #</div>
                                 <div class="text-white font-bold text-3xl">{{ $reservation->id }}</div>
                             </div>
+                            @endif
                         </div>
                     </div>
 
                     <div class="p-6">
-                        <form method="POST" action="{{ route('admin.orders.reservations.store', ['reservation' => $reservation->id]) }}">
+                        <form method="POST" action="{{ isset($reservation) && $reservation ? route('admin.orders.reservations.store', ['reservation' => $reservation->id]) : route('admin.orders.store') }}">
                             @csrf
+                            @if(isset($reservation) && $reservation)
                             <input type="hidden" name="reservation_id" value="{{ $reservation->id }}">
+                            @endif
                             
                             <!-- Menu Search and Categories -->
                             <div class="mb-6">
@@ -118,9 +128,15 @@
                                     <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg flex items-center">
                                         <i class="fas fa-paper-plane mr-2"></i>Place Order
                                     </button>
+                                    @if(isset($reservation) && $reservation)
                                     <a href="{{ route('admin.reservations.show', $reservation) }}" class="w-full sm:w-auto text-center text-gray-600 hover:text-blue-600 font-medium py-3 px-6 rounded-xl border border-gray-300 hover:border-blue-300 transition-colors flex items-center justify-center">
                                         <i class="fas fa-arrow-left mr-2"></i>Back to Reservation
                                     </a>
+                                    @else
+                                    <a href="{{ route('admin.orders.index') }}" class="w-full sm:w-auto text-center text-gray-600 hover:text-blue-600 font-medium py-3 px-6 rounded-xl border border-gray-300 hover:border-blue-300 transition-colors flex items-center justify-center">
+                                        <i class="fas fa-arrow-left mr-2"></i>Back to Orders
+                                    </a>
+                                    @endif
                                 </div>
                             </div>
                         </form>

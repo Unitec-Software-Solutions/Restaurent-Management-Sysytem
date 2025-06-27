@@ -3,7 +3,7 @@
 @section('content')
 <div class="container mx-auto max-w-2xl py-8">
     {{-- Debug Info Card for Customer Dashboard --}}
-    @if(config('app.debug'))
+    {{-- @if(config('app.debug'))
         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
             <div class="flex justify-between items-center">
                 <h3 class="text-sm font-medium text-purple-800">🔍 Customer Dashboard Debug Info</h3>
@@ -25,7 +25,7 @@
                 </div>
             </div>
         </div>
-    @endif
+    @endif --}}
 
     <h2 class="text-2xl font-bold mb-6">Find Your Reservations</h2>
     <form method="GET" action="{{ route('customer.dashboard') }}" class="mb-8">

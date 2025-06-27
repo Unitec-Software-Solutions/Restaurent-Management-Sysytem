@@ -150,6 +150,101 @@
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+                
+                <div>
+                    <label for="hourly_rate" class="block text-sm font-medium text-gray-700 mb-1">Hourly Rate (LKR)</label>
+                    <input type="number" id="hourly_rate" name="hourly_rate" value="{{ old('hourly_rate', $employee->hourly_rate) }}" min="0" step="0.01"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('hourly_rate') border-red-500 @enderror">
+                    @error('hourly_rate')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">Used for overtime calculations</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shift & Department Information -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Shift & Department Information</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="shift_type" class="block text-sm font-medium text-gray-700 mb-1">Shift Type</label>
+                    <select id="shift_type" name="shift_type"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('shift_type') border-red-500 @enderror">
+                        <option value="">Select Shift Type</option>
+                        <option value="morning" {{ old('shift_type', $employee->shift_type) === 'morning' ? 'selected' : '' }}>Morning (6:00 AM - 3:00 PM)</option>
+                        <option value="evening" {{ old('shift_type', $employee->shift_type) === 'evening' ? 'selected' : '' }}>Evening (3:00 PM - 10:00 PM)</option>
+                        <option value="night" {{ old('shift_type', $employee->shift_type) === 'night' ? 'selected' : '' }}>Night (10:00 PM - 6:00 AM)</option>
+                        <option value="flexible" {{ old('shift_type', $employee->shift_type) === 'flexible' ? 'selected' : '' }}>Flexible</option>
+                    </select>
+                    @error('shift_type')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="department" class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <select id="department" name="department"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('department') border-red-500 @enderror">
+                        <option value="">Select Department</option>
+                        <option value="front_of_house" {{ old('department', $employee->department) === 'front_of_house' ? 'selected' : '' }}>Front of House</option>
+                        <option value="kitchen" {{ old('department', $employee->department) === 'kitchen' ? 'selected' : '' }}>Kitchen</option>
+                        <option value="bar" {{ old('department', $employee->department) === 'bar' ? 'selected' : '' }}>Bar</option>
+                        <option value="management" {{ old('department', $employee->department) === 'management' ? 'selected' : '' }}>Management</option>
+                        <option value="support" {{ old('department', $employee->department) === 'support' ? 'selected' : '' }}>Support</option>
+                    </select>
+                    @error('department')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="shift_start_time" class="block text-sm font-medium text-gray-700 mb-1">Shift Start Time</label>
+                    <input type="time" id="shift_start_time" name="shift_start_time" 
+                           value="{{ old('shift_start_time', $employee->shift_start_time ? $employee->shift_start_time->format('H:i') : '') }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('shift_start_time') border-red-500 @enderror">
+                    @error('shift_start_time')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">Leave empty for flexible shift</p>
+                </div>
+
+                <div>
+                    <label for="shift_end_time" class="block text-sm font-medium text-gray-700 mb-1">Shift End Time</label>
+                    <input type="time" id="shift_end_time" name="shift_end_time" 
+                           value="{{ old('shift_end_time', $employee->shift_end_time ? $employee->shift_end_time->format('H:i') : '') }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('shift_end_time') border-red-500 @enderror">
+                    @error('shift_end_time')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">Leave empty for flexible shift</p>
+                </div>
+
+                <div>
+                    <label for="availability_status" class="block text-sm font-medium text-gray-700 mb-1">Availability Status</label>
+                    <select id="availability_status" name="availability_status"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('availability_status') border-red-500 @enderror">
+                        <option value="available" {{ old('availability_status', $employee->availability_status) === 'available' ? 'selected' : '' }}>Available</option>
+                        <option value="busy" {{ old('availability_status', $employee->availability_status) === 'busy' ? 'selected' : '' }}>Busy</option>
+                        <option value="off_duty" {{ old('availability_status', $employee->availability_status) === 'off_duty' ? 'selected' : '' }}>Off Duty</option>
+                        <option value="on_break" {{ old('availability_status', $employee->availability_status) === 'on_break' ? 'selected' : '' }}>On Break</option>
+                    </select>
+                    @error('availability_status')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="current_workload" class="block text-sm font-medium text-gray-700 mb-1">Current Workload</label>
+                    <input type="number" id="current_workload" name="current_workload" 
+                           value="{{ old('current_workload', $employee->current_workload ?? 0) }}" min="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('current_workload') border-red-500 @enderror">
+                    @error('current_workload')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">Number of active orders/tasks assigned</p>
+                </div>
             </div>
         </div>        <!-- Current Restaurant Role -->
         <div class="bg-white rounded-lg shadow-sm p-6">
