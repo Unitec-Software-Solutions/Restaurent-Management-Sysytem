@@ -46,7 +46,7 @@ class BranchAutomationService
     protected function createBranchAdmin(Branch $branch): Admin
     {
         $password = Str::random(12);
-        $adminEmail = 'admin.' . Str::slug($branch->name) . '@' . 
+        $adminEmail = 'admin.' . Str::slug($branch->name) . '@' .
                      str_replace(['http://', 'https://'], '', parse_url($branch->organization->email, PHP_URL_HOST) ?? 'restaurant.com');
 
         $adminData = [
@@ -66,7 +66,7 @@ class BranchAutomationService
         $branchAdminRole = Role::where('name', 'Branch Administrator')
             ->where('organization_id', $branch->organization_id)
             ->first();
-            
+
         if ($branchAdminRole) {
             $admin->assignRole($branchAdminRole);
         }
@@ -80,7 +80,7 @@ class BranchAutomationService
     protected function createCustomizedKitchenStations(Branch $branch): void
     {
         $stationTemplates = $this->getStationTemplatesByBranchType($branch->type);
-        
+
         foreach ($stationTemplates as $index => $template) {
             $stationData = [
                 'branch_id' => $branch->id,
@@ -172,25 +172,25 @@ class BranchAutomationService
     {
         // Get branch-specific permissions based on organization's subscription
         $subscription = $branch->organization->currentSubscription;
-        
+
         if ($subscription && $subscription->plan) {
             $availableModules = collect($subscription->plan->modules)->pluck('name');
-            
+
             // Assign permissions based on available modules
             $permissions = [];
-            
+
             if ($availableModules->contains('pos')) {
                 $permissions = array_merge($permissions, ['pos.operate', 'pos.transactions']);
             }
-            
+
             if ($availableModules->contains('kitchen')) {
                 $permissions = array_merge($permissions, ['kitchen.view', 'kitchen.manage']);
             }
-            
+
             if ($availableModules->contains('inventory')) {
                 $permissions = array_merge($permissions, ['inventory.view', 'inventory.manage']);
             }
-            
+
             // Sync permissions
             $admin->syncPermissions($permissions);
         }
@@ -203,7 +203,7 @@ class BranchAutomationService
     {
         $branchCode = str_pad($branchId, 2, '0', STR_PAD_LEFT);
         $sequenceCode = str_pad($sequence, 3, '0', STR_PAD_LEFT);
-        
+
         return $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
     }
 }

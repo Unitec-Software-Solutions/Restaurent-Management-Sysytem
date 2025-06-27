@@ -48,7 +48,7 @@ class Organization extends Model
             if (!isset($organization->is_active)) {
                 $organization->is_active = false;
             }
-            
+
             if (empty($organization->activation_key)) {
                 $organization->activation_key = Str::uuid();
             }
@@ -260,7 +260,7 @@ class Organization extends Model
     {
         $this->activation_key = Str::uuid();
         $this->save();
-        
+
         return $this->activation_key;
     }
 
@@ -271,7 +271,7 @@ class Organization extends Model
     {
         $this->activated_at = now();
         $this->is_active = true;
-        
+
         return $this->save();
     }
 

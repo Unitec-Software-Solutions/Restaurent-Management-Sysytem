@@ -188,7 +188,7 @@ class ItemTransactionController extends Controller
                 'category' => optional($item->category)->name ?? '-',
                 'reorder_level' => $item->reorder_level,
                 'stock' => $stock,
-                'status' => $stock <= $item->reorder_level ? 'Warning' : 'OK',
+                'status' => $stock <= ($item->reorder_level ?? 0) ? 'Warning' : 'OK',
             ];
         });
 
@@ -335,7 +335,7 @@ class ItemTransactionController extends Controller
 
     public function isStockOut($type)
     {
-        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'gtn_outgoing'];
+        $outTypes = ['sales_order', 'write_off', 'transfer', 'usage', 'gtn_outgoing', 'production_issue'];
         return in_array($type, $outTypes);
     }
 }
