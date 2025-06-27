@@ -12,7 +12,7 @@ use App\Models\ProductionOrderIngredient;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Models\Recipe;
+use App\Models\ProductionRecipe;
 use App\Models\ItemMaster;
 
 class ProductionOrderController extends Controller
@@ -233,7 +233,7 @@ class ProductionOrderController extends Controller
         } else {
             // Fallback: Calculate ingredients from production recipes if no recipe ingredients provided
             foreach ($aggregatedItems as $itemData) {
-                $recipe = \App\Models\Recipe::where('production_item_id', $itemData['item_id'])
+                $recipe = \App\Models\ProductionRecipe::where('production_item_id', $itemData['item_id'])
                     ->where('is_active', true)
                     ->with('details.rawMaterialItem')
                     ->first();
@@ -520,7 +520,7 @@ class ProductionOrderController extends Controller
             $quantity = $itemData['total_quantity'];
 
             // Find recipe for this production item
-            $recipe = Recipe::where('production_item_id', $itemId)
+            $recipe = ProductionRecipe::where('production_item_id', $itemId)
                 ->where('is_active', true)
                 ->first();
 
@@ -568,10 +568,10 @@ class ProductionOrderController extends Controller
             'ingredients' => array_values($ingredients),
             'summary' => [
                 'total_ingredients' => count($ingredients),
-                'recipes_found' => Recipe::whereIn('production_item_id', array_keys($aggregatedItems))
+                'recipes_found' => ProductionRecipe::whereIn('production_item_id', array_keys($aggregatedItems))
                     ->where('is_active', true)
                     ->count(),
-                'items_without_recipes' => count($aggregatedItems) - Recipe::whereIn('production_item_id', array_keys($aggregatedItems))
+                'items_without_recipes' => count($aggregatedItems) - ProductionRecipe::whereIn('production_item_id', array_keys($aggregatedItems))
                     ->where('is_active', true)
                     ->count()
             ]
@@ -579,173 +579,173 @@ class ProductionOrderController extends Controller
     }
 
     /**
-     * Issue ingredients to production order
+     * Get recipe details for a specific production item
      */
-    public function issueIngredients(Request $request, ProductionOrder $productionOrder)
+    public function getRecipeDetails(Request $request, $itemId)
     {
-        $request->validate([
-            'ingredients' => 'required|array',
-            'ingredients.*.ingredient_item_id' => 'required|exists:item_master,id',
-            'ingredients.*.issued_quantity' => 'required|numeric|min:0.001'
-        ]);
+        $user = Auth::user();
 
-        DB::transaction(function () use ($request, $productionOrder) {
-            foreach ($request->ingredients as $ingredientData) {
-                $ingredient = \App\Models\ProductionOrderIngredient::where('production_order_id', $productionOrder->id)
-                    ->where('ingredient_item_id', $ingredientData['ingredient_item_id'])
-                    ->first();
+        $recipe = ProductionRecipe::where('production_item_id', $itemId)
+            ->where('organization_id', $user->organization_id)
+            ->where('is_active', true)
+            ->with(['details.rawMaterialItem', 'productionItem'])
+            ->first();
 
-                if ($ingredient) {
-                    $issuedQuantity = $ingredientData['issued_quantity'];
-
-                    // Update ingredient issued quantity
-                    $ingredient->update([
-                        'issued_quantity' => $ingredient->issued_quantity + $issuedQuantity
-                    ]);
-
-                    // Create inventory transaction for ingredient outgoing
-                    \App\Models\ItemTransaction::create([
-                        'organization_id' => Auth::user()->organization_id,
-                        'branch_id' => Auth::user()->organization_id, // HQ branch
-                        'inventory_item_id' => $ingredientData['ingredient_item_id'],
-                        'transaction_type' => 'production_issue',
-                        'quantity' => -$issuedQuantity, // Negative for outgoing
-                        'cost_price' => 0, // Will be calculated based on current stock
-                        'source_id' => $productionOrder->id,
-                        'source_type' => 'ProductionOrder',
-                        'notes' => 'Issued to production order: ' . $productionOrder->production_order_number,
-                        'created_by_user_id' => Auth::id(),
-                        'is_active' => true
-                    ]);
-                }
-            }
-        });
-
-        return redirect()->back()->with('success', 'Ingredients issued successfully.');
-    }
-
-    /**
-     * Complete production and add produced items to inventory
-     */
-    public function completeProduction(Request $request, ProductionOrder $productionOrder)
-    {
-        $request->validate([
-            'items' => 'required|array',
-            'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.quantity_produced' => 'required|numeric|min:0'
-        ]);
-
-        DB::transaction(function () use ($request, $productionOrder) {
-            foreach ($request->items as $itemData) {
-                $orderItem = ProductionOrderItem::where('production_order_id', $productionOrder->id)
-                    ->where('item_id', $itemData['item_id'])
-                    ->first();
-
-                if ($orderItem) {
-                    $producedQuantity = $itemData['quantity_produced'];
-
-                    // Update order item quantities
-                    $orderItem->update([
-                        'quantity_produced' => $orderItem->quantity_produced + $producedQuantity
-                    ]);
-
-                    // Create inventory transaction for produced items (incoming)
-                    \App\Models\ItemTransaction::create([
-                        'organization_id' => Auth::user()->organization_id,
-                        'branch_id' => Auth::user()->organization_id, // HQ branch
-                        'inventory_item_id' => $itemData['item_id'],
-                        'transaction_type' => 'production_completion',
-                        'quantity' => $producedQuantity, // Positive for incoming
-                        'cost_price' => 0, // Will be calculated based on ingredient costs
-                        'source_id' => $productionOrder->id,
-                        'source_type' => 'ProductionOrder',
-                        'notes' => 'Produced from production order: ' . $productionOrder->production_order_number,
-                        'created_by_user_id' => Auth::id(),
-                        'is_active' => true
-                    ]);
-                }
-            }
-
-            // Check if production order is complete
-            $this->checkProductionOrderCompletion($productionOrder);
-        });
-
-        return redirect()->back()->with('success', 'Production completed and items added to inventory.');
-    }
-
-    /**
-     * Check if production order should be marked as completed
-     */
-    private function checkProductionOrderCompletion(ProductionOrder $productionOrder)
-    {
-        $allItemsCompleted = $productionOrder->items->every(function ($item) {
-            return $item->quantity_produced >= $item->quantity_to_produce;
-        });
-
-        if ($allItemsCompleted) {
-            $productionOrder->update([
-                'status' => ProductionOrder::STATUS_COMPLETED,
-                'completed_at' => now()
-            ]);
-
-            // Update related production requests
-            ProductionRequestMaster::where('production_order_id', $productionOrder->id)
-                ->update(['status' => ProductionRequestMaster::STATUS_COMPLETED]);
+        if (!$recipe) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active recipe found for this production item'
+            ], 404);
         }
+
+        $quantity = $request->input('quantity', $recipe->yield_quantity);
+        $multiplier = $quantity / $recipe->yield_quantity;
+
+        $ingredients = $recipe->details->map(function($detail) use ($multiplier) {
+            return [
+                'ingredient_id' => $detail->raw_material_item_id,
+                'ingredient_name' => $detail->rawMaterialItem->name,
+                'quantity_required' => $detail->quantity_required * $multiplier,
+                'base_quantity' => $detail->quantity_required,
+                'unit_of_measurement' => $detail->unit_of_measurement ?: $detail->rawMaterialItem->unit_of_measurement,
+                'preparation_notes' => $detail->preparation_notes,
+                'current_stock' => $detail->rawMaterialItem->getCurrentStock()
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'recipe' => [
+                'id' => $recipe->id,
+                'name' => $recipe->recipe_name,
+                'production_item' => $recipe->productionItem->name,
+                'yield_quantity' => $recipe->yield_quantity,
+                'total_time' => $recipe->total_time,
+                'difficulty_level' => $recipe->difficulty_level
+            ],
+            'production_quantity' => $quantity,
+            'multiplier' => $multiplier,
+            'ingredients' => $ingredients
+        ]);
     }
 
     /**
-     * Calculate and create ingredients for production order based on recipes
+     * Store aggregated production order from multiple requests
      */
-    private function calculateAndCreateIngredients(ProductionOrder $productionOrder)
+    public function storeAggregated(Request $request)
     {
-        $ingredients = [];
+        $request->validate([
+            'selected_requests' => 'required|array|min:1',
+            'selected_requests.*' => 'exists:production_requests_master,id',
+            'production_notes' => 'nullable|string',
+            'manual_ingredients' => 'nullable|array',
+            'manual_ingredients.*.ingredient_id' => 'required|exists:item_master,id',
+            'manual_ingredients.*.quantity' => 'required|numeric|min:0.001',
+            'manual_ingredients.*.notes' => 'nullable|string'
+        ]);
 
-        foreach ($productionOrder->items as $orderItem) {
-            // Find active recipe for this production item
-            $recipe = Recipe::where('production_item_id', $orderItem->item_id)
-                ->where('is_active', true)
-                ->first();
+        try {
+            return DB::transaction(function () use ($request) {
+                // Get selected production requests
+                $selectedRequests = ProductionRequestMaster::with(['items.item', 'branch'])
+                    ->where('organization_id', Auth::user()->organization_id)
+                    ->where('status', ProductionRequestMaster::STATUS_APPROVED)
+                    ->whereIn('id', $request->selected_requests)
+                    ->get();
 
-            if ($recipe) {
-                $recipeIngredients = $recipe->calculateIngredientsForQuantity($orderItem->quantity_to_produce);
+                if ($selectedRequests->isEmpty()) {
+                    throw new \Exception('No valid approved requests found.');
+                }
 
-                foreach ($recipeIngredients as $ingredient) {
-                    $ingredientId = $ingredient['ingredient_item_id'];
+                // Create production order
+                $productionOrder = ProductionOrder::create([
+                    'organization_id' => Auth::user()->organization_id,
+                    'production_order_number' => $this->generateOrderNumber(),
+                    'production_date' => now()->addDay()->toDateString(),
+                    'status' => ProductionOrder::STATUS_APPROVED,
+                    'notes' => $request->production_notes,
+                    'created_by_user_id' => Auth::id(),
+                    'approved_by_user_id' => Auth::id(),
+                    'approved_at' => now(),
+                ]);
 
-                    if (isset($ingredients[$ingredientId])) {
-                        $ingredients[$ingredientId]['planned_quantity'] += $ingredient['planned_quantity'];
-                    } else {
-                        $ingredients[$ingredientId] = [
-                            'production_order_id' => $productionOrder->id,
-                            'ingredient_item_id' => $ingredientId,
-                            'planned_quantity' => $ingredient['planned_quantity'],
-                            'unit_of_measurement' => $ingredient['unit_of_measurement'],
-                            'notes' => $ingredient['preparation_notes'],
-                            'is_manually_added' => false
-                        ];
+                // Aggregate items by item_id
+                $aggregatedItems = [];
+                $requestIds = [];
+
+                foreach ($selectedRequests as $productionRequest) {
+                    $requestIds[] = $productionRequest->id;
+
+                    foreach ($productionRequest->items as $item) {
+                        $itemId = $item->item_id;
+
+                        if (!isset($aggregatedItems[$itemId])) {
+                            $aggregatedItems[$itemId] = [
+                                'item_id' => $itemId,
+                                'quantity_to_produce' => 0,
+                                'requests' => []
+                            ];
+                        }
+
+                        $aggregatedItems[$itemId]['quantity_to_produce'] += $item->quantity_approved;
+                        $aggregatedItems[$itemId]['requests'][] = $productionRequest->id;
                     }
                 }
-            }
-        }
 
-        // Create ingredient records
-        foreach ($ingredients as $ingredient) {
-            ProductionOrderIngredient::create($ingredient);
+                // Create production order items
+                foreach ($aggregatedItems as $itemData) {
+                    ProductionOrderItem::create([
+                        'production_order_id' => $productionOrder->id,
+                        'item_id' => $itemData['item_id'],
+                        'quantity_to_produce' => $itemData['quantity_to_produce'],
+                        'quantity_produced' => 0,
+                        'notes' => 'Aggregated from requests: ' . implode(', ', $itemData['requests'])
+                    ]);
+                }
+
+                // Calculate and create ingredient requirements (including manual ones)
+                $this->createIngredientRequirements($productionOrder, $aggregatedItems, $request->manual_ingredients ?? []);
+
+                // Update production requests status and link to production order
+                ProductionRequestMaster::whereIn('id', $request->selected_requests)
+                    ->update([
+                        'status' => ProductionRequestMaster::STATUS_IN_PRODUCTION,
+                        'production_order_id' => $productionOrder->id
+                    ]);
+
+                return redirect()->route('admin.production.orders.show', $productionOrder)
+                    ->with('success', 'Production order created successfully from ' . count($request->selected_requests) . ' requests with ingredient requirements.');
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Error creating production order: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
     /**
-     * Calculate ingredients required for production order based on recipes - Enhanced Version
+     * Get current stock for an ingredient
      */
-    public function calculateIngredientsFromRecipes(Request $request)
+    private function getCurrentStock($ingredientId, $organizationId)
     {
-        $request->validate([
-            'production_items' => 'required|array|min:1',
-            'production_items.*.item_id' => 'required|exists:item_master,id',
-            'production_items.*.quantity' => 'required|numeric|min:0.001',
-        ]);
+        // Get HQ branch for this organization
+        $hqBranch = \App\Models\Branch::where('organization_id', $organizationId)
+            ->where('is_head_office', true)
+            ->first();
 
+        if (!$hqBranch) {
+            return 0;
+        }
+
+        // Calculate current stock from transactions
+        $currentStock = \App\Models\ItemTransaction::where('inventory_item_id', $ingredientId)
+            ->where('branch_id', $hqBranch->id)
+            ->where('is_active', true)
+            ->sum('quantity');
+
+        return max(0, $currentStock);
+    }
+}
         $user = Auth::user();
         $ingredientsSummary = [];
         $missingRecipes = [];
