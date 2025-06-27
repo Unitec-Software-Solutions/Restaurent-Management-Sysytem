@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Recipe extends Model
+class ProductionRecipe extends Model
 {
     use HasFactory;
 
@@ -39,7 +39,7 @@ class Recipe extends Model
     // Relationships
     public function details()
     {
-        return $this->hasMany(RecipeDetail::class, 'recipe_id');
+        return $this->hasMany(ProductionRecipeDetail::class, 'recipe_id');
     }
 
     public function productionItem()
