@@ -14,7 +14,7 @@ A comprehensive restaurant management platform for seamless reservations, order 
 
 - Phone number-based tracking for registered/unregistered customers
 - Multi-channel reservations (online, in-call, walk-in) with dynamic fees/cancellation policies
-- Automated waitlist with SMS/email notifications
+- Phone-based customer tracking system
 - Interactive table map (reserved/occupied/dirty/open statuses)
 
 ### 🍽️ Order Processing
