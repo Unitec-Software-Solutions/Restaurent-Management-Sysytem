@@ -34,7 +34,7 @@ use App\Http\Controllers\{
     ProductionRecipeController,
 };
 use App\Http\Middleware\SuperAdmin;
-use App\Models\Recipe;
+use App\Models\ProductionRecipe;
 
 /*-------------------------------------------------------------------------
 | Debug Routes - Removed in production refactoring
