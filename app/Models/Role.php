@@ -24,6 +24,22 @@ class Role extends SpatieRole
     ];
 
     /**
+     * Get the organization that owns the role
+     */
+    public function organization()
+    {
+        return $this->belongsTo(\App\Models\Organization::class);
+    }
+
+    /**
+     * Get the branch that owns the role
+     */
+    public function branch()
+    {
+        return $this->belongsTo(\App\Models\Branch::class);
+    }
+
+    /**
      * Scope roles by organization
      */
     public function scopeForOrganization($query, $organizationId)
