@@ -291,51 +291,6 @@ class ProductionSessionController extends Controller
     }
 
     /**
-     * Issue ingredients for production session
-     */
-    public function issueIngredients(Request $request, ProductionSession $session)
-    {
-        // $request->validate([
-        //     'ingredients' => 'required|array',
-        //     'ingredients.*.ingredient_id' => 'required|exists:production_order_ingredients,id',
-        //     'ingredients.*.issued_quantity' => 'required|numeric|min:0',
-        //     'ingredients.*.notes' => 'nullable|string|max:255',
-        // ]);
-
-        // DB::transaction(function () use ($request, $session) {
-        //     foreach ($request->ingredients as $ingredientData) {
-        //         $ingredient = ProductionOrderIngredient::find($ingredientData['ingredient_id']);
-
-        //         if ($ingredient && $ingredientData['issued_quantity'] > 0) {
-        //             // Update ingredient issued quantity
-        //             $ingredient->update([
-        //                 'issued_quantity' => $ingredient->issued_quantity + $ingredientData['issued_quantity'],
-        //                 'notes' => $ingredientData['notes'] ?? $ingredient->notes,
-        //             ]);
-
-        //             // Create inventory transaction for ingredient consumption
-        //             ItemTransaction::create([
-        //                 'organization_id' => Auth::user()->organization_id,
-        //                 'branch_id' => Auth::user()->branch_id,
-        //                 'inventory_item_id' => $ingredient->ingredient_item_id,
-        //                 'transaction_type' => 'issue_production',
-        //                 'quantity' => -$ingredientData['issued_quantity'],
-        //                 'unit_price' => 0,
-        //                 'total_amount' => 0,
-        //                 'transaction_date' => now(),
-        //                 'description' => "Ingredient issued for production session: {$session->session_name}",
-        //                 'production_session_id' => $session->id,
-        //                 'production_order_id' => $session->production_order_id,
-        //                 'created_by_user_id' => Auth::id(),
-        //             ]);
-        //         }
-        //     }
-        // });
-
-        return redirect()->back()->with('success', 'Place Holder .');
-    }
-
-    /**
      * Record production output and return items to inventory
      */
     public function recordProduction(Request $request, ProductionSession $session)
