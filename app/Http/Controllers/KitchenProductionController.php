@@ -8,7 +8,7 @@ use App\Models\ProductionOrder;
 use App\Models\ProductionSession;
 use App\Models\ItemMaster;
 use App\Models\ItemTransaction;
-use App\Models\Recipe;
+use App\Models\ProductionRecipe;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -149,7 +149,7 @@ class KitchenProductionController extends Controller
 
         foreach ($scheduledOrders as $order) {
             foreach ($order->items as $item) {
-                $recipe = Recipe::where('production_item_id', $item->item_id)->first();
+                $recipe = ProductionRecipe::where('production_item_id', $item->item_id)->first();
                 if ($recipe) {
                     $multiplier = $item->quantity_to_produce / $recipe->yield_quantity;
                     $estimatedTime = $recipe->total_time * $multiplier;
