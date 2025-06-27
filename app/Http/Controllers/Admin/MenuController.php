@@ -645,4 +645,110 @@ class MenuController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Display menu items manager - manage which items are included in menus
+     */
+    public function manager(): View
+    {
+        $user = Auth::user();
+        
+        if (!$user || !$user->organization_id) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        // Get all items with menu-related information
+        $items = \App\Models\ItemMaster::where('organization_id', $user->organization_id)
+            ->with(['category'])
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'category' => $item->category->name ?? 'Uncategorized',
+                    'selling_price' => $item->selling_price,
+                    'is_menu_item' => $item->is_menu_item,
+                    'attributes' => $item->attributes,
+                    'cuisine_type' => $item->attributes['cuisine_type'] ?? null,
+                    'spice_level' => $item->attributes['spice_level'] ?? null,
+                    'prep_time_minutes' => $item->attributes['prep_time_minutes'] ?? null,
+                    'availability' => $item->attributes['availability'] ?? null,
+                    'is_chefs_special' => $item->attributes['is_chefs_special'] ?? false,
+                    'is_popular' => $item->attributes['is_popular'] ?? false,
+                ];
+            });
+
+        // Get categories for filtering
+        $categories = \App\Models\ItemCategory::where('organization_id', $user->organization_id)->get();
+
+        // Statistics
+        $totalItems = $items->count();
+        $menuItems = $items->where('is_menu_item', true)->count();
+        $nonMenuItems = $totalItems - $menuItems;
+        $chefsSpecials = $items->where('is_chefs_special', true)->count();
+
+        return view('admin.menus.manager', compact(
+            'items',
+            'categories',
+            'totalItems',
+            'menuItems',
+            'nonMenuItems',
+            'chefsSpecials'
+        ));
+    }
+
+    /**
+     * Toggle menu status for an item
+     */
+    public function toggleMenuStatus(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        
+        if (!$user || !$user->organization_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'item_id' => 'required|exists:item_master,id',
+            'is_menu' => 'required|boolean'
+        ]);
+
+        $item = \App\Models\ItemMaster::where('organization_id', $user->organization_id)
+            ->findOrFail($request->item_id);
+
+        $item->update(['is_menu_item' => $request->is_menu]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $request->is_menu ? 'Item added to menu' : 'Item removed from menu'
+        ]);
+    }
+
+    /**
+     * Bulk update menu status for multiple items
+     */
+    public function bulkUpdateMenuStatus(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        
+        if (!$user || !$user->organization_id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'item_ids' => 'required|array',
+            'item_ids.*' => 'exists:item_master,id',
+            'is_menu' => 'required|boolean'
+        ]);
+
+        $updated = \App\Models\ItemMaster::where('organization_id', $user->organization_id)
+            ->whereIn('id', $request->item_ids)
+            ->update(['is_menu_item' => $request->is_menu]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Updated {$updated} items",
+            'count' => $updated
+        ]);
+    }
 }
