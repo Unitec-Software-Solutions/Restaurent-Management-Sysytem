@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Branch;
 use App\Models\Reservation;
 use App\Models\ItemMaster;
+use App\Models\ItemCategory;
 use App\Models\OrderItem;
 use App\Models\Menu;
 use App\Models\MenuItem;
@@ -123,29 +124,45 @@ class AdminOrderController extends Controller
 
     public function createForReservation(Reservation $reservation)
     {
-        // Use eager loading and specific queries to optimize performance
-        $data = [
-            'reservation' => $reservation,
-            'branches' => Branch::select('id', 'name')->get(),
-            'stewards' => \App\Models\Employee::select('id', 'name')
-                ->whereIn('role', ['steward', 'waiter'])
-                ->get(),
-            'menuItems' => ItemMaster::select('id', 'name', 'price')
-                ->where('is_menu_item', true)
-                ->get(),
-            'prefill' => [
-                'customer_name' => $reservation->name,
-                'customer_phone' => $reservation->phone,
-                'branch_id' => $reservation->branch_id,
-                'date' => $reservation->date?->format('Y-m-d') ?? '',
-                'start_time' => $reservation->start_time,
-                'end_time' => $reservation->end_time,
-                'number_of_people' => $reservation->number_of_people,
-                'reservation_id' => $reservation->id
-            ]
+        $admin = auth('admin')->user();
+        
+        // Get branches
+        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id, 
+            fn($q) => $q->where('organization_id', $admin->organization_id)
+        )->active()->get();
+        
+        // Get menu items
+        $menuItems = ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
+            ->where('is_menu_item', true)
+            ->where('is_active', true)
+            ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->get();
+        
+        // Get categories
+        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->active()
+            ->get();
+        
+        // Get menus
+        $menus = Menu::with(['menuItems.category'])
+            ->where('is_active', true)
+            ->when(!$admin->is_super_admin && $admin->branch_id, 
+                fn($q) => $q->where('branch_id', $admin->branch_id)
+            )
+            ->get();
+        
+        // Stock summary
+        $stockSummary = [
+            'available_count' => $menuItems->count(),
+            'low_stock_count' => 0,
+            'out_of_stock_count' => 0
         ];
         
-        return view('admin.orders.create', $data);
+        return view('admin.orders.create', compact('reservation', 'branches', 'menuItems', 'categories', 'menus', 'stockSummary'));
     }
 
     /**
@@ -231,6 +248,23 @@ class AdminOrderController extends Controller
             fn($q) => $q->where('organization_id', $admin->organization_id)
         )->active()->get();
         
+        // Get menu items directly, similar to what enhanced-create expects
+        $menuItems = ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
+            ->where('is_menu_item', true)
+            ->where('is_active', true)
+            ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->get();
+        
+        // Get categories for the filter dropdown - this was missing and causing the error
+        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->where('is_active', true)
+            ->get();
+        
+        // Also get menus for menu structure if needed
         $menus = Menu::with(['menuItems.category'])
             ->where('is_active', true)
             ->when(!$admin->is_super_admin && $admin->branch_id, 
@@ -238,7 +272,26 @@ class AdminOrderController extends Controller
             )
             ->get();
         
-        return view('admin.orders.create', compact('branches', 'menus'));
+        // Stock summary for the sidebar widget
+        $stockSummary = [
+            'available_count' => $menuItems->count(),
+            'low_stock_count' => 0,
+            'out_of_stock_count' => 0
+        ];
+        
+        // Check if reservation_id is passed for reservation-based orders
+        $reservation = null;
+        if (request()->has('reservation_id')) {
+            $reservationId = request()->get('reservation_id');
+            $reservation = Reservation::find($reservationId);
+            if ($reservation) {
+                // Use the reservation-specific view
+                return view('admin.orders.create', compact('branches', 'menus', 'menuItems', 'categories', 'reservation', 'stockSummary'));
+            }
+        }
+        
+        // For enhanced order creation without reservation
+        return view('admin.orders.enhanced-create', compact('branches', 'menus', 'menuItems', 'categories', 'reservation', 'stockSummary'));
     }
 
     /**
@@ -489,10 +542,22 @@ class AdminOrderController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Access denied. No branch assigned.');
         }
 
-        // Get menu items
+        // Get menu items with validation
         $menuItems = ItemMaster::where('is_menu_item', true)
-            ->where('active', true)
-            ->get();
+            ->where('is_active', true)
+            ->get()
+            ->filter(function ($item) {
+                // Only include menu items that have required attributes
+                $attributes = is_array($item->attributes) ? $item->attributes : [];
+                $requiredAttrs = ['cuisine_type', 'prep_time_minutes', 'serving_size'];
+                
+                foreach ($requiredAttrs as $attr) {
+                    if (empty($attributes[$attr])) {
+                        return false; // Exclude items missing required menu attributes
+                    }
+                }
+                return true;
+            });
 
         return view('admin.orders.takeaway.create', [
             'branches' => $branches,
