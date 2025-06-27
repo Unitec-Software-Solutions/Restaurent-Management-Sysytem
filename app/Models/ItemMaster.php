@@ -28,6 +28,7 @@ class ItemMaster extends Model
         'buying_price',
         'selling_price',
         'is_menu_item',
+        'is_active',
         'additional_notes',
         'description',
         'attributes',
@@ -37,6 +38,7 @@ class ItemMaster extends Model
         'attributes'      => 'array',
         'is_perishable'   => 'boolean',
         'is_menu_item'    => 'boolean',
+        'is_active'       => 'boolean',
         'buying_price'    => 'decimal:2',
         'selling_price'   => 'decimal:2',
     ];
