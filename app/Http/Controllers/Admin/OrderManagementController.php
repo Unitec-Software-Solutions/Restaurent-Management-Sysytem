@@ -130,7 +130,7 @@ class OrderManagementController extends Controller
         $items = $this->orderService->getItemsWithStock($branchId, $orgId);
         $stockAlerts = $this->orderService->getStockAlerts($branchId, $orgId);
 
-        return view('admin.orders.create', compact(
+        return view('admin.orders.enhanced-create', compact(
             'branches',
             'stewards',
             'items',
@@ -421,5 +421,27 @@ class OrderManagementController extends Controller
         $stewards = $this->orderService->getAvailableStewards($branchId);
         
         return response()->json($stewards);
+    }
+
+    /**
+     * Get stock alerts for AJAX requests
+     */
+    public function getStockAlerts(Request $request)
+    {
+        $branchId = $request->get('branch_id');
+        $orgId = $this->getOrganizationId();
+
+        if (!$branchId) {
+            return response()->json(['error' => 'Branch ID required'], 400);
+        }
+
+        $stockAlerts = $this->orderService->getStockAlerts($branchId, $orgId);
+        
+        return response()->json($stockAlerts);
+    }
+
+    public function getAvailableStewards(Request $request)
+    {
+        return $this->getStewards($request);
     }
 }
