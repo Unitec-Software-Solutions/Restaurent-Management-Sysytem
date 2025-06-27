@@ -135,12 +135,17 @@ class Employee extends Model
         return $query->where('role', $role);
     }
 
+    public function scopeStewards($query)
+    {
+        return $query->where('role', self::ROLE_STEWARD);
+    }
+
     public function scopeByBranch($query, $branchId)
     {
         return $query->where('branch_id', $branchId);
     }
 
-    // New helper methods for restaurant roles
+    
     public function isServer()
     {
         return $this->hasRole(self::ROLE_SERVERS);
