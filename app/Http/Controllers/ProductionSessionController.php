@@ -7,7 +7,7 @@ use App\Models\ProductionOrder;
 use App\Models\ProductionOrderIngredient;
 use App\Models\ProductionOrderItem;
 use App\Models\ProductionSession;
-use App\Models\Recipe;
+use App\Models\ProductionRecipe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +56,7 @@ class ProductionSessionController extends Controller
         if ($request->has('order_id')) {
             $orderId = $request->get('order_id');
             $selectedOrder = $availableOrders->where('id', $orderId)->first();
-            
+
             if (!$selectedOrder) {
                 return redirect()->route('admin.production.sessions.create')
                     ->with('error', 'The specified production order is not available for session creation.');
@@ -99,7 +99,7 @@ class ProductionSessionController extends Controller
         $session->load(['productionOrder.items.item', 'supervisor']);
 
         // Get production recipes for production items
-        $recipes = Recipe::whereIn('production_item_id',
+        $recipes = ProductionRecipe::whereIn('production_item_id',
             $session->productionOrder->items->pluck('item_id')
         )->with('details.rawMaterialItem')->get();
 
@@ -245,7 +245,7 @@ class ProductionSessionController extends Controller
      */
     private function consumeRawMaterials(ProductionSession $session, array $item)
     {
-        $recipe = Recipe::where('production_item_id', $item['item_id'])->first();
+        $recipe = ProductionRecipe::where('production_item_id', $item['item_id'])->first();
 
         if (!$recipe) {
             return; // No recipe found, skip raw material consumption
@@ -305,7 +305,7 @@ class ProductionSessionController extends Controller
         // DB::transaction(function () use ($request, $session) {
         //     foreach ($request->ingredients as $ingredientData) {
         //         $ingredient = ProductionOrderIngredient::find($ingredientData['ingredient_id']);
-                
+
         //         if ($ingredient && $ingredientData['issued_quantity'] > 0) {
         //             // Update ingredient issued quantity
         //             $ingredient->update([
@@ -367,11 +367,11 @@ class ProductionSessionController extends Controller
                     // Record production output to inventory (production in)
                     if ($itemData['quantity_produced'] > 0) {
                         $notes = "Production completed - Session: {$session->session_name}, Order: {$session->productionOrder->production_order_number}";
-                        
+
                         if (!empty($itemData['batch_number'])) {
                             $notes .= ", Batch: {$itemData['batch_number']}";
                         }
-                        
+
                         if (!empty($itemData['quality_notes'])) {
                             $notes .= ", Quality: {$itemData['quality_notes']}";
                         }
@@ -436,7 +436,7 @@ class ProductionSessionController extends Controller
         DB::transaction(function () use ($request, $session) {
             foreach ($request->returned_ingredients as $returnData) {
                 $ingredient = ProductionOrderIngredient::find($returnData['ingredient_id']);
-                
+
                 if ($ingredient && $returnData['return_quantity'] > 0) {
                     // Update ingredient returned quantity
                     $ingredient->update([
