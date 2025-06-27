@@ -28,6 +28,10 @@ class ProductionRecipeController extends Controller
             $query->where('is_active', $request->is_active);
         }
 
+        if ($request->filled('search')) {
+            $query->where('recipe_name', 'like', '%' . $request->search . '%');
+        }
+
         $recipes = $query->latest()->paginate(20);
 
         // Get production items for filter
