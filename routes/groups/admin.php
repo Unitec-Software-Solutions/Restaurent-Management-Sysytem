@@ -117,22 +117,26 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/grn/{grn}', [GrnDashboardController::class, 'show'])->name('grn.show');
     
     // Orders management
-    Route::get('admin/orders', [AdminOrderController::class, 'index'])->name('orders.index');
-    Route::get('admin/orders/create', [AdminOrderController::class, 'create'])->name('orders.create');
-    Route::post('admin/orders', [AdminOrderController::class, 'store'])->name('orders.store');
-    Route::get('admin/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
-    Route::get('admin/orders/{order}/edit', [AdminOrderController::class, 'edit'])->name('orders.edit');
-    Route::put('admin/orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
-    Route::delete('admin/orders/{order}', [AdminOrderController::class, 'destroy'])->name('orders.destroy');
+    Route::get('admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
+    Route::get('admin/orders/create', [AdminOrderController::class, 'create'])->name('admin.orders.create');
+    Route::post('admin/orders', [AdminOrderController::class, 'store'])->name('admin.orders.store');
+    Route::get('admin/orders/{order}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
+    Route::get('admin/orders/{order}/edit', [AdminOrderController::class, 'edit'])->name('admin.orders.edit');
+    Route::put('admin/orders/{order}', [AdminOrderController::class, 'update'])->name('admin.orders.update');
+    Route::delete('admin/orders/{order}', [AdminOrderController::class, 'destroy'])->name('admin.orders.destroy');
     
     // Takeaway orders
-    Route::get('admin/orders/takeaway', [AdminOrderController::class, 'indexTakeaway'])->name('orders.takeaway.index');
-    Route::get('admin/orders/takeaway/create', [AdminOrderController::class, 'createTakeaway'])->name('orders.takeaway.create');
-    Route::post('admin/orders/takeaway', [AdminOrderController::class, 'storeTakeaway'])->name('orders.takeaway.store');
-    Route::get('admin/orders/takeaway/{order}', [AdminOrderController::class, 'showTakeaway'])->name('orders.takeaway.show');
-    Route::get('admin/orders/takeaway/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('orders.takeaway.edit');
-    Route::put('admin/orders/takeaway/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('orders.takeaway.update');
-    Route::delete('admin/orders/takeaway/{order}', [AdminOrderController::class, 'destroyTakeaway'])->name('orders.takeaway.destroy');
+    Route::get('admin/orders/takeaway', [AdminOrderController::class, 'indexTakeaway'])->name('admin.orders.takeaway.index');
+    Route::get('admin/orders/takeaway/create', [AdminOrderController::class, 'createTakeaway'])->name('admin.orders.takeaway.create');
+    Route::post('admin/orders/takeaway', [AdminOrderController::class, 'storeTakeaway'])->name('admin.orders.takeaway.store');
+    Route::get('admin/orders/takeaway/{order}', [AdminOrderController::class, 'showTakeaway'])->name('admin.orders.takeaway.show');
+    Route::get('admin/orders/takeaway/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('admin.orders.takeaway.edit');
+    Route::put('admin/orders/takeaway/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('admin.orders.takeaway.update');
+    Route::delete('admin/orders/takeaway/{order}', [AdminOrderController::class, 'destroyTakeaway'])->name('admin.orders.takeaway.destroy');
+    
+    // Admin order dashboard and type selector
+    Route::get('admin/orders/dashboard', [AdminOrderController::class, 'dashboard'])->name('admin.orders.dashboard');
+    Route::get('admin/orders/takeaway/type-selector', [AdminOrderController::class, 'takeawayTypeSelector'])->name('admin.orders.takeaway.type-selector');
     
     // Organizations
     Route::get('admin/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
@@ -323,4 +327,8 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     // Bills
     Route::get('bills/show', [BillController::class, 'show'])->name('bills.show');
     Route::get('inventory/items/added-items', [InventoryController::class, 'itemsAddedItems'])->name('inventory.items.added-items');
+    
+    // Enhanced order routes for reservation and takeaway flows
+    Route::get('admin/orders/reservations/summary', [AdminOrderController::class, 'reservationOrderSummary'])->name('orders.reservations.summary');
+    Route::get('admin/orders/takeaway/type-selector', [AdminOrderController::class, 'takeawayTypeSelector'])->name('orders.takeaway.type-selector');
 });
