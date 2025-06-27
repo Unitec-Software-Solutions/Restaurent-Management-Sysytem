@@ -28,6 +28,7 @@ class ItemMaster extends Model
         'buying_price',
         'selling_price',
         'is_menu_item',
+        'is_active',
         'additional_notes',
         'description',
         'attributes',
@@ -37,6 +38,7 @@ class ItemMaster extends Model
         'attributes'      => 'array',
         'is_perishable'   => 'boolean',
         'is_menu_item'    => 'boolean',
+        'is_active'       => 'boolean',
         'buying_price'    => 'decimal:2',
         'selling_price'   => 'decimal:2',
     ];
@@ -108,15 +110,69 @@ class ItemMaster extends Model
     }
 
     // In ItemMaster model
-public function purchaseOrderItems()
-{
-    return $this->hasMany(PurchaseOrderItem::class, 'item_id');
-}
+    public function purchaseOrderItems()
+    {
+        return $this->hasMany(PurchaseOrderItem::class, 'item_id');
+    }
 
-public function latestPurchaseOrderItem()
-{
-    return $this->hasOne(PurchaseOrderItem::class, 'item_id')
-        ->latest();
-}
+    public function latestPurchaseOrderItem()
+    {
+        return $this->hasOne(PurchaseOrderItem::class, 'item_id')
+            ->latest();
+    }
+
+    /**
+     * Get current stock level for this item at a specific branch
+     */
+    public function getStockLevel(int $branchId): float
+    {
+        return $this->transactions()
+            ->where('branch_id', $branchId)
+            ->sum('quantity');
+    }
+
+    /**
+     * Check if item is low stock
+     */
+    public function isLowStock(int $branchId): bool
+    {
+        $currentStock = $this->getStockLevel($branchId);
+        return $currentStock <= $this->reorder_level;
+    }
+
+    /**
+     * Check if item is out of stock
+     */
+    public function isOutOfStock(int $branchId): bool
+    {
+        $currentStock = $this->getStockLevel($branchId);
+        return $currentStock <= 0;
+    }
+
+    /**
+     * Get stock status for display
+     */
+    public function getStockStatus(int $branchId): string
+    {
+        $currentStock = $this->getStockLevel($branchId);
+        
+        if ($currentStock <= 0) return 'out_of_stock';
+        if ($currentStock <= $this->reorder_level) return 'low_stock';
+        if ($currentStock <= $this->reorder_level * 2) return 'medium_stock';
+        return 'good_stock';
+    }
+
+    /**
+     * Get stock percentage for UI indicators
+     */
+    public function getStockPercentage(int $branchId): int
+    {
+        $currentStock = $this->getStockLevel($branchId);
+        $maxStock = $this->reorder_level * 5; // Assume max stock is 5x reorder level
+        
+        if ($maxStock <= 0) return 0;
+        
+        return min(100, max(0, round(($currentStock / $maxStock) * 100)));
+    }
 
 }

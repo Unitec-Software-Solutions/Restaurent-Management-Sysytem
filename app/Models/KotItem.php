@@ -12,10 +12,12 @@ class KotItem extends Model
     protected $fillable = [
         'kot_id',
         'order_item_id',
-        'item_id',
+        'menu_item_id',
         'quantity',
         'status',
         'special_instructions',
+        'allergen_notes',
+        'priority',
         'estimated_prep_time',
         'actual_prep_time',
         'started_at',

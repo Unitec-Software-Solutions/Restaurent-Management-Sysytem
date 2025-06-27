@@ -2,88 +2,230 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Admin;
 use App\Models\Branch;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 
 class AdminSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Run the database seeds following UI/UX guidelines.
      */
     public function run(): void
     {
-        // $Organization = Organization::all();
+        $this->command->info('👤 Seeding admin users with role assignments...');
 
-        // if ($Organization->count() < 5) {
-        //     $this->command->warn('🚨 Not enough Organization found. Ensure 5 Organization exist before seeding admins.');
-        //     return;
-        // }
+        // Check if we can use soft deletes
+        $canUseSoftDeletes = Schema::hasColumn('admins', 'deleted_at');
+        
+        if (!$canUseSoftDeletes) {
+            $this->command->warn('⚠️  deleted_at column not found. Using regular queries...');
+        }
 
-        // /**
-        //  * Creates 2 admins per organization with sequentially numbered credentials:
-        //  * - Email: admin{number}@example.com (e.g., admin1@example.com, admin2@example.com, ...)
-        //  * - Password: password{number} (e.g., password1, password2, ...)
-        //  *
-        //  * Example: The 5th admin will have:
-        //  * - Email: admin5@example.com
-        //  * - Password: password5
-        //  */
+        // Ensure required roles exist
+        $this->ensureRolesExist();
+        
+        // Create Super Admin
+        $superAdmin = $this->createSuperAdmin($canUseSoftDeletes);
+        
+        // Create Organization Admins
+        $this->createOrganizationAdmins($canUseSoftDeletes);
+        
+        // Create Branch Admins
+        $this->createBranchAdmins($canUseSoftDeletes);
 
-        // $adminIndex = 1;
+        $this->command->info('  ✅ Admin users seeded successfully with proper role assignments.');
+    }
 
-        // foreach ($Organization as $organization) {
-        //     $branches = Branch::where('organization_id', $organization->id)->get();
+    /**
+     * Ensure required roles exist
+     */
+    private function ensureRolesExist(): void
+    {
+        $roles = [
+            'Super Admin' => 'System administrator with full access',
+            'Organization Admin' => 'Organization-level administrator',
+            'Branch Admin' => 'Branch-level administrator'
+        ];
+        
+        foreach ($roles as $roleName => $description) {
+            Role::firstOrCreate([
+                'name' => $roleName,
+                'guard_name' => 'admin'
+            ]);
+        }
+    }
 
-        //     if ($branches->isEmpty()) {
-        //         $this->command->warn("⚠️ No branches found for organization ID {$organization->id}. Skipping admin creation.");
-        //         continue;
-        //     }
+    /**
+     * Create Super Admin following UI/UX guidelines
+     */
+    private function createSuperAdmin(bool $canUseSoftDeletes): Admin
+    {
+        $superAdminRole = Role::where('name', 'Super Admin')->where('guard_name', 'admin')->first();
 
-        //     for ($i = 0; $i < 2; $i++) { // Two admins per organization
-        //         $branch = $branches->random();
+        // Use appropriate query method based on soft delete availability
+        if ($canUseSoftDeletes) {
+            $superAdmin = Admin::withTrashed()->firstOrCreate(
+                ['email' => 'superadmin@rms.com'],
+                $this->getSuperAdminData()
+            );
+            
+            // Restore if soft deleted
+            if ($superAdmin->trashed()) {
+                $superAdmin->restore();
+            }
+        } else {
+            $superAdmin = Admin::firstOrCreate(
+                ['email' => 'superadmin@rms.com'],
+                $this->getSuperAdminData()
+            );
+        }
 
-        //         $email = "admin{$adminIndex}@example.com";
+        // Update attributes
+        $superAdmin->update($this->getSuperAdminData());
 
-        //         Admin::firstOrCreate(
-        //             ['email' => $email],
-        //             [
-        //                 'name' => "Admin User $adminIndex",
-        //                 'password' => Hash::make("password{$adminIndex}"),
-        //                 'branch_id' => $branch->id,
-        //                 'organization_id' => $organization->id,
-        //             ]
-        //         );
+        // Assign role safely
+        if ($superAdminRole && !$superAdmin->hasRole($superAdminRole)) {
+            $superAdmin->assignRole($superAdminRole);
+        }
 
-        //         $adminIndex++;
-        //     }
-        // }
+        $this->command->info("    ✅ Super Admin created: {$superAdmin->email}");
+        return $superAdmin;
+    }
 
-        // Additional testing admin
-        // $defaultBranch = Branch::first();
-        // $defaultOrg = $defaultBranch ? $defaultBranch->organization_id : null;
+    /**
+     * Get Super Admin data following UI/UX guidelines
+     */
+    private function getSuperAdminData(): array
+    {
+        return [
+            'name' => 'System Super Admin',
+            'password' => Hash::make('password'),
+            'is_super_admin' => true,
+            'is_active' => true,
+            'organization_id' => null,
+            'branch_id' => null,
+            'ui_settings' => [
+                'theme' => 'light',
+                'sidebar_collapsed' => false,
+                'dashboard_layout' => 'grid',
+                'notifications_enabled' => true,
+                'preferred_language' => 'en',
+                'show_all_organizations' => true,
+            ],
+            'preferences' => [
+                'timezone' => 'Asia/Colombo',
+                'date_format' => 'Y-m-d',
+                'time_format' => '24h',
+                'super_admin_mode' => true,
+            ],
+        ];
+    }
 
-        $admin = Admin::firstOrCreate(
-            ['email' => 'admin@rms.com'],
-            [
-                'name' => 'Testing Admin',
-                'password' => Hash::make('admin123'),
-                'is_super_admin' => true,
-            ]
-        );
+    /**
+     * Create Organization Admins following UI/UX guidelines
+     */
+    private function createOrganizationAdmins(bool $canUseSoftDeletes): void
+    {
+        $organizations = Organization::where('is_active', true)->get();
+        $orgAdminRole = Role::where('name', 'Organization Admin')->where('guard_name', 'admin')->first();
+        
+        foreach ($organizations as $organization) {
+            $adminEmail = 'admin@' . strtolower(str_replace([' ', '.', '-'], '', $organization->trading_name ?? $organization->name)) . '.com';
+            
+            $orgAdminData = [
+                'name' => "Admin - {$organization->trading_name}",
+                'password' => Hash::make('password123'),
+                'organization_id' => $organization->id,
+                'branch_id' => null,
+                'is_super_admin' => false,
+                'is_active' => true,
+                'ui_settings' => [
+                    'theme' => 'light',
+                    'sidebar_collapsed' => false,
+                    'dashboard_layout' => 'cards',
+                    'show_organization_selector' => false,
+                ],
+                'preferences' => [
+                    'timezone' => 'Asia/Colombo',
+                    'default_organization_id' => $organization->id,
+                ],
+            ];
 
-        // Make sure the role exists
-        $role = Role::firstOrCreate(
-            ['name' => 'Super Admin', 'guard_name' => 'admin']
-        );
+            if ($canUseSoftDeletes) {
+                $orgAdmin = Admin::withTrashed()->firstOrCreate(['email' => $adminEmail], $orgAdminData);
+                if ($orgAdmin->trashed()) {
+                    $orgAdmin->restore();
+                }
+            } else {
+                $orgAdmin = Admin::firstOrCreate(['email' => $adminEmail], $orgAdminData);
+            }
 
-        // Assign the role to the admin
-        $admin->assignRole($role);
+            $orgAdmin->update($orgAdminData);
 
-        $this->command->info('  ✅ 10 Admin users and 1 testing admin seeded successfully (skipped existing ones).');
+            // Assign role safely
+            if ($orgAdminRole && !$orgAdmin->hasRole($orgAdminRole)) {
+                $orgAdmin->assignRole($orgAdminRole);
+            }
+
+            $this->command->info("    ✅ Organization Admin created: {$orgAdmin->email} for {$organization->name}");
+        }
+    }
+
+    /**
+     * Create Branch Admins following UI/UX guidelines
+     */
+    private function createBranchAdmins(bool $canUseSoftDeletes): void
+    {
+        $branches = Branch::with('organization')->where('is_active', true)->take(3)->get();
+        $branchAdminRole = Role::where('name', 'Branch Admin')->where('guard_name', 'admin')->first();
+
+        foreach ($branches as $branch) {
+            $adminEmail = 'branch.admin@' . 
+                strtolower(str_replace([' ', '.', '-'], '', $branch->organization->trading_name ?? $branch->organization->name)) . 
+                '.branch' . $branch->id . '.com';
+            
+            $branchAdminData = [
+                'name' => "Branch Admin - {$branch->name}",
+                'password' => Hash::make('password123'),
+                'organization_id' => $branch->organization_id,
+                'branch_id' => $branch->id,
+                'is_super_admin' => false,
+                'is_active' => true,
+                'ui_settings' => [
+                    'theme' => 'light',
+                    'sidebar_collapsed' => true,
+                    'dashboard_layout' => 'compact',
+                    'show_branch_selector' => false,
+                ],
+                'preferences' => [
+                    'timezone' => 'Asia/Colombo',
+                    'default_branch_id' => $branch->id,
+                    'focus_mode' => true,
+                ],
+            ];
+
+            if ($canUseSoftDeletes) {
+                $branchAdmin = Admin::withTrashed()->firstOrCreate(['email' => $adminEmail], $branchAdminData);
+                if ($branchAdmin->trashed()) {
+                    $branchAdmin->restore();
+                }
+            } else {
+                $branchAdmin = Admin::firstOrCreate(['email' => $adminEmail], $branchAdminData);
+            }
+
+            $branchAdmin->update($branchAdminData);
+
+            // Assign role safely
+            if ($branchAdminRole && !$branchAdmin->hasRole($branchAdminRole)) {
+                $branchAdmin->assignRole($branchAdminRole);
+            }
+
+            $this->command->info("    ✅ Branch Admin created: {$branchAdmin->email} for {$branch->name}");
+        }
     }
 }

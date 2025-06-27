@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\ItemTransaction;
 use App\Models\ItemMaster;
 use App\Models\Branch;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class ItemTransactionController extends Controller
 {
+    use Exportable;
     protected function getOrganizationId()
     {
         $user = Auth::user();
@@ -148,10 +150,28 @@ class ItemTransactionController extends Controller
             $query->whereDate('created_at', '<=', request('date_to'));
         }
 
+        // Apply filters and search for potential export
+        $query = $this->applyFiltersToQuery($query, request());
+
+        // Handle export
+        if (request()->has('export')) {
+            return $this->exportToExcel(request(), $query, 'inventory_transactions_export.xlsx', [
+                'ID', 'Item', 'Type', 'Quantity', 'Branch', 'Date', 'Created By', 'Reference'
+            ]);
+        }
+
         $transactions = $query->paginate(25);
         $branches = Branch::where('organization_id', $orgId)->active()->get();
 
         return view('admin.inventory.stock.transactions.index', compact('transactions', 'branches'));
+    }
+
+    /**
+     * Get searchable columns for inventory transactions
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['transaction_type', 'quantity', 'reference_id'];
     }
 
     public function stockSummary()

@@ -42,13 +42,25 @@ class Employee extends Model
         'emergency_contact',
         'position',
         'salary',
-        'notes'
+        'notes',
+        // Essential shift and staff fields
+        'shift_type',
+        'shift_start_time',
+        'shift_end_time',
+        'hourly_rate',
+        'department',
+        'availability_status',
+        'current_workload'
     ];
 
     protected $casts = [
         'joined_date' => 'datetime',
         'is_active' => 'boolean',
-        'salary' => 'decimal:2'
+        'salary' => 'decimal:2',
+        'hourly_rate' => 'decimal:2',
+        'shift_start_time' => 'datetime:H:i',
+        'shift_end_time' => 'datetime:H:i',
+        'current_workload' => 'integer'
     ];
 
     protected static function boot()
@@ -123,12 +135,17 @@ class Employee extends Model
         return $query->where('role', $role);
     }
 
+    public function scopeStewards($query)
+    {
+        return $query->where('role', self::ROLE_STEWARD);
+    }
+
     public function scopeByBranch($query, $branchId)
     {
         return $query->where('branch_id', $branchId);
     }
 
-    // New helper methods for restaurant roles
+    
     public function isServer()
     {
         return $this->hasRole(self::ROLE_SERVERS);
@@ -237,5 +254,82 @@ class Employee extends Model
     public function canAccessKitchen()
     {
         return $this->can('kitchen-operations') || $this->can('view-kitchen-orders');
+    }
+
+    // Essential shift and staff management methods
+    public function isAvailable()
+    {
+        return $this->availability_status === 'available' && $this->is_active;
+    }
+
+    public function isOnShift($time = null)
+    {
+        if (!$this->shift_start_time || !$this->shift_end_time) {
+            return true; // Flexible shift
+        }
+
+        $time = $time ?: now()->format('H:i');
+        return $time >= $this->shift_start_time && $time <= $this->shift_end_time;
+    }
+
+    public function canTakeOrder()
+    {
+        return $this->isAvailable() && $this->isOnShift() && 
+               $this->current_workload < 10; // Default max workload
+    }
+
+    public function assignOrder()
+    {
+        $this->increment('current_workload');
+        if ($this->current_workload >= 10) {
+            $this->update(['availability_status' => 'busy']);
+        }
+    }
+
+    public function completeOrder()
+    {
+        if ($this->current_workload > 0) {
+            $this->decrement('current_workload');
+            if ($this->current_workload < 10 && $this->availability_status === 'busy') {
+                $this->update(['availability_status' => 'available']);
+            }
+        }
+    }
+
+    public function setOnBreak()
+    {
+        $this->update(['availability_status' => 'on_break']);
+    }
+
+    public function setOffDuty()
+    {
+        $this->update(['availability_status' => 'off_duty', 'current_workload' => 0]);
+    }
+
+    public function setAvailable()
+    {
+        $this->update(['availability_status' => 'available']);
+    }
+
+    // Scope for shift management
+    public function scopeByShift($query, $shiftType)
+    {
+        return $query->where('shift_type', $shiftType);
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('availability_status', 'available')
+                     ->where('is_active', true);
+    }
+
+    public function scopeOnDuty($query)
+    {
+        return $query->whereIn('availability_status', ['available', 'busy']);
+    }
+
+    public function scopeByDepartment($query, $department)
+    {
+        return $query->where('department', $department);
     }
 }

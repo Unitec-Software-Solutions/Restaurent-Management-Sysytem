@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Reservation;
 use App\Models\Payment;
 use App\Models\Table;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ReservationConfirmed;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class AdminReservationController extends Controller
 {
+    use Exportable;
     public function index(Request $request)
     {
         $admin = auth('admin')->user();
@@ -65,9 +67,14 @@ class AdminReservationController extends Controller
 
         $query->orderBy('date', 'desc')->orderBy('start_time', 'desc');
 
-        // Export functionality
-        if ($export) {
-            return $this->exportReservations($query->get(), $export);
+        // Apply filters and search for potential export
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'reservations_export.xlsx', [
+                'ID', 'Customer Name', 'Phone', 'Email', 'Date', 'Time', 'People', 'Status', 'Branch', 'Tables', 'Created At'
+            ]);
         }
 
         $reservations = $query->paginate(20);
@@ -89,6 +96,14 @@ class AdminReservationController extends Controller
         ];
 
         return view('admin.reservations.index', compact('reservations', 'branches', 'stewards', 'filters'));
+    }
+
+    /**
+     * Get searchable columns for reservations
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'phone', 'email'];
     }
 
     public function pending()
@@ -154,9 +169,29 @@ class AdminReservationController extends Controller
     public function edit(Reservation $reservation)
     {
         $admin = auth('admin')->user();
-        $reservation->load(['branch', 'tables', 'employee']); 
+        
+        // Load admin's branch relationship if not already loaded
+        if (!$admin->relationLoaded('branch')) {
+            $admin->load('branch');
+        }
+        
+        // Validate admin has a branch assigned
+        if (!$admin->branch_id || !$admin->branch) {
+            return redirect()->route('admin.reservations.index')
+                ->with('error', 'You must be assigned to a branch to edit reservations.');
+        }
+        
+        // Load reservation relationships
+        $reservation->load(['branch', 'tables', 'steward']); 
 
-        $tables = Table::where('branch_id', $admin->branch->id)->get();
+        // Use null-safe operator for branch access
+        $branchId = $admin->branch?->id;
+        if (!$branchId) {
+            return redirect()->route('admin.reservations.index')
+                ->with('error', 'Invalid branch assignment. Please contact administrator.');
+        }
+
+        $tables = Table::where('branch_id', $branchId)->get();
         $assignedTableIds = $reservation->tables->pluck('id')->toArray();
         $availableTableIds = $tables->pluck('id')->toArray();
 
@@ -299,6 +334,18 @@ public function update(Request $request, Reservation $reservation)
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
+        
+        // Load branch relationship if not already loaded
+        if (!$admin->relationLoaded('branch')) {
+            $admin->load('branch');
+        }
+        
+        // Validate admin has a branch assigned
+        if (!$admin->branch_id || !$admin->branch) {
+            return redirect()->route('admin.reservations.index')
+                ->with('error', 'You must be assigned to a branch to create reservations.');
+        }
+        
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'phone' => 'required|string|min:10|max:15',
@@ -312,10 +359,13 @@ public function update(Request $request, Reservation $reservation)
             'steward_id' => 'nullable|exists:employees,id',
         ]);
 
-        // Validate branch operating hours
+        // Use null-safe operator for branch access
         $branch = $admin->branch;
-        $branchOpenTime = \Carbon\Carbon::parse($branch->opening_time)->format('H:i');
-        $branchCloseTime = \Carbon\Carbon::parse($branch->closing_time)->format('H:i');
+        
+        // Validate branch operating hours with null-safe operators
+        $branchOpenTime = $branch?->opening_time ? \Carbon\Carbon::parse($branch->opening_time)->format('H:i') : '00:00';
+        $branchCloseTime = $branch?->closing_time ? \Carbon\Carbon::parse($branch->closing_time)->format('H:i') : '23:59';
+        
         if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
             return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')'])->withInput();
         }
@@ -326,22 +376,27 @@ public function update(Request $request, Reservation $reservation)
                 return back()->withErrors(['start_time' => 'Start time must be at least 30 minutes from now.']);
             }
         }
-        // Check capacity
-        $reservedCapacity = $branch->reservations()
-            ->where('date', $validated['date'])
-            ->where(function($query) use ($validated) {
-                $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                    ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                    ->orWhere(function($q) use ($validated) {
-                        $q->where('start_time', '<=', $validated['start_time'])
-                            ->where('end_time', '>=', $validated['end_time']);
-                    });
-            })
-            ->where('reservations.status', '!=', 'cancelled')
-            ->sum('number_of_people');
-        $availableCapacity = $branch->total_capacity - $reservedCapacity;
-        if ($availableCapacity < $validated['number_of_people']) {
-            return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
+        // Check capacity with null-safe operations
+        $totalCapacity = $branch?->total_capacity ?? 0;
+        
+        if ($totalCapacity > 0) {
+            $reservedCapacity = $branch->reservations()
+                ->where('date', $validated['date'])
+                ->where(function($query) use ($validated) {
+                    $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                        ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                        ->orWhere(function($q) use ($validated) {
+                            $q->where('start_time', '<=', $validated['start_time'])
+                                ->where('end_time', '>=', $validated['end_time']);
+                        });
+                })
+                ->where('reservations.status', '!=', 'cancelled')
+                ->sum('number_of_people');
+            
+            $availableCapacity = $totalCapacity - $reservedCapacity;
+            if ($availableCapacity < $validated['number_of_people']) {
+                return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
+            }
         }
 
         // Check if any selected tables are already reserved for the same date and overlapping time
@@ -367,8 +422,14 @@ public function update(Request $request, Reservation $reservation)
             }
         }
 
-        $reservationFee = $branch && $branch->reservation_fee !== null ? $branch->reservation_fee : 0;
-        $cancellationFee = $branch && $branch->cancellation_fee !== null ? $branch->cancellation_fee : 0;
+        // Calculate fees with null-safe operators
+        $reservationFee = $branch?->reservation_fee ?? 0;
+        $cancellationFee = $branch?->cancellation_fee ?? 0;
+        $branchId = $branch?->id;
+        
+        if (!$branchId) {
+            return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
+        }
 
         $reservation = Reservation::create([
             'name' => $validated['name'],
@@ -379,7 +440,7 @@ public function update(Request $request, Reservation $reservation)
             'end_time' => $validated['end_time'],
             'number_of_people' => $validated['number_of_people'],
             'status' => 'pending',
-            'branch_id' => $branch->id,
+            'branch_id' => $branchId,
             'reservation_fee' => $reservationFee,
             'cancellation_fee' => $cancellationFee,
             'steward_id' => $validated['steward_id'],
@@ -397,11 +458,32 @@ public function update(Request $request, Reservation $reservation)
     public function create()
     {
         $admin = auth('admin')->user();
-        $tables = Table::where('branch_id', $admin->branch->id)->get();
+        
+        // Load branch relationship if not already loaded
+        if (!$admin->relationLoaded('branch')) {
+            $admin->load('branch');
+        }
+        
+        // Validate admin has a branch assigned
+        if (!$admin->branch_id || !$admin->branch) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'You must be assigned to a branch to create reservations.');
+        }
+        
         $branch = $admin->branch;
-
+        
+        // Use null-safe operators to prevent errors
+        $branchId = $branch?->id;
+        if (!$branchId) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'Invalid branch assignment. Please contact administrator.');
+        }
+        
+        // Get tables for the branch with null-safe operations
+        $tables = Table::where('branch_id', $branchId)->get();
+        
         $availableTableIds = $tables->pluck('id')->toArray();
-        $defaultPhone = $branch->phone ?? '';
+        $defaultPhone = $branch?->phone ?? '';
         $defaultDate = now()->toDateString();
 
         // Set default start time to now, end time to 2 hours later
@@ -409,10 +491,17 @@ public function update(Request $request, Reservation $reservation)
         $start_time = $now->format('H:i');
         $end_time = $now->copy()->addHours(2)->format('H:i');
 
-        $nextId = DB::table('reservations')->max('id') + 1;
-        $defaultName = 'customer ' . $nextId . '';
+        // Get next ID safely
+        $nextId = (DB::table('reservations')->max('id') ?? 0) + 1;
+        $defaultName = 'customer ' . $nextId;
 
-        $stewards = Employee::where('branch_id', $admin->branch->id)->get();
+        // Get stewards for the branch with null-safe operations
+        $stewards = Employee::where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->whereHas('roles', function($query) {
+                $query->where('name', 'steward');
+            })
+            ->get();
 
         return view('admin.reservations.create', compact(
             'tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName', 'start_time', 'end_time', 'stewards'
@@ -527,7 +616,22 @@ public function checkTableAvailability(Request $request)
         'end_time' => 'required|date_format:H:i|after:start_time',
     ]);
 
-    $branchId = auth('admin')->user()->branch->id;
+    $admin = auth('admin')->user();
+    
+    // Load branch relationship if not already loaded
+    if (!$admin->relationLoaded('branch')) {
+        $admin->load('branch');
+    }
+    
+    // Validate admin has a branch assigned with null-safe operator
+    $branchId = $admin->branch?->id;
+    
+    if (!$branchId) {
+        return response()->json([
+            'error' => 'No branch assigned to admin',
+            'available_table_ids' => []
+        ], 400);
+    }
 
     $conflictingReservations = Reservation::where('branch_id', $branchId)
         ->where('date', $request->date)

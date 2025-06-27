@@ -4,7 +4,7 @@
 @section('content')
 
 {{-- Debug Info Card for GRN Show --}}
-@if(config('app.debug'))
+{{-- @if(config('app.debug'))
     <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
         <div class="flex justify-between items-center">
             <h3 class="text-sm font-medium text-emerald-800">🔍 GRN Debug Info</h3>
@@ -32,7 +32,7 @@
             </div>
         </div>
     </div>
-@endif
+@endif --}}
 
     <div class="p-4 rounded-lg">
         <!-- Back and Action Buttons -->
