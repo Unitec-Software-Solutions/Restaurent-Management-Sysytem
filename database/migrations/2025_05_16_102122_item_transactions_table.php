@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('item_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->constrained('organizations');
-            $table->foreignId('branch_id')->constrained('branches');
+            $table->foreignId('branch_id')->constrained('branches')->nullable();
             $table->foreignId('inventory_item_id')->constrained('item_master');
             $table->string('transaction_type', 50);
             $table->foreignId('incoming_branch_id')->nullable()->constrained('branches');
