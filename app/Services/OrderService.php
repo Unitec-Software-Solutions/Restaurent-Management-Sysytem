@@ -9,6 +9,7 @@ use App\Models\ItemMaster;
 use App\Models\ItemTransaction;
 use App\Models\Branch;
 use App\Models\Reservation;
+use App\Models\Employee;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -183,6 +184,100 @@ class OrderService
         ]);
 
         return $order;
+    }
+
+    /**
+     * Get available stewards for a branch
+     */
+    public function getAvailableStewards(int $branchId): \Illuminate\Database\Eloquent\Collection
+    {
+        return Employee::stewards()
+            ->where('branch_id', $branchId)
+            ->where('status', 'active')
+            ->select('id', 'first_name', 'last_name', 'employee_code')
+            ->orderBy('first_name')
+            ->get();
+    }
+
+    /**
+     * Get items with current stock levels for a branch
+     */
+    public function getItemsWithStock(int $branchId, ?int $organizationId = null): \Illuminate\Database\Eloquent\Collection
+    {
+        $query = ItemMaster::where('is_menu_item', true)
+            ->where('is_active', true);
+
+        // Apply organization filter if provided
+        if ($organizationId) {
+            $query->where('organization_id', $organizationId);
+        }
+
+        $items = $query->select('id', 'name', 'selling_price', 'buying_price', 'attributes')
+            ->get();
+
+        // Add stock information to each item
+        return $items->map(function ($item) use ($branchId) {
+            $stockOnHand = ItemTransaction::stockOnHand($item->id, $branchId);
+            $item->stock_on_hand = $stockOnHand;
+            $item->is_low_stock = $stockOnHand <= ($item->reorder_level ?? 10);
+            $item->is_out_of_stock = $stockOnHand <= 0;
+            return $item;
+        });
+    }
+
+    /**
+     * Get stock alerts for a branch
+     */
+    public function getStockAlerts(int $branchId, ?int $organizationId = null): array
+    {
+        $items = $this->getItemsWithStock($branchId, $organizationId);
+        
+        $alerts = [
+            'low_stock' => $items->where('is_low_stock', true)->where('is_out_of_stock', false),
+            'out_of_stock' => $items->where('is_out_of_stock', true),
+            'total_alerts' => 0
+        ];
+        
+        $alerts['total_alerts'] = $alerts['low_stock']->count() + $alerts['out_of_stock']->count();
+        
+        return $alerts;
+    }
+
+    /**
+     * Cancel an order and reverse stock
+     */
+    public function cancelOrder(Order $order, ?string $reason = null): Order
+    {
+        return DB::transaction(function () use ($order, $reason) {
+            // Check if order can be cancelled
+            if (in_array($order->status, [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])) {
+                throw new Exception('Order cannot be cancelled in current status: ' . $order->status);
+            }
+
+            // Reverse stock
+            $this->reverseOrderStock($order);
+
+            // Update order status
+            $order->update([
+                'status' => Order::STATUS_CANCELLED,
+                'status_updated_at' => now(),
+                'status_reason' => $reason ?? 'Cancelled by admin',
+                'updated_by' => optional(auth())->id(),
+            ]);
+
+            // Update reservation status if linked
+            if ($order->reservation) {
+                $order->reservation->update(['status' => 'cancelled']);
+            }
+
+            Log::info('Order cancelled successfully', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'reason' => $reason
+            ]);
+
+            return $order->fresh();
+        });
     }
 
     /**
