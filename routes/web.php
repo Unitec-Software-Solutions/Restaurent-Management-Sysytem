@@ -31,7 +31,7 @@ use App\Http\Controllers\{
     ProductionRequestItemController,
     ProductionSessionController,
     ProductionController,
-    RecipeController
+    ProductionRecipeController,
 };
 use App\Http\Middleware\SuperAdmin;
 use App\Models\Recipe;
@@ -344,15 +344,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Recipe Management
             Route::prefix('recipes')->name('recipes.')->group(function () {
-                Route::get('/', [RecipeController::class, 'index'])->name('index');
-                Route::get('/create', [RecipeController::class, 'create'])->name('create');
-                Route::post('/', [RecipeController::class, 'store'])->name('store');
-                Route::get('/{recipe}', [RecipeController::class, 'show'])->name('show');
-                Route::get('/{recipe}/edit', [RecipeController::class, 'edit'])->name('edit');
-                Route::put('/{recipe}', [RecipeController::class, 'update'])->name('update');
-                Route::delete('/{recipe}', [RecipeController::class, 'destroy'])->name('destroy');
-                Route::post('/{recipe}/toggle-status', [RecipeController::class, 'toggleStatus'])->name('toggle-status');
-                Route::get('/{recipe}/production', [RecipeController::class, 'getRecipeForProduction'])->name('production');
+                Route::get('/', [ProductionRecipeController::class, 'index'])->name('index');
+                Route::get('/create', [ProductionRecipeController::class, 'create'])->name('create');
+                Route::post('/', [ProductionRecipeController::class, 'store'])->name('store');
+                Route::get('/{recipe}', [ProductionRecipeController::class, 'show'])->name('show');
+                Route::get('/{recipe}/edit', [ProductionRecipeController::class, 'edit'])->name('edit');
+                Route::put('/{recipe}', [ProductionRecipeController::class, 'update'])->name('update');
+                Route::delete('/{recipe}', [ProductionRecipeController::class, 'destroy'])->name('destroy');
+                Route::post('/{recipe}/toggle-status', [ProductionRecipeController::class, 'toggleStatus'])->name('toggle-status');
+                Route::get('/{recipe}/production', [ProductionRecipeController::class, 'getRecipeForProduction'])->name('production');
             });
 
             // Production Session routes with ingredient management
