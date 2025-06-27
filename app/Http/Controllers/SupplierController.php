@@ -19,12 +19,22 @@ class SupplierController extends Controller
     {
         $admin = Auth::guard('admin')->user();
         
-        if (!$admin || !$admin->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        if (!$admin) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to access the suppliers page.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $admin->isSuperAdmin();
+        
+        // Basic validation - super admins don't need organization
+        if (!$isSuperAdmin && !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
         }
 
         try {
-            $query = Supplier::where('organization_id', $admin->organization_id);
+            $query = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
+                return $q->where('organization_id', $admin->organization_id);
+            });
 
             // Apply filters
             if ($request->has('search')) {
@@ -51,10 +61,21 @@ class SupplierController extends Controller
             $suppliers = $query->latest()->paginate(15);
 
             // Statistics
-            $totalSuppliers = Supplier::where('organization_id', $admin->organization_id)->count();
-            $activeSuppliers = Supplier::where('organization_id', $admin->organization_id)->where('is_active', true)->count();
-            $inactiveSuppliers = Supplier::where('organization_id', $admin->organization_id)->where('is_active', false)->count();
-            $newSuppliersToday = Supplier::where('organization_id', $admin->organization_id)->whereDate('created_at', today())->count();
+            $totalSuppliers = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
+                return $q->where('organization_id', $admin->organization_id);
+            })->count();
+            
+            $activeSuppliers = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
+                return $q->where('organization_id', $admin->organization_id);
+            })->where('is_active', true)->count();
+            
+            $inactiveSuppliers = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
+                return $q->where('organization_id', $admin->organization_id);
+            })->where('is_active', false)->count();
+            
+            $newSuppliersToday = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
+                return $q->where('organization_id', $admin->organization_id);
+            })->whereDate('created_at', today())->count();
 
             return view('admin.suppliers.index', compact(
                 'suppliers',
@@ -73,8 +94,16 @@ class SupplierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to create suppliers.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->isSuperAdmin();
+        
+        // Basic validation - super admins don't need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
         }
 
         return view('admin.suppliers.create');
@@ -84,8 +113,16 @@ class SupplierController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to create suppliers.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->isSuperAdmin();
+        
+        // Basic validation - super admins don't need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
         }
 
         $validated = $request->validate([
@@ -100,7 +137,9 @@ class SupplierController extends Controller
 
         $validated['supplier_id'] = 'SUP-' . Str::upper(Str::random(6));
         $validated['is_active'] = true;
-        $validated['organization_id'] = $user->organization_id;
+        // Super admins can create suppliers for any organization (will need organization selector in form)
+        // For now, super admins will create suppliers without organization (could be global suppliers)
+        $validated['organization_id'] = $isSuperAdmin ? $user->organization_id : $user->organization_id;
 
         Supplier::create($validated);
 

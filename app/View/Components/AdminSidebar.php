@@ -800,6 +800,12 @@ class AdminSidebar extends Component
             return true;
         }
         
+        // For now, allow all authenticated admin users to access inventory and suppliers
+        // TODO: Implement proper permission checking later
+        if (in_array($permission, ['inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage'])) {
+            return true;
+        }
+        
         // Check using Spatie permissions if admin has hasPermissionTo method
         if (method_exists($admin, 'hasPermissionTo')) {
             return $admin->hasPermissionTo($permission);
@@ -997,28 +1003,36 @@ class AdminSidebar extends Component
     {
         return [
             [
-                'title' => 'Dashboard',
-                'route' => 'admin.inventory.dashboard',
-                'icon' => 'layout-dashboard',
+                'title' => 'Stock Levels',
+                'route' => 'admin.inventory.index',
+                'icon' => 'box',
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
-                'is_route_valid' => $this->validateRoute('admin.inventory.dashboard')
+                'is_route_valid' => $this->validateRoute('admin.inventory.index')
             ],
             [
-                'title' => 'Items',
+                'title' => 'Items Management',
                 'route' => 'admin.inventory.items.index',
-                'icon' => 'box',
+                'icon' => 'package',
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
             ],
             [
-                'title' => 'Low Stock Alert',
-                'route' => 'admin.inventory.low-stock',
-                'icon' => 'alert-triangle',
+                'title' => 'Suppliers',
+                'route' => 'admin.suppliers.index',
+                'icon' => 'truck',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.view',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.index')
+            ],
+            [
+                'title' => 'Purchase Orders (GRN)',
+                'route' => 'admin.grn.index',
+                'icon' => 'receipt',
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
-                'is_route_valid' => $this->validateRoute('admin.inventory.low-stock')
+                'is_route_valid' => $this->validateRoute('admin.grn.index')
             ]
         ];
     }

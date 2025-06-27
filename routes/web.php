@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\{
     CustomerDashboardController,
     ReservationController,
@@ -163,6 +164,28 @@ if (config('app.debug')) {
             'session_exists' => session()->isStarted(),
         ];
     });
+    
+    // Debug route to check permissions (temporary)
+    Route::get('/debug-permissions', function() {
+        if (!Auth::guard('admin')->check()) {
+            return 'Not logged in as admin';
+        }
+        
+        $admin = Auth::guard('admin')->user();
+        $permissions = \App\Models\Permission::all()->pluck('name');
+        
+        return [
+            'admin' => $admin->email,
+            'organization_id' => $admin->organization_id,
+            'all_permissions' => $permissions->toArray(),
+            'user_has_permissions' => [
+                'view_inventory' => $admin->can('view_inventory'),
+                'manage_inventory' => $admin->can('manage_inventory'),
+                'inventory.view' => $admin->can('inventory.view'),
+                'inventory.manage' => $admin->can('inventory.manage'),
+            ]
+        ];
+    })->middleware('auth:admin');
 }
 
 /*-------------------------------------------------------------------------

@@ -13,7 +13,14 @@ class OrganizationFactory extends Factory
 
     public function definition()
     {
-        $plan = SubscriptionPlan::inRandomOrder()->first();
+        // Make subscription plan optional since the table may not exist
+        $plan = null;
+        try {
+            $plan = SubscriptionPlan::inRandomOrder()->first();
+        } catch (\Exception $e) {
+            // Subscription plans table doesn't exist, use null
+        }
+        
         return [
             'name' => $this->faker->company(),
             'email' => $this->faker->unique()->companyEmail(),

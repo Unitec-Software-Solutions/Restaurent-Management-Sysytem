@@ -154,8 +154,6 @@
         </nav>
 
         <div class="flex flex-1">
-            @include('partials.sidebar')
-
             <!-- Main Content -->
             <main class="flex-1 p-6">
                 @yield('content')
