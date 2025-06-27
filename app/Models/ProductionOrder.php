@@ -213,7 +213,7 @@ class ProductionOrder extends Model
         // Calculate based on production recipes if available
         $totalTime = 0;
         foreach ($this->items as $item) {
-            $recipe = Recipe::where('production_item_id', $item->item_id)->first();
+            $recipe = ProductionRecipe::where('production_item_id', $item->item_id)->first();
             if ($recipe) {
                 $multiplier = $item->quantity_to_produce / $recipe->yield_quantity;
                 $totalTime += $recipe->total_time * $multiplier;
