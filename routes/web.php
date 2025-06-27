@@ -255,6 +255,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
             Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
             
+            // AJAX endpoints for OrderManagementController
+            Route::get('/ajax/items-with-stock', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getItemsWithStock'])->name('ajax.items-with-stock');
+            Route::get('/ajax/stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStewards'])->name('ajax.stewards');
+            Route::get('/ajax/available-stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getAvailableStewards'])->name('ajax.available-stewards');
+            Route::get('/ajax/stock-alerts', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStockAlerts'])->name('ajax.stock-alerts');
+            
             // Takeaway Orders
             Route::prefix('takeaway')->name('takeaway.')->group(function () {
                 Route::get('/', [AdminOrderController::class, 'indexTakeaway'])->name('index');
