@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class RecipeDetail extends Model
+class ProductionRecipeDetail extends Model
 {
     use HasFactory;
 
@@ -21,7 +21,7 @@ class RecipeDetail extends Model
 
     public function recipe()
     {
-        return $this->belongsTo(Recipe::class, 'recipe_id');
+        return $this->belongsTo(ProductionRecipe::class, 'recipe_id');
     }
 
     public function rawMaterialItem()
