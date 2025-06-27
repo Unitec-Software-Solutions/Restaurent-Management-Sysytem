@@ -57,6 +57,78 @@
                             @csrf
                             @if(isset($reservation) && $reservation)
                             <input type="hidden" name="reservation_id" value="{{ $reservation->id }}">
+                            @else
+                            <input type="hidden" name="order_type" value="{{ $orderType ?? 'in_house' }}">
+                            
+                            <!-- Order Type and Customer Information (for non-reservation orders) -->
+                            @if(!isset($reservation) || !$reservation)
+                            <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Order Type Selection -->
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                        <i class="fas fa-shopping-cart mr-2 text-blue-500"></i>
+                                        Order Type
+                                    </h3>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="order_type" value="in_house" 
+                                                {{ ($orderType ?? 'in_house') === 'in_house' ? 'checked' : '' }}
+                                                class="mr-2 text-blue-600">
+                                            <span class="text-gray-700">Dine In</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="order_type" value="takeaway" 
+                                                {{ ($orderType ?? '') === 'takeaway' ? 'checked' : '' }}
+                                                class="mr-2 text-blue-600">
+                                            <span class="text-gray-700">Takeaway</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Branch Selection (for super admin) -->
+                                @if(auth('admin')->user()->is_super_admin)
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                        <i class="fas fa-building mr-2 text-blue-500"></i>
+                                        Branch
+                                    </h3>
+                                    <select name="branch_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                        @foreach($branches as $branch)
+                                            <option value="{{ $branch->id }}" {{ $defaultBranch == $branch->id ? 'selected' : '' }}>
+                                                {{ $branch->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @else
+                                <input type="hidden" name="branch_id" value="{{ $defaultBranch }}">
+                                @endif
+                            </div>
+
+                            <!-- Customer Information (for takeaway orders) -->
+                            <div id="customer-info" class="mb-6 bg-blue-50 rounded-xl p-4" style="display: {{ ($orderType ?? '') === 'takeaway' ? 'block' : 'none' }}">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                    <i class="fas fa-user mr-2 text-blue-500"></i>
+                                    Customer Information
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                                        <input type="text" name="customer_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter customer name">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                                        <input type="tel" name="customer_phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter phone number" required>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
+                                        <input type="datetime-local" name="order_time" 
+                                            value="{{ old('order_time', now()->format('Y-m-d\TH:i')) }}"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
                             @endif
                             
                             <!-- Menu Search and Categories -->
@@ -80,43 +152,86 @@
                                     @php
                                         $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
                                     @endphp
-                                    <div class="flex items-center border-b py-4 menu-item"
+                                    <div class="bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors duration-200 p-4 menu-item"
                                         data-item-id="{{ $item->id }}"
-                                        data-item-type="{{ $item->type }}"
-                                        data-stock-level="{{ $item->stock_level }}"
-                                        @if($item->is_kot) data-is-kot="true" @endif>
-                                        <input type="checkbox"
-                                            class="item-check mr-4"
-                                            data-item-id="{{ $item->id }}"
-                                            id="item_{{ $item->id }}"
-                                            name="items[{{ $item->id }}][item_id]"
-                                            value="{{ $item->id }}"
-                                            @if($existing) checked @endif>
-                                        <label for="item_{{ $item->id }}" class="flex-1">
-                                            <span class="font-semibold">{{ $item->name }}</span>
-                                            <span class="ml-2 text-gray-500">LKR {{ number_format($item->selling_price, 2) }}</span>
-                                        </label>
-                                        <div class="flex items-center ml-4">
-                                            <button type="button"
-                                                class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
-                                                data-item-id="{{ $item->id }}"
-                                                @if(!$existing) disabled @endif>-</button>
-                                            <input type="number"
-                                                min="1"
-                                                value="{{ $existing ? $existing->quantity : 1 }}"
-                                                class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1 quantity-input"
-                                                data-item-id="{{ $item->id }}"
-                                                @if(!$existing) disabled @endif
-                                                @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
-                                            <button type="button"
-                                                class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
-                                                data-item-id="{{ $item->id }}"
-                                                @if(!$existing) disabled @endif>+</button>
+                                        data-item-type="{{ $item->type ?? 1 }}"
+                                        data-stock="{{ isset($item->stock) ? $item->stock : 0 }}"
+                                        data-is-available="{{ $item->is_available ? 'true' : 'false' }}">
+                                        
+                                        <div class="flex items-start justify-between mb-3">
+                                            <div class="flex-1">
+                                                <h3 class="font-semibold text-gray-900">{{ $item->name }}</h3>
+                                                <p class="text-sm text-gray-600 mt-1">{{ $item->description ?? '' }}</p>
+                                                <p class="text-lg font-bold text-indigo-600 mt-2">LKR {{ number_format($item->price, 2) }}</p>
+                                            </div>
+                                            
+                                            <!-- Menu Item Type Display Logic -->
+                                            <div class="ml-3 text-right">
+                                                @if(($item->type ?? 1) === App\Models\MenuItem::TYPE_BUY_SELL)
+                                                    <div class="stock-indicator bg-gray-100 px-2 py-1 rounded text-xs font-medium" 
+                                                         data-stock="{{ $item->stock ?? 0 }}">
+                                                        <i class="fas fa-boxes mr-1"></i>
+                                                        Stock: {{ $item->stock ?? 0 }}
+                                                    </div>
+                                                    @if(($item->stock ?? 0) < 1)
+                                                        <div class="mt-1 text-xs text-red-600 font-medium">
+                                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                            Out of Stock
+                                                        </div>
+                                                    @elseif(($item->stock ?? 0) < 5)
+                                                        <div class="mt-1 text-xs text-orange-600 font-medium">
+                                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                                            Low Stock
+                                                        </div>
+                                                    @endif
+                                                @elseif(($item->type ?? 1) === App\Models\MenuItem::TYPE_KOT)
+                                                    <span class="badge bg-success text-white px-2 py-1 rounded text-xs font-medium">
+                                                        <i class="fas fa-check-circle mr-1"></i>
+                                                        Available
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </div>
 
-                                        <!-- Stock and KOT Info -->
-                                        <div class="hidden stock-container"></div>
-                                        <div class="hidden badge-container"></div>
+                                        <!-- Add to Order Controls -->
+                                        <div class="flex items-center justify-between mt-4">
+                                            <div class="flex items-center">
+                                                <input type="checkbox"
+                                                    class="item-check add-to-order mr-3 w-4 h-4 text-indigo-600"
+                                                    data-item-id="{{ $item->id }}"
+                                                    data-stock="{{ $item->stock ?? 0 }}"
+                                                    id="item_{{ $item->id }}"
+                                                    value="{{ $item->id }}"
+                                                    @if(($item->type ?? 1) === App\Models\MenuItem::TYPE_BUY_SELL && ($item->stock ?? 0) < 1) disabled @endif
+                                                    @if($existing) checked @endif>
+                                                <label for="item_{{ $item->id }}" class="text-sm font-medium text-gray-700">
+                                                    Add to Order
+                                                </label>
+                                            </div>
+                                            
+                                            <div class="flex items-center space-x-1">
+                                                <button type="button"
+                                                    class="qty-decrease w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg flex items-center justify-center"
+                                                    data-item-id="{{ $item->id }}"
+                                                    @if(!$existing) disabled @endif>
+                                                    <i class="fas fa-minus text-xs"></i>
+                                                </button>
+                                                <input type="number"
+                                                    min="1"
+                                                    max="{{ ($item->type ?? 1) === App\Models\MenuItem::TYPE_BUY_SELL ? ($item->stock ?? 0) : 99 }}"
+                                                    value="{{ $existing ? $existing->quantity : 1 }}"
+                                                    class="item-qty w-12 text-center border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                                    data-item-id="{{ $item->id }}"
+                                                    @if(!$existing) disabled @endif
+                                                    @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
+                                                <button type="button"
+                                                    class="qty-increase w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg flex items-center justify-center"
+                                                    data-item-id="{{ $item->id }}"
+                                                    @if(!$existing) disabled @endif>
+                                                    <i class="fas fa-plus text-xs"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                     @endforeach
                                 </div>
@@ -259,6 +374,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize takeaway type selector for admin
     initializeTakeawayTypeSelector();
+    
+    // Initialize order type change handler
+    initializeOrderTypeHandler();
 });
 
 /**
@@ -500,8 +618,7 @@ function updateExistingOrder() {
                     .replace(':reservation_id', data.reservation_id)
                     .replace(':order_id', orderId);
             } else {
-                window.location.href = `{{ route('admin.orders.summary', ':order_id') }}`
-                    .replace(':order_id', orderId);
+                window.location.href = "{{ route('admin.orders.summary', ['order' => 'ORDER_ID_PLACEHOLDER']) }}".replace('ORDER_ID_PLACEHOLDER', orderId);
             }
         } else {
             showErrorMessage('Failed to update order: ' + (data.message || 'Unknown error'));
@@ -709,3 +826,7 @@ function showToast(message, type) {
 console.log('✅ Admin Order Management JavaScript initialized successfully');
 </script>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/order-system.js') }}"></script>
+@endpush

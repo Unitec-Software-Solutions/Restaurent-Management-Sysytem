@@ -13,6 +13,9 @@ class MenuItem extends Model
     use HasFactory, SoftDeletes;
 
     
+    const TYPE_BUY_SELL = 1;  
+    const TYPE_KOT = 2;       
+
     protected $fillable = [
         'organization_id',
         'branch_id',
@@ -68,6 +71,11 @@ class MenuItem extends Model
     public function menuCategory(): BelongsTo
     {
         return $this->belongsTo(MenuCategory::class, 'menu_category_id');
+    }
+
+    public function itemMaster(): BelongsTo
+    {
+        return $this->belongsTo(ItemMaster::class, 'item_master_id');
     }
 
     public function kitchenStation(): BelongsTo

@@ -261,10 +261,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/ajax/available-stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getAvailableStewards'])->name('ajax.available-stewards');
             Route::get('/ajax/stock-alerts', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStockAlerts'])->name('ajax.stock-alerts');
             
-            // Takeaway Orders
+            // Takeaway Orders - redirect to unified create with type parameter
             Route::prefix('takeaway')->name('takeaway.')->group(function () {
                 Route::get('/', [AdminOrderController::class, 'indexTakeaway'])->name('index');
-                Route::get('/create', [AdminOrderController::class, 'createTakeaway'])->name('create');
+                Route::get('/create', function() {
+                    return redirect()->route('admin.orders.create', ['type' => 'takeaway']);
+                })->name('create');
                 Route::post('/', [AdminOrderController::class, 'storeTakeaway'])->name('store');
                 Route::get('/{order}', [AdminOrderController::class, 'showTakeaway'])->whereNumber('order')->name('show');
                 Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
@@ -418,9 +420,6 @@ Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 });
 
-/*-------------------------------------------------------------------------
-| Enhanced Order Management API Routes
-|------------------------------------------------------------------------*/
 Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     // Stock and availability APIs
     Route::get('/stock-summary', [AdminOrderController::class, 'getStockSummary']);
@@ -434,17 +433,11 @@ Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     Route::post('/update-menu-availability/{branch}', [AdminOrderController::class, 'updateMenuAvailability']);
 });
 
-// Enhanced order routes
-Route::prefix('admin/orders')->middleware(['auth:admin'])->group(function () {
-    Route::get('/enhanced-create', [AdminOrderController::class, 'enhancedCreate'])->name('admin.orders.enhanced-create');
-    Route::post('/enhanced-store', [AdminOrderController::class, 'enhancedStore'])->name('admin.orders.enhanced-store');
-    Route::post('/{order}/confirm-stock', [AdminOrderController::class, 'confirmOrderStock'])->name('admin.orders.confirm-stock');
-    Route::delete('/{order}/cancel-with-stock', [AdminOrderController::class, 'cancelOrderWithStock'])->name('admin.orders.cancel-with-stock');
+// Menu Items API Routes
+Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
+    Route::get('/menu-items/by-branch', [AdminOrderController::class, 'getMenuItems'])->name('menu-items.by-branch');
 });
 
-/*-------------------------------------------------------------------------
-| Real-time Dashboard Routes
-|------------------------------------------------------------------------*/
 Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () {
     Route::get('/realtime-inventory', [RealtimeDashboardController::class, 'index'])->name('admin.dashboard.realtime-inventory');
     

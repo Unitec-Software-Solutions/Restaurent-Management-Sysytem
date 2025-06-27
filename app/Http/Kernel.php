@@ -36,5 +36,6 @@ class Kernel extends HttpKernel
         'restaurant.permission' => \App\Http\Middleware\CheckRestaurantPermission::class,
         'admin.auth.debug' => \App\Http\Middleware\AdminAuthenticateDebug::class,
         'enhanced.admin.auth' => \App\Http\Middleware\EnhancedAdminAuth::class,
+        'admin.order.defaults' => \App\Http\Middleware\AdminOrderDefaults::class,
     ];
 }

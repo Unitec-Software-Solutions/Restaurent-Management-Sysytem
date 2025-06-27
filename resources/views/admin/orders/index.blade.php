@@ -39,7 +39,13 @@
     <div class="bg-white shadow-md rounded-lg p-6 mb-6">
         <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
             <h1 class="text-2xl font-bold">
-                All Orders
+                @if(request('type') === 'takeaway' || request('order_type') === 'takeaway')
+                    Takeaway Orders
+                @elseif(request('type') === 'in_house' || request('order_type') === 'in_house')
+                    Dine-In Orders
+                @else
+                    All Orders
+                @endif
                 @php $admin = auth('admin')->user(); @endphp
                 @if($admin->isSuperAdmin())
                     <span class="text-sm text-gray-500">(All Organizations)</span>
@@ -50,21 +56,23 @@
                 @endif
             </h1>
             <div class="flex gap-2">
-                @routeexists('admin.orders.takeaway.create')
-                    <a href="{{ route('admin.orders.takeaway.create') }}" 
-                       class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                        Create Takeaway
+                @routeexists('admin.orders.create')
+                    <a href="{{ route('admin.orders.create') }}" 
+                       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors duration-200">
+                        <i class="fas fa-plus mr-2"></i>
+                        Create Order
                     </a>
                 @else
                     <span class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
-                        Create Takeaway (Unavailable)
+                        Create Order (Unavailable)
                     </span>
                 @endrouteexists
 
                 @if(!$admin->isSuperAdmin())
                     @routeexists('admin.reservations.create')
                         <a href="{{ route('admin.reservations.create') }}" 
-                           class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors duration-200">
+                            <i class="fas fa-calendar-plus mr-2"></i>
                             Create Reservation
                         </a>
                     @else

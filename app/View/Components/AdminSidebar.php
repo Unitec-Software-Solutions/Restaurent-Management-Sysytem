@@ -339,8 +339,24 @@ class AdminSidebar extends Component
                         'permission' => 'orders.view'
                     ],
                     [
-                        'title' => 'Takeaway',
-                        'route' => 'admin.orders.takeaway.index',
+                        'title' => 'Create Order',
+                        'route' => 'admin.orders.create',
+                        'icon' => 'plus-circle',
+                        'icon_type' => 'svg',
+                        'permission' => 'orders.create'
+                    ],
+                    [
+                        'title' => 'Dine-In Orders',
+                        'route' => 'admin.orders.index',
+                        'route_params' => ['type' => 'in_house'],
+                        'icon' => 'utensils',
+                        'icon_type' => 'svg',
+                        'permission' => 'orders.view'
+                    ],
+                    [
+                        'title' => 'Takeaway Orders',
+                        'route' => 'admin.orders.index',
+                        'route_params' => ['type' => 'takeaway'],
                         'icon' => 'shopping-bag',
                         'icon_type' => 'svg',
                         'permission' => 'orders.view'
@@ -899,7 +915,7 @@ class AdminSidebar extends Component
     }
 
     /**
-     * Get order sub-items
+     * Get order sub-items - unified order flow
      */
     private function getOrderSubItems(): array
     {
@@ -913,20 +929,30 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute('admin.orders.index')
             ],
             [
-                'title' => 'Takeaway Orders',
-                'route' => 'admin.orders.takeaway.index',
-                'icon' => 'shopping-bag',
-                'icon_type' => 'svg',
-                'permission' => 'orders.view',
-                'is_route_valid' => $this->validateRoute('admin.orders.takeaway.index')
-            ],
-            [
                 'title' => 'Create Order',
                 'route' => 'admin.orders.create',
                 'icon' => 'plus-circle',
                 'icon_type' => 'svg',
                 'permission' => 'orders.create',
                 'is_route_valid' => $this->validateRoute('admin.orders.create')
+            ],
+            [
+                'title' => 'Dine-In Orders',
+                'route' => 'admin.orders.index',
+                'route_params' => ['type' => 'in_house'],
+                'icon' => 'utensils',
+                'icon_type' => 'svg',
+                'permission' => 'orders.view',
+                'is_route_valid' => $this->validateRoute('admin.orders.index')
+            ],
+            [
+                'title' => 'Takeaway Orders',
+                'route' => 'admin.orders.index',
+                'route_params' => ['type' => 'takeaway'],
+                'icon' => 'shopping-bag',
+                'icon_type' => 'svg',
+                'permission' => 'orders.view',
+                'is_route_valid' => $this->validateRoute('admin.orders.index')
             ]
         ];
     }
