@@ -3,36 +3,36 @@
 @section('header-title', 'Goods Received Note Details')
 @section('content')
 
-    {{-- Debug Info Card for GRN Show --}}
-    @if (config('app.debug'))
-        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-medium text-emerald-800">🔍 GRN Debug Info</h3>
-                <a href="{{ route('admin.grn.show', $grn->grn_id ?? 0) }}?debug=1"
-                    class="text-xs text-emerald-600 hover:text-emerald-800">
-                    Full Debug (debug=1)
-                </a>
+{{-- Debug Info Card for GRN Show --}}
+{{-- @if(config('app.debug'))
+    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-medium text-emerald-800">🔍 GRN Debug Info</h3>
+            <a href="{{ route('admin.grn.show', $grn->grn_id ?? 0) }}?debug=1"
+               class="text-xs text-emerald-600 hover:text-emerald-800">
+                Full Debug (@dd)
+            </a>
+        </div>
+        <div class="text-xs text-emerald-700 mt-2 grid grid-cols-4 gap-4">
+            <div>
+                <p><strong>GRN Variable:</strong> {{ isset($grn) ? 'Set' : 'NOT SET' }}</p>
+                <p><strong>GRN Number:</strong> {{ $grn->grn_number ?? 'N/A' }}</p>
             </div>
-            <div class="text-xs text-emerald-700 mt-2 grid grid-cols-4 gap-4">
-                <div>
-                    <p><strong>GRN Variable:</strong> {{ isset($grn) ? 'Set' : 'NOT SET' }}</p>
-                    <p><strong>GRN Number:</strong> {{ $grn->grn_number ?? 'N/A' }}</p>
-                </div>
-                <div>
-                    <p><strong>Items Count:</strong> {{ isset($grn) ? $grn->grnItems->count() : 'N/A' }}</p>
-                    <p><strong>Total Amount:</strong> Rs. {{ number_format($grn->total_amount ?? 0, 2) }}</p>
-                </div>
-                <div>
-                    <p><strong>Supplier:</strong> {{ $grn->supplier->name ?? 'N/A' }}</p>
-                    <p><strong>PO Number:</strong> {{ $grn->purchaseOrder->po_number ?? 'N/A' }}</p>
-                </div>
-                <div>
-                    <p><strong>Status:</strong> {{ $grn->status ?? 'N/A' }}</p>
-                    <p><strong>Received By:</strong> {{ $grn->receivedByUser->name ?? 'N/A' }}</p>
-                </div>
+            <div>
+                <p><strong>Items Count:</strong> {{ isset($grn) ? $grn->grnItems->count() : 'N/A' }}</p>
+                <p><strong>Total Amount:</strong> Rs. {{ number_format($grn->total_amount ?? 0, 2) }}</p>
+            </div>
+            <div>
+                <p><strong>Supplier:</strong> {{ $grn->supplier->name ?? 'N/A' }}</p>
+                <p><strong>PO Number:</strong> {{ $grn->purchaseOrder->po_number ?? 'N/A' }}</p>
+            </div>
+            <div>
+                <p><strong>Status:</strong> {{ $grn->status ?? 'N/A' }}</p>
+                <p><strong>Received By:</strong> {{ $grn->receivedByUser->name ?? 'N/A' }}</p>
             </div>
         </div>
-    @endif
+    </div>
+@endif --}}
 
     <div class="p-4 rounded-lg">
         <!-- Back and Action Buttons -->

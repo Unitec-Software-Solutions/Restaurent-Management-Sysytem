@@ -16,6 +16,7 @@ class ItemCategory extends Model
         'code',
         'description',
         'is_active',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -28,6 +29,11 @@ class ItemCategory extends Model
     public function items()
     {
         return $this->hasMany(ItemMaster::class, 'item_category_id');
+    }
+
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

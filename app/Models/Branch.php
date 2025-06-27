@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class Branch extends Model
 {
@@ -41,6 +42,71 @@ class Branch extends Model
         'reservation_fee' => 'decimal:2',
         'cancellation_fee' => 'decimal:2',
     ];
+
+    /**
+     * Boot method to set defaults and handle activation constraints
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($branch) {
+            // Default status: Branch must default to "inactive"
+            if (!isset($branch->is_active)) {
+                $branch->is_active = false;
+            }
+        });
+
+        static::updating(function ($branch) {
+            // Activation constraint: Branch cannot be active if parent Organization is inactive
+            if ($branch->is_active && $branch->isDirty('is_active')) {
+                $organization = $branch->organization;
+                if (!$organization || !$organization->is_active) {
+                    throw new \Exception('Branch cannot be activated while parent organization is inactive');
+                }
+            }
+        });
+
+        static::updated(function ($branch) {
+            // Log status changes for audit
+            if ($branch->isDirty('is_active')) {
+                Log::info('Branch status changed', [
+                    'branch_id' => $branch->id,
+                    'organization_id' => $branch->organization_id,
+                    'old_status' => $branch->getOriginal('is_active') ? 'active' : 'inactive',
+                    'new_status' => $branch->is_active ? 'active' : 'inactive'
+                ]);
+            }
+        });
+    }
+
+    /**
+     * Accessor: Ensure consistent status checking with organization validation
+     */
+    public function getIsActiveAttribute($value)
+    {
+        // Branch can only be active if organization is also active
+        if ($value && $this->organization && !$this->organization->is_active) {
+            return false;
+        }
+        return (bool) $value;
+    }
+
+    /**
+     * Mutator: Ensure boolean conversion and validation
+     */
+    public function setIsActiveAttribute($value)
+    {
+        $this->attributes['is_active'] = (bool) $value;
+    }
+
+    /**
+     * Check if branch can be activated based on organization status
+     */
+    public function canBeActivated(): bool
+    {
+        return $this->organization && $this->organization->is_active;
+    }
 
     // Relationships
     public function organization(): BelongsTo

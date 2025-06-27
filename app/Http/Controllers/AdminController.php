@@ -5,24 +5,43 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Reservation;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
     public function dashboard()
     {
-        $admin = Auth::user();
-
+        $admin = Auth::guard('admin')->user();
+        
         if (!$admin) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access the dashboard.');
         }
 
-        // Fetch GRN payment status counts
-        $grnPaymentStatusCounts = \App\Models\GrnMaster::selectRaw('payment_status, COUNT(*) as count')
-            ->groupBy('payment_status')
-            ->pluck('count', 'payment_status')
-            ->toArray();
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $admin->isSuperAdmin();
+        
+        // Basic validation - super admins don't need organization
+        if (!$isSuperAdmin && !$admin->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
+        }
 
-        return view('admin.dashboard', compact('admin', 'grnPaymentStatusCounts'));
+        try {
+            // Super admins can see all reservations, others see their organization's
+            $reservationsQuery = Reservation::with(['user', 'table'])
+                ->orderBy('created_at', 'desc')
+                ->take(10);
+                
+            if (!$isSuperAdmin && $admin->organization_id) {
+                $reservationsQuery->where('organization_id', $admin->organization_id);
+            }
+            
+            $reservations = $reservationsQuery->get();
+
+            return view('admin.dashboard', compact('reservations', 'admin'));
+        } catch (\Exception $e) {
+            Log::error('Dashboard error: ' . $e->getMessage());
+            return view('admin.dashboard', ['reservations' => collect(), 'admin' => $admin]);
+        }
     }
 
     public function index()

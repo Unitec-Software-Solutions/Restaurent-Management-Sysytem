@@ -156,10 +156,11 @@ public function activateBranch(Request $request)
         return back()->with('error', 'Invalid activation key.');
     }
 
-    $branch->is_active = true;
-    $branch->activated_at = now();
-    $branch->activation_key = null;
-    $branch->save();
+    $branch->update([
+        'is_active' => true,
+        'activated_at' => now(),
+        'activation_key' => null,
+    ]);
 
     return back()->with('success', 'Branch activated successfully!');
 }

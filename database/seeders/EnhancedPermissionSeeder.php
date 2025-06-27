@@ -132,12 +132,12 @@ class EnhancedPermissionSeeder extends Seeder
             ]);
         }
 
-        $this->command->info('  Admin permissions created successfully!');
+        $this->command->info('Admin permissions created successfully!');
 
         // Create default role templates (these will be created per organization)
         $this->createDefaultRoleTemplates();
 
-        $this->command->info('  Enhanced permission system seeded successfully!');
+        $this->command->info('Enhanced permission system seeded successfully!');
     }
 
     private function createDefaultRoleTemplates(): void
@@ -221,7 +221,7 @@ class EnhancedPermissionSeeder extends Seeder
         // Store role templates for later use by observers
         cache()->put('role_templates', $roleTemplates, now()->addDays(30));
 
-        $this->command->info('  Role templates cached for automated creation');
+        $this->command->info('Role templates cached for automated creation');
     }
 
     /**

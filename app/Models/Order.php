@@ -2,103 +2,189 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Order extends Model
 {
-    use HasFactory;
-
-    // Order types from database check constraint
-    const TYPE_TAKEAWAY_IN_CALL = 'takeaway_in_call_scheduled';
-    const TYPE_TAKEAWAY_ONLINE = 'takeaway_online_scheduled';
-    const TYPE_TAKEAWAY_WALKIN_SCHEDULED = 'takeaway_walk_in_scheduled';
-    const TYPE_TAKEAWAY_WALKIN_DEMAND = 'takeaway_walk_in_demand';
-    const TYPE_DINEIN_ONLINE = 'dine_in_online_scheduled';
-    const TYPE_DINEIN_INCALL = 'dine_in_in_call_scheduled';
-    const TYPE_DINEIN_WALKIN_SCHEDULED = 'dine_in_walk_in_scheduled';
-    const TYPE_DINEIN_WALKIN_DEMAND = 'dine_in_walk_in_demand';
-
-    // Statuses from database check constraint
-    const STATUS_ACTIVE = 'active';
+    // Order Status Constants
+    const STATUS_PENDING = 'pending';
+    const STATUS_CONFIRMED = 'confirmed';
     const STATUS_SUBMITTED = 'submitted';
     const STATUS_PREPARING = 'preparing';
     const STATUS_READY = 'ready';
     const STATUS_COMPLETED = 'completed';
     const STATUS_CANCELLED = 'cancelled';
 
-    protected $attributes = [
-        'customer_name' => 'Not Provided',
-        'customer_phone' => 'Not Provided',
-        'status' => self::STATUS_ACTIVE,
-        'order_type' => self::TYPE_TAKEAWAY_ONLINE,
-    ];
+    // Order Type Constants
+    const TYPE_DINE_IN = 'dine_in';
+    const TYPE_TAKEAWAY = 'takeaway';
+    const TYPE_DELIVERY = 'delivery';
+    
+    // Detailed Order Type Constants (as requested)
+    const TYPE_TAKEAWAY_IN_CALL = 'takeaway_in_call';
+    const TYPE_TAKEAWAY_ONLINE = 'takeaway_online';
+    const TYPE_TAKEAWAY_WALKIN_SCHEDULED = 'takeaway_walkin_scheduled';
+    const TYPE_TAKEAWAY_WALKIN_DEMAND = 'takeaway_walkin_demand';
+    const TYPE_DINEIN_ONLINE = 'dinein_online';
+    const TYPE_DINEIN_INCALL = 'dinein_incall';
+    const TYPE_DINEIN_WALKIN_SCHEDULED = 'dinein_walkin_scheduled';
+    const TYPE_DINEIN_WALKIN_DEMAND = 'dinein_walkin_demand';
 
-    // Additional fillable fields for stock management
+    // Payment Status Constants
+    const PAYMENT_STATUS_PENDING = 'pending';
+    const PAYMENT_STATUS_PAID = 'paid';
+    const PAYMENT_STATUS_PARTIAL = 'partial';
+    const PAYMENT_STATUS_REFUNDED = 'refunded';
+
+    // Payment Method Constants
+    const PAYMENT_METHOD_CASH = 'cash';
+    const PAYMENT_METHOD_CARD = 'card';
+    const PAYMENT_METHOD_DIGITAL = 'digital';
+
+    use HasFactory, SoftDeletes;
+
     protected $fillable = [
-        'reservation_id',
-        'branch_id',
+        'order_number',
         'customer_name',
         'customer_phone',
+        'customer_email',
         'order_type',
         'status',
         'subtotal',
-        'tax',
+        'tax_amount',        
+        'discount_amount',   
         'service_charge',
-        'discount',
-        'total',
-        'placed_by_admin',
-        'steward_id',
+        'delivery_fee',
+        'total_amount',      
+        'currency',
+        'payment_status',
+        'payment_method',
+        'payment_reference',
+        'notes',
         'order_date',
-        'kot_generated',
-        'bill_generated',
-        'stock_deducted',
-        'notes'
+        'reservation_id',
+        'branch_id',
+        'organization_id',
+        'table_id',
+        'user_id',
+        'created_by',
+        'placed_by_admin',       
+        'tax',              
+        'discount',         
+        'total',            
+        'requested_time',
+        'confirmed_at',
+        'prepared_at',
+        'completed_at',
+        'delivery_address',
+        'delivery_latitude',
+        'delivery_longitude',
+        'delivery_instructions',
+        'special_instructions',
+        'metadata'
     ];
 
     protected $casts = [
-        'order_time' => 'datetime',
         'order_date' => 'datetime',
-        'kot_generated' => 'boolean',
-        'bill_generated' => 'boolean',
-        'stock_deducted' => 'boolean',
+        'requested_time' => 'datetime',
+        'confirmed_at' => 'datetime',
+        'prepared_at' => 'datetime',
+        'completed_at' => 'datetime',
         'subtotal' => 'decimal:2',
-        'tax' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'service_charge' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        // Compatibility casts
+        'tax' => 'decimal:2',
         'discount' => 'decimal:2',
-        'total' => 'decimal:2'
+        'total' => 'decimal:2',
+        'placed_by_admin' => 'boolean',
+        'delivery_latitude' => 'decimal:8',
+        'delivery_longitude' => 'decimal:8',
+        'metadata' => 'array'
     ];
 
+    /**
+     * Boot method to generate order number and handle field mapping
+     */
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($order) {
-            // Set order date if not provided
-            if (!$order->order_date) {
-                $order->order_date = now();
+            if (empty($order->order_number)) {
+                $order->order_number = $order->generateOrderNumber();
             }
             
-            // Automatically set to 'submitted' when created
-            $order->status = self::STATUS_SUBMITTED;
-            
-            // Set customer_name to null if empty or blank
-            if (empty($order->customer_name) || trim($order->customer_name) === '') {
-                $order->customer_name = null;
-            }
+            // Handle field mapping for compatibility
+            $order->mapCompatibilityFields();
+        });
+        
+        static::updating(function ($order) {
+            $order->mapCompatibilityFields();
         });
     }
 
-    // Relationships
+    /**
+     * Map compatibility fields to ensure database consistency
+     */
+    private function mapCompatibilityFields()
+    {
+        // Map new fields to legacy fields for database consistency
+        if (!is_null($this->total) && is_null($this->total_amount)) {
+            $this->total_amount = $this->total;
+        } elseif (!is_null($this->total_amount) && is_null($this->total)) {
+            $this->total = $this->total_amount;
+        }
+        
+        if (!is_null($this->tax) && is_null($this->tax_amount)) {
+            $this->tax_amount = $this->tax;
+        } elseif (!is_null($this->tax_amount) && is_null($this->tax)) {
+            $this->tax = $this->tax_amount;
+        }
+        
+        if (!is_null($this->discount) && is_null($this->discount_amount)) {
+            $this->discount_amount = $this->discount;
+        } elseif (!is_null($this->discount_amount) && is_null($this->discount)) {
+            $this->discount = $this->discount_amount;
+        }
+    }
+
+    /**
+     * Generate unique order number following UI/UX guidelines
+     */
+    private function generateOrderNumber(): string
+    {
+        $prefix = 'ORD';
+        $branchId = str_pad($this->branch_id ?? '00', 2, '0', STR_PAD_LEFT);
+        $date = now()->format('Ymd');
+        
+        // Get today's order count for this branch
+        $todayCount = static::where('branch_id', $this->branch_id)
+            ->whereDate('created_at', today())
+            ->count() + 1;
+        
+        $sequence = str_pad($todayCount, 3, '0', STR_PAD_LEFT);
+        
+        return "{$prefix}{$branchId}{$date}{$sequence}";
+    }
+
+    /**
+     * Relationships
+     */
     public function branch()
     {
         return $this->belongsTo(Branch::class);
     }
 
-    public function items()
+    public function organization()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->belongsTo(Organization::class);
     }
 
     public function reservation()
@@ -106,31 +192,60 @@ class Order extends Model
         return $this->belongsTo(Reservation::class);
     }
 
+    public function table()
+    {
+        return $this->belongsTo(Table::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
     }
 
-    public function steward()
+    /**
+     * Calculate totals automatically with proper field mapping
+     */
+    public function calculateTotals()
     {
-        return $this->belongsTo(Employee::class, 'steward_id');
+        $subtotal = $this->orderItems->sum('total_price');
+        $this->subtotal = $subtotal;
+        
+        $tax = $subtotal * 0.10; // 10% tax
+        $this->tax = $tax;
+        $this->tax_amount = $tax;
+        
+        $serviceCharge = $subtotal * 0.05; // 5% service charge  
+        $this->service_charge = $serviceCharge;
+        
+        $discount = $this->discount ?? $this->discount_amount ?? 0;
+        $this->discount = $discount;
+        $this->discount_amount = $discount;
+        
+        $deliveryFee = $this->delivery_fee ?? 0;
+        
+        $total = $subtotal + $tax + $serviceCharge + $deliveryFee - $discount;
+        $this->total = $total;
+        $this->total_amount = $total;
+        
+        return $this;
     }
 
-    // New method that aliases steward to server for better naming
-    public function server()
+    /**
+     * Scopes for common queries
+     */
+    public function scopeActive($query)
     {
-        return $this->belongsTo(Employee::class, 'steward_id');
+        return $query->whereNotIn('status', ['cancelled', 'refunded']);
     }
 
-    public function bills()
+    public function scopeToday($query)
     {
-        return $this->hasMany(Bill::class);
-    }
-
-    // Scopes
-    public function scopeByDateRange($query, $startDate, $endDate)
-    {
-        return $query->whereBetween('order_date', [$startDate, $endDate]);
+        return $query->whereDate('created_at', today());
     }
 
     public function scopeByBranch($query, $branchId)
@@ -138,148 +253,46 @@ class Order extends Model
         return $query->where('branch_id', $branchId);
     }
 
-    public function scopeByStatus($query, $status)
+    /**
+     * Status badge for UI display following guidelines
+     */
+    public function getStatusBadgeAttribute(): string
     {
-        return $query->where('status', $status);
-    }
+        $badges = [
+            'pending' => 'bg-yellow-100 text-yellow-800',
+            'confirmed' => 'bg-blue-100 text-blue-800',
+            'preparing' => 'bg-orange-100 text-orange-800',
+            'ready' => 'bg-green-100 text-green-800',
+            'completed' => 'bg-gray-100 text-gray-800',
+            'cancelled' => 'bg-red-100 text-red-800',
+        ];
 
-    public function scopeByType($query, $type)
-    {
-        return $query->where('order_type', $type);
-    }
-
-    public function scopeOrderedByDate($query)
-    {
-        return $query->orderBy('order_date', 'desc');
-    }
-
-    // Status management methods
-    public function markAsPreparing()
-    {
-        if ($this->status !== self::STATUS_SUBMITTED) {
-            throw new \Exception('Only submitted orders can be marked as preparing');
-        }
-        $this->update([
-            'status' => self::STATUS_PREPARING,
-            'preparation_started_at' => now()
-        ]);
-    }
-
-    public function markAsReady()
-    {
-        if ($this->status !== self::STATUS_PREPARING) {
-            throw new \Exception('Only preparing orders can be marked as ready');
-        }
-        $this->update([
-            'status' => self::STATUS_READY,
-            'ready_at' => now()
-        ]);
-    }
-
-    public function markAsCompleted()
-    {
-        if (!in_array($this->status, [self::STATUS_READY, self::STATUS_PREPARING])) {
-            throw new \Exception('Order must be ready or preparing to be completed');
-        }
-        $this->update([
-            'status' => self::STATUS_COMPLETED,
-            'completed_at' => now(),
-            'bill_generated' => true
-        ]);
-    }
-
-    public function cancel($reason = null)
-    {
-        if (in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_CANCELLED])) {
-            throw new \Exception('Cannot cancel completed or already cancelled order');
-        }
-        
-        $this->update([
-            'status' => self::STATUS_CANCELLED,
-            'cancelled_at' => now(),
-            'cancellation_reason' => $reason
-        ]);
-    }
-
-    // Stock management methods
-    public function generateKOT()
-    {
-        if ($this->kot_generated) {
-            return false;
-        }
-
-        $this->update(['kot_generated' => true]);
-        return true;
-    }
-
-    public function canDeductStock()
-    {
-        return !$this->stock_deducted && in_array($this->status, [self::STATUS_SUBMITTED, self::STATUS_PREPARING]);
-    }
-
-    public function deductStock()
-    {
-        if (!$this->canDeductStock()) {
-            return false;
-        }
-
-        $this->update(['stock_deducted' => true]);
-        return true;
-    }
-
-    // Helper methods
-    public function calculateTotal()
-    {
-        $subtotal = $this->items->sum('total_price');
-        $tax = $subtotal * 0.13; // 13% VAT
-        $serviceCharge = $subtotal * 0.10; // 10% service charge
-        $total = $subtotal + $tax + $serviceCharge - ($this->discount ?? 0);
-
-        $this->update([
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'service_charge' => $serviceCharge,
-            'total' => $total
-        ]);
-
-        return $total;
-    }
-
-    public function getOrderNumberAttribute()
-    {
-        return 'ORD-' . str_pad($this->id, 6, '0', STR_PAD_LEFT);
+        return $badges[$this->status] ?? 'bg-gray-100 text-gray-600';
     }
 
     /**
-     * Check if the order is submitted.
+     * Get formatted total amount
      */
-    public function isSubmitted(): bool
+    public function getFormattedTotalAttribute(): string
     {
-        return $this->status === self::STATUS_SUBMITTED;
+        $amount = $this->total_amount ?? $this->total ?? 0;
+        return number_format($amount, 2);
     }
 
-    public function isActive(): bool
+    /**
+     * Get currency symbol
+     */
+    public function getCurrencySymbolAttribute(): string
     {
-        return $this->status === self::STATUS_ACTIVE;
-    }
+        $symbols = [
+            'USD' => '$',
+            'LKR' => 'Rs.',
+            'EUR' => '€',
+            'GBP' => '£'
+        ];
 
-    public function isPreparing(): bool
-    {
-        return $this->status === self::STATUS_PREPARING;
+        return $symbols[$this->currency] ?? $this->currency;
     }
+    
 
-    public function isReady(): bool
-    {
-        return $this->status === self::STATUS_READY;
-    }
-
-    public function isCompleted(): bool
-    {
-        return $this->status === self::STATUS_COMPLETED;
-    }
-
-    public function isCancelled(): bool
-    {
-        return $this->status === self::STATUS_CANCELLED;
-    }
 }

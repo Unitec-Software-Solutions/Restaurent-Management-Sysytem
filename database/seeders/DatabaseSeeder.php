@@ -4,14 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Organization;
 use App\Models\Branch;
-use App\Models\Admin;
-use App\Models\CustomRole;
-use App\Models\User;
-use App\Models\Employee;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
-use App\Models\Table;
-use App\Models\Reservation;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\GoodsTransferNote;
@@ -19,6 +13,7 @@ use App\Models\GoodsTransferItem;
 use App\Models\GrnMaster;
 use App\Models\GrnItem;
 use App\Models\ItemMaster;
+use App\Models\ItemCategory;
 use App\Models\Permission;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
@@ -31,144 +26,99 @@ use Illuminate\Support\Facades\DB;
 class DatabaseSeeder extends Seeder
 {
 
+    protected $faker;
+
     public function run(): void
     {
-        // Clear existing data first
-        DB::statement('TRUNCATE tables RESTART IDENTITY CASCADE;');
+        $this->command->info('🌱 Starting comprehensive database seeding...');
 
-        // Run basic seeders first
-        $this->call([
-            SubscriptionPlanSeeder::class, // Creates subscription plans
-            EnhancedPermissionSeeder::class, // Creates roles and permissions for automation
-            OrganizationSeeder::class,
-            BranchSeeder::class,
-            // TableSeeder::class,
-            LoginSeeder::class,
-            // SupplierSeeder::class,
-            ItemCategorySeeder::class,
-            // ItemMasterSeeder::class,
-            AdminSeeder::class,
-            // ReservationSeeder::class,
-            // PurchaseOrderSeeder::class,
-            // GRNSeeder::class,
-            // SupplierPaymentSeeder::class,
-            // ItemTransactionSeeder::class,
-            //EmployeeSeeder::class,
-            // ModulePermissionSeeder::class,
-            SuperAdminSeeder::class,
-            ModulesTableSeeder::class,
-            RoleSeeder::class,
-            UserSeeder::class,
+        // Clear existing data first (but safely)
+        $this->command->info('🧹 Clearing existing data...');
 
+        // Use database-agnostic approach for disabling foreign key checks
+        $databaseType = DB::connection()->getDriverName();
 
-        ]);
+        if ($databaseType === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        } elseif ($databaseType === 'pgsql') {
+            // PostgreSQL doesn't have a global foreign key disable, so we'll truncate in correct order
+            $this->command->info('🔄 Using PostgreSQL-compatible truncation...');
+        }
+          // Clear tables in dependency order (reverse of creation order)
+        $tablesToClear = [
+            'payment_allocations', 'order_items', 'orders', 'menu_items',
+            'menu_categories', 'goods_transfer_items', 'goods_transfer_notes',
+            'grn_items', 'grn_masters', 'purchase_order_items', 'purchase_orders',            'item_masters', 'item_categories', 'kitchen_stations', 'branches',
+            'organizations', 'admins', 'users', 'roles'
+        ];
 
-        $legacyPlan = \App\Models\SubscriptionPlan::create([
-            'name' => 'Legacy',
-            'price' => 1000,
-            'currency' => 'LKR',
-            'modules' => [],
-            'description' => 'Legacy plan',
-            'is_trial' => false,
-            'trial_period_days' => null
-        ]);
-
-
-        // Get the created subscription plans for factory data
-        $plans = \App\Models\SubscriptionPlan::all();
-
-
-        $planIds = $plans->pluck('id')->toArray();
-
-
-        Organization::factory(5)->create([
-            'subscription_plan_id' => $planIds[array_rand($planIds)]
-        ])->each(function ($organization) use ($planIds) {
-            if (!$organization->subscription_plan_id || !in_array($organization->subscription_plan_id, $planIds)) {
-                echo "[ERROR] Organization ID {$organization->id} has invalid subscription_plan_id: {$organization->subscription_plan_id}\n";
-            }
-            $branches = Branch::factory(3)->create(['organization_id' => $organization->id]);
-            Admin::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            CustomRole::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            Employee::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            $menuCategories = MenuCategory::factory(3)->create();
-            MenuItem::factory(10)->create(['menu_category_id' => $menuCategories->random()->id]);
-
-            $branches->each(function ($branch, $index) {
-                for ($tableNum = 1; $tableNum <= 5; $tableNum++) {
-                    Table::factory()->create([
-                        'branch_id' => $branch->id,
-                        'number' => $tableNum
-                    ]);
+        foreach ($tablesToClear as $table) {
+            try {
+                // Check if table exists before attempting to clear
+                if (!DB::getSchemaBuilder()->hasTable($table)) {
+                    $this->command->warn("⚠️ Table {$table} does not exist, skipping...");
+                    continue;
                 }
-            });
-            User::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            Reservation::factory(5)->create(['branch_id' => $branches->random()->id]);
 
+                if ($databaseType === 'mysql') {
+                    DB::table($table)->truncate();
+                } else {
+                    // For PostgreSQL, use TRUNCATE CASCADE to handle foreign keys
+                    DB::statement("TRUNCATE TABLE {$table} RESTART IDENTITY CASCADE;");
+                }
+                $this->command->info("✅ Cleared table: {$table}");
+            } catch (\Exception $e) {
+                $this->command->warn("⚠️ Could not clear table {$table}: {$e->getMessage()}");
+                // For PostgreSQL, try a force delete approach
+                if ($databaseType === 'pgsql') {
+                    try {
+                        DB::table($table)->delete();
+                        $this->command->info("✅ Force cleared table: {$table}");
+                    } catch (\Exception $innerE) {
+                        $this->command->warn("⚠️ Force clear also failed for {$table}: {$innerE->getMessage()}");
+                    }
+                }
+            }
+        }
 
-            $itemMasters = ItemMaster::factory(5)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
+        // Re-enable foreign key checks
+        if ($databaseType === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        } elseif ($databaseType === 'pgsql') {
+            $this->command->info('✅ PostgreSQL truncation completed');
+        }
+          // Run our stable, tested seeders only
+        $this->command->info('🌱 Running core seeders...');
 
-            $orders = Order::factory(5)->create(['branch_id' => $branches->random()->id]);
-            $orders->each(function ($order) use ($itemMasters) {
-                OrderItem::factory(3)->create([
-                    'order_id' => $order->id,
-                    'menu_item_id' => $itemMasters->random()->id,
-                    'inventory_item_id' => $itemMasters->random()->id
-                ]);
-            });
-            $gtns = GoodsTransferNote::factory(2)->create(['organization_id' => $organization->id, 'from_branch_id' => $branches->random()->id, 'to_branch_id' => $branches->random()->id]);
-            $gtns->each(function ($gtn) {
-                GoodsTransferItem::factory(3)->create(['gtn_id' => $gtn->gtn_id]);
-            });
-            $grns = GrnMaster::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            $grns->each(function ($grn) {
-                GrnItem::factory(3)->create(['grn_id' => $grn->grn_id]);
-            });
+        // 0. Create super admin first
+        $this->call(SuperAdminSeeder::class);
 
-            Permission::factory(2)->create();
-            $pos = PurchaseOrder::factory(2)->create(['organization_id' => $organization->id, 'branch_id' => $branches->random()->id]);
-            $pos->each(function ($po) {
-                PurchaseOrderItem::factory(3)->create(['po_id' => $po->po_id]);
-            });
-            Payment::factory(2)->create();
-            PaymentAllocation::factory(2)->create();
-        });
+        // 0.1. Also create super admin in users table (LoginSeeder)
+        $this->call(LoginSeeder::class);
+          // 1. Organizations first (creates kitchen stations automatically)
+        $this->call(OrganizationSeeder::class);
 
-        // Display success message
-        $this->displaySuccessMessage();
-    }
+        // 2. Branches (creates additional kitchen stations)
+        $this->call(BranchSeeder::class);
 
-    private function displaySuccessMessage(): void
-    {
-        $this->command->newLine();
-        $this->command->getOutput()->writeln('<fg=white;bg=green> ✅ DATABASE SEEDING COMPLETED SUCCESSFULLY! </fg=white;bg=green>');
-        $this->command->newLine();
+        // 2.1. Create roles for the organizations
+        $this->call(RoleSeeder::class);
 
-        $this->command->info('🎉 <fg=green>Database has been seeded with sample data!</fg=green>');
-        $this->command->newLine();
+        // 3. Item categories (required for item masters)
+        $this->call(ItemCategorySeeder::class);
 
-        $this->command->line('<fg=cyan>📊 Summary of created records:</fg=cyan>');
-        $this->command->line('   • Organizations: ' . \App\Models\Organization::count());
-        $this->command->line('   • Subscription Plans: ' . \App\Models\SubscriptionPlan::count());
-        $this->command->line('   • Branches: ' . \App\Models\Branch::count());
-        $this->command->line('   • Employees: ' . \App\Models\Employee::count());
-        $this->command->line('   • Menu Items: ' . \App\Models\MenuItem::count());
-        $this->command->line('   • Orders: ' . \App\Models\Order::count());
-        $this->command->line('   • Reservations: ' . \App\Models\Reservation::count());
-        $this->command->line('   • Suppliers: ' . \App\Models\Supplier::count());
-        $this->command->line('   • Purchase Orders: ' . \App\Models\PurchaseOrder::count());
-        $this->command->line('   • GRNs: ' . \App\Models\GrnMaster::count());
-        $this->command->line('   • Payments: ' . \App\Models\Payment::count());
+        // 4. Item masters with valid references
+        $this->call(ItemMasterSeeder::class);
+          $this->command->info('✅ Core database seeding completed successfully!');
+        $this->command->info('📊 Current state:');
 
-        $this->command->newLine();
-        $this->command->line('<fg=yellow>🚀 Next steps:</fg=yellow>');
-        $this->command->line('   1. Visit your application dashboard');
-        $this->command->line('   2. Check views for data display issues');
-        $this->command->line('   3. Use @dd() for debugging any unexpected values');
-        $this->command->line('   4. Add ?debug=1 to URLs for detailed debugging');
-
-        $this->command->newLine();
-        $this->command->line('<fg=green>✨ Your Restaurant Management System is ready to go!</fg=green>');
-        $this->command->newLine();
+        // Show summary
+        $this->command->info('  - Organizations: ' . Organization::count());
+        $this->command->info('  - Branches: ' . Branch::count());
+        $this->command->info('  - Kitchen Stations: ' . \App\Models\KitchenStation::count());
+        $this->command->info('  - Item Categories: ' . \App\Models\ItemCategory::count());
+        $this->command->info('  - Item Masters: ' . ItemMaster::count());
+        $this->command->info('  - Admin Users: ' . \App\Models\Admin::count());
+        $this->command->info('  - Regular Users: ' . \App\Models\User::count());
     }
 }

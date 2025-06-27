@@ -16,7 +16,16 @@ class CheckSubscription
     {
         $user = auth('admin')->user() ?? auth('web')->user();
         
-        if (!$user || !$user->organization) {
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please log in to access this feature.');
+        }
+
+        // Super admins bypass all subscription checks
+        if (isset($user->is_super_admin) && $user->is_super_admin) {
+            return $next($request);
+        }
+
+        if (!$user->organization) {
             return redirect()->route('login')->with('error', 'Please log in to access this feature.');
         }
 

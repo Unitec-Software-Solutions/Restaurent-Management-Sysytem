@@ -14,38 +14,35 @@
 @section('content')
 
     {{-- Debug Info Card for Stock Transactions --}}
-    @if (config('app.debug'))
-        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-medium text-indigo-800">🔍 Stock Transactions Debug Info</h3>
-                <a href="{{ route('admin.inventory.stock.transactions.index', array_merge(request()->query(), ['debug' => 1])) }}"
-                    class="text-xs text-indigo-600 hover:text-indigo-800">
-                    Full Debug (debug=1)
-                </a>
+    {{-- @if (config('app.debug'))
+    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-medium text-indigo-800">🔍 Stock Transactions Debug Info</h3>
+            <a href="{{ route('admin.inventory.stock.transactions.index', array_merge(request()->query(), ['debug' => 1])) }}"
+               class="text-xs text-indigo-600 hover:text-indigo-800">
+                Full Debug (@dd)
+            </a>
+        </div>
+        <div class="text-xs text-indigo-700 mt-2 grid grid-cols-4 gap-4">
+            <div>
+                <p><strong>Transactions Variable:</strong> {{ isset($transactions) ? 'Set (' . $transactions->count() . ')' : 'NOT SET' }}</p>
+                <p><strong>DB Transactions:</strong> {{ \App\Models\ItemTransaction::count() }}</p>
             </div>
-            <div class="text-xs text-indigo-700 mt-2 grid grid-cols-4 gap-4">
-                <div>
-                    <p><strong>Transactions Variable:</strong>
-                        {{ isset($transactions) ? 'Set (' . $transactions->count() . ')' : 'NOT SET' }}</p>
-                    <p><strong>DB Transactions:</strong> {{ \App\Models\ItemTransaction::count() }}</p>
-                </div>
-                <div>
-                    <p><strong>Branches Variable:</strong>
-                        {{ isset($branches) ? 'Set (' . $branches->count() . ')' : 'NOT SET' }}</p>
-                    <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}
-                    </p>
-                </div>
-                <div>
-                    <p><strong>Date Range:</strong> {{ $dateFrom }} to {{ $dateTo }}</p>
-                    <p><strong>Search:</strong> {{ request('search', 'None') }}</p>
-                </div>
-                <div>
-                    <p><strong>Transaction Type:</strong> {{ request('transaction_type', 'All') }}</p>
-                    <p><strong>Branch Filter:</strong> {{ request('branch_id', 'All') }}</p>
-                </div>
+            <div>
+                <p><strong>Branches Variable:</strong> {{ isset($branches) ? 'Set (' . $branches->count() . ')' : 'NOT SET' }}</p>
+                <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}</p>
+            </div>
+            <div>
+                <p><strong>Date Range:</strong> {{ $dateFrom }} to {{ $dateTo }}</p>
+                <p><strong>Search:</strong> {{ request('search', 'None') }}</p>
+            </div>
+            <div>
+                <p><strong>Transaction Type:</strong> {{ request('transaction_type', 'All') }}</p>
+                <p><strong>Branch Filter:</strong> {{ request('branch_id', 'All') }}</p>
             </div>
         </div>
-    @endif
+    </div>
+@endif --}}
 
     <div class="p-4 rounded-lg">
         <!-- Header with navigation buttons -->
@@ -61,36 +58,33 @@
                 ]" active="Transactions" />
             </div>
 
-            <!-- Search and Filter -->
-            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <form method="GET" action="{{ route('admin.inventory.stock.transactions.index') }}"
-                    class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                        <div class="relative">
-                            <input type="text" name="search" value="{{ request('search') }}"
-                                placeholder="Item name or code"
-                                class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                        </div>
-                    </div>
+            <!-- Filters with Export -->
+            <x-module-filters :action="route('admin.inventory.stock.transactions.index')" :export-permission="'export_inventory'" :export-filename="'inventory_transactions_export.xlsx'">
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                        <div class="relative">
-                            <select name="branch_id"
-                                class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                <option value="">All Branches</option>
-                                @foreach ($branches as $branch)
-                                    <option value="{{ $branch->id }}"
-                                        {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
-                                        {{ $branch->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-
-                        </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                    <div class="relative">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Item name or code"
+                            class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                    <div class="relative">
+                        <select name="branch_id"
+                            class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <option value="">All Branches</option>
+                            @foreach ($branches as $branch)
+                                <option value="{{ $branch->id }}"
+                                    {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                    {{ $branch->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
@@ -121,28 +115,16 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <input type="date" name="date_from" value="{{ $dateFrom }}"
-                                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-                            <input type="date" name="date_to" value="{{ $dateTo }}"
-                                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-                        </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" name="date_from" value="{{ request('date_from') }}"
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <input type="date" name="date_to" value="{{ request('date_to') }}"
+                            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
                     </div>
-
-                    <div class="flex items-end space-x-2">
-                        <button type="submit"
-                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-filter mr-2"></i> Filter
-                        </button>
-                        <a href="{{ route('admin.inventory.stock.transactions.index') }}"
-                            class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-redo mr-2"></i> Reset
-                        </a>
-                    </div>
-                </form>
-            </div>
+                </div>
+            </x-module-filters>
 
 
 

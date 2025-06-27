@@ -118,8 +118,23 @@
                                         @foreach($menuItems as $item)
                                         @php
                                             $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
+                                            
+                                            // Handle KOT vs Buy & Sell items differently
+                                            if ($item->item_type === 'KOT') {
+                                                $stockLevel = 'unlimited';
+                                                $isLowStock = false;
+                                                $isOutOfStock = false;
+                                                $stockBadgeClass = 'bg-green-100 text-green-800';
+                                                $stockText = 'Always Available';
+                                            } else {
+                                                $stockLevel = $item->current_stock ?? 0;
+                                                $isLowStock = $stockLevel > 0 && $stockLevel <= 5;
+                                                $isOutOfStock = $stockLevel <= 0;
+                                                $stockBadgeClass = $isOutOfStock ? 'bg-red-100 text-red-800' : ($isLowStock ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800');
+                                                $stockText = $isOutOfStock ? 'Out of Stock' : ($isLowStock ? "Low Stock ({$stockLevel})" : 'Available');
+                                            }
                                         @endphp
-                                        <div class="menu-item-card bg-white border border-gray-200 rounded-lg p-4 mb-3 hover:shadow-md transition-all duration-300">
+                                        <div class="menu-item-card bg-white border border-gray-200 rounded-lg p-4 mb-3 hover:shadow-md transition-all duration-300 {{ $isOutOfStock ? 'opacity-50' : '' }}">
                                             <div class="flex items-start">
                                                 <!-- Item Image Placeholder -->
                                                 <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 flex items-center justify-center mr-3">
@@ -134,19 +149,60 @@
                                                                     value="{{ $item->id }}" 
                                                                     id="item_{{ $item->id }}"
                                                                     class="mt-1 focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded item-check"
-                                                                    @if($existing) checked @endif>
-                                                                <label for="item_{{ $item->id }}" class="font-semibold text-gray-800">{{ $item->name }}</label>
+                                                                    @if($existing) checked @endif
+                                                                    @if($isOutOfStock) disabled @endif>
+                                                                <label for="item_{{ $item->id }}" class="font-semibold text-gray-800 {{ $isOutOfStock ? 'text-gray-400' : '' }}">{{ $item->name }}</label>
+                                                                
+                                                                <!-- KOT Badge -->
+                                                                @if($item->item_type === 'KOT')
+                                                                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>
+                                                                @endif
+                                                                
+                                                                <!-- Stock Status Badge for Buy & Sell items only -->
+                                                                @if($item->item_type === 'Buy & Sell')
+                                                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $stockBadgeClass }}">
+                                                                    {{ $stockText }}
+                                                                </span>
+                                                                @endif
                                                             </div>
                                                             @if($item->description)
                                                             <p class="ml-6 text-sm text-gray-500">{{ $item->description }}</p>
                                                             @endif
+                                                            
+                                                            <!-- Additional Item Info -->
+                                                            <div class="ml-6 mt-2 flex items-center space-x-4 text-xs text-gray-500">
+                                                                @if(isset($item->attributes['prep_time_minutes']))
+                                                                <div class="flex items-center">
+                                                                    <i class="fas fa-clock mr-1"></i>
+                                                                    <span>{{ $item->attributes['prep_time_minutes'] }} mins</span>
+                                                                </div>
+                                                                @endif
+                                                                @if(isset($item->attributes['cuisine_type']))
+                                                                <div class="flex items-center">
+                                                                    <i class="fas fa-tag mr-1"></i>
+                                                                    <span>{{ ucfirst($item->attributes['cuisine_type']) }}</span>
+                                                                </div>
+                                                                @endif
+                                                                @if(isset($item->attributes['serving_size']))
+                                                                <div class="flex items-center">
+                                                                    <i class="fas fa-users mr-1"></i>
+                                                                    <span>{{ $item->attributes['serving_size'] }}</span>
+                                                                </div>
+                                                                @endif
+                                                            </div>
                                                         </div>
-                                                        <span class="text-blue-600 font-medium">LKR {{ number_format($item->selling_price, 2) }}</span>
+                                                        <div class="text-right">
+                                                            <span class="text-blue-600 font-medium">LKR {{ number_format($item->selling_price, 2) }}</span>
+                                                            @if($stockLevel > 0)
+                                                            <div class="text-xs text-gray-500 mt-1">Stock: {{ $stockLevel }}</div>
+                                                            @endif
+                                                        </div>
                                                     </div>
-                                                    <div class="ml-6 mt-3">
+                                                    <div class="ml-6 mt-3 {{ $isOutOfStock ? 'hidden' : '' }}">
                                                         <input type="number" 
                                                             name="items[{{ $item->id }}][quantity]" 
                                                             min="1" 
+                                                            max="{{ $stockLevel }}"
                                                             value="{{ $existing ? $existing->quantity : 1 }}" 
                                                             class="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 quantity-input"
                                                             disabled>
@@ -352,38 +408,72 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', updateSummary);
     });
 
-    // Form validation
+    // Enhanced form validation with stock checks
     document.getElementById('order-form').addEventListener('submit', function(e) {
         const phoneInput = document.querySelector('input[name="customer_phone"]');
         if (!phoneInput.value.trim() || !phoneInput.checkValidity()) {
             e.preventDefault();
             alert('Please enter a valid 10-15 digit phone number');
             phoneInput.focus();
+            return;
+        }
+
+        // Stock validation
+        let stockErrors = [];
+        document.querySelectorAll('.item-check:checked').forEach(checkbox => {
+            const itemCard = checkbox.closest('.menu-item-card');
+            const quantityInput = itemCard.querySelector('.quantity-input');
+            const stockLevel = parseInt(quantityInput.getAttribute('max')) || 0;
+            const requestedQty = parseInt(quantityInput.value) || 0;
+            const itemName = checkbox.closest('.menu-item-card').querySelector('label').textContent;
+
+            if (requestedQty > stockLevel) {
+                stockErrors.push(`${itemName}: Requested ${requestedQty}, but only ${stockLevel} available`);
+            }
+        });
+
+        if (stockErrors.length > 0) {
+            e.preventDefault();
+            alert('Stock validation errors:\n' + stockErrors.join('\n'));
+            return;
+        }
+
+        // Check if at least one item is selected
+        const selectedItems = document.querySelectorAll('.item-check:checked');
+        if (selectedItems.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one menu item');
+            return;
         }
     });
 
-    // Initial summary update
-    updateSummary();
-});
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.item-check').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            const itemId = this.getAttribute('data-item-id');
-            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
-            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
-            if (this.checked) {
-                qtyInput.disabled = false;
-                plusBtn.disabled = false;
-                minusBtn.disabled = false;
-                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-            } else {
-                qtyInput.disabled = true;
-                plusBtn.disabled = true;
-                minusBtn.disabled = true;
-                qtyInput.removeAttribute('name');
-                qtyInput.value = 1;
+    // Real-time stock validation on quantity change
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const maxStock = parseInt(this.getAttribute('max')) || 0;
+            const currentValue = parseInt(this.value) || 0;
+            const stockWarning = this.parentNode.querySelector('.stock-warning');
+            
+            // Remove existing warning
+            if (stockWarning) {
+                stockWarning.remove();
             }
+            
+            if (currentValue > maxStock) {
+                this.style.borderColor = '#dc2626';
+                const warning = document.createElement('div');
+                warning.className = 'stock-warning text-xs text-red-600 mt-1';
+                warning.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>Only ${maxStock} available`;
+                this.parentNode.appendChild(warning);
+            } else {
+                this.style.borderColor = '#d1d5db';
+            }
+            
+            updateSummary();
+        });
+        
+        input.addEventListener('change', updateSummary);
+    });
         });
     });
 

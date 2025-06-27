@@ -95,6 +95,143 @@
                 }
             });
 
+            // Handle menu item checkbox change
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('menu-item-checkbox')) {
+                    const index = e.target.dataset.index;
+                    const menuAttributesSection = document.querySelector(`.menu-attributes[data-index="${index}"]`);
+                    
+                    if (e.target.checked) {
+                        menuAttributesSection.classList.remove('hidden');
+                        // Make menu attributes required
+                        setMenuAttributesRequired(index, true);
+                    } else {
+                        menuAttributesSection.classList.add('hidden');
+                        // Remove required status and clear menu attributes when unchecked
+                        setMenuAttributesRequired(index, false);
+                        clearMenuAttributes(index);
+                    }
+                    
+                    // Update the attributes field
+                    updateMenuAttributesField(index);
+                }
+            });
+
+            // Handle menu attribute field changes
+            document.addEventListener('input', function(e) {
+                if (e.target.classList.contains('menu-attribute-field')) {
+                    const menuAttrSection = e.target.closest('.menu-attributes');
+                    if (menuAttrSection) {
+                        const index = menuAttrSection.dataset.index;
+                        updateMenuAttributesField(index);
+                    }
+                }
+            });
+
+            // Handle menu attribute checkbox changes
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('menu-attribute-field') && e.target.type === 'checkbox') {
+                    const menuAttrSection = e.target.closest('.menu-attributes');
+                    if (menuAttrSection) {
+                        const index = menuAttrSection.dataset.index;
+                        updateMenuAttributesField(index);
+                    }
+                }
+            });
+
+            // Update menu attributes field
+            function updateMenuAttributesField(index) {
+                const menuAttrSection = document.querySelector(`.menu-attributes[data-index="${index}"]`);
+                const attrField = document.querySelector(`input[name="items[${index}][attributes]"]`);
+                const isMenuItemChecked = document.querySelector(`#menuitem-${index}`).checked;
+
+                if (!menuAttrSection || !attrField) return;
+
+                let attributes = {};
+                
+                // Get existing category attributes if any
+                try {
+                    attributes = JSON.parse(attrField.value || '{}');
+                } catch (e) {
+                    attributes = {};
+                }
+
+                if (isMenuItemChecked) {
+                    // Add menu-specific attributes
+                    const menuFields = menuAttrSection.querySelectorAll('.menu-attribute-field');
+                    menuFields.forEach(field => {
+                        const key = field.dataset.menuAttr;
+                        if (field.type === 'checkbox') {
+                            attributes[key] = field.checked;
+                        } else {
+                            attributes[key] = field.value;
+                        }
+                    });
+                } else {
+                    // Remove menu-specific attributes
+                    const menuAttrKeys = [
+                        'cuisine_type', 'spice_level', 'prep_time_minutes', 'serving_size',
+                        'dietary_type', 'availability', 'main_ingredients', 'allergen_info',
+                        'is_chefs_special', 'is_popular'
+                    ];
+                    menuAttrKeys.forEach(key => {
+                        delete attributes[key];
+                    });
+                }
+
+                attrField.value = JSON.stringify(attributes);
+            }
+
+            // Clear menu attributes
+            function clearMenuAttributes(index) {
+                const menuAttrSection = document.querySelector(`.menu-attributes[data-index="${index}"]`);
+                if (!menuAttrSection) return;
+
+                // Clear all menu attribute fields
+                menuAttrSection.querySelectorAll('.menu-attribute-field').forEach(field => {
+                    if (field.type === 'checkbox') {
+                        field.checked = false;
+                    } else {
+                        field.value = '';
+                    }
+                });
+            }
+
+            // Set menu attributes as required or optional
+            function setMenuAttributesRequired(index, required) {
+                const menuAttrSection = document.querySelector(`.menu-attributes[data-index="${index}"]`);
+                if (!menuAttrSection) return;
+
+                // Core menu attributes that should be required
+                const requiredMenuFields = [
+                    'cuisine_type', 'prep_time_minutes', 'serving_size'
+                ];
+
+                menuAttrSection.querySelectorAll('.menu-attribute-field').forEach(field => {
+                    const attrName = field.dataset.menuAttr;
+                    if (!attrName) return;
+
+                    // Update required status for key menu attributes
+                    if (requiredMenuFields.includes(attrName)) {
+                        if (required) {
+                            field.setAttribute('required', 'required');
+                            // Add visual indicator
+                            const label = field.closest('div').querySelector('label');
+                            if (label && !label.textContent.includes('*')) {
+                                label.innerHTML = label.innerHTML + ' <span class="text-red-500">*</span>';
+                            }
+                        } else {
+                            field.removeAttribute('required');
+                            // Remove visual indicator
+                            const label = field.closest('div').querySelector('label');
+                            if (label && label.textContent.includes('*')) {
+                                label.innerHTML = label.innerHTML.replace(' <span class="text-red-500">*</span>', '');
+                            }
+                        }
+                    }
+                });
+            }
+
             // Handle category-specific attributes
             document.addEventListener('change', function(e) {
                 if (e.target.classList.contains('item-category')) {
@@ -167,25 +304,49 @@
                 }
             });
 
-            // Update hidden attributes field
+            // Update hidden attributes field (handles both category and menu attributes)
             function updateAttributesField(index) {
                 const attrContainer = document.querySelector(`.category-attributes[data-index="${index}"]`);
                 const attrField = document.querySelector(`input[name="items[${index}][attributes]"]`);
 
-                if (!attrContainer || !attrField) return;
+                if (!attrField) return;
 
-                const inputs = attrContainer.querySelectorAll('.attribute-field');
-                const attributes = {};
+                let attributes = {};
 
-                inputs.forEach(input => {
-                    const key = input.dataset.attr;
-                    attributes[key] = input.value;
-                });
+                // Get category-specific attributes
+                if (attrContainer) {
+                    const categoryInputs = attrContainer.querySelectorAll('.attribute-field');
+                    categoryInputs.forEach(input => {
+                        const key = input.dataset.attr;
+                        if (key && input.value) {
+                            attributes[key] = input.value;
+                        }
+                    });
+                }
+
+                // Get menu-specific attributes if menu item is checked
+                const isMenuItemChecked = document.querySelector(`#menuitem-${index}`)?.checked;
+                if (isMenuItemChecked) {
+                    const menuAttrSection = document.querySelector(`.menu-attributes[data-index="${index}"]`);
+                    if (menuAttrSection) {
+                        const menuFields = menuAttrSection.querySelectorAll('.menu-attribute-field');
+                        menuFields.forEach(field => {
+                            const key = field.dataset.menuAttr;
+                            if (key) {
+                                if (field.type === 'checkbox') {
+                                    attributes[key] = field.checked;
+                                } else if (field.value) {
+                                    attributes[key] = field.value;
+                                }
+                            }
+                        });
+                    }
+                }
 
                 attrField.value = JSON.stringify(attributes);
             }
 
-            // Form submission handling
+            // Form submission handling with menu validation
             document.getElementById('items-form').addEventListener('submit', function(e) {
                 // Validate at least one item exists
                 const itemSections = document.querySelectorAll('.item-section');
@@ -195,10 +356,48 @@
                     return;
                 }
 
+                // Validate menu items have required attributes
+                let hasValidationErrors = false;
+                const errorMessages = [];
+
+                itemSections.forEach((section, sectionIndex) => {
+                    const isMenuItemChecked = section.querySelector('.menu-item-checkbox')?.checked;
+                    
+                    if (isMenuItemChecked) {
+                        const menuAttrSection = section.querySelector('.menu-attributes');
+                        const requiredFields = ['cuisine_type', 'prep_time_minutes', 'serving_size'];
+                        
+                        requiredFields.forEach(fieldName => {
+                            const field = menuAttrSection?.querySelector(`[data-menu-attr="${fieldName}"]`);
+                            if (!field || !field.value || field.value.trim() === '') {
+                                hasValidationErrors = true;
+                                const fieldLabel = {
+                                    'cuisine_type': 'Cuisine Type',
+                                    'prep_time_minutes': 'Preparation Time',
+                                    'serving_size': 'Serving Size'
+                                };
+                                errorMessages.push(`Item #${sectionIndex + 1}: ${fieldLabel[fieldName]} is required for menu items`);
+                            }
+                        });
+                    }
+                });
+
+                if (hasValidationErrors) {
+                    e.preventDefault();
+                    alert('Please fix the following validation errors:\n\n' + errorMessages.join('\n'));
+                    return;
+                }
+
                 // Update all attributes fields before submission
                 document.querySelectorAll('.item-category').forEach(select => {
                     const index = select.dataset.index;
                     updateAttributesField(index);
+                });
+
+                // Also update menu attributes for all items
+                document.querySelectorAll('.menu-item-checkbox').forEach(checkbox => {
+                    const index = checkbox.dataset.index;
+                    updateMenuAttributesField(index);
                 });
             });
         });

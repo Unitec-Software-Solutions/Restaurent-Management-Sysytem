@@ -13,7 +13,7 @@ class ShiftService
     /**
      * Auto-assign staff based on current shift and branch needs
      */
-    public function assignStaff(Branch $branch, Carbon $dateTime = null): Collection
+    public function assignStaff(Branch $branch, ?Carbon $dateTime = null): Collection
     {
         $dateTime = $dateTime ?? now();
         $shift = $this->determineShift($dateTime);
@@ -76,7 +76,7 @@ class ShiftService
     /**
      * Get optimal staff distribution for a branch
      */
-    public function getOptimalStaffing(Branch $branch, Carbon $dateTime = null): array
+    public function getOptimalStaffing(Branch $branch, ?Carbon $dateTime = null): array
     {
         $dateTime = $dateTime ?? now();
         $shift = $this->determineShift($dateTime);

@@ -34,5 +34,7 @@ class Kernel extends HttpKernel
         'subscription.expiry.alert' => \App\Http\Middleware\SubscriptionExpiryAlert::class,
         'role.scope' => \App\Http\Middleware\CheckRoleScope::class,
         'restaurant.permission' => \App\Http\Middleware\CheckRestaurantPermission::class,
+        'admin.auth.debug' => \App\Http\Middleware\AdminAuthenticateDebug::class,
+        'enhanced.admin.auth' => \App\Http\Middleware\EnhancedAdminAuth::class,
     ];
 }

@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\ItemCategory;
 use App\Models\ItemMaster;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use App\Models\Branch;
 use Illuminate\Support\Facades\Auth;
 
 class ItemMasterController extends Controller
 {
+    use Exportable;
+
     /**
      * Display a listing of items.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -23,32 +26,24 @@ class ItemMasterController extends Controller
 
         $orgId = $user->organization_id;
 
-        $items = ItemMaster::with('category')
-            ->where('organization_id', $orgId)
-            ->when(request('search'), function ($query) {
-                $search = strtolower(request('search'));
-                $query->where(function ($q) use ($search) {
-                    $q->whereRaw('LOWER(name) LIKE ?', ['%' . $search . '%'])
-                        ->orWhereRaw('LOWER(item_code) LIKE ?', ['%' . $search . '%']);
-                });
-            })
-            ->when(request('category'), function ($query) {
-                return $query->where('item_category_id', request('category'));
-            })
-            ->when(request('status'), function ($query) {
-                $status = request('status');
-                if ($status === 'active') {
-                    $query->whereNull('deleted_at'); // Non-trashed items
-                } elseif ($status === 'inactive') {
-                    $query->onlyTrashed(); // Only soft-deleted items
-                }
-            })
-            ->paginate(15);
+        $query = ItemMaster::with('category')
+            ->where('organization_id', $orgId);
+
+        // Apply filters
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'inventory_items_export.xlsx', [
+                'Item Code', 'Name', 'Category', 'Unit', 'Cost Price', 'Selling Price', 'Status', 'Created At'
+            ]);
+        }
+
+        $items = $query->paginate(15);
 
         $categories = ItemCategory::active()
             ->where('organization_id', $orgId)
             ->get();
-
 
         $totalItems = ItemMaster::where('organization_id', $orgId)->count();
         $activeItems = ItemMaster::where('organization_id', $orgId)->count();
@@ -99,6 +94,37 @@ class ItemMasterController extends Controller
             'items.*.description' => 'nullable|string',
             'items.*.attributes' => 'nullable|json',
         ]);
+
+        // Validate menu attributes for menu items
+        foreach ($validated['items'] as $index => $itemData) {
+            if (isset($itemData['is_menu_item']) && $itemData['is_menu_item']) {
+                $attributes = isset($itemData['attributes']) ? json_decode($itemData['attributes'], true) : [];
+                
+                // Required menu attributes
+                $requiredMenuAttrs = ['cuisine_type', 'prep_time_minutes', 'serving_size'];
+                $missingAttrs = [];
+                
+                foreach ($requiredMenuAttrs as $attr) {
+                    if (empty($attributes[$attr])) {
+                        $missingAttrs[] = $attr;
+                    }
+                }
+                
+                if (!empty($missingAttrs)) {
+                    $fieldLabels = [
+                        'cuisine_type' => 'Cuisine Type',
+                        'prep_time_minutes' => 'Preparation Time',
+                        'serving_size' => 'Serving Size'
+                    ];
+                    
+                    $missingLabels = array_map(fn($attr) => $fieldLabels[$attr], $missingAttrs);
+                    
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "items.{$index}.menu_attributes" => "Menu items require the following attributes: " . implode(', ', $missingLabels)
+                    ]);
+                }
+            }
+        }
 
         $createdItems = [];
 
@@ -183,7 +209,65 @@ class ItemMasterController extends Controller
             'additional_notes' => 'nullable|string',
             'description' => 'nullable|string',
             'attributes' => 'nullable|json',
+            'menu_attributes' => 'nullable|array',
         ]);
+
+        // Handle menu attributes validation for edit
+        if (isset($data['menu_attributes']) && $data['is_menu_item']) {
+            // Validate required menu attributes
+            $requiredMenuAttrs = ['cuisine_type', 'prep_time_minutes', 'serving_size'];
+            $missingAttrs = [];
+            
+            foreach ($requiredMenuAttrs as $attr) {
+                if (empty($data['menu_attributes'][$attr])) {
+                    $missingAttrs[] = $attr;
+                }
+            }
+            
+            if (!empty($missingAttrs)) {
+                $fieldLabels = [
+                    'cuisine_type' => 'Cuisine Type',
+                    'prep_time_minutes' => 'Preparation Time',
+                    'serving_size' => 'Serving Size'
+                ];
+                
+                $missingLabels = array_map(fn($attr) => $fieldLabels[$attr], $missingAttrs);
+                
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'menu_attributes' => "Menu items require the following attributes: " . implode(', ', $missingLabels)
+                ]);
+            }
+            
+            // Get existing attributes or start with empty array
+            $existingAttributes = is_array($item->attributes) ? $item->attributes : [];
+            
+            // Merge menu attributes with existing attributes
+            $attributes = array_merge($existingAttributes, $data['menu_attributes']);
+            
+            // Remove empty values
+            $attributes = array_filter($attributes, function($value) {
+                return $value !== '' && $value !== null;
+            });
+            
+            $data['attributes'] = $attributes;
+        } elseif (!$data['is_menu_item']) {
+            // Remove menu-specific attributes if not a menu item
+            $existingAttributes = is_array($item->attributes) ? $item->attributes : [];
+            $menuAttrKeys = [
+                'cuisine_type', 'spice_level', 'prep_time_minutes', 'serving_size',
+                'dietary_type', 'availability', 'main_ingredients', 'allergen_info',
+                'is_chefs_special', 'is_popular'
+            ];
+            
+            foreach ($menuAttrKeys as $key) {
+                unset($existingAttributes[$key]);
+            }
+            
+            $data['attributes'] = $existingAttributes;
+        }
+
+        // Remove the menu_attributes key as it's been processed
+        unset($data['menu_attributes']);
 
         $item->update($data);
 
@@ -321,5 +405,13 @@ class ItemMasterController extends Controller
 
         return redirect()->route('admin.inventory.items.index')
             ->with('success', 'Item deleted successfully');
+    }
+
+    /**
+     * Get searchable columns for inventory items
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'item_code', 'description'];
     }
 }

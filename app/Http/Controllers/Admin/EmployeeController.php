@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\Branch;
 use App\Models\Role;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,10 +17,19 @@ use Spatie\Permission\Models\Role as SpatieRole;
 
 class EmployeeController extends Controller
 {
-    protected function getOrganizationId()
+    use Exportable;protected function getOrganizationId()
     {
         $user = Auth::user();
-        if (!$user || !$user->organization_id) {
+        if (!$user) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Super admins don't have organization restrictions
+        if (isset($user->is_super_admin) && $user->is_super_admin) {
+            return null; // Return null to indicate no restriction
+        }
+        
+        if (!$user->organization_id) {
             abort(403, 'Unauthorized access');
         }
         return $user->organization_id;
@@ -27,8 +37,12 @@ class EmployeeController extends Controller
     {
         $orgId = $this->getOrganizationId();
         
-        $query = Employee::with(['branch', 'employeeRole'])
-            ->where('organization_id', $orgId);
+        $query = Employee::with(['branch', 'employeeRole']);
+        
+        // Apply organization filter only if not super admin
+        if ($orgId !== null) {
+            $query->where('organization_id', $orgId);
+        }
 
         // Include trashed records if requested
         if ($request->boolean('show_deleted')) {
@@ -62,21 +76,45 @@ class EmployeeController extends Controller
             $query->where('branch_id', $request->branch_id);
         }
 
-        if ($request->has('status')) {
+        if ($request->has('shift_type') && $request->shift_type) {
+            $query->where('shift_type', $request->shift_type);
+        }        if ($request->has('status')) {
             $isActive = $request->status === 'active';
             $query->where('is_active', $isActive);
         }
 
+        // Apply filters and search for potential export
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'employees_export.xlsx', [
+                'ID', 'Name', 'Email', 'Phone', 'Branch', 'Role', 'Status', 'Join Date', 'Created At'
+            ]);
+        }
+
         $employees = $query->orderBy('name')->paginate(15)->appends($request->query());
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = ($orgId !== null) 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $roles = Employee::getAvailableRoles();
         $restaurantRoles = Employee::getAvailableRestaurantRoles();
 
         return view('admin.employees.index', compact('employees', 'branches', 'roles', 'restaurantRoles'));
-    }    public function create()
+    }
+
+    /**
+     * Get searchable columns for employees
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'email', 'phone', 'emp_id'];
+    }public function create()
     {
         $orgId = $this->getOrganizationId();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = ($orgId !== null) 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $roles = Employee::getAvailableRoles();
         $restaurantRoles = SpatieRole::where('guard_name', 'web')
             ->whereIn('name', ['host/hostess', 'servers', 'bartenders', 'cashiers', 'chefs', 'dishwashers', 'kitchen-managers'])
@@ -103,14 +141,24 @@ class EmployeeController extends Controller
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
+            // New shift and staff fields
+            'shift_type' => 'nullable|in:morning,evening,night,flexible',
+            'shift_start_time' => 'nullable|date_format:H:i',
+            'shift_end_time' => 'nullable|date_format:H:i',
+            'hourly_rate' => 'nullable|numeric|min:0',
+            'department' => 'nullable|string|max:255',
+            'availability_status' => 'nullable|in:available,busy,on_break,off_duty',
+            'current_workload' => 'nullable|integer|min:0',
         ]);
 
-        // Validate branch belongs to organization
-        $branch = Branch::where('id', $validated['branch_id'])
-            ->where('organization_id', $orgId)
-            ->firstOrFail();
+        // Validate branch belongs to organization (skip for super admin)
+        if ($orgId !== null) {
+            $branch = Branch::where('id', $validated['branch_id'])
+                ->where('organization_id', $orgId)
+                ->firstOrFail();
+        }
 
-        $validated['organization_id'] = $orgId;
+        $validated['organization_id'] = $orgId ?: Branch::find($validated['branch_id'])->organization_id;
         $validated['joined_date'] = now();
         $validated['is_active'] = $request->boolean('is_active', true);
 
@@ -131,11 +179,12 @@ class EmployeeController extends Controller
         return redirect()
             ->route('admin.employees.index')
             ->with('success', "Employee {$employee->name} created successfully!");
-    }
-
-    public function show(Employee $employee)
+    }    public function show(Employee $employee)
     {
-        if ($employee->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all employees, others need organization match
+        if ($orgId !== null && $employee->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
@@ -144,12 +193,17 @@ class EmployeeController extends Controller
         return view('admin.employees.show', compact('employee'));
     }    public function edit(Employee $employee)
     {
-        if ($employee->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all employees, others need organization match
+        if ($orgId !== null && $employee->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
         $orgId = $this->getOrganizationId();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = ($orgId !== null) 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $roles = Employee::getAvailableRoles();
         $restaurantRoles = SpatieRole::where('guard_name', 'web')
             ->whereIn('name', ['host/hostess', 'servers', 'bartenders', 'cashiers', 'chefs', 'dishwashers', 'kitchen-managers'])
@@ -181,12 +235,22 @@ class EmployeeController extends Controller
             'emergency_contact' => 'nullable|string|max:20',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
+            // New shift and staff fields
+            'shift_type' => 'nullable|in:morning,evening,night,flexible',
+            'shift_start_time' => 'nullable|date_format:H:i',
+            'shift_end_time' => 'nullable|date_format:H:i',
+            'hourly_rate' => 'nullable|numeric|min:0',
+            'department' => 'nullable|string|max:255',
+            'availability_status' => 'nullable|in:available,busy,on_break,off_duty',
+            'current_workload' => 'nullable|integer|min:0',
         ]);
 
-        // Validate branch belongs to organization
-        $branch = Branch::where('id', $validated['branch_id'])
-            ->where('organization_id', $orgId)
-            ->firstOrFail();
+        // Validate branch belongs to organization (skip for super admin)
+        if ($orgId !== null) {
+            $branch = Branch::where('id', $validated['branch_id'])
+                ->where('organization_id', $orgId)
+                ->firstOrFail();
+        }
 
         $validated['is_active'] = $request->boolean('is_active', true);
 
@@ -211,11 +275,12 @@ class EmployeeController extends Controller
         return redirect()
             ->route('admin.employees.index')
             ->with('success', "Employee {$employee->name} updated successfully!");
-    }
-
-    public function destroy(Employee $employee)
+    }    public function destroy(Employee $employee)
     {
-        if ($employee->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all employees, others need organization match
+        if ($orgId !== null && $employee->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
@@ -291,5 +356,98 @@ class EmployeeController extends Controller
             ->get();
 
         return response()->json($servers);
+    }
+
+    /**
+     * Get available employees for shift assignment
+     */
+    public function getAvailableForShift(Request $request)
+    {
+        $shiftType = $request->get('shift_type', 'flexible');
+        $department = $request->get('department');
+        $branchId = $request->get('branch_id');
+
+        $query = Employee::available()
+            ->where('branch_id', $branchId)
+            ->byShift($shiftType);
+
+        if ($department) {
+            $query->byDepartment($department);
+        }
+
+        $employees = $query->get(['id', 'name', 'current_workload', 'shift_type', 'department']);
+
+        return response()->json([
+            'employees' => $employees,
+            'count' => $employees->count()
+        ]);
+    }
+
+    /**
+     * Update employee availability status
+     */
+    public function updateAvailability(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'availability_status' => 'required|in:available,busy,on_break,off_duty'
+        ]);
+
+        $employee->update([
+            'availability_status' => $request->availability_status
+        ]);
+
+        // Reset workload if going off duty
+        if ($request->availability_status === 'off_duty') {
+            $employee->update(['current_workload' => 0]);
+        }
+
+        $statusName = ucfirst(str_replace('_', ' ', $request->availability_status));
+        
+        return redirect()
+            ->route('admin.employees.show', $employee)
+            ->with('success', "Employee availability updated to: {$statusName}");
+    }
+
+    /**
+     * Get shift schedule for branch
+     */
+    public function getShiftSchedule(Request $request)
+    {
+        $branchId = $request->get('branch_id');
+        $date = $request->get('date', now()->format('Y-m-d'));
+
+        $employees = Employee::where('branch_id', $branchId)
+            ->where('is_active', true)
+            ->get()
+            ->groupBy('shift_type');
+
+        $schedule = [];
+        foreach (['morning', 'evening', 'night', 'flexible'] as $shift) {
+            $shiftEmployees = $employees->get($shift, collect());
+            $schedule[$shift] = [
+                'count' => $shiftEmployees->count(),
+                'available' => $shiftEmployees->where('availability_status', 'available')->count(),
+                'busy' => $shiftEmployees->where('availability_status', 'busy')->count(),
+                'on_break' => $shiftEmployees->where('availability_status', 'on_break')->count(),
+                'off_duty' => $shiftEmployees->where('availability_status', 'off_duty')->count(),
+                'employees' => $shiftEmployees->map(function($emp) {
+                    return [
+                        'id' => $emp->id,
+                        'name' => $emp->name,
+                        'department' => $emp->department,
+                        'availability_status' => $emp->availability_status,
+                        'current_workload' => $emp->current_workload,
+                        'shift_start_time' => $emp->shift_start_time,
+                        'shift_end_time' => $emp->shift_end_time,
+                    ];
+                })
+            ];
+        }
+
+        return response()->json([
+            'date' => $date,
+            'branch_id' => $branchId,
+            'schedule' => $schedule
+        ]);
     }
 }

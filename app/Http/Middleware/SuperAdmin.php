@@ -14,10 +14,9 @@ class SuperAdmin
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
-
     {
         $user = auth('admin')->user();
-        if (!$user || !$user->is_super_admin) {
+        if (!$user || !$user->isSuperAdmin()) {
             abort(403, 'Unauthorized - Super Admin access required');
         }
         return $next($request);

@@ -1,42 +1,37 @@
 @extends('layouts.admin')
 
 @section('content')
-    {{-- Debug Info Card for Takeaway Orders --}}
-    @if (config('app.debug'))
-        <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-6">
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-medium text-cyan-800">🔍 Takeaway Orders Debug Info</h3>
-                <a href="{{ route('admin.orders.takeaway.index', ['debug' => 1]) }}"
-                    class="text-xs text-cyan-600 hover:text-cyan-800">
-                    Full Debug (debug=1)
-                </a>
+
+{{-- Debug Info Card for Takeaway Orders --}}
+{{-- @if(config('app.debug'))
+    <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <h3 class="text-sm font-medium text-cyan-800">🔍 Takeaway Orders Debug Info</h3>
+            <a href="{{ route('admin.orders.takeaway.index', ['debug' => 1]) }}"
+               class="text-xs text-cyan-600 hover:text-cyan-800">
+                Full Debug (@dd)
+            </a>
+        </div>
+        <div class="text-xs text-cyan-700 mt-2 grid grid-cols-4 gap-4">
+            <div>
+                <p><strong>Orders Variable:</strong> {{ isset($orders) ? 'Set (' . $orders->count() . ')' : 'NOT SET' }}</p>
+                <p><strong>Takeaway Orders DB:</strong> {{ \App\Models\Order::where('order_type', 'LIKE', '%takeaway%')->count() }}</p>
             </div>
-            <div class="text-xs text-cyan-700 mt-2 grid grid-cols-4 gap-4">
-                <div>
-                    <p><strong>Orders Variable:</strong> {{ isset($orders) ? 'Set (' . $orders->count() . ')' : 'NOT SET' }}
-                    </p>
-                    <p><strong>Takeaway Orders DB:</strong>
-                        {{ \App\Models\Order::where('order_type', 'LIKE', '%takeaway%')->count() }}</p>
-                </div>
-                <div>
-                    <p><strong>All Orders DB:</strong> {{ \App\Models\Order::count() }}</p>
-                    <p><strong>With Items:</strong>
-                        {{ isset($orders) ? $orders->filter(fn($o) => $o->orderItems->count() > 0)->count() : 'N/A' }}</p>
-                </div>
-                <div>
-                    <p><strong>Has Branches:</strong>
-                        {{ isset($orders) ? $orders->filter(fn($o) => $o->branch)->count() : 'N/A' }}</p>
-                    <p><strong>Has Customer Names:</strong>
-                        {{ isset($orders) ? $orders->filter(fn($o) => !empty($o->customer_name))->count() : 'N/A' }}</p>
-                </div>
-                <div>
-                    <p><strong>First Order ID:</strong>
-                        {{ isset($orders) && $orders->count() > 0 ? $orders->first()->id : 'None' }}</p>
-                    <p><strong>Route Name:</strong> {{ request()->route()->getName() ?? 'No Route' }}</p>
-                </div>
+            <div>
+                <p><strong>All Orders DB:</strong> {{ \App\Models\Order::count() }}</p>
+                <p><strong>With Items:</strong> {{ isset($orders) ? $orders->filter(fn($o) => $o->orderItems->count() > 0)->count() : 'N/A' }}</p>
+            </div>
+            <div>
+                <p><strong>Has Branches:</strong> {{ isset($orders) ? $orders->filter(fn($o) => $o->branch)->count() : 'N/A' }}</p>
+                <p><strong>Has Customer Names:</strong> {{ isset($orders) ? $orders->filter(fn($o) => !empty($o->customer_name))->count() : 'N/A' }}</p>
+            </div>
+            <div>
+                <p><strong>First Order ID:</strong> {{ isset($orders) && $orders->count() > 0 ? $orders->first()->id : 'None' }}</p>
+                <p><strong>Route Name:</strong> {{ request()->route()->getName() ?? 'No Route' }}</p>
             </div>
         </div>
-    @endif
+    </div>
+@endif --}}
 
     <div class="container mx-auto px-4 py-8">
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">

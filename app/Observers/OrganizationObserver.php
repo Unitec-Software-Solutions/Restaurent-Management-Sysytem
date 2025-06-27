@@ -31,24 +31,24 @@ class OrganizationObserver
             try {
                 // Step 1: Create Head Office Branch
                 $headOffice = $this->createHeadOfficeBranch($organization);
-                
+
                 // Step 2: Create Organization Admin
                 $orgAdmin = $this->createOrganizationAdmin($organization, $headOffice);
-                
+
                 // Step 3: Create Default Kitchen Stations for Head Office
                 $this->createDefaultKitchenStations($headOffice);
-                
+
                 // Step 4: Create Default Menu Categories (skipped - no org relationship)
                 // $this->createDefaultMenuCategories($organization);
-                
+
                 // Step 5: Create Inventory Starter Kit (skipped - inventory system not set up)
                 // $this->createInventoryStarterKit($organization, $headOffice);
-                
+
                 // Step 6: Send Welcome Email
                 $this->sendWelcomeEmail($orgAdmin, $organization);
-                
+
                 Log::info("Successfully created organization {$organization->name} with automated setup");
-                
+
             } catch (\Exception $e) {
                 Log::error("Failed to create organization setup: " . $e->getMessage());
                 throw $e; // Re-throw to trigger transaction rollback
@@ -82,7 +82,7 @@ class OrganizationObserver
     {
         // Generate secure password
         $password = $this->generateSecurePassword();
-        
+
         // Create admin user
         $admin = Admin::create([
             'name' => $organization->contact_person ?: 'Organization Admin',
@@ -97,10 +97,10 @@ class OrganizationObserver
         // Create and assign organization admin role
         $adminRole = $this->createOrganizationAdminRole($organization);
         $admin->assignRole($adminRole);
-        
+
         // Store plain password for email (will be sent securely)
         $admin->temp_password = $password;
-        
+
         return $admin;
     }
 
@@ -118,7 +118,7 @@ class OrganizationObserver
 
         // Get permissions for org admin from template
         $permissions = EnhancedPermissionSeeder::getPermissionsForRole('org_admin');
-        
+
         if (!empty($permissions)) {
             $permissionModels = Permission::where('guard_name', 'admin')
                 ->whereIn('name', $permissions)
@@ -132,11 +132,37 @@ class OrganizationObserver
     private function createDefaultKitchenStations(Branch $branch): void
     {
         $defaultStations = $branch->getDefaultKitchenStations();
-        
+
+        $index = 1;
         foreach ($defaultStations as $stationName => $config) {
+            // Generate unique code for kitchen station
+            $typePrefix = match($config['type']) {
+                'cooking' => 'COOK',
+                'prep' => 'PREP',
+                'beverage' => 'BEV',
+                'dessert' => 'DESS',
+                'grill' => 'GRILL',
+                'fry' => 'FRY',
+                'bar' => 'BAR',
+                default => 'MAIN'
+            };
+
+            $branchCode = str_pad($branch->id, 2, '0', STR_PAD_LEFT);
+            $sequenceCode = str_pad($index, 3, '0', STR_PAD_LEFT);
+            $code = $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
+
+            // Ensure uniqueness
+            $attempts = 0;
+            while (KitchenStation::where('code', $code)->exists() && $attempts < 100) {
+                $attempts++;
+                $sequenceCode = str_pad($index + $attempts, 3, '0', STR_PAD_LEFT);
+                $code = $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
+            }
+
             KitchenStation::create([
                 'branch_id' => $branch->id,
                 'name' => $stationName,
+                'code' => $code,
                 'type' => $config['type'],
                 'order_priority' => $config['priority'],
                 'is_active' => true,
@@ -147,6 +173,8 @@ class OrganizationObserver
                 ]),
                 'notes' => 'Auto-created default station',
             ]);
+
+            $index++;
         }
     }
 
@@ -181,11 +209,11 @@ class OrganizationObserver
             ['name' => 'Olive Oil', 'category' => 'Oils', 'unit' => 'liter', 'cost_per_unit' => 8.00],
             ['name' => 'Onions', 'category' => 'Vegetables', 'unit' => 'kg', 'cost_per_unit' => 1.50],
             ['name' => 'Garlic', 'category' => 'Vegetables', 'unit' => 'kg', 'cost_per_unit' => 4.00],
-            
+
             // Basic proteins
             ['name' => 'Chicken Breast', 'category' => 'Proteins', 'unit' => 'kg', 'cost_per_unit' => 12.00],
             ['name' => 'Ground Beef', 'category' => 'Proteins', 'unit' => 'kg', 'cost_per_unit' => 10.00],
-            
+
             // Dairy
             ['name' => 'Milk', 'category' => 'Dairy', 'unit' => 'liter', 'cost_per_unit' => 1.20],
             ['name' => 'Butter', 'category' => 'Dairy', 'unit' => 'kg', 'cost_per_unit' => 6.00],
@@ -225,18 +253,18 @@ class OrganizationObserver
         $lowercase = 'abcdefghijklmnopqrstuvwxyz';
         $numbers = '0123456789';
         $specialChars = '!@#$%^&*';
-        
+
         $password = '';
         $password .= $uppercase[random_int(0, strlen($uppercase) - 1)];
         $password .= $lowercase[random_int(0, strlen($lowercase) - 1)];
         $password .= $numbers[random_int(0, strlen($numbers) - 1)];
         $password .= $specialChars[random_int(0, strlen($specialChars) - 1)];
-        
+
         $allChars = $uppercase . $lowercase . $numbers . $specialChars;
         for ($i = 4; $i < $length; $i++) {
             $password .= $allChars[random_int(0, strlen($allChars) - 1)];
         }
-        
+
         return str_shuffle($password);
     }
 }

@@ -6,7 +6,7 @@
             <h1 class="text-2xl font-bold text-gray-800 mb-6">
                 Reservation Orders
                 @php $admin = auth('admin')->user(); @endphp
-                @if($admin->is_super_admin)
+                @if($admin->isSuperAdmin())
                     <span class="text-sm text-gray-500">(All Organizations)</span>
                 @elseif($admin->organization)
                     <span class="text-sm text-gray-500">({{ $admin->organization->name }})</span>
@@ -71,23 +71,35 @@
                                     <td class="px-4 py-2 border-b">{{ $order->created_at->diffForHumans() }}</td>
                                     <td class="px-4 py-2 border-b">
                                         @if($order->reservation)
-                                            <a href="{{ route('admin.reservations.show', ['reservation' => $order->reservation->id]) }}" 
-                                               class="inline-block text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 transition">
-                                                View
-                                            </a>
+                                            @routeexists('admin.reservations.show')
+                                                <a href="{{ route('admin.reservations.show', ['reservation' => $order->reservation->id]) }}" 
+                                                   class="inline-block text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 transition">
+                                                    View
+                                                </a>
+                                            @else
+                                                <span class="inline-block text-sm text-gray-500">View (Unavailable)</span>
+                                            @endrouteexists
                                         @else
                                             <span class="inline-block text-sm text-gray-500 italic">No Reservation</span>
                                         @endif
                                         @if($order->reservation)
-                                            <a href="{{ route('admin.orders.reservations.edit', ['reservation' => $order->reservation->id, 'order' => $order->id]) }}"
-                                               class="inline-block ml-2 text-sm font-medium text-white bg-yellow-500 hover:bg-yellow-600 rounded px-3 py-1 transition">
-                                                Edit
-                                            </a>
+                                            @routeexists('admin.orders.orders.reservations.edit')
+                                                <a href="{{ route('admin.orders.orders.reservations.edit', ['reservation' => $order->reservation->id, 'order' => $order->id]) }}"
+                                                   class="inline-block ml-2 text-sm font-medium text-white bg-yellow-500 hover:bg-yellow-600 rounded px-3 py-1 transition">
+                                                    Edit
+                                                </a>
+                                            @else
+                                                <span class="inline-block ml-2 text-sm text-gray-500">Edit (Unavailable)</span>
+                                            @endrouteexists
                                         @else
-                                            <a href="{{ route('admin.orders.reservations.edit', ['reservation' => null, 'order' => $order->id]) }}"
-                                               class="inline-block ml-2 text-sm font-medium text-white bg-yellow-400 hover:bg-yellow-500 rounded px-3 py-1 transition">
-                                                Edit (No Res.)
-                                            </a>
+                                            @routeexists('admin.orders.orders.reservations.edit')
+                                                <a href="{{ route('admin.orders.orders.reservations.edit', ['reservation' => null, 'order' => $order->id]) }}"
+                                                   class="inline-block ml-2 text-sm font-medium text-white bg-yellow-400 hover:bg-yellow-500 rounded px-3 py-1 transition">
+                                                    Edit (No Res.)
+                                                </a>
+                                            @else
+                                                <span class="inline-block ml-2 text-sm text-gray-500">Edit (Unavailable)</span>
+                                            @endrouteexists
                                         @endif
                                     </td>
                                 </tr>

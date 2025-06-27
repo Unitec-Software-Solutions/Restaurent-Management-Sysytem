@@ -17,6 +17,12 @@ class SubscriptionActive
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
+        
+        // Super admins bypass subscription checks
+        if ($user && isset($user->is_super_admin) && $user->is_super_admin) {
+            return $next($request);
+        }
+        
         if ($user && $user->organization && !$user->organization->is_active) {
             Auth::logout();
             return redirect()->route('login')->withErrors([

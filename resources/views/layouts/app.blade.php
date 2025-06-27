@@ -125,11 +125,21 @@
                         <span class="ml-2 text-gray-600">Name</span>
                     </a>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                        <!-- 🔘 Test Page Button -->
-                        <a href="{{ route('admin.testpage') }}"
-                            class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
-                            🧪 Test Page
-                        </a>
+                        <!-- 🔘 Test Page Button with safe route check -->
+                        @if(Route::has('admin.testpage'))
+                            <a href="{{ route('admin.testpage') }}"
+                                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
+                                🧪 Test Page
+                            </a>
+                        @else
+                            <!-- Development fallback when route doesn't exist -->
+                            @if(config('app.debug'))
+                                <span class="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed">
+                                    🧪 Test Page (Route Missing)
+                                </span>
+                            @endif
+                        @endif
+                        
                         <a href="{{ route('admin.login') }}"
                             class="px-4 py-2 text-gray-700 hover:text-[#515DEF] transition-colors font-medium">
                             <i class="fas fa-sign-in-alt mr-2"></i>Sign In (admin login - test )

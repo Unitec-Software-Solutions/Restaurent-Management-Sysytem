@@ -14,8 +14,13 @@ class ComprehensiveSystemSeeder extends Seeder
     {
         $this->command->info('🚀 Starting Comprehensive Restaurant Management System Seeding...');
         
-        // Disable foreign key checks for clean seeding
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Disable foreign key checks for clean seeding (database-agnostic)
+        $databaseType = DB::connection()->getDriverName();
+        if ($databaseType === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        } elseif ($databaseType === 'pgsql') {
+            $this->command->info('🔄 Using PostgreSQL-compatible seeding...');
+        }
         
         try {
             // 1. Core system setup
@@ -64,13 +69,17 @@ class ComprehensiveSystemSeeder extends Seeder
             ]);
             
             // Re-enable foreign key checks
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            if ($databaseType === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            }
             
             // 7. Final validation and summary
             $this->displayFinalSummary();
             
         } catch (\Exception $e) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            if ($databaseType === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            }
             $this->command->error('❌ Seeding failed: ' . $e->getMessage());
             throw $e;
         }

@@ -3,17 +3,33 @@
 namespace App\Http\Controllers;
 
 use App\Models\Module;
+use App\Traits\Exportable;
 use Illuminate\Http\Request;
 
 class ModuleController extends Controller
 {
+    use Exportable;
+
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Module::class);
-        $modules = Module::all();
+        
+        $query = Module::query();
+
+        // Apply filters
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'modules_export.xlsx', [
+                'Name', 'Slug', 'Description', 'Active', 'Permissions Count', 'Created At'
+            ]);
+        }
+
+        $modules = $query->get();
         return view('admin.modules.index', compact('modules'));
     }
 
@@ -109,5 +125,13 @@ class ModuleController extends Controller
         $module->delete();
         return redirect()->route('admin.modules.index')
                          ->with('success', 'Module deleted successfully');
+    }
+
+    /**
+     * Get searchable columns for modules
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'slug', 'description'];
     }
 }

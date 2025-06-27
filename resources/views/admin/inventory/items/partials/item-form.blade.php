@@ -121,8 +121,139 @@
         <div class="flex items-center">
             <input type="hidden" name="{{ $prefix }}[is_menu_item]" value="0">
             <input type="checkbox" id="menuitem-{{ $index }}" name="{{ $prefix }}[is_menu_item]" value="1"
-                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600">
-            <label for="menuitem-{{ $index }}" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Menu Item</label>
+                   class="menu-item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+                   data-index="{{ $index }}">
+            <label for="menuitem-{{ $index }}" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Include in Menu</label>
+        </div>
+    </div>
+
+    <!-- Menu-Specific Attributes (Initially Hidden) -->
+    <div class="menu-attributes mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 hidden" data-index="{{ $index }}">
+        <h4 class="text-lg font-semibold mb-4 text-blue-900 dark:text-blue-100 flex items-center">
+            <i class="fas fa-utensils mr-2"></i>
+            Menu Item Properties
+        </h4>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Cuisine Type -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuisine Type</label>
+                <select data-menu-attr="cuisine_type" 
+                        class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Cuisine</option>
+                    <option value="sri_lankan">Sri Lankan</option>
+                    <option value="chinese">Chinese</option>
+                    <option value="indian">Indian</option>
+                    <option value="italian">Italian</option>
+                    <option value="continental">Continental</option>
+                    <option value="seafood">Seafood</option>
+                    <option value="vegetarian">Vegetarian</option>
+                    <option value="vegan">Vegan</option>
+                    <option value="dessert">Dessert</option>
+                    <option value="beverage">Beverage</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <!-- Spice Level -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Spice Level</label>
+                <select data-menu-attr="spice_level" 
+                        class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Level</option>
+                    <option value="mild">Mild</option>
+                    <option value="medium">Medium</option>
+                    <option value="hot">Hot</option>
+                    <option value="extra_hot">Extra Hot</option>
+                </select>
+            </div>
+
+            <!-- Preparation Time -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prep Time (minutes)</label>
+                <input type="number" data-menu-attr="prep_time_minutes" min="1" max="120"
+                       class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                       placeholder="e.g., 15">
+            </div>
+
+            <!-- Serving Size -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Serving Size</label>
+                <select data-menu-attr="serving_size" 
+                        class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Size</option>
+                    <option value="small">Small</option>
+                    <option value="regular">Regular</option>
+                    <option value="large">Large</option>
+                    <option value="family">Family Size</option>
+                </select>
+            </div>
+
+            <!-- Dietary Restrictions -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dietary</label>
+                <select data-menu-attr="dietary_type" 
+                        class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Type</option>
+                    <option value="vegetarian">Vegetarian</option>
+                    <option value="vegan">Vegan</option>
+                    <option value="gluten_free">Gluten Free</option>
+                    <option value="dairy_free">Dairy Free</option>
+                    <option value="halal">Halal</option>
+                    <option value="kosher">Kosher</option>
+                    <option value="none">None</option>
+                </select>
+            </div>
+
+            <!-- Availability -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Available During</label>
+                <select data-menu-attr="availability" 
+                        class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select Availability</option>
+                    <option value="all_day">All Day</option>
+                    <option value="breakfast">Breakfast Only</option>
+                    <option value="lunch">Lunch Only</option>
+                    <option value="dinner">Dinner Only</option>
+                    <option value="lunch_dinner">Lunch & Dinner</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <!-- Main Ingredients -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Main Ingredients</label>
+                <textarea data-menu-attr="main_ingredients" rows="2"
+                          class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          placeholder="e.g., Rice, Chicken, Vegetables"></textarea>
+            </div>
+
+            <!-- Allergen Information -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allergen Info</label>
+                <textarea data-menu-attr="allergen_info" rows="2"
+                          class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          placeholder="e.g., Contains nuts, dairy"></textarea>
+            </div>
+        </div>
+
+        <!-- Chef's Recommendation -->
+        <div class="mt-4">
+            <div class="flex items-center">
+                <input type="checkbox" data-menu-attr="is_chefs_special" value="1"
+                       class="menu-attribute-field h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600">
+                <label class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Chef's Special</label>
+            </div>
+        </div>
+
+        <!-- Popular Item -->
+        <div class="mt-2">
+            <div class="flex items-center">
+                <input type="checkbox" data-menu-attr="is_popular" value="1"
+                       class="menu-attribute-field h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600">
+                <label class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Popular Item</label>
+            </div>
         </div>
     </div>
 

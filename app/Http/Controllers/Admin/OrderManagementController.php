@@ -26,23 +26,37 @@ class OrderManagementController extends Controller
     {
         $this->orderService = $orderService;
         $this->printService = $printService;
-    }
-
-    protected function getOrganizationId()
+    }    protected function getOrganizationId()
     {
         $user = Auth::user();
-        if (!$user || !$user->organization_id) {
+        if (!$user) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        // Super admins don't have organization restrictions
+        if (isset($user->is_super_admin) && $user->is_super_admin) {
+            return null; // Return null to indicate no restriction
+        }
+        
+        if (!$user->organization_id) {
             abort(403, 'Unauthorized access');
         }
         return $user->organization_id;
     }
 
-    public function index(Request $request)
+    protected function isSuperAdmin()
     {
-        $orgId = $this->getOrganizationId();
+        $user = Auth::user();
+        return $user && $user->isSuperAdmin();
+    }public function index(Request $request)
+    {        $orgId = $this->getOrganizationId();
         
-        $query = Order::with(['items.inventoryItem', 'branch', 'steward', 'reservation'])
-            ->whereHas('branch', fn($q) => $q->where('organization_id', $orgId));
+        $query = Order::with(['items.inventoryItem', 'branch', 'steward', 'reservation']);
+
+        // Apply organization filter only if not super admin
+        if ($orgId !== null) {
+            $query->whereHas('branch', fn($q) => $q->where('organization_id', $orgId));
+        }
 
         // Apply filters
         if ($request->filled('search')) {
@@ -76,13 +90,15 @@ class OrderManagementController extends Controller
 
         if ($request->filled('end_date')) {
             $query->whereDate('order_date', '<=', $request->end_date);
-        }
-
-        $orders = $query->orderByDesc('order_date')->paginate(20);
+        }        $orders = $query->orderByDesc('order_date')->paginate(20);
 
         // Get filter options
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
-        $stewards = Employee::stewards()->where('organization_id', $orgId)->active()->get();
+        $branches = $orgId !== null 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
+        $stewards = $orgId !== null 
+            ? Employee::stewards()->where('organization_id', $orgId)->active()->get()
+            : Employee::stewards()->active()->get();
         $stockAlerts = $this->orderService->getStockAlerts(
             $request->branch_id ?: $branches->first()?->id,
             $orgId
@@ -94,23 +110,27 @@ class OrderManagementController extends Controller
             'stewards',
             'stockAlerts'
         ));
-    }
-
-    public function create(Request $request)
+    }    public function create(Request $request)
     {
         $orgId = $this->getOrganizationId();
-        $branchId = $request->get('branch_id') ?: Branch::where('organization_id', $orgId)->first()?->id;
+        $branchId = $request->get('branch_id') ?: (
+            $orgId !== null 
+                ? Branch::where('organization_id', $orgId)->first()?->id
+                : Branch::first()?->id
+        );
         
         if (!$branchId) {
             return redirect()->back()->with('error', 'No branch available for ordering');
         }
 
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = $orgId !== null 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $stewards = $this->orderService->getAvailableStewards($branchId);
         $items = $this->orderService->getItemsWithStock($branchId, $orgId);
         $stockAlerts = $this->orderService->getStockAlerts($branchId, $orgId);
 
-        return view('admin.orders.create', compact(
+        return view('admin.orders.enhanced-create', compact(
             'branches',
             'stewards',
             'items',
@@ -142,12 +162,12 @@ class OrderManagementController extends Controller
             'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string'
-        ]);
-
-        // Validate branch belongs to organization
-        $branch = Branch::where('id', $validated['branch_id'])
-            ->where('organization_id', $orgId)
-            ->firstOrFail();
+        ]);        // Validate branch belongs to organization (skip for super admin)
+        if ($orgId !== null) {
+            $branch = Branch::where('id', $validated['branch_id'])
+                ->where('organization_id', $orgId)
+                ->firstOrFail();
+        }
 
         // Validate steward if provided
         if ($validated['steward_id']) {
@@ -171,36 +191,41 @@ class OrderManagementController extends Controller
                 ->withInput()
                 ->with('error', 'Error creating order: ' . $e->getMessage());
         }
-    }
-
-    public function show(Order $order)
+    }    public function show(Order $order)
     {
-        if ($order->branch->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all orders, others need organization match
+        if ($orgId !== null && $order->branch->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
         $order->load(['items.inventoryItem.category', 'branch', 'steward', 'reservation', 'bills']);
         
         return view('admin.orders.show', compact('order'));
-    }
-
-    public function edit(Order $order)
+    }    public function edit(Order $order)
     {
-        if ($order->branch->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all orders, others need organization match
+        if ($orgId !== null && $order->branch->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
         $orgId = $this->getOrganizationId();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        $branches = ($orgId !== null) 
+            ? Branch::where('organization_id', $orgId)->active()->get()
+            : Branch::active()->get();
         $stewards = $this->orderService->getAvailableStewards($order->branch_id);
         $items = $this->orderService->getItemsWithStock($order->branch_id, $orgId);
 
         return view('admin.orders.edit', compact('order', 'branches', 'stewards', 'items'));
-    }
-
-    public function update(Request $request, Order $order)
+    }    public function update(Request $request, Order $order)
     {
-        if ($order->branch->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all orders, others need organization match
+        if ($orgId !== null && $order->branch->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
@@ -238,11 +263,12 @@ class OrderManagementController extends Controller
                 ->withInput()
                 ->with('error', 'Error updating order: ' . $e->getMessage());
         }
-    }
-
-    public function destroy(Order $order)
+    }    public function destroy(Order $order)
     {
-        if ($order->branch->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        
+        // Super admins can access all orders, others need organization match
+        if ($orgId !== null && $order->branch->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
@@ -395,5 +421,27 @@ class OrderManagementController extends Controller
         $stewards = $this->orderService->getAvailableStewards($branchId);
         
         return response()->json($stewards);
+    }
+
+    /**
+     * Get stock alerts for AJAX requests
+     */
+    public function getStockAlerts(Request $request)
+    {
+        $branchId = $request->get('branch_id');
+        $orgId = $this->getOrganizationId();
+
+        if (!$branchId) {
+            return response()->json(['error' => 'Branch ID required'], 400);
+        }
+
+        $stockAlerts = $this->orderService->getStockAlerts($branchId, $orgId);
+        
+        return response()->json($stockAlerts);
+    }
+
+    public function getAvailableStewards(Request $request)
+    {
+        return $this->getStewards($request);
     }
 }

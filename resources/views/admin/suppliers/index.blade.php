@@ -12,7 +12,7 @@
         ]" active="Suppliers Management" />
 
         {{-- Debug Info Card --}}
-        @if (config('app.debug'))
+        {{-- @if(config('app.debug'))
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-medium text-blue-800">🔍 Suppliers Debug Info</h3>
@@ -36,7 +36,7 @@
                     </div>
                 </div>
             </div>
-        @endif
+        @endif --}}
 
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Header -->
@@ -62,38 +62,21 @@
                 </a>
             </div>
 
-            <!-- Search & Filters -->
-            <div class="p-6 border-b bg-gray-50">
-                <form method="GET" action="{{ route('admin.suppliers.index') }}"
-                    class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                        <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Name, ID, contact..."
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                            <option value="">All Status</option>
-                            <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex gap-2 items-end">
-                        <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-search mr-2"></i> Search
-                        </button>
-                        @if (request()->hasAny(['search', 'status']))
-                            <a href="{{ route('admin.suppliers.index') }}"
-                                class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200">
-                                Clear
-                            </a>
-                        @endif
-                    </div>
-                </form>
-            </div>
+            <!-- Filters with Export -->
+            <x-module-filters
+                :action="route('admin.suppliers.index')"
+                :export-permission="'export_suppliers'"
+                :export-filename="'suppliers_export.xlsx'">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Status</option>
+                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                    </select>
+                </div>
+            </x-module-filters>
 
             <!-- Suppliers Table -->
             <div class="overflow-x-auto">
@@ -124,10 +107,9 @@
                                         <div class="text-sm text-gray-500">{{ $supplier->phone ?? 'No Phone' }}</div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <span
-                                            class="px-2 py-1 text-xs font-semibold rounded-full 
-                                            {{ $supplier->is_active ?? false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                            {{ $supplier->is_active ?? false ? 'Active' : 'Inactive' }}
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                            {{ ($supplier->is_active ?? false) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                            {{ ($supplier->is_active ?? false) ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">
