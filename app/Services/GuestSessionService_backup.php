@@ -295,34 +295,7 @@ class GuestSessionService
         return $result;
     }
 
-    /**
-     * Remove item from cart
-     */
-    public function removeFromCart(int $menuItemId): array
-    {
-        $cart = $this->getCart();
-        $itemIndex = $this->findCartItemIndex($cart, $menuItemId);
-        
-        $result = [
-            'success' => false,
-            'message' => 'Item not found in cart',
-            'cart_count' => 0,
-            'cart_total' => 0
-        ];
-        
-        if ($itemIndex !== false) {
-            array_splice($cart, $itemIndex, 1);
-            $this->saveCart($cart);
-            
-            $result['success'] = true;
-            $result['message'] = 'Item removed from cart';
-        }
-        
-        $result['cart_count'] = $this->getCartItemCount();
-        $result['cart_total'] = $this->getCartTotal();
-        
-        return $result;
-    }
+    
 
     /**
      * Clear entire cart
@@ -540,13 +513,6 @@ class GuestSessionService
         return $result;
     }
 
-    /**
-     * Clear cart
-     */
-    public function clearCart(): void
-    {
-        Session::forget(self::CART_SESSION_KEY);
-    }
 
     /**
      * Check if cart has items
