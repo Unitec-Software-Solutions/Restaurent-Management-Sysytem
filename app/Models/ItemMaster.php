@@ -89,7 +89,7 @@ class ItemMaster extends Model
      */
     public function productionRecipes()
     {
-        return $this->hasMany(Recipe::class, 'production_item_id');
+        return $this->hasMany(ProductionRecipe::class, 'production_item_id');
     }
 
     /**
@@ -97,7 +97,7 @@ class ItemMaster extends Model
      */
     public function rawMaterialRecipes()
     {
-        return $this->hasMany(RecipeDetail::class, 'raw_material_item_id');
+        return $this->hasMany(ProductionRecipeDetail::class, 'raw_material_item_id');
     }
 
     /**
