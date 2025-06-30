@@ -159,4 +159,37 @@ class RoleController extends Controller
 
         return view('admin.roles.edit', compact('role', 'modules', 'branches', 'organizations'));
     }
+
+    public function permissions($id)
+    {
+        $role = \App\Models\Role::findOrFail($id);
+        $permissions = \App\Models\Permission::all();
+        return view('admin.roles.permissions', compact('role', 'permissions'));
+    }
+
+
+    public function assign(Request $request)
+    {
+        try {
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'role_id' => 'required|exists:roles,id'
+            ]);
+            
+            $user = \App\Models\User::findOrFail($request->user_id);
+            $role = \App\Models\Role::findOrFail($request->role_id);
+            
+            $user->assignRole($role);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Role assigned successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

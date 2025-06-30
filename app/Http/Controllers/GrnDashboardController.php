@@ -1058,5 +1058,11 @@ class GrnDashboardController extends Controller
             return back()->with('error', 'Failed to export GRN data');
         }
     }
-}
 
+    public function statistics()
+    {
+        // TODO: Implement statistics logic
+        return response()->json(['message' => 'Statistics data']);
+    }
+
+}

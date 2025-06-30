@@ -269,4 +269,18 @@ class OrderController extends Controller
             return back()->withInput()->with('error', 'Failed to update takeaway order: ' . $e->getMessage());
         }
     }
+
+
+    public function orders()
+    {
+        try {
+            $orders = \App\Models\Order::with(['customer', 'orderItems', 'branch'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+                
+            return view('admin.orders.orders', compact('orders'));
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to load orders: ' . $e->getMessage());
+        }
+    }
 }

@@ -796,4 +796,11 @@ class ProductionOrderController extends Controller
 
         return max(0, $currentStock);
     }
+
+    public function calculateIngredientsFromRecipes(Request $request)
+    {
+        // TODO: Implement calculateIngredientsFromRecipes logic
+        return response()->json(['message' => 'Ingredients calculated']);
+    }
+
 }
