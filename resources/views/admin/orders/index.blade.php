@@ -2,40 +2,6 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
-    {{-- Debug Info Card for Orders --}}
-    {{-- @if(config('app.debug'))
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-medium text-yellow-800">🔍 Orders Debug Info</h3>
-                <a href="{{ route('admin.orders.index', ['debug' => request('debug') ? null : true]) }}"
-                   class="text-xs text-yellow-600 hover:text-yellow-800">
-                    {{ request('debug') ? 'Hide Debug' : 'Show Full Debug' }}
-                </a>
-            </div>
-            <div class="text-xs text-yellow-700 mt-2 grid grid-cols-3 gap-4">
-                <div>
-                    <p><strong>Orders Variable:</strong> {{ isset($orders) ? 'Set (' . $orders->count() . ')' : 'NOT SET' }}</p>
-                    <p><strong>DB Total Orders:</strong> {{ \App\Models\Order::count() }}</p>
-                </div>
-                <div>
-                    <p><strong>Today's Orders:</strong> {{ \App\Models\Order::whereDate('created_at', today())->count() }}</p>
-                    <p><strong>Pending Orders:</strong> {{ \App\Models\Order::where('status', 'pending')->count() }}</p>
-                </div>
-                <div>
-                    <p><strong>Admin:</strong> {{ auth('admin')->check() ? 'Authenticated' : 'NOT AUTH' }}</p>
-                    <p><strong>Organization:</strong> {{ auth('admin')->user()->organization->name ?? 'None' }}</p>
-                </div>
-            </div>
-
-
-            @if(request('debug'))
-                <div class="mt-4 p-3 bg-gray-100 rounded">
-                    <h4 class="font-medium text-gray-800 mb-2">Full Orders Data:</h4>
-                    <pre class="text-xs overflow-auto max-h-40">{{ isset($orders) ? print_r($orders->toArray(), true) : 'Orders variable not set' }}</pre>
-                </div>
-            @endif
-        </div>
-    @endif --}}
     <div class="bg-white shadow-md rounded-lg p-6 mb-6">
         <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
             <h1 class="text-2xl font-bold">
@@ -197,11 +163,11 @@
                 </tbody>
             </table>
         </div>
-        @if($orders->hasPages())
-        <div class="mt-6">
-            {{ $orders->links() }}
-        </div>
-        @endif
+            @if($orders->hasPages())
+                <div class="mt-6">
+                    {{ $orders->links() }}
+                </div>
+            @endif
     </div>
 </div>
 @endsection

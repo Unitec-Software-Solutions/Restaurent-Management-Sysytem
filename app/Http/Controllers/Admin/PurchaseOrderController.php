@@ -13,4 +13,14 @@ class PurchaseOrderController extends Controller
         return view('admin.edit', compact('id'));
     }
 
+
+    public function show($id)
+    {
+        try {
+            $model = $this->getModel()::findOrFail($id);
+            return view('admin.show', compact('model'));
+        } catch (\Exception $e) {
+            return back()->with('error', 'Show failed: ' . $e->getMessage());
+        }
+    }
 }

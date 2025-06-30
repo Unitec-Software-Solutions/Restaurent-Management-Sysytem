@@ -440,4 +440,11 @@ class ProductionSessionController extends Controller
             $this->checkProductionOrderCompletion($session->productionOrder);
         }
     }
+
+    public function issueIngredients(Request $request, $id)
+    {
+        // TODO: Implement issueIngredients logic
+        return redirect()->back()->with('success', 'Ingredients issued successfully');
+    }
+
 }

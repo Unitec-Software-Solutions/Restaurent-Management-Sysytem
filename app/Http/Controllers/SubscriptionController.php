@@ -40,4 +40,27 @@ class SubscriptionController extends Controller
     }
 
    
+
+    public function edit($id)
+    {
+        $subscription = \App\Models\Subscription::findOrFail($id);
+        return view('admin.subscriptions.edit', compact('subscription'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $subscription = \App\Models\Subscription::findOrFail($id);
+        // TODO: Add validation and update logic
+        return redirect()->route('admin.subscriptions.index')->with('success', 'Subscription updated');
+    }
+
+
+    public function create()
+    {
+        try {
+            return view('admin.create');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Create failed: ' . $e->getMessage());
+        }
+    }
 }

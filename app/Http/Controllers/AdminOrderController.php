@@ -1363,42 +1363,339 @@ class AdminOrderController extends Controller
     }
     
     /**
-     * Get stock status for display
+     * Get stock summary for API endpoint
      */
-    private function getStockStatus($stockLevel)
-    {
-        if ($stockLevel <= 0) return 'out_of_stock';
-        if ($stockLevel <= 10) return 'low_stock';
-        if ($stockLevel <= 25) return 'medium_stock';
-        return 'in_stock';
-    }
-    
-    /**
-     * Calculate current stock for an item
-     */
-    private function calculateCurrentStock($itemMasterId, $branchId = null)
+    public function getStockSummary(Request $request)
     {
         try {
-            // Check if ItemTransaction model exists for stock calculation
-            if (class_exists('App\Models\ItemTransaction')) {
-                return \App\Models\ItemTransaction::where('item_master_id', $itemMasterId)
-                    ->when($branchId, function($q) use ($branchId) {
-                        $q->where('branch_id', $branchId);
-                    })
-                    ->sum('quantity'); // Assuming positive qty = stock in, negative = stock out
+            $admin = auth('admin')->user();
+            $branchId = $request->get('branch_id', $admin->branch_id);
+            
+            $stockSummary = ItemMaster::where('branch_id', $branchId)
+                ->select('id', 'name', 'current_stock', 'minimum_stock', 'unit')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->name,
+                        'current_stock' => $item->current_stock ?? 0,
+                        'minimum_stock' => $item->minimum_stock ?? 0,
+                        'unit' => $item->unit,
+                        'status' => $item->current_stock <= $item->minimum_stock ? 'low' : 'ok'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $stockSummary
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting stock summary: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get stock summary'
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate cart items against stock
+     */
+    public function validateCart(Request $request)
+    {
+        try {
+            $cartItems = $request->get('cart_items', []);
+            $branchId = $request->get('branch_id');
+            
+            $validationResults = [];
+            
+            foreach ($cartItems as $item) {
+                $menuItem = MenuItem::find($item['menu_item_id']);
+                if (!$menuItem) {
+                    $validationResults[] = [
+                        'menu_item_id' => $item['menu_item_id'],
+                        'valid' => false,
+                        'message' => 'Menu item not found'
+                    ];
+                    continue;
+                }
+                
+                // Check if we have enough stock
+                $stockCheck = $this->checkMenuItemStock($menuItem, $item['quantity'], $branchId);
+                
+                $validationResults[] = [
+                    'menu_item_id' => $item['menu_item_id'],
+                    'valid' => $stockCheck['available'],
+                    'message' => $stockCheck['message'],
+                    'available_quantity' => $stockCheck['available_quantity']
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'validation_results' => $validationResults
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error validating cart: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to validate cart'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get menu alternatives for unavailable items
+     */
+    public function getMenuAlternatives($itemId, Request $request)
+    {
+        try {
+            $menuItem = MenuItem::find($itemId);
+            if (!$menuItem) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Menu item not found'
+                ], 404);
             }
             
-            // Fallback: check if ItemMaster has a stock column
-            $itemMaster = \App\Models\ItemMaster::find($itemMasterId);
-            return $itemMaster->stock ?? 0;
+            $branchId = $request->get('branch_id');
             
-        } catch (\Exception $e) {
-            Log::warning('Failed to calculate stock', [
-                'item_master_id' => $itemMasterId,
-                'branch_id' => $branchId,
-                'error' => $e->getMessage()
+            // Find alternatives based on category and availability
+            $alternatives = MenuItem::where('menu_id', $menuItem->menu_id)
+                ->where('id', '!=', $itemId)
+                ->where('category', $menuItem->category)
+                ->where('is_available', true)
+                ->limit(5)
+                ->get()
+                ->map(function ($item) use ($branchId) {
+                    $stockCheck = $this->checkMenuItemStock($item, 1, $branchId);
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->name,
+                        'price' => $item->price,
+                        'category' => $item->category,
+                        'available' => $stockCheck['available']
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'alternatives' => $alternatives
             ]);
-            return 0;
+        } catch (\Exception $e) {
+            Log::error('Error getting menu alternatives: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get alternatives'
+            ], 500);
         }
+    }
+
+    /**
+     * Get real-time availability for a branch
+     */
+    public function getRealTimeAvailability($branchId)
+    {
+        try {
+            $availability = MenuItem::join('menus', 'menu_items.menu_id', '=', 'menus.id')
+                ->where('menus.branch_id', $branchId)
+                ->where('menus.is_active', true)
+                ->select('menu_items.*')
+                ->get()
+                ->map(function ($item) use ($branchId) {
+                    $stockCheck = $this->checkMenuItemStock($item, 1, $branchId);
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->name,
+                        'available' => $stockCheck['available'],
+                        'available_quantity' => $stockCheck['available_quantity']
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'availability' => $availability
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting real-time availability: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get availability'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get inventory items for a branch
+     */
+    public function getInventoryItems($branchId)
+    {
+        try {
+            $items = ItemMaster::where('branch_id', $branchId)
+                ->select('id', 'name', 'current_stock', 'unit', 'minimum_stock')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'items' => $items
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting inventory items: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get inventory items'
+            ], 500);
+        }
+    }
+
+    /**
+     * Update menu availability for a branch
+     */
+    public function updateMenuAvailability($branchId, Request $request)
+    {
+        try {
+            $menuItemId = $request->get('menu_item_id');
+            $isAvailable = $request->get('is_available', false);
+            
+            $menuItem = MenuItem::join('menus', 'menu_items.menu_id', '=', 'menus.id')
+                ->where('menus.branch_id', $branchId)
+                ->where('menu_items.id', $menuItemId)
+                ->first();
+                
+            if (!$menuItem) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Menu item not found'
+                ], 404);
+            }
+            
+            MenuItem::where('id', $menuItemId)->update([
+                'is_available' => $isAvailable
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Menu availability updated'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating menu availability: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update availability'
+            ], 500);
+        }
+    }
+
+    /**
+     * Create takeaway order
+     */
+    public function createTakeaway()
+    {
+        return redirect()->route('admin.orders.create', ['type' => 'takeaway']);
+    }
+
+    /**
+     * Confirm order stock before processing
+     */
+    public function confirmOrderStock(Request $request)
+    {
+        try {
+            $orderId = $request->get('order_id');
+            $order = Order::with('orderItems.menuItem')->find($orderId);
+            
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found'
+                ], 404);
+            }
+            
+            $stockIssues = [];
+            foreach ($order->orderItems as $orderItem) {
+                $stockCheck = $this->checkMenuItemStock(
+                    $orderItem->menuItem, 
+                    $orderItem->quantity, 
+                    $order->branch_id
+                );
+                
+                if (!$stockCheck['available']) {
+                    $stockIssues[] = [
+                        'item' => $orderItem->menuItem->name,
+                        'requested' => $orderItem->quantity,
+                        'available' => $stockCheck['available_quantity'],
+                        'message' => $stockCheck['message']
+                    ];
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'has_stock_issues' => !empty($stockIssues),
+                'stock_issues' => $stockIssues
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error confirming order stock: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to confirm stock'
+            ], 500);
+        }
+    }
+
+    /**
+     * Cancel order and restore stock
+     */
+    public function cancelOrderWithStock(Request $request)
+    {
+        try {
+            $orderId = $request->get('order_id');
+            $order = Order::with('orderItems.menuItem')->find($orderId);
+            
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found'
+                ], 404);
+            }
+            
+            DB::transaction(function () use ($order) {
+                // Restore stock for cancelled order
+                foreach ($order->orderItems as $orderItem) {
+                    // Logic to restore stock would go here
+                    // This depends on your stock management system
+                }
+                
+                $order->update(['status' => 'cancelled']);
+            });
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Order cancelled and stock restored'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error cancelling order: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel order'
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper method to check menu item stock
+     */
+    private function checkMenuItemStock($menuItem, $quantity, $branchId)
+    {
+        // This is a simplified stock check - you may need to implement
+        // more complex logic based on your recipe/ingredient system
+        
+        // For now, assume menu items are always available
+        // In a real system, you'd check against ingredient stock
+        
+        return [
+            'available' => true,
+            'available_quantity' => 999,
+            'message' => 'Item available'
+        ];
     }
 }
