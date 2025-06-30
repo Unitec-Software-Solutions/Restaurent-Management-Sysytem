@@ -1,7 +1,10 @@
 <header class="fixed top-0 right-0 z-30 bg-white border-b border-gray-200 px-6 py-3 dark:bg-gray-800 dark:border-gray-700 transition-all duration-300 lg:left-72"
         x-data 
         x-init="$store.sidebar = Alpine.store('sidebar')"
-        :class="{ 'lg:left-72': !$store.sidebar?.collapsed, 'lg:left-20': $store.sidebar?.collapsed }">
+        :class="{ 
+            'lg:left-72': !$store.sidebar?.collapsed, 
+            'lg:left-20': $store.sidebar?.collapsed 
+        }">
     <div class="flex flex-col space-y-1">
         <!-- Top row - menu button, title, and profile -->
         <div class="flex items-center justify-between w-full">
@@ -28,15 +31,18 @@
                     </p>
                 @endif
             </div>
-            <div class="flex items-center space-x-4">
-    <!-- 🔘 Test Page Button -->
-    <a href="{{ route('admin.testpage') }}"
-       class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
-        🧪 Test Page
-    </a>
 
-    <!-- Profile dropdown -->
-    @include('partials.header.profile-dropdown')
-</div>
+            <!-- Action buttons container -->
+            <div class="flex items-center space-x-3">
+                <!-- Test Page Button -->
+                <a href="{{ route('admin.testpage') }}"
+                   class="inline-flex items-center px-3 py-1.5 bg-indigo-600 border border-transparent text-xs font-medium rounded-md text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    🧪 Test Page
+                </a>
+                
+                <!-- Profile dropdown -->
+                
+            </div>
+        </div>
     </div>
 </header>
