@@ -152,10 +152,6 @@ class OrderManagementController extends Controller
                 Order::TYPE_TAKEAWAY_ONLINE,
                 Order::TYPE_TAKEAWAY_WALKIN_SCHEDULED,
                 Order::TYPE_TAKEAWAY_WALKIN_DEMAND,
-                Order::TYPE_DINEIN_ONLINE,
-                Order::TYPE_DINEIN_INCALL,
-                Order::TYPE_DINEIN_WALKIN_SCHEDULED,
-                Order::TYPE_DINEIN_WALKIN_DEMAND
             ]),
             'steward_id' => 'nullable|exists:employees,id',
             'items' => 'required|array|min:1',

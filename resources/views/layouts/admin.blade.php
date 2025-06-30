@@ -89,7 +89,7 @@
     @endauth
 
     <!-- Header -->
-    @include('partials.header.admin-header')
+    {{-- @include('partials.header.admin-header') --}}
 
     <!-- Main Content -->
     <main class="lg:ml-64 transition-all duration-300">
@@ -118,6 +118,7 @@
 
     <!-- Logout Modal -->
     @include('partials.modals.logout-modal')
+    @include('partials.header.profile-dropdown')
 
     <!-- Scripts -->
     <script>

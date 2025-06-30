@@ -260,13 +260,27 @@ function getRequestedQuantity(itemId) {
 
 function enableQuantityControls(itemId) {
     const menuItem = document.querySelector(`[data-item-id="${itemId}"]`);
-    const controls = menuItem.querySelectorAll('.qty-decrease, .qty-increase, .item-qty');
-    controls.forEach(control => control.disabled = false);
+    if (!menuItem) return;
     
-    // Enable form submission for this item
     const qtyInput = menuItem.querySelector('.item-qty');
+    const increaseBtn = menuItem.querySelector('.qty-increase');
+    const decreaseBtn = menuItem.querySelector('.qty-decrease');
+    
+    // Enable controls
     if (qtyInput) {
+        qtyInput.disabled = false;
         qtyInput.name = `items[${itemId}][quantity]`;
+        
+        // Set proper button states
+        const currentValue = parseInt(qtyInput.value) || 1;
+        const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+        
+        if (decreaseBtn) {
+            decreaseBtn.disabled = currentValue <= 1;
+        }
+        if (increaseBtn) {
+            increaseBtn.disabled = currentValue >= maxValue;
+        }
     }
 }
 

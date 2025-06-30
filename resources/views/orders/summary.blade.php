@@ -128,7 +128,7 @@
             @else
                 <p class="text-green-500 font-semibold">Order Submitted</p>
             @endif
-            <form action="{{ route(request()->routeIs('orders.takeaway.*') ? 'orders.destroy' : 'orders.destroy', $order) }}" method="POST">
+            <form action="{{ request()->routeIs('orders.takeaway.*') ? route('orders.takeaway.destroy', $order) : route('orders.destroy', $order) }}" method="POST">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" onclick="return confirm('Delete this order?')">Delete Order</button>

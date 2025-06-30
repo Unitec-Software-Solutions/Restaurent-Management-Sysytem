@@ -134,8 +134,18 @@ class EnhancedOrderManager {
             $card.addClass('selected');
             $quantityControls.show();
             
-            // Enable quantity controls
-            $card.find('.item-qty, .qty-increase, .qty-decrease').prop('disabled', false);
+            // Enable quantity controls with proper button states
+            const $qtyInput = $card.find('.item-qty');
+            const $increaseBtn = $card.find('.qty-increase');
+            const $decreaseBtn = $card.find('.qty-decrease');
+            
+            $qtyInput.prop('disabled', false);
+            
+            const currentValue = parseInt($qtyInput.val()) || 1;
+            const maxValue = parseInt($qtyInput.attr('max')) || 99;
+            
+            $decreaseBtn.prop('disabled', currentValue <= 1);
+            $increaseBtn.prop('disabled', currentValue >= maxValue);
             
         } else {
             // Remove from cart
@@ -160,9 +170,18 @@ class EnhancedOrderManager {
         const itemId = $button.data('item-id');
         const $qtyInput = $(`.item-qty[data-item-id="${itemId}"]`);
         const currentQty = parseInt($qtyInput.val()) || 1;
-        const newQty = Math.max(1, currentQty + delta);
+        const maxQty = parseInt($qtyInput.attr('max')) || 99;
+        const newQty = Math.max(1, Math.min(maxQty, currentQty + delta));
         
         $qtyInput.val(newQty);
+        
+        // Update button states
+        const $decreaseBtn = $(`.qty-decrease[data-item-id="${itemId}"]`);
+        const $increaseBtn = $(`.qty-increase[data-item-id="${itemId}"]`);
+        
+        $decreaseBtn.prop('disabled', newQty <= 1);
+        $increaseBtn.prop('disabled', newQty >= maxQty);
+        
         this.handleDirectQuantityChange({ target: $qtyInput[0] });
     }
 
@@ -172,9 +191,17 @@ class EnhancedOrderManager {
     handleDirectQuantityChange(event) {
         const $input = $(event.target);
         const itemId = $input.data('item-id');
-        const quantity = Math.max(1, parseInt($input.val()) || 1);
+        const maxValue = parseInt($input.attr('max')) || 99;
+        let quantity = Math.max(1, Math.min(maxValue, parseInt($input.val()) || 1));
         
-        $input.val(quantity); // Ensure minimum quantity
+        $input.val(quantity); // Ensure value is within bounds
+
+        // Update button states
+        const $decreaseBtn = $(`.qty-decrease[data-item-id="${itemId}"]`);
+        const $increaseBtn = $(`.qty-increase[data-item-id="${itemId}"]`);
+        
+        $decreaseBtn.prop('disabled', quantity <= 1);
+        $increaseBtn.prop('disabled', quantity >= maxValue);
 
         if (this.cart.has(itemId)) {
             const itemData = this.cart.get(itemId);
