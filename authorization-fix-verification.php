@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
+
 /**
  * Authorization Fix Verification Script
  * This script verifies that the authorization issues in GRN and Items management are fixed
