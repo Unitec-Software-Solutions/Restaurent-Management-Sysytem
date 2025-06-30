@@ -682,6 +682,22 @@ class AdminSidebar extends Component
             ];
         }
 
+        // Suppliers Management (separate from inventory)
+        if ($this->hasPermission($admin, 'suppliers.view')) {
+            $menuItems[] = [
+                'title' => 'Suppliers',
+                'route' => 'admin.suppliers.index',
+                'route_params' => [],
+                'icon' => 'truck',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.view',
+                'badge' => 0,
+                'badge_color' => 'blue',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.index'),
+                'sub_items' => $this->getSupplierSubItems()
+            ];
+        }
+
         // Reservations
         if ($this->hasPermission($admin, 'reservations.view')) {
             $menuItems[] = [
@@ -1033,6 +1049,31 @@ class AdminSidebar extends Component
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.grn.index')
+            ]
+        ];
+    }
+
+    /**
+     * Get supplier sub-items
+     */
+    private function getSupplierSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Suppliers',
+                'route' => 'admin.suppliers.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.view',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.index')
+            ],
+            [
+                'title' => 'Add Supplier',
+                'route' => 'admin.suppliers.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.create',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.create')
             ]
         ];
     }
