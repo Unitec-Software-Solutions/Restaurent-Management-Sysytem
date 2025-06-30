@@ -251,6 +251,11 @@ class AdminOrderController extends Controller
         $admin = auth('admin')->user();
         $orderType = $request->get('type', 'in_house'); // Default to in_house
         
+        // For takeaway orders, set default takeaway type if not specified
+        if ($orderType === 'takeaway' && !$request->has('subtype')) {
+            $orderType = 'takeaway_walk_in_demand'; // Default takeaway subtype
+        }
+        
         // Apply admin defaults (pre-filled values as requested in refactoring)
         $defaultData = [
             'branch_id' => $admin->branch_id,
