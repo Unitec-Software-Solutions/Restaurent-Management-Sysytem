@@ -22,34 +22,23 @@
                 @endif
             </h1>
             <div class="flex gap-2">
-
-                @routeexists('admin.orders.create')
-                    <a href="{{ route('admin.orders.create') }}" 
-                       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors duration-200">
-                        <i class="fas fa-plus mr-2"></i>
-                        Create Order
-               @routeexists('admin.orders.takeaway.create')
+                @routeexists('admin.orders.takeaway.create')
                     <a href="{{ route('admin.orders.takeaway.create') }}"
-                       class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                       class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors duration-200">
+                        <i class="fas fa-plus mr-2"></i>
                         Create Takeaway
-
                     </a>
                 @else
                     <span class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
-                        Create Order (Unavailable)
+                        Create Takeaway (Unavailable)
                     </span>
                 @endrouteexists
 
                 @if(!$admin->isSuperAdmin())
                     @routeexists('admin.reservations.create')
-
                         <a href="{{ route('admin.reservations.create') }}" 
                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors duration-200">
                             <i class="fas fa-calendar-plus mr-2"></i>
-
-                        <a href="{{ route('admin.reservations.create') }}"
-                           class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-
                             Create Reservation
                         </a>
                     @else
