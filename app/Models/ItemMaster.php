@@ -7,6 +7,7 @@ use App\Models\ItemCategory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class ItemMaster extends Model
 {
@@ -70,6 +71,38 @@ class ItemMaster extends Model
     }
 
     /**
+     * Production request items relationship
+     */
+    public function productionRequestItems()
+    {
+        return $this->hasMany(ProductionRequestItem::class, 'item_id');
+    }
+
+    /**
+     * Production order items relationship
+     */
+    public function productionOrderItems()
+    {
+        return $this->hasMany(ProductionOrderItem::class, 'item_id');
+    }
+
+    /**
+     * Production recipes where this item is the production item
+     */
+    public function productionRecipes()
+    {
+        return $this->hasMany(ProductionRecipe::class, 'production_item_id');
+    }
+
+    /**
+     * Production recipe details where this item is a raw material
+     */
+    public function rawMaterialRecipes()
+    {
+        return $this->hasMany(ProductionRecipeDetail::class, 'raw_material_item_id');
+    }
+
+    /**
      * Accessor Example: Get Ingredients if available in attributes
      */
     public function getIngredientsAttribute()
@@ -85,7 +118,7 @@ class ItemMaster extends Model
         if (isset($this->attributes['attributes']['img'])) {
             return asset('storage/'.$this->attributes['attributes']['img']);
         }
-        return asset('storage/default.png'); 
+        return asset('storage/default.png');
     }
 
 
@@ -107,6 +140,24 @@ class ItemMaster extends Model
     public function scopePerishable($query)
     {
         return $query->where('is_perishable', true);
+    }
+
+    /**
+     * Scope to get production items only
+     */
+    public function scopeProductionItems($query)
+    {
+        return $query->whereHas('category', function($q) {
+            $q->where('name', 'Production Items');
+        });
+    }
+
+    // New scope for raw materials
+    public function scopeRawMaterials($query)
+    {
+        return $query->whereHas('category', function($q) {
+            $q->where('name', 'Raw Materials');
+        });
     }
 
     // In ItemMaster model

@@ -45,6 +45,7 @@ class ItemDashboardController extends Controller
             ->whereDate('created_at', now()->format('Y-m-d'))
             ->count();
 
+
         // Total Stock Value
         $totalStockValue = DB::table('item_master')
             ->join('item_transactions', 'item_master.id', '=', 'item_transactions.inventory_item_id')
@@ -64,7 +65,28 @@ class ItemDashboardController extends Controller
             ->select(DB::raw('SUM(item_transactions.quantity * item_master.buying_price) as total_stock_value'))
             ->first()->total_stock_value ?? 0;
 
-        $stockValueChange = $totalStockValue - $yesterdayStockValue;
+        // Total Stock Value - calculate using current stock levels
+        $totalStockValue = 0;
+        $items = ItemMaster::where('organization_id', $orgId)->get();
+        foreach ($items as $item) {
+            $currentStock = ItemTransaction::stockOnHand($item->id);
+            $totalStockValue += $currentStock * ($item->buying_price ?? 0);
+        }
+
+        // Stock Value Change (from yesterday) - simplified approach
+        $yesterdayTransactions = ItemTransaction::where('organization_id', $orgId)
+            ->whereDate('created_at', now()->subDay())
+            ->get();
+
+
+        $yesterdayStockChange = 0;
+        foreach ($yesterdayTransactions as $transaction) {
+            $item = $transaction->item;
+            if ($item) {
+                $yesterdayStockChange += $transaction->quantity * ($item->buying_price ?? 0);
+            }
+        }
+        $stockValueChange = $yesterdayStockChange;
 
         // Purchase Orders
         $purchaseOrders = ItemTransaction::when(!$isSuperAdmin, function($q) use ($orgId) {
@@ -73,7 +95,9 @@ class ItemDashboardController extends Controller
             ->where('transaction_type', 'purchase_order')
             ->get();
 
-        $purchaseOrdersTotal = $purchaseOrders->sum('cost_price');
+        $purchaseOrdersTotal = $purchaseOrders->sum(function($transaction) {
+            return $transaction->quantity * ($transaction->cost_price ?? 0);
+        });
         $purchaseOrdersCount = $purchaseOrders->count();
 
         // Sales Orders

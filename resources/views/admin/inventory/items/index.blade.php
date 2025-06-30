@@ -9,18 +9,20 @@
             <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-medium text-green-800">🔍 Inventory Items Debug Info</h3>
-                    <a href="{{ route('admin.inventory.items.index', ['debug' => 1]) }}" 
-                       class="text-xs text-green-600 hover:text-green-800">
-                        Full Debug (@dd)
+                    <a href="{{ route('admin.inventory.items.index', ['debug' => 1]) }}"
+                        class="text-xs text-green-600 hover:text-green-800">
+                        Full Debug (debug=1)
                     </a>
                 </div>
                 <div class="text-xs text-green-700 mt-2 grid grid-cols-3 gap-4">
                     <div>
-                        <p><strong>Items Variable:</strong> {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}</p>
+                        <p><strong>Items Variable:</strong>
+                            {{ isset($items) ? 'Set (' . $items->count() . ')' : 'NOT SET' }}</p>
                         <p><strong>DB Total Items:</strong> {{ \App\Models\ItemMaster::count() }}</p>
                     </div>
                     <div>
-                        <p><strong>Categories Variable:</strong> {{ isset($categories) ? 'Set (' . $categories->count() . ')' : 'NOT SET' }}</p>
+                        <p><strong>Categories Variable:</strong>
+                            {{ isset($categories) ? 'Set (' . $categories->count() . ')' : 'NOT SET' }}</p>
                         <p><strong>DB Total Categories:</strong> {{ \App\Models\ItemCategory::count() }}</p>
                     </div>
                     <div>
@@ -45,11 +47,11 @@
             </div>
 
             <!-- Filters with Export -->
-            <x-module-filters 
+            <x-module-filters
                 :action="route('admin.inventory.items.index')"
                 :export-permission="'export_inventory_items'"
                 :export-filename="'inventory_items_export.xlsx'">
-                
+
                 <div>
                     <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <select name="category" id="category"
@@ -62,7 +64,7 @@
                         @endforeach
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" id="status" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">

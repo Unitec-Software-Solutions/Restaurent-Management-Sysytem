@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('header-title', 'GRN List')
+@section('header-title', 'Goods Received Notes')
 {{-- @section('header-subtitle', 'Manage all goods received notes for your organization.') --}}
 
 
