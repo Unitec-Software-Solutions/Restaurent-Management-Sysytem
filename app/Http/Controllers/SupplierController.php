@@ -32,9 +32,12 @@ class SupplierController extends Controller
         }
 
         try {
-            $query = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
-                return $q->where('organization_id', $admin->organization_id);
-            });
+            $query = Supplier::query();
+            
+            // Apply organization filter only for non-super admins
+            if (!$isSuperAdmin && $admin->organization_id) {
+                $query->where('organization_id', $admin->organization_id);
+            }
 
             // Apply filters
             if ($request->has('search')) {
@@ -60,22 +63,22 @@ class SupplierController extends Controller
 
             $suppliers = $query->latest()->paginate(15);
 
-            // Statistics
-            $totalSuppliers = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
-                return $q->where('organization_id', $admin->organization_id);
-            })->count();
+            // Statistics - improved for super admin
+            $totalSuppliers = $isSuperAdmin ? 
+                Supplier::count() : 
+                Supplier::where('organization_id', $admin->organization_id)->count();
             
-            $activeSuppliers = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
-                return $q->where('organization_id', $admin->organization_id);
-            })->where('is_active', true)->count();
+            $activeSuppliers = $isSuperAdmin ? 
+                Supplier::where('is_active', true)->count() : 
+                Supplier::where('organization_id', $admin->organization_id)->where('is_active', true)->count();
             
-            $inactiveSuppliers = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
-                return $q->where('organization_id', $admin->organization_id);
-            })->where('is_active', false)->count();
+            $inactiveSuppliers = $isSuperAdmin ? 
+                Supplier::where('is_active', false)->count() : 
+                Supplier::where('organization_id', $admin->organization_id)->where('is_active', false)->count();
             
-            $newSuppliersToday = Supplier::when(!$isSuperAdmin, function($q) use ($admin) {
-                return $q->where('organization_id', $admin->organization_id);
-            })->whereDate('created_at', today())->count();
+            $newSuppliersToday = $isSuperAdmin ? 
+                Supplier::whereDate('created_at', today())->count() : 
+                Supplier::where('organization_id', $admin->organization_id)->whereDate('created_at', today())->count();
 
             return view('admin.suppliers.index', compact(
                 'suppliers',
