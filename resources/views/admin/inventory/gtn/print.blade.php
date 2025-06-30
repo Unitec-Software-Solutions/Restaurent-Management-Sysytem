@@ -156,20 +156,27 @@
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
                 <div class="mb-4 md:mb-0">
                     <div class="text-2xl font-bold mb-1 text-gray-900">
-                        {{ Auth::user()->organization->name ?? 'Organization Name' }}</div>
-                    @if (Auth::user()->organization)
-                        <div class="text-gray-600">{{ Auth::user()->organization->address ?? '' }}</div>
-                        <div class="text-gray-600">
-                            @if (Auth::user()->organization->city)
-                                {{ Auth::user()->organization->city }},
-                            @endif
-                            {{ Auth::user()->organization->country ?? '' }}
-                        </div>
-                        @if (Auth::user()->organization->phone)
-                            <div class="text-gray-600">Phone: {{ Auth::user()->organization->phone }}</div>
+                        @if(Auth::guard('admin')->user()->is_super_admin)
+                            All Organizations (Super Admin)
+                        @elseif(Auth::guard('admin')->user()->organization)
+                            {{ Auth::guard('admin')->user()->organization->name }}
+                        @else
+                            Organization Name
                         @endif
-                        @if (Auth::user()->organization->email)
-                            <div class="text-gray-600">Email: {{ Auth::user()->organization->email }}</div>
+                    </div>
+                    @if (Auth::guard('admin')->user()->organization)
+                        <div class="text-gray-600">{{ Auth::guard('admin')->user()->organization->address ?? '' }}</div>
+                        <div class="text-gray-600">
+                            @if (Auth::guard('admin')->user()->organization->city)
+                                {{ Auth::guard('admin')->user()->organization->city }},
+                            @endif
+                            {{ Auth::guard('admin')->user()->organization->country ?? '' }}
+                        </div>
+                        @if (Auth::guard('admin')->user()->organization->phone)
+                            <div class="text-gray-600">Phone: {{ Auth::guard('admin')->user()->organization->phone }}</div>
+                        @endif
+                        @if (Auth::guard('admin')->user()->organization->email)
+                            <div class="text-gray-600">Email: {{ Auth::guard('admin')->user()->organization->email }}</div>
                         @endif
                     @endif
                 </div>
