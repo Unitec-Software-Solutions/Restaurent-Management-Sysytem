@@ -278,7 +278,7 @@ class AdminOrderController extends Controller
                 if ($item->item_master_id && $item->itemMaster && $item->itemMaster->is_active) {
                     $itemType = MenuItem::TYPE_BUY_SELL;
                     // Calculate current stock from item_transactions
-                    $currentStock = $this->calculateCurrentStock($item->item_master_id, $admin->branch_id ?? null);
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $admin->branch_id ?? null);
                 }
                 
                 // Add type and availability information for frontend display
@@ -307,13 +307,13 @@ class AdminOrderController extends Controller
     /**
      * Get availability information for menu item display
      */
-    private function getItemAvailabilityInfo($item)
+    private function getItemAvailabilityInfo($item, $currentStock, $itemType)
     {
-        if ($item->type == MenuItem::TYPE_BUY_SELL) {
+        if ($itemType == MenuItem::TYPE_BUY_SELL) {
             return [
                 'type' => 'stock',
-                'stock' => $item->stock ?? 0,
-                'available' => ($item->stock ?? 0) > 0
+                'stock' => $currentStock,
+                'available' => $currentStock > 0
             ];
         } else {
             return [
@@ -423,6 +423,7 @@ class AdminOrderController extends Controller
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $item['menu_item_id'],
+                    'item_name' => $menuItem->name,
                     'quantity' => $item['quantity'],
                     'unit_price' => $menuItem->price,
                     'subtotal' => $subtotal,
@@ -1326,7 +1327,7 @@ class AdminOrderController extends Controller
                 
                 if ($item->item_master_id && $item->itemMaster && $item->itemMaster->is_active) {
                     $itemType = MenuItem::TYPE_BUY_SELL;
-                    $currentStock = $this->calculateCurrentStock($item->item_master_id, $branchId);
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
                 }
                 
                 return [
