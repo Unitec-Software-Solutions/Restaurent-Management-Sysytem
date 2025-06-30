@@ -1,7 +1,7 @@
 <header class="fixed top-0 right-0 z-30 bg-white border-b border-gray-200 px-6 py-3 dark:bg-gray-800 dark:border-gray-700 transition-all duration-300 lg:left-72"
         x-data 
         x-init="$store.sidebar = Alpine.store('sidebar')"
-        :class="{ 'lg:left-72': !$store.sidebar?.collapsed, 'lg:left-20': $store.sidebar?.collapsed }">>
+        :class="{ 'lg:left-72': !$store.sidebar?.collapsed, 'lg:left-20': $store.sidebar?.collapsed }">
     <div class="flex flex-col space-y-1">
         <!-- Top row - menu button, title, and profile -->
         <div class="flex items-center justify-between w-full">
