@@ -176,6 +176,8 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
+        $admin = Auth::guard('admin')->user();
+        
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
@@ -185,8 +187,10 @@ class UserController extends Controller
             ],
             'branch_id' => [
                 'nullable',
-                Rule::exists('branches', 'id')->where(function ($query) {
-                    $query->where('organization_id', Auth::user()->organization_id);
+                Rule::exists('branches', 'id')->where(function ($query) use ($admin) {
+                    if (!$admin->is_super_admin && $admin->organization_id) {
+                        $query->where('organization_id', $admin->organization_id);
+                    }
                 })
             ],
             'password' => 'nullable|string|min:8|confirmed',
@@ -212,7 +216,14 @@ class UserController extends Controller
     {
         $this->authorize('assignRole', $user);
 
-        $roles = Role::where('organization_id', Auth::user()->organization_id)->get();
+        $admin = Auth::guard('admin')->user();
+        $roles = Role::query();
+        
+        if (!$admin->is_super_admin && $admin->organization_id) {
+            $roles->where('organization_id', $admin->organization_id);
+        }
+        
+        $roles = $roles->get();
 
         return view('admin.users.assign-role', compact('user', 'roles'));
     }
@@ -222,11 +233,15 @@ class UserController extends Controller
     {
         $this->authorize('assignRole', $user);
 
+        $admin = Auth::guard('admin')->user();
+
         $request->validate([
             'role_id' => [
                 'required',
-                Rule::exists('roles', 'id')->where(function ($query) {
-                    $query->where('organization_id', Auth::user()->organization_id);
+                Rule::exists('roles', 'id')->where(function ($query) use ($admin) {
+                    if (!$admin->is_super_admin && $admin->organization_id) {
+                        $query->where('organization_id', $admin->organization_id);
+                    }
                 })
             ],
         ]);
@@ -241,7 +256,7 @@ class UserController extends Controller
     {
         $this->authorize('delete', $user);
 
-        if (optional(Auth::user())->id === $user->id) {
+        if (optional(Auth::guard('admin')->user())->id === $user->id) {
             return redirect()->back()->with('error', 'You cannot delete your own account');
         }
 
@@ -308,7 +323,7 @@ class UserController extends Controller
 
     public function hasPermission($permission)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
         if (!$user || !$user->role) return false;
         return $user->role->permissions->pluck('name')->contains($permission);
     }
