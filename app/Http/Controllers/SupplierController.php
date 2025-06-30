@@ -26,9 +26,9 @@ class SupplierController extends Controller
         // Super admin check - bypass organization requirements
         $isSuperAdmin = $admin->isSuperAdmin();
         
-        // Basic validation - super admins don't need organization
+        // Basic validation - only non-super admins need organization
         if (!$isSuperAdmin && !$admin->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
         try {
@@ -101,9 +101,9 @@ class SupplierController extends Controller
         // Super admin check - bypass organization requirements
         $isSuperAdmin = $user->isSuperAdmin();
         
-        // Basic validation - super admins don't need organization
+        // Basic validation - only non-super admins need organization
         if (!$isSuperAdmin && !$user->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
         return view('admin.suppliers.create');
@@ -111,7 +111,7 @@ class SupplierController extends Controller
 
     public function store(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
         if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Please log in to create suppliers.');
@@ -120,9 +120,9 @@ class SupplierController extends Controller
         // Super admin check - bypass organization requirements
         $isSuperAdmin = $user->isSuperAdmin();
         
-        // Basic validation - super admins don't need organization
+        // Basic validation - only non-super admins need organization
         if (!$isSuperAdmin && !$user->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
         $validated = $request->validate([
