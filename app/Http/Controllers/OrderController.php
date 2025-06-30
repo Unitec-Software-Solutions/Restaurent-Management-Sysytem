@@ -7,7 +7,6 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ItemMaster;
 use App\Models\MenuItem;
-use App\Models\MenuCategory;
 use App\Models\Reservation;
 use App\Models\Customer;
 use App\Models\Branch;
@@ -17,12 +16,9 @@ use App\Services\ProductCatalogService;
 use App\Services\OrderService;
 use App\Services\NotificationService;
 use App\Enums\OrderType;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderController extends Controller
 {
@@ -166,7 +162,7 @@ class OrderController extends Controller
         $data = $request->validate([
             'reservation_id' => 'required|exists:reservations,id',
             'items' => 'required|array',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
             'customer_name' => 'nullable|string|max:255',
             'customer_phone' => 'required|string|max:20',
@@ -217,12 +213,15 @@ class OrderController extends Controller
             // Stock validation - check all items before creating order
             $stockErrors = [];
             foreach ($data['items'] as $item) {
-                $inventoryItem = ItemMaster::find($item['item_id']);
-                if (!$inventoryItem) continue;
+                $menuItem = MenuItem::find($item['item_id']);
+                if (!$menuItem) continue;
                 
-                $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $reservation->branch_id);
-                if ($currentStock < $item['quantity']) {
-                    $stockErrors[] = "Insufficient stock for {$inventoryItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                // Only check stock for items linked to inventory (ItemMaster)
+                if ($menuItem->item_master_id) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $reservation->branch_id);
+                    if ($currentStock < $item['quantity']) {
+                        $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                    }
                 }
             }
 
@@ -234,46 +233,50 @@ class OrderController extends Controller
             $order = Order::create([
                 'reservation_id' => $reservation->id,
                 'branch_id' => $reservation->branch_id,
+                'organization_id' => $reservation->branch->organization_id,
                 'customer_name' => $customer->name,
                 'customer_phone' => $customer->phone,
                 'customer_phone_fk' => $customer->phone,
                 'order_type' => $orderType,
                 'status' => Order::STATUS_SUBMITTED,
                 'steward_id' => $data['steward_id'] ?? null,
+                'order_date' => now(),
             ]);
 
             $subtotal = 0;
             foreach ($data['items'] as $item) {
-                $inventoryItem = ItemMaster::find($item['item_id']);
-                if (!$inventoryItem) continue;
+                $menuItem = MenuItem::find($item['item_id']);
+                if (!$menuItem) continue;
                 
-                $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                $lineTotal = $menuItem->price * $item['quantity'];
                 $subtotal += $lineTotal;
 
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $item['item_id'],
-                    'inventory_item_id' => $item['item_id'],
+                    'item_name' => $menuItem->name,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $inventoryItem->selling_price,
-                    'total_price' => $lineTotal,
+                    'unit_price' => $menuItem->price,
+                    'subtotal' => $lineTotal,
                 ]);
 
-                // Deduct stock immediately upon order submission
-                \App\Models\ItemTransaction::create([
-                    'organization_id' => $reservation->organization_id ?? Auth::user()->organization_id,
-                    'branch_id' => $reservation->branch_id,
-                    'inventory_item_id' => $item['item_id'],
-                    'transaction_type' => 'sales_order',
-                    'quantity' => -$item['quantity'], // Negative for stock deduction
-                    'cost_price' => $inventoryItem->buying_price,
-                    'unit_price' => $inventoryItem->selling_price,
-                    'source_id' => $order->id,
-                    'source_type' => 'Order',
-                    'created_by_user_id' => Auth::id(),
-                    'notes' => "Stock deducted for Order #{$order->id}",
-                    'is_active' => true,
-                ]);
+                // Deduct stock immediately upon order submission (only for inventory items)
+                if ($menuItem->item_master_id && $menuItem->itemMaster) {
+                    \App\Models\ItemTransaction::create([
+                        'organization_id' => $reservation->organization_id ?? Auth::user()->organization_id,
+                        'branch_id' => $reservation->branch_id,
+                        'inventory_item_id' => $menuItem->item_master_id,
+                        'transaction_type' => 'sales_order',
+                        'quantity' => -$item['quantity'], // Negative for stock deduction
+                        'cost_price' => $menuItem->itemMaster->buying_price,
+                        'unit_price' => $menuItem->price,
+                        'source_id' => $order->id,
+                        'source_type' => 'Order',
+                        'created_by_user_id' => Auth::id(),
+                        'notes' => "Stock deducted for Order #{$order->id}",
+                        'is_active' => true,
+                    ]);
+                }
             }
 
             $tax = $subtotal * 0.13; // 13% VAT
@@ -325,7 +328,7 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'items' => 'required|array',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
@@ -372,19 +375,19 @@ class OrderController extends Controller
             
             // Create new order items and deduct stock
             foreach ($data['items'] as $item) {
-                $inventoryItem = ItemMaster::find($item['item_id']);
-                if (!$inventoryItem) continue;
+                $menuItem = MenuItem::find($item['item_id']);
+                if (!$menuItem) continue;
                 
-                $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                $lineTotal = $menuItem->price * $item['quantity'];
                 $subtotal += $lineTotal;
                 
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $item['item_id'],
-                    'inventory_item_id' => $item['item_id'],
+                    'item_name' => $menuItem->name,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $inventoryItem->selling_price,
-                    'total_price' => $lineTotal,
+                    'unit_price' => $menuItem->price,
+                    'subtotal' => $lineTotal,
                 ]);
 
                 // Deduct stock for new quantities
@@ -480,7 +483,7 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
             'special_instructions' => 'nullable|string|max:1000',
             'order_type' => 'nullable|string|in:' . implode(',', array_column(OrderType::takeawayTypes(), 'value')),
@@ -518,16 +521,17 @@ class OrderController extends Controller
                 // Stock validation - check all items before creating order
                 $stockErrors = [];
                 foreach ($data['items'] as $item) {
-                    $inventoryItem = ItemMaster::find($item['item_id']);
-                    if (!$inventoryItem || !$inventoryItem->is_active) {
+                    $menuItem = MenuItem::find($item['item_id']);
+                    if (!$menuItem || !$menuItem->is_active) {
                         $stockErrors[] = "Item {$item['item_id']} is not available";
                         continue;
                     }
                     
-                    if ($inventoryItem->item_type === 'Buy & Sell') {
-                        $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $data['branch_id']);
+                    // Only check stock for items linked to inventory (ItemMaster)
+                    if ($menuItem->item_master_id && $menuItem->itemMaster) {
+                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $data['branch_id']);
                         if ($currentStock < $item['quantity']) {
-                            $stockErrors[] = "Insufficient stock for {$inventoryItem->item_name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                            $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
                         }
                     }
                 }
@@ -539,6 +543,7 @@ class OrderController extends Controller
                 // Create takeaway order (model will handle customer linking)
                 $order = Order::create([
                     'branch_id' => $data['branch_id'],
+                    'organization_id' => $branch->organization_id,
                     'order_time' => $data['order_time'] ?? now(),
                     'customer_name' => $customer->name,
                     'customer_phone' => $customer->phone,
@@ -547,35 +552,36 @@ class OrderController extends Controller
                     'status' => Order::STATUS_SUBMITTED,
                     'special_instructions' => $data['special_instructions'],
                     'takeaway_id' => 'TW' . now()->format('YmdHis') . rand(100, 999),
+                    'order_date' => now(),
                 ]);
 
                 $subtotal = 0;
                 foreach ($data['items'] as $item) {
-                    $inventoryItem = ItemMaster::find($item['item_id']);
-                    if (!$inventoryItem) continue;
+                    $menuItem = MenuItem::find($item['item_id']);
+                    if (!$menuItem) continue;
                     
-                    $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                    $lineTotal = $menuItem->price * $item['quantity'];
                     $subtotal += $lineTotal;
 
                     OrderItem::create([
                         'order_id' => $order->id,
                         'menu_item_id' => $item['item_id'],
-                        'inventory_item_id' => $item['item_id'],
+                        'item_name' => $menuItem->name,
                         'quantity' => $item['quantity'],
-                        'unit_price' => $inventoryItem->selling_price,
-                        'total_price' => $lineTotal,
+                        'unit_price' => $menuItem->price,
+                        'subtotal' => $lineTotal,
                     ]);
 
-                    // Deduct stock for Buy & Sell items
-                    if ($inventoryItem->item_type === 'Buy & Sell') {
+                    // Deduct stock for items linked to inventory (ItemMaster)
+                    if ($menuItem->item_master_id && $menuItem->itemMaster) {
                         \App\Models\ItemTransaction::create([
                             'organization_id' => $branch->organization_id,
                             'branch_id' => $data['branch_id'],
-                            'inventory_item_id' => $item['item_id'],
+                            'inventory_item_id' => $menuItem->item_master_id,
                             'transaction_type' => 'takeaway_order',
                             'quantity' => -$item['quantity'],
-                            'cost_price' => $inventoryItem->buying_price,
-                            'unit_price' => $inventoryItem->selling_price,
+                            'cost_price' => $menuItem->itemMaster->buying_price,
+                            'unit_price' => $menuItem->price,
                             'source_id' => $order->id,
                             'source_type' => 'Order',
                             'created_by_user_id' => Auth::id(),
@@ -741,7 +747,7 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
@@ -749,16 +755,18 @@ class OrderController extends Controller
         $order->items()->delete();
         $subtotal = 0;
         foreach ($data['items'] as $item) {
-            $menuItem = ItemMaster::find($item['item_id']);
-            $lineTotal = $menuItem->selling_price * $item['quantity'];
+            $menuItem = MenuItem::find($item['item_id']);
+            if (!$menuItem) continue;
+            
+            $lineTotal = $menuItem->price * $item['quantity'];
             $subtotal += $lineTotal;
             OrderItem::create([
                 'order_id' => $order->id,
                 'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'],
+                'item_name' => $menuItem->name,
                 'quantity' => $item['quantity'],
-                'unit_price' => $menuItem->selling_price,
-                'total_price' => $lineTotal,
+                'unit_price' => $menuItem->price,
+                'subtotal' => $lineTotal,
             ]);
         }
         $tax = $subtotal * 0.10;
