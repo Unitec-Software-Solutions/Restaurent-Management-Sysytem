@@ -13,7 +13,7 @@ class ItemDashboardController extends Controller
 {
     public function index()
     {
-        $admin = Auth::user();
+        $admin = Auth::guard('admin')->user();
 
         if (!$admin) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access the inventory dashboard.');
@@ -22,9 +22,9 @@ class ItemDashboardController extends Controller
         // Super admin check - bypass organization requirements
         $isSuperAdmin = $admin->isSuperAdmin();
         
-        // Basic validation - super admins don't need organization
+        // Basic validation - only non-super admins need organization
         if (!$isSuperAdmin && !$admin->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
         // Super admins can see all items, others see their organization's
