@@ -30,6 +30,15 @@ class Order extends Model
     const PAYMENT_METHOD_CARD = 'card';
     const PAYMENT_METHOD_DIGITAL = 'digital';
 
+    // Order Type Constants
+    const TYPE_DINE_IN = 'dine_in';
+    const TYPE_TAKEAWAY = 'takeaway';
+    const TYPE_DELIVERY = 'delivery';
+    const TYPE_TAKEAWAY_IN_CALL = 'takeaway_in_call';
+    const TYPE_TAKEAWAY_ONLINE = 'takeaway_online';
+    const TYPE_TAKEAWAY_WALKIN_SCHEDULED = 'takeaway_walkin_scheduled';
+    const TYPE_TAKEAWAY_WALKIN_DEMAND = 'takeaway_walkin_demand';
+
     // Order States for State Machine
     const STATES = [
         self::STATUS_PENDING,
