@@ -21,11 +21,58 @@ class GrnDashboardController extends Controller
 {
     protected function getOrganizationId()
     {
-        $user = Auth::user();
-        if (!$user || !$user->organization_id) {
+        $user = Auth::guard('admin')->user();
+        if (!$user) {
             abort(403, 'Unauthorized access');
         }
+        
+        // For super admin, return null to allow access to all organizations
+        if ($user->is_super_admin) {
+            return null;
+        }
+        
+        if (!$user->organization_id) {
+            abort(403, 'No organization assigned');
+        }
+        
         return $user->organization_id;
+    }
+
+    /**
+     * Apply organization filter to query if user is not super admin
+     */
+    protected function applyOrganizationFilter($query, $orgId)
+    {
+        if ($orgId !== null) {
+            return $query->where('organization_id', $orgId);
+        }
+        return $query;
+    }
+
+    /**
+     * Check if user can access record from specific organization
+     */
+    protected function canAccessOrganization($recordOrgId, $userOrgId)
+    {
+        return $userOrgId === null || $recordOrgId === $userOrgId;
+    }
+
+    /**
+     * Create organization validation rule
+     */
+    protected function createOrganizationValidationRule($table, $orgId)
+    {
+        return function ($attribute, $value, $fail) use ($table, $orgId) {
+            if ($orgId !== null) {
+                $exists = DB::table($table)
+                    ->where('id', $value)
+                    ->where('organization_id', $orgId)
+                    ->exists();
+                if (!$exists) {
+                    $fail("The selected {$attribute} does not belong to your organization.");
+                }
+            }
+        };
     }
 
     public function index(Request $request)
@@ -36,8 +83,12 @@ class GrnDashboardController extends Controller
         $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder'])
-            ->where('organization_id', $orgId);
+        $query = GrnMaster::with(['supplier', 'branch', 'verifiedByUser', 'purchaseOrder']);
+        
+        // Apply organization filter for non-super admins
+        if ($orgId !== null) {
+            $query->where('organization_id', $orgId);
+        }
 
         if ($request->filled('search') ) {
             $search = $request->search;
@@ -76,7 +127,8 @@ class GrnDashboardController extends Controller
 
         $grns = $query->paginate(10);
 
-        $statsQuery = GrnMaster::where('organization_id', $orgId);
+        $statsQuery = GrnMaster::query();
+        $this->applyOrganizationFilter($statsQuery, $orgId);
 
         // Always apply date range filter for stats
         $statsQuery->whereBetween('received_date', [$startDate, $endDate]);
@@ -92,8 +144,8 @@ class GrnDashboardController extends Controller
                 ->sum('total_amount'),
         ];
 
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
-        $suppliers = Supplier::where('organization_id', $orgId)->active()->get();
+        $branches = $this->applyOrganizationFilter(Branch::query(), $orgId)->active()->get();
+        $suppliers = $this->applyOrganizationFilter(Supplier::query(), $orgId)->active()->get();
 
         return view('admin.suppliers.grn.index', compact(
             'grns',
@@ -351,10 +403,10 @@ class GrnDashboardController extends Controller
     {
         $orgId = $this->getOrganizationId();
 
-        $items = ItemMaster::where('organization_id', $orgId)->active()->get();
-        $suppliers = Supplier::where('organization_id', $orgId)->active()->get();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
-        $purchaseOrders = PurchaseOrder::where('organization_id', $orgId)
+        $items = $this->applyOrganizationFilter(ItemMaster::query(), $orgId)->active()->get();
+        $suppliers = $this->applyOrganizationFilter(Supplier::query(), $orgId)->active()->get();
+        $branches = $this->applyOrganizationFilter(Branch::query(), $orgId)->active()->get();
+        $purchaseOrders = $this->applyOrganizationFilter(PurchaseOrder::query(), $orgId)
             ->where('status', 'Approved')
             ->with(['supplier', 'items'])
             ->get();
@@ -375,20 +427,12 @@ class GrnDashboardController extends Controller
             'branch_id' => [
                 'required',
                 'exists:branches,id',
-                function ($attribute, $value, $fail) use ($orgId) {
-                    if (!Branch::where('id', $value)->where('organization_id', $orgId)->exists()) {
-                        $fail('The selected branch does not belong to your organization.');
-                    }
-                }
+                $this->createOrganizationValidationRule('branches', $orgId)
             ],
             'supplier_id' => [
                 'required',
                 'exists:suppliers,id',
-                function ($attribute, $value, $fail) use ($orgId) {
-                    if (!Supplier::where('id', $value)->where('organization_id', $orgId)->exists()) {
-                        $fail('The selected supplier does not belong to your organization.');
-                    }
-                }
+                $this->createOrganizationValidationRule('suppliers', $orgId)
             ],
             'received_date' => 'required|date|before_or_equal:today',
             'delivery_note_number' => 'nullable|string|max:100',
@@ -398,11 +442,7 @@ class GrnDashboardController extends Controller
             'items.*.item_id' => [
                 'required',
                 'exists:item_master,id',
-                function ($attribute, $value, $fail) use ($orgId) {
-                    if (!ItemMaster::where('id', $value)->where('organization_id', $orgId)->exists()) {
-                        $fail('The selected item does not belong to your organization.');
-                    }
-                }
+                $this->createOrganizationValidationRule('item_master', $orgId)
             ],
             'items.*.item_code' => 'nullable|exists:item_master,item_code',
             'items.*.batch_no' => 'nullable|string|max:50',
@@ -516,7 +556,8 @@ class GrnDashboardController extends Controller
 
     public function show(GrnMaster $grn)
     {
-        if ($grn->organization_id !== $this->getOrganizationId()) {
+        $orgId = $this->getOrganizationId();
+        if (!$this->canAccessOrganization($grn->organization_id, $orgId)) {
             abort(403);
         }
 
@@ -537,7 +578,7 @@ class GrnDashboardController extends Controller
     public function print(GrnMaster $grn)
     {
         $orgId = $this->getOrganizationId();
-        if ($grn->organization_id !== $orgId) {
+        if (!$this->canAccessOrganization($grn->organization_id, $orgId)) {
             abort(403);
         }
 
