@@ -18,16 +18,25 @@ class ItemMasterController extends Controller
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id) {
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
 
-        $orgId = $user->organization_id;
+        // For super admin, allow access to all organizations
+        $orgId = $user->is_super_admin ? null : $user->organization_id;
+        
+        if ($orgId === null && !$user->is_super_admin) {
+            return redirect()->route('admin.login')->with('error', 'No organization assigned.');
+        }
 
-        $query = ItemMaster::with('category')
-            ->where('organization_id', $orgId);
+        $query = ItemMaster::with('category');
+        
+        // Apply organization filter for non-super admins
+        if ($orgId !== null) {
+            $query->where('organization_id', $orgId);
+        }
 
         // Apply filters
         $query = $this->applyFiltersToQuery($query, $request);
@@ -41,16 +50,30 @@ class ItemMasterController extends Controller
 
         $items = $query->paginate(15);
 
-        $categories = ItemCategory::active()
-            ->where('organization_id', $orgId)
-            ->get();
+        $categories = ItemCategory::active();
+        if ($orgId !== null) {
+            $categories->where('organization_id', $orgId);
+        }
+        $categories = $categories->get();
 
-        $totalItems = ItemMaster::where('organization_id', $orgId)->count();
-        $activeItems = ItemMaster::where('organization_id', $orgId)->count();
-        $inactiveItems = ItemMaster::onlyTrashed()->where('organization_id', $orgId)->count();
-        $newItemsToday = ItemMaster::where('organization_id', $orgId)->whereDate('created_at', today())->count();
-        $inactiveItemsChange = ItemMaster::onlyTrashed()->where('organization_id', $orgId)->count();
-        $activeItemsChange = ItemMaster::where('organization_id', $orgId)->count();
+        $totalItemsQuery = ItemMaster::query();
+        $activeItemsQuery = ItemMaster::query();
+        $inactiveItemsQuery = ItemMaster::onlyTrashed();
+        $newItemsTodayQuery = ItemMaster::query()->whereDate('created_at', today());
+        
+        if ($orgId !== null) {
+            $totalItemsQuery->where('organization_id', $orgId);
+            $activeItemsQuery->where('organization_id', $orgId);
+            $inactiveItemsQuery->where('organization_id', $orgId);
+            $newItemsTodayQuery->where('organization_id', $orgId);
+        }
+
+        $totalItems = $totalItemsQuery->count();
+        $activeItems = $activeItemsQuery->count();
+        $inactiveItems = $inactiveItemsQuery->count();
+        $newItemsToday = $newItemsTodayQuery->count();
+        $inactiveItemsChange = $inactiveItems;
+        $activeItemsChange = $activeItems;
 
         return view('admin.inventory.items.index', compact(
             'items',
@@ -69,17 +92,24 @@ class ItemMasterController extends Controller
      */
     public function store(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id) {
+        if (!$user) {
             return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
+        // For super admin, allow creation but require organization_id in request
+        $orgId = $user->is_super_admin ? $request->organization_id : $user->organization_id;
+        
+        if (!$orgId && !$user->is_super_admin) {
+            return response()->json(['message' => 'No organization assigned.'], 403);
         }
 
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.name' => 'required|string|max:255',
             'items.*.unicode_name' => 'nullable|string|max:255',
-            'items.*.item_category_id' => 'required|exists:item_categories,id,organization_id,' . $user->organization_id,
+            'items.*.item_category_id' => 'required|exists:item_categories,id' . ($orgId ? ',organization_id,' . $orgId : ''),
             'items.*.item_code' => 'required|string|unique:item_master,item_code',
             'items.*.unit_of_measurement' => 'required|string|max:50',
             'items.*.reorder_level' => 'nullable|numeric|min:0',
