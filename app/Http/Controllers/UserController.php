@@ -324,8 +324,8 @@ class UserController extends Controller
     public function hasPermission($permission)
     {
         $user = Auth::guard('admin')->user();
-        if (!$user || !$user->role) return false;
-        return $user->role->permissions->pluck('name')->contains($permission);
+        if (!$user || !is_object($user->role)) return false;
+        return optional($user->role->permissions)->pluck('name')->contains($permission);
     }
 
     public function show(User $user)
