@@ -195,66 +195,142 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Prevent going below 1
-    document.querySelectorAll('.item-qty').forEach(function(input) {
-        input.addEventListener('input', function() {
-            if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
-                this.value = 1;
-            }
-            if (typeof updateCart === 'function') updateCart();
-        });
-    });
-
-    // Plus button
-    document.querySelectorAll('.qty-increase').forEach(function(btn) {
-        btn.addEventListener('click', function () {
-            const itemId = this.dataset.itemId;
-            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-            if (!input.disabled) {
-                input.value = parseInt(input.value) + 1;
-                input.dispatchEvent(new Event('input'));
-            }
-        });
-    });
-
-    // Minus button
-    document.querySelectorAll('.qty-decrease').forEach(function(btn) {
-        btn.addEventListener('click', function () {
-            const itemId = this.dataset.itemId;
-            const input = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-            if (!input.disabled) {
-                const currentValue = parseInt(input.value);
-                if (currentValue > 1) {
-                    input.value = currentValue - 1;
-                    input.dispatchEvent(new Event('input'));
+/**
+ * Initialize quantity controls for takeaway orders
+ */
+function initializeQuantityControls() {
+    console.log('🔢 Initializing takeaway quantity controls...');
+    
+    // Handle quantity increase buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qty-increase')) {
+            e.preventDefault();
+            const button = e.target.closest('.qty-increase');
+            const itemId = button.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            
+            if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                const currentValue = parseInt(qtyInput.value) || 1;
+                const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                
+                if (currentValue < maxValue) {
+                    qtyInput.value = currentValue + 1;
+                    updateButtonStates(itemId, qtyInput.value);
+                    if (typeof updateCart === 'function') updateCart();
                 }
             }
-        });
+        }
     });
-
-    // Item selection handling
-    document.querySelectorAll('[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const quantityInput = this.closest('.bg-white').querySelector('[type="number"]');
-            quantityInput.disabled = !this.checked;
-            if (!this.checked) {
-                quantityInput.value = 1;
-                quantityInput.classList.add('bg-gray-100');
-            } else {
-                quantityInput.classList.remove('bg-gray-100');
+    
+    // Handle quantity decrease buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qty-decrease')) {
+            e.preventDefault();
+            const button = e.target.closest('.qty-decrease');
+            const itemId = button.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            
+            if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                const currentValue = parseInt(qtyInput.value) || 1;
+                
+                if (currentValue > 1) {
+                    qtyInput.value = currentValue - 1;
+                    updateButtonStates(itemId, qtyInput.value);
+                    if (typeof updateCart === 'function') updateCart();
+                }
             }
+        }
+    });
+    
+    // Handle direct quantity input changes
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('item-qty')) {
+            const qtyInput = e.target;
+            const itemId = qtyInput.getAttribute('data-item-id');
+            let value = parseInt(qtyInput.value) || 1;
+            const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+            
+            // Validate and constrain value
+            if (value < 1) {
+                value = 1;
+                qtyInput.value = value;
+            } else if (value > maxValue) {
+                value = maxValue;
+                qtyInput.value = value;
+            }
+            
+            updateButtonStates(itemId, value);
+            if (typeof updateCart === 'function') updateCart();
+        }
+    });
+}
+
+/**
+ * Update button states based on quantity value
+ */
+function updateButtonStates(itemId, value) {
+    const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+    const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+    const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+    
+    const maxValue = parseInt(qtyInput?.getAttribute('max')) || 99;
+    
+    if (decreaseBtn) {
+        decreaseBtn.disabled = value <= 1 || qtyInput?.disabled;
+    }
+    if (increaseBtn) {
+        increaseBtn.disabled = value >= maxValue || qtyInput?.disabled;
+    }
+}
+
+// Initialize the controls when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initializing takeaway order creation page...');
+    
+    initializeQuantityControls();
+    
+    // Initialize item selection with proper button states
+    document.querySelectorAll('.item-check').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const itemId = this.getAttribute('data-item-id');
+            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
+            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
+            
+            if (this.checked) {
+                qtyInput.disabled = false;
+                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+                updateButtonStates(itemId, qtyInput.value);
+            } else {
+                qtyInput.disabled = true;
+                qtyInput.removeAttribute('name');
+                qtyInput.value = 1;
+                if (plusBtn) plusBtn.disabled = true;
+                if (minusBtn) minusBtn.disabled = true;
+            }
+            if (typeof updateCart === 'function') updateCart();
         });
     });
 
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
         const phoneInput = document.querySelector('input[name="customer_phone"]');
-        if (!phoneInput.value.trim()) {
+        if (phoneInput && !phoneInput.value.trim()) {
             e.preventDefault();
             alert('Please enter a valid phone number');
             phoneInput.focus();
+            return false;
+        }
+        
+        // Check if at least one item is selected
+        const checkedItems = document.querySelectorAll('.item-check:checked');
+        if (checkedItems.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one item');
+            return false;
         }
     });
+});
 });
 </script>
 @endsection

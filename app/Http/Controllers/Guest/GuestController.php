@@ -225,13 +225,12 @@ class GuestController extends Controller
     /**
      * Remove item from cart
      */
-    public function removeFromCart(Request $request)
+    public function removeFromCart($itemId)
     {
-        $validated = $request->validate([
-            'menu_item_id' => 'required|exists:menu_items,id'
-        ]);
-
-        $this->guestSessionService->removeFromCart($validated['menu_item_id']);
+        // Validate the item exists
+        $menuItem = MenuItem::findOrFail($itemId);
+        
+        $this->guestSessionService->removeFromCart($itemId);
 
         return response()->json([
             'success' => true,
