@@ -16,9 +16,36 @@ class CheckModuleAccess
     public function handle(Request $request, Closure $next, $moduleSlug): Response
     {
         $user = $request->user();
-        if (!$user || !$user->role || !$user->role->modules->contains('slug', $moduleSlug)) {
+        
+        // Skip check for super admin or if no user
+        if (!$user) {
             abort(403, 'Unauthorized access to this module');
         }
-        return $next($request);
+        
+        // Check if user has permission for the module
+        // Using Spatie permission system
+        if ($user->can($moduleSlug) || $user->hasRole('super_admin')) {
+            return $next($request);
+        }
+        
+        // Fallback: Check role-based modules if they exist
+        $role = $user->role ?? $user->userRole;
+        if ($role) {
+            $modulesData = $role->modules ?? [];
+            
+            // Handle different data types for modules
+            if (is_string($modulesData)) {
+                $modulesData = json_decode($modulesData, true) ?: [];
+            } elseif (!is_array($modulesData)) {
+                $modulesData = [];
+            }
+            
+            $modules = collect($modulesData);
+            if ($modules->contains('slug', $moduleSlug)) {
+                return $next($request);
+            }
+        }
+        
+        abort(403, 'Unauthorized access to this module');
     }
 }

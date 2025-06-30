@@ -53,10 +53,82 @@
                     </div>
 
                     <div class="p-6">
-                        <form method="POST" action="{{ isset($reservation) && $reservation ? route('admin.orders.reservations.store', ['reservation' => $reservation->id]) : route('admin.orders.store') }}">
+                        <form method="POST" action="{{ isset($reservation) && $reservation ? route('admin.orders.reservations.store', ['reservation' => $reservation->id]) : route('admin.orders.store') }}" id="orderForm">
                             @csrf
                             @if(isset($reservation) && $reservation)
                             <input type="hidden" name="reservation_id" value="{{ $reservation->id }}">
+                            @else
+                            <input type="hidden" name="order_type" value="{{ $orderType ?? 'in_house' }}">
+                            
+                            <!-- Order Type and Customer Information (for non-reservation orders) -->
+                            @if(!isset($reservation) || !$reservation)
+                            <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Order Type Selection -->
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                        <i class="fas fa-shopping-cart mr-2 text-blue-500"></i>
+                                        Order Type
+                                    </h3>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="order_type" value="in_house" 
+                                                {{ ($orderType ?? 'in_house') === 'in_house' ? 'checked' : '' }}
+                                                class="mr-2 text-blue-600">
+                                            <span class="text-gray-700">Dine In</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="order_type" value="takeaway" 
+                                                {{ ($orderType ?? '') === 'takeaway' ? 'checked' : '' }}
+                                                class="mr-2 text-blue-600">
+                                            <span class="text-gray-700">Takeaway</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Branch Selection (for super admin) -->
+                                @if(auth('admin')->user()->is_super_admin)
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                        <i class="fas fa-building mr-2 text-blue-500"></i>
+                                        Branch
+                                    </h3>
+                                    <select name="branch_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                        @foreach($branches as $branch)
+                                            <option value="{{ $branch->id }}" {{ $defaultBranch == $branch->id ? 'selected' : '' }}>
+                                                {{ $branch->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @else
+                                <input type="hidden" name="branch_id" value="{{ $defaultBranch }}">
+                                @endif
+                            </div>
+
+                            <!-- Customer Information (for takeaway orders) -->
+                            <div id="customer-info" class="mb-6 bg-blue-50 rounded-xl p-4" style="display: {{ ($orderType ?? '') === 'takeaway' ? 'block' : 'none' }}">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                    <i class="fas fa-user mr-2 text-blue-500"></i>
+                                    Customer Information
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                                        <input type="text" name="customer_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter customer name">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                                        <input type="tel" name="customer_phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter phone number" required>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
+                                        <input type="datetime-local" name="order_time" 
+                                            value="{{ old('order_time', now()->format('Y-m-d\TH:i')) }}"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
                             @endif
                             
                             <!-- Menu Search and Categories -->
@@ -80,34 +152,85 @@
                                     @php
                                         $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
                                     @endphp
-                                    <div class="flex items-center border-b py-4">
-                                        <input type="checkbox"
-                                            class="item-check mr-4"
-                                            data-item-id="{{ $item->id }}"
-                                            id="item_{{ $item->id }}"
-                                            name="items[{{ $item->id }}][item_id]"
-                                            value="{{ $item->id }}"
-                                            @if($existing) checked @endif>
-                                        <label for="item_{{ $item->id }}" class="flex-1">
-                                            <span class="font-semibold">{{ $item->name }}</span>
-                                            <span class="ml-2 text-gray-500">LKR {{ number_format($item->selling_price, 2) }}</span>
-                                        </label>
-                                        <div class="flex items-center ml-4">
-                                            <button type="button"
-                                                class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
-                                                data-item-id="{{ $item->id }}"
-                                                @if(!$existing) disabled @endif>-</button>
-                                            <input type="number"
-                                                min="1"
-                                                value="{{ $existing ? $existing->quantity : 1 }}"
-                                                class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
-                                                data-item-id="{{ $item->id }}"
-                                                @if(!$existing) disabled @endif
-                                                @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
-                                            <button type="button"
-                                                class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
-                                                data-item-id="{{ $item->id }}"
-                                                @if(!$existing) disabled @endif>+</button>
+                                    <div class="bg-white rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors duration-200 p-4 menu-item"
+                                        data-item-id="{{ $item->id }}"
+                                        data-item-type="{{ $item->type ?? 1 }}"
+                                        data-stock="{{ isset($item->stock) ? $item->stock : 0 }}"
+                                        data-is-available="{{ $item->is_available ? 'true' : 'false' }}">
+                                        
+                                        <div class="flex items-start justify-between mb-3">
+                                            <div class="flex-1">
+                                                <h3 class="font-semibold text-gray-900">{{ $item->name }}</h3>
+                                                <p class="text-sm text-gray-600 mt-1">{{ $item->description ?? '' }}</p>
+                                                <p class="text-lg font-bold text-indigo-600 mt-2">LKR {{ number_format($item->price, 2) }}</p>
+                                            </div>
+                                            
+                                            <!-- Menu Item Type Display Logic -->
+                                            <div class="ml-3 text-right">
+                                                @if(($item->type ?? 1) === App\Models\MenuItem::TYPE_BUY_SELL)
+                                                    <div class="stock-indicator bg-gray-100 px-2 py-1 rounded text-xs font-medium" 
+                                                         data-stock="{{ $item->stock ?? 0 }}">
+                                                        <i class="fas fa-boxes mr-1"></i>
+                                                        Stock: {{ $item->stock ?? 0 }}
+                                                    </div>
+                                                    @if(($item->stock ?? 0) < 1)
+                                                        <div class="mt-1 text-xs text-red-600 font-medium">
+                                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                            Out of Stock
+                                                        </div>
+                                                    @elseif(($item->stock ?? 0) < 5)
+                                                        <div class="mt-1 text-xs text-orange-600 font-medium">
+                                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                                            Low Stock
+                                                        </div>
+                                                    @endif
+                                                @elseif(($item->type ?? 1) === App\Models\MenuItem::TYPE_KOT)
+                                                    <span class="badge bg-success text-white px-2 py-1 rounded text-xs font-medium">
+                                                        <i class="fas fa-check-circle mr-1"></i>
+                                                        Available
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <!-- Add to Order Controls -->
+                                        <div class="flex items-center justify-between mt-4">
+                                            <div class="flex items-center">
+                                                <input type="checkbox"
+                                                    class="item-check add-to-order mr-3 w-4 h-4 text-indigo-600"
+                                                    data-item-id="{{ $item->id }}"
+                                                    data-stock="{{ $item->stock ?? 0 }}"
+                                                    id="item_{{ $item->id }}"
+                                                    value="{{ $item->id }}"
+                                                    @if(($item->type ?? 1) === App\Models\MenuItem::TYPE_BUY_SELL && ($item->stock ?? 0) < 1) disabled @endif
+                                                    @if($existing) checked @endif>
+                                                <label for="item_{{ $item->id }}" class="text-sm font-medium text-gray-700">
+                                                    Add to Order
+                                                </label>
+                                            </div>
+                                            
+                                            <div class="flex items-center space-x-1">
+                                                <button type="button"
+                                                    class="qty-decrease w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg flex items-center justify-center"
+                                                    data-item-id="{{ $item->id }}"
+                                                    @if(!$existing) disabled @endif>
+                                                    <i class="fas fa-minus text-xs"></i>
+                                                </button>
+                                                <input type="number"
+                                                    min="1"
+                                                    max="{{ ($item->type ?? 1) === App\Models\MenuItem::TYPE_BUY_SELL ? ($item->stock ?? 0) : 99 }}"
+                                                    value="{{ $existing ? $existing->quantity : 1 }}"
+                                                    class="item-qty w-12 text-center border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                                    data-item-id="{{ $item->id }}"
+                                                    @if(!$existing) disabled @endif
+                                                    @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
+                                                <button type="button"
+                                                    class="qty-increase w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg flex items-center justify-center"
+                                                    data-item-id="{{ $item->id }}"
+                                                    @if(!$existing) disabled @endif>
+                                                    <i class="fas fa-plus text-xs"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     @endforeach
@@ -125,7 +248,7 @@
                                 </div>
 
                                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-                                    <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg flex items-center">
+                                    <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg flex items-center" id="submitOrderButton">
                                         <i class="fas fa-paper-plane mr-2"></i>Place Order
                                     </button>
                                     @if(isset($reservation) && $reservation)
@@ -235,123 +358,475 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Enable/disable quantity fields and update cart on change
-    document.querySelectorAll('.item-check').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            const itemId = this.getAttribute('data-item-id');
-            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-            if (this.checked) {
-                qtyInput.disabled = false;
-                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-                qtyInput.classList.add('border-blue-400', 'ring-1', 'ring-blue-200');
-            } else {
-                qtyInput.disabled = true;
-                qtyInput.removeAttribute('name');
-                qtyInput.value = 1;
-                qtyInput.classList.remove('border-blue-400', 'ring-1', 'ring-blue-200');
-            }
-            updateCart();
-        });
-    });
+    console.log('🚀 Admin Order Management System - Flow Implementation');
     
-    document.querySelectorAll('.item-qty').forEach(function(input) {
-        input.addEventListener('input', function() {
-            if (this.value < 1) this.value = 1;
-            updateCart();
-        });
-    });
+    // Initialize admin-specific defaults
+    initializeAdminDefaults();
+    
+    // Initialize menu item display with stock validation
+    initializeMenuItemDisplay();
+    
+    // Initialize order flow buttons
+    initializeOrderFlowButtons();
+    
+    // Initialize branch filtering
+    initializeBranchFiltering();
+    
+    // Initialize takeaway type selector for admin
+    initializeTakeawayTypeSelector();
+    
+    // Initialize order type change handler
+    initializeOrderTypeHandler();
+});
 
-    // Menu search functionality
-    document.getElementById('menu-search').addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        document.querySelectorAll('.item-card').forEach(function(card) {
-            const itemName = card.querySelector('label').textContent.toLowerCase();
-            if (itemName.includes(searchTerm)) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
-        });
-    });
+/**
+ * Initialize admin-specific default values from session
+ */
+function initializeAdminDefaults() {
+    console.log('👨‍💼 Initializing Admin Defaults...');
+    
+    const sessionDefaults = @json($sessionDefaults ?? []);
+    
+    // Pre-fill form with admin defaults
+    if (sessionDefaults.branch_id) {
+        const branchField = document.getElementById('branch_id');
+        if (branchField && !branchField.value) {
+            branchField.value = sessionDefaults.branch_id;
+            console.log('✅ Branch pre-filled:', sessionDefaults.branch_id);
+        }
+    }
+    
+    if (sessionDefaults.default_order_type) {
+        const orderTypeField = document.getElementById('order_type');
+        if (orderTypeField && !orderTypeField.value) {
+            orderTypeField.value = sessionDefaults.default_order_type;
+            console.log('✅ Order type pre-filled:', sessionDefaults.default_order_type);
+        }
+    }
+    
+    // Set takeaway type default to 'in_house' for admin
+    const takeawayTypeField = document.getElementById('takeaway_type');
+    if (takeawayTypeField && !takeawayTypeField.value) {
+        takeawayTypeField.value = 'in_house';
+        console.log('✅ Takeaway type set to default: in_house');
+    }
+}
 
-    // AJAX cart update
-    function updateCart() {
-        const items = [];
-        let itemCount = 0;
+/**
+ * Initialize menu item display with proper stock levels and KOT badges
+ */
+function initializeMenuItemDisplay() {
+    console.log('🍽️ Initializing Menu Item Display...');
+    
+    const menuItems = document.querySelectorAll('.menu-item');
+    
+    menuItems.forEach((item, index) => {
+        const itemId = item.dataset.itemId;
+        const itemType = item.dataset.itemType;
+        const stockLevel = parseInt(item.dataset.stockLevel) || 0;
+        const isKot = item.dataset.isKot === 'true';
         
-        document.querySelectorAll('.item-check:checked').forEach(function(checkbox) {
-            const itemId = checkbox.getAttribute('data-item-id');
-            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-            items.push({
-                item_id: itemId,
-                quantity: qtyInput.value
-            });
-            itemCount += parseInt(qtyInput.value);
+        // Add stock display for Buy & Sell items
+        if (itemType === 'Buy & Sell') {
+            addStockLevelDisplay(item, stockLevel);
+        }
+        
+        // Add KOT badge for KOT items
+        if (isKot || itemType === 'KOT') {
+            addKotAvailabilityBadge(item);
+        }
+        
+        // Add click handler for item selection
+        item.addEventListener('click', function() {
+            selectMenuItem(itemId, itemType, stockLevel);
         });
+        
+        console.log(`Menu Item ${index + 1}: ${itemType}, Stock: ${stockLevel}, KOT: ${isKot}`);
+    });
+}
 
-        fetch("{{ route('admin.orders.update-cart') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ items: items })
-        })
-        .then(response => response.json())
-        .then(cart => {
-            // Update cart display
-            const cartItemsEl = document.getElementById('cart-items');
+/**
+ * Add stock level display to Buy & Sell items
+ */
+function addStockLevelDisplay(itemElement, stockLevel) {
+    const stockContainer = itemElement.querySelector('.stock-container');
+    if (!stockContainer) return;
+    
+    const stockBadge = document.createElement('span');
+    stockBadge.className = `stock-badge px-2 py-1 text-xs font-semibold rounded-full ${getStockStatusClass(stockLevel)}`;
+    stockBadge.innerHTML = `<i class="fas fa-box mr-1"></i>Stock: ${stockLevel}`;
+    
+    stockContainer.appendChild(stockBadge);
+    
+    // Disable item if out of stock
+    if (stockLevel <= 0) {
+        itemElement.classList.add('opacity-50', 'cursor-not-allowed');
+        itemElement.querySelector('.item-checkbox').disabled = true;
+    }
+}
+
+/**
+ * Add KOT availability badge to KOT items
+ */
+function addKotAvailabilityBadge(itemElement) {
+    const badgeContainer = itemElement.querySelector('.badge-container');
+    if (!badgeContainer) return;
+    
+    const kotBadge = document.createElement('span');
+    kotBadge.className = 'kot-badge bg-green-100 text-green-800 px-2 py-1 text-xs font-semibold rounded-full';
+    kotBadge.innerHTML = '<i class="fas fa-check-circle mr-1"></i>KOT Available';
+    
+    badgeContainer.appendChild(kotBadge);
+}
+
+/**
+ * Get stock status CSS class based on stock level
+ */
+function getStockStatusClass(stockLevel) {
+    if (stockLevel <= 0) return 'bg-red-100 text-red-800';
+    if (stockLevel <= 10) return 'bg-yellow-100 text-yellow-800';
+    if (stockLevel <= 25) return 'bg-orange-100 text-orange-800';
+    return 'bg-green-100 text-green-800';
+}
+
+/**
+ * Initialize order flow buttons following the exact requested flow
+ */
+function initializeOrderFlowButtons() {
+    console.log('🔄 Initializing Order Flow Buttons...');
+    
+    // Submit Order Button - Goes to summary page
+    const submitButton = document.getElementById('submitOrderButton');
+    if (submitButton) {
+        submitButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('📋 Submit Order clicked - Going to summary page');
             
-            if (cart.items.length > 0) {
-                let itemsHtml = '';
-                cart.items.forEach(function(item) {
-                    itemsHtml += `
-                        <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100 last:border-0">
-                            <div class="flex-1">
-                                <div class="font-semibold text-gray-700 truncate">${item.name}</div>
-                                <div class="flex items-center text-xs text-gray-500 mt-1">
-                                    <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">Rs. ${item.price.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>
-                                    <span class="text-gray-400">×</span>
-                                    <span class="ml-2 bg-gray-100 text-gray-700 px-2 py-0.5 rounded">${item.quantity}</span>
-                                </div>
-                            </div>
-                            <div class="font-semibold text-gray-800">
-                                Rs. ${item.total.toLocaleString('en-US', {minimumFractionDigits: 2})}
-                            </div>
-                        </div>`;
-                });
-                
-                cartItemsEl.innerHTML = itemsHtml;
-                
-                document.getElementById('cart-subtotal').textContent = 'LKR ' + cart.subtotal.toFixed(2);
-                document.getElementById('cart-tax').textContent = 'LKR ' + cart.tax.toFixed(2);
-                document.getElementById('cart-service').textContent = 'LKR ' + cart.service.toFixed(2);
-                document.getElementById('cart-total').textContent = 'LKR ' + cart.total.toFixed(2);
-                
-                // Update item count badge
-                document.getElementById('item-count').textContent = itemCount + (itemCount === 1 ? ' item' : ' items');
-                document.getElementById('item-count').classList.remove('bg-blue-100', 'text-blue-800');
-                document.getElementById('item-count').classList.add('bg-blue-600', 'text-white');
-            } else {
-                cartItemsEl.innerHTML = `
-                    <div class="text-center py-8">
-                        <i class="fas fa-shopping-basket text-gray-200 text-5xl mb-3"></i>
-                        <p class="text-gray-400 font-medium">Your cart is empty</p>
-                        <p class="text-gray-400 text-sm mt-1">Add items from the menu</p>
-                    </div>`;
-                
-                document.getElementById('cart-subtotal').textContent = 'LKR 0.00';
-                document.getElementById('cart-tax').textContent = 'LKR 0.00';
-                document.getElementById('cart-service').textContent = 'LKR 0.00';
-                document.getElementById('cart-total').textContent = 'LKR 0.00';
-                
-                // Reset item count badge
-                document.getElementById('item-count').textContent = '0 items';
-                document.getElementById('item-count').classList.remove('bg-blue-600', 'text-white');
-                document.getElementById('item-count').classList.add('bg-blue-100', 'text-blue-800');
+            if (validateOrderForm()) {
+                // Create order and go to summary
+                submitOrderToSummary();
             }
         });
     }
-});
+    
+    // Update Order Button (for editing existing orders)
+    const updateButton = document.getElementById('updateOrderButton');
+    if (updateButton) {
+        updateButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('✏️ Update Order clicked - Saving changes');
+            
+            if (validateOrderForm()) {
+                updateExistingOrder();
+            }
+        });
+    }
+    
+    // Add Another Order Button
+    const addAnotherButton = document.getElementById('addAnotherOrderButton');
+    if (addAnotherButton) {
+        addAnotherButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('➕ Add Another Order clicked - Starting new order');
+            
+            // Save current order and redirect to new order creation
+            saveAndCreateNewOrder();
+        });
+    }
+}
+
+/**
+ * Submit order and redirect to summary page (exact flow requirement)
+ */
+function submitOrderToSummary() {
+    const formData = new FormData(document.getElementById('orderForm'));
+    
+    // Add admin-specific data
+    formData.append('created_by_admin', true);
+    formData.append('admin_id', '{{ auth("admin")->id() }}');
+    
+    showLoadingState('Creating order...');
+    
+    fetch('{{ route("admin.orders.store") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoadingState();
+        
+        if (data.success) {
+            console.log('✅ Order created successfully');
+            
+            // Redirect to summary page with three options as requested
+            if (data.reservation_id) {
+                // Reservation-linked order - go to reservation + order summary
+                window.location.href = `{{ route('admin.orders.reservations.summary', ['reservation' => ':reservation_id', 'order' => ':order_id']) }}`
+                    .replace(':reservation_id', data.reservation_id)
+                    .replace(':order_id', data.order_id);
+            } else {
+                // Takeaway order - go to order details by number
+                window.location.href = "{{ url('admin/orders') }}/" + data.order_id;
+            }
+        } else {
+            showErrorMessage('Failed to create order: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        hideLoadingState();
+        console.error('❌ Order creation failed:', error);
+        showErrorMessage('Failed to create order. Please try again.');
+    });
+}
+
+/**
+ * Update existing order and return to summary
+ */
+function updateExistingOrder() {
+    const orderId = document.getElementById('order_id')?.value;
+    if (!orderId) {
+        showErrorMessage('Order ID not found');
+        return;
+    }
+    
+    const formData = new FormData(document.getElementById('orderForm'));
+    formData.append('_method', 'PUT');
+    
+    showLoadingState('Updating order...');
+    
+    fetch(`{{ route('admin.orders.update', ['order' => 'ORDER_ID_PLACEHOLDER']) }}`.replace('ORDER_ID_PLACEHOLDER', orderId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoadingState();
+        
+        if (data.success) {
+            console.log('✅ Order updated successfully');
+            showSuccessMessage('Order updated successfully');
+            
+            // Return to summary page as requested
+            if (data.reservation_id) {
+                window.location.href = `{{ route('admin.orders.reservations.summary', ['reservation' => ':reservation_id', 'order' => ':order_id']) }}`
+                    .replace(':reservation_id', data.reservation_id)
+                    .replace(':order_id', orderId);
+            } else {
+                window.location.href = "{{ route('admin.orders.summary', ['order' => 'ORDER_ID_PLACEHOLDER']) }}".replace('ORDER_ID_PLACEHOLDER', orderId);
+            }
+        } else {
+            showErrorMessage('Failed to update order: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        hideLoadingState();
+        console.error('❌ Order update failed:', error);
+        showErrorMessage('Failed to update order. Please try again.');
+    });
+}
+
+/**
+ * Save current order and create new one (Add Another flow)
+ */
+function saveAndCreateNewOrder() {
+    // First save the current order
+    const formData = new FormData(document.getElementById('orderForm'));
+    formData.append('save_and_continue', true);
+    
+    showLoadingState('Saving order and preparing new order...');
+    
+    fetch('{{ route("admin.orders.store") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoadingState();
+        
+        if (data.success) {
+            console.log('✅ Order saved, creating new order');
+            showSuccessMessage('Order saved! Starting new order...');
+            
+            // Redirect back to create page (fresh form)
+            setTimeout(() => {
+                window.location.href = '{{ route("admin.orders.create") }}';
+            }, 1500);
+        } else {
+            showErrorMessage('Failed to save order: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        hideLoadingState();
+        console.error('❌ Save and continue failed:', error);
+        showErrorMessage('Failed to save order. Please try again.');
+    });
+}
+
+/**
+ * Initialize branch filtering for admin
+ */
+function initializeBranchFiltering() {
+    const branchSelector = document.getElementById('branch_id');
+    if (!branchSelector) return;
+    
+    branchSelector.addEventListener('change', function() {
+        const selectedBranchId = this.value;
+        console.log('🏢 Branch changed:', selectedBranchId);
+        
+        if (selectedBranchId) {
+            // Load menu items for selected branch
+            loadMenuItemsForBranch(selectedBranchId);
+        }
+    });
+}
+
+/**
+ * Initialize takeaway type selector (Call/In-house) for admin
+ */
+function initializeTakeawayTypeSelector() {
+    const orderTypeField = document.getElementById('order_type');
+    const takeawayTypeContainer = document.getElementById('takeaway_type_container');
+    
+    if (!orderTypeField || !takeawayTypeContainer) return;
+    
+    orderTypeField.addEventListener('change', function() {
+        const orderType = this.value;
+        
+        if (orderType === 'takeaway_walk_in_demand' || orderType === 'takeaway_online_scheduled') {
+            // Show takeaway type selector for admin
+            takeawayTypeContainer.style.display = 'block';
+            console.log('📞 Showing takeaway type selector');
+        } else {
+            takeawayTypeContainer.style.display = 'none';
+        }
+    });
+}
+
+/**
+ * Load menu items for selected branch with stock validation
+ */
+function loadMenuItemsForBranch(branchId) {
+    showLoadingState('Loading menu items...');
+    
+    fetch(`{{ route('admin.menu-items.by-branch') }}?branch_id=${branchId}`, {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoadingState();
+        
+        if (data.success) {
+            updateMenuItemsDisplay(data.items);
+            console.log(`✅ Loaded ${data.items.length} menu items for branch ${branchId}`);
+        } else {
+            showErrorMessage('Failed to load menu items');
+        }
+    })
+    .catch(error => {
+        hideLoadingState();
+        console.error('❌ Failed to load menu items:', error);
+        showErrorMessage('Failed to load menu items');
+    });
+}
+
+/**
+ * Validate order form before submission
+ */
+function validateOrderForm() {
+    const requiredFields = ['branch_id', 'order_type', 'customer_name', 'customer_phone'];
+    const errors = [];
+    
+    requiredFields.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (!field || !field.value.trim()) {
+            errors.push(`${fieldName.replace('_', ' ')} is required`);
+        }
+    });
+    
+    // Check if at least one menu item is selected
+    const selectedItems = document.querySelectorAll('.item-checkbox:checked');
+    if (selectedItems.length === 0) {
+        errors.push('Please select at least one menu item');
+    }
+    
+    // Validate stock for selected items
+    selectedItems.forEach(checkbox => {
+        const itemElement = checkbox.closest('.menu-item');
+        const stockLevel = parseInt(itemElement.dataset.stockLevel) || 0;
+        const quantity = parseInt(itemElement.querySelector('.quantity-input')?.value) || 1;
+        
+        if (stockLevel < quantity) {
+            const itemName = itemElement.querySelector('.item-name')?.textContent || 'Unknown item';
+            errors.push(`Insufficient stock for ${itemName}. Available: ${stockLevel}, Required: ${quantity}`);
+        }
+    });
+    
+    if (errors.length > 0) {
+        showErrorMessage('Validation errors:\n' + errors.join('\n'));
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * Utility functions for UI feedback
+ */
+function showLoadingState(message) {
+    const loader = document.getElementById('loadingOverlay');
+    if (loader) {
+        loader.querySelector('.loading-text').textContent = message;
+        loader.style.display = 'flex';
+    }
+}
+
+function hideLoadingState() {
+    const loader = document.getElementById('loadingOverlay');
+    if (loader) {
+        loader.style.display = 'none';
+    }
+}
+
+function showSuccessMessage(message) {
+    showToast(message, 'success');
+}
+
+function showErrorMessage(message) {
+    showToast(message, 'error');
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+console.log('✅ Admin Order Management JavaScript initialized successfully');
 </script>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/order-system.js') }}"></script>
+@endpush

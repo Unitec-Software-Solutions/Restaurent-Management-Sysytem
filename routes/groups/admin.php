@@ -76,39 +76,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/reservations/{reservation}/edit', [AdminReservationController::class, 'edit'])->name('reservations.edit');
     Route::put('admin/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('reservations.update');
     Route::delete('admin/reservations/{reservation}', [AdminReservationController::class, 'destroy'])->name('reservations.destroy');
-    
-    // Inventory management
-    Route::get('admin/inventory', [ItemDashboardController::class, 'index'])->name('inventory.index');
-    Route::get('admin/inventory/dashboard', [ItemDashboardController::class, 'index'])->name('inventory.dashboard');
-    Route::get('admin/inventory/items', [ItemMasterController::class, 'index'])->name('inventory.items.index');
-    Route::get('admin/inventory/items/create', [ItemMasterController::class, 'create'])->name('inventory.items.create');
-    Route::post('admin/inventory/items', [ItemMasterController::class, 'store'])->name('inventory.items.store');
-    Route::get('admin/inventory/items/{item}', [ItemMasterController::class, 'show'])->name('inventory.items.show');
-    Route::get('admin/inventory/items/{item}/edit', [ItemMasterController::class, 'edit'])->name('inventory.items.edit');
-    Route::put('admin/inventory/items/{item}', [ItemMasterController::class, 'update'])->name('inventory.items.update');
-    Route::delete('admin/inventory/items/{item}', [ItemMasterController::class, 'destroy'])->name('inventory.items.destroy');
-    Route::get('admin/inventory/stock', [ItemTransactionController::class, 'index'])->name('inventory.stock.index');
-    Route::post('admin/inventory/stock', [ItemTransactionController::class, 'store'])->name('inventory.stock.store');
-    Route::get('admin/inventory/stock/transactions', [ItemTransactionController::class, 'transactions'])->name('inventory.stock.transactions.index');
-    
-    // GTN (Goods Transfer Note)
-    Route::get('admin/inventory/gtn/search-items', [GoodsTransferNoteController::class, 'searchItems'])->name('inventory.gtn.search-items');
-    Route::get('admin/inventory/gtn/item-stock', [GoodsTransferNoteController::class, 'getItemStock'])->name('inventory.gtn.item-stock');
-    Route::get('admin/inventory/gtn', [GoodsTransferNoteController::class, 'index'])->name('inventory.gtn.index');
-    Route::get('admin/inventory/gtn/create', [GoodsTransferNoteController::class, 'create'])->name('inventory.gtn.create');
-    Route::post('admin/inventory/gtn', [GoodsTransferNoteController::class, 'store'])->name('inventory.gtn.store');
-    Route::get('admin/inventory/gtn/{gtn}', [GoodsTransferNoteController::class, 'show'])->name('inventory.gtn.show');
-    
-    // Suppliers
-    Route::get('admin/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
-    Route::get('admin/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
-    Route::post('admin/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
-    Route::get('admin/suppliers/{supplier}', [SupplierController::class, 'show'])->name('suppliers.show');
-    Route::get('admin/suppliers/{supplier}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
-    Route::put('admin/suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
-    Route::delete('admin/suppliers/{supplier}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
-    Route::get('admin/suppliers/{supplier}/pending-grns', [SupplierController::class, 'pendingGrns'])->name('suppliers.pending-grns');
-    Route::get('admin/suppliers/{supplier}/pending-pos', [SupplierController::class, 'pendingPos'])->name('suppliers.pending-pos');
+
     
     // GRN (Goods Received Note)
     Route::get('admin/grn', [GrnDashboardController::class, 'index'])->name('grn.index');

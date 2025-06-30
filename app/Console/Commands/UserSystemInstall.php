@@ -105,18 +105,18 @@ class UserSystemInstall extends Command
         $this->line('  ✅ Stock reservation system');
     }
 
-    private function optimizeSidebar()
-    {
-        $this->info('🎯 Optimizing Admin Sidebar...');
+    // private function optimizeSidebar()
+    // {
+    //     $this->info('🎯 Optimizing Admin Sidebar...');
         
-        $service = new SidebarOptimizationService();
-        $service->implementOptimizations();
+    //     $service = new SidebarOptimizationService();
+    //     $service->implementOptimizations();
         
-        $this->line('  ✅ Route validation fixes');
-        $this->line('  ✅ Permission-based visibility');
-        $this->line('  ✅ Real-time status badges');
-        $this->line('  ✅ Responsive design');
-    }
+    //     $this->line('  ✅ Route validation fixes');
+    //     $this->line('  ✅ Permission-based visibility');
+    //     $this->line('  ✅ Real-time status badges');
+    //     $this->line('  ✅ Responsive design');
+    // }
 
     private function generateTestScenarios()
     {

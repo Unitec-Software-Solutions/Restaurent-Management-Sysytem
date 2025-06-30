@@ -117,7 +117,7 @@ class MenuSystemService
         ];
     }
 
-    private function checkItemAvailability(MenuItem $item): bool
+    public function checkItemAvailability(MenuItem $item): bool
     {
         // Check inventory levels
         if ($item->requires_inventory_check) {

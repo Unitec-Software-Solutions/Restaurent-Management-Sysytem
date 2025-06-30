@@ -339,8 +339,24 @@ class AdminSidebar extends Component
                         'permission' => 'orders.view'
                     ],
                     [
-                        'title' => 'Takeaway',
-                        'route' => 'admin.orders.takeaway.index',
+                        'title' => 'Create Order',
+                        'route' => 'admin.orders.create',
+                        'icon' => 'plus-circle',
+                        'icon_type' => 'svg',
+                        'permission' => 'orders.create'
+                    ],
+                    [
+                        'title' => 'Dine-In Orders',
+                        'route' => 'admin.orders.index',
+                        'route_params' => ['type' => 'in_house'],
+                        'icon' => 'utensils',
+                        'icon_type' => 'svg',
+                        'permission' => 'orders.view'
+                    ],
+                    [
+                        'title' => 'Takeaway Orders',
+                        'route' => 'admin.orders.index',
+                        'route_params' => ['type' => 'takeaway'],
                         'icon' => 'shopping-bag',
                         'icon_type' => 'svg',
                         'permission' => 'orders.view'
@@ -666,6 +682,22 @@ class AdminSidebar extends Component
             ];
         }
 
+        // Suppliers Management (separate from inventory)
+        if ($this->hasPermission($admin, 'suppliers.view')) {
+            $menuItems[] = [
+                'title' => 'Suppliers',
+                'route' => 'admin.suppliers.index',
+                'route_params' => [],
+                'icon' => 'truck',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.view',
+                'badge' => 0,
+                'badge_color' => 'blue',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.index'),
+                'sub_items' => $this->getSupplierSubItems()
+            ];
+        }
+
         // Reservations
         if ($this->hasPermission($admin, 'reservations.view')) {
             $menuItems[] = [
@@ -784,6 +816,12 @@ class AdminSidebar extends Component
             return true;
         }
         
+        // For now, allow all authenticated admin users to access inventory and suppliers
+        // TODO: Implement proper permission checking later
+        if (in_array($permission, ['inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage'])) {
+            return true;
+        }
+        
         // Check using Spatie permissions if admin has hasPermissionTo method
         if (method_exists($admin, 'hasPermissionTo')) {
             return $admin->hasPermissionTo($permission);
@@ -899,7 +937,7 @@ class AdminSidebar extends Component
     }
 
     /**
-     * Get order sub-items
+     * Get order sub-items - unified order flow
      */
     private function getOrderSubItems(): array
     {
@@ -913,20 +951,30 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute('admin.orders.index')
             ],
             [
-                'title' => 'Takeaway Orders',
-                'route' => 'admin.orders.takeaway.index',
-                'icon' => 'shopping-bag',
-                'icon_type' => 'svg',
-                'permission' => 'orders.view',
-                'is_route_valid' => $this->validateRoute('admin.orders.takeaway.index')
-            ],
-            [
                 'title' => 'Create Order',
                 'route' => 'admin.orders.create',
                 'icon' => 'plus-circle',
                 'icon_type' => 'svg',
                 'permission' => 'orders.create',
                 'is_route_valid' => $this->validateRoute('admin.orders.create')
+            ],
+            [
+                'title' => 'Dine-In Orders',
+                'route' => 'admin.orders.index',
+                'route_params' => ['type' => 'in_house'],
+                'icon' => 'utensils',
+                'icon_type' => 'svg',
+                'permission' => 'orders.view',
+                'is_route_valid' => $this->validateRoute('admin.orders.index')
+            ],
+            [
+                'title' => 'Takeaway Orders',
+                'route' => 'admin.orders.index',
+                'route_params' => ['type' => 'takeaway'],
+                'icon' => 'shopping-bag',
+                'icon_type' => 'svg',
+                'permission' => 'orders.view',
+                'is_route_valid' => $this->validateRoute('admin.orders.index')
             ]
         ];
     }
@@ -971,28 +1019,61 @@ class AdminSidebar extends Component
     {
         return [
             [
-                'title' => 'Dashboard',
-                'route' => 'admin.inventory.dashboard',
-                'icon' => 'layout-dashboard',
+                'title' => 'Stock Levels',
+                'route' => 'admin.inventory.index',
+                'icon' => 'box',
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
-                'is_route_valid' => $this->validateRoute('admin.inventory.dashboard')
+                'is_route_valid' => $this->validateRoute('admin.inventory.index')
             ],
             [
-                'title' => 'Items',
+                'title' => 'Items Management',
                 'route' => 'admin.inventory.items.index',
-                'icon' => 'box',
+                'icon' => 'package',
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
             ],
             [
-                'title' => 'Low Stock Alert',
-                'route' => 'admin.inventory.low-stock',
-                'icon' => 'alert-triangle',
+                'title' => 'Suppliers',
+                'route' => 'admin.suppliers.index',
+                'icon' => 'truck',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.view',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.index')
+            ],
+            [
+                'title' => 'Purchase Orders (GRN)',
+                'route' => 'admin.grn.index',
+                'icon' => 'receipt',
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
-                'is_route_valid' => $this->validateRoute('admin.inventory.low-stock')
+                'is_route_valid' => $this->validateRoute('admin.grn.index')
+            ]
+        ];
+    }
+
+    /**
+     * Get supplier sub-items
+     */
+    private function getSupplierSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Suppliers',
+                'route' => 'admin.suppliers.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.view',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.index')
+            ],
+            [
+                'title' => 'Add Supplier',
+                'route' => 'admin.suppliers.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'suppliers.create',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.create')
             ]
         ];
     }

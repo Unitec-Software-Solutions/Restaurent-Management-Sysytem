@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Enums\OrderType;
 
 class Order extends Model
 {
@@ -18,21 +19,6 @@ class Order extends Model
     const STATUS_COMPLETED = 'completed';
     const STATUS_CANCELLED = 'cancelled';
 
-    // Order Type Constants
-    const TYPE_DINE_IN = 'dine_in';
-    const TYPE_TAKEAWAY = 'takeaway';
-    const TYPE_DELIVERY = 'delivery';
-    
-    // Detailed Order Type Constants (as requested)
-    const TYPE_TAKEAWAY_IN_CALL = 'takeaway_in_call';
-    const TYPE_TAKEAWAY_ONLINE = 'takeaway_online';
-    const TYPE_TAKEAWAY_WALKIN_SCHEDULED = 'takeaway_walkin_scheduled';
-    const TYPE_TAKEAWAY_WALKIN_DEMAND = 'takeaway_walkin_demand';
-    const TYPE_DINEIN_ONLINE = 'dinein_online';
-    const TYPE_DINEIN_INCALL = 'dinein_incall';
-    const TYPE_DINEIN_WALKIN_SCHEDULED = 'dinein_walkin_scheduled';
-    const TYPE_DINEIN_WALKIN_DEMAND = 'dinein_walkin_demand';
-
     // Payment Status Constants
     const PAYMENT_STATUS_PENDING = 'pending';
     const PAYMENT_STATUS_PAID = 'paid';
@@ -44,14 +30,49 @@ class Order extends Model
     const PAYMENT_METHOD_CARD = 'card';
     const PAYMENT_METHOD_DIGITAL = 'digital';
 
+    // Order Type Constants
+    const TYPE_DINE_IN = 'dine_in';
+    const TYPE_TAKEAWAY = 'takeaway';
+    const TYPE_DELIVERY = 'delivery';
+    const TYPE_TAKEAWAY_IN_CALL = 'takeaway_in_call';
+    const TYPE_TAKEAWAY_ONLINE = 'takeaway_online';
+    const TYPE_TAKEAWAY_WALKIN_SCHEDULED = 'takeaway_walkin_scheduled';
+    const TYPE_TAKEAWAY_WALKIN_DEMAND = 'takeaway_walkin_demand';
+
+    // Order States for State Machine
+    const STATES = [
+        self::STATUS_PENDING,
+        self::STATUS_CONFIRMED,
+        self::STATUS_SUBMITTED,
+        self::STATUS_PREPARING,
+        self::STATUS_READY,
+        self::STATUS_COMPLETED,
+        self::STATUS_CANCELLED
+    ];
+
+    /**
+     * Valid status transitions for order state machine
+     * draft → pending → confirmed → completed/canceled
+     */
+    const VALID_STATUS_TRANSITIONS = [
+        self::STATUS_PENDING => [self::STATUS_CONFIRMED, self::STATUS_CANCELLED],
+        self::STATUS_CONFIRMED => [self::STATUS_PREPARING, self::STATUS_CANCELLED],
+        self::STATUS_PREPARING => [self::STATUS_READY, self::STATUS_CANCELLED],
+        self::STATUS_READY => [self::STATUS_COMPLETED, self::STATUS_CANCELLED],
+        self::STATUS_COMPLETED => [], // Terminal state
+        self::STATUS_CANCELLED => []  // Terminal state
+    ];
+
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'order_number',
         'customer_name',
         'customer_phone',
+        'customer_phone_fk',
         'customer_email',
         'order_type',
+        'order_source',
         'status',
         'subtotal',
         'tax_amount',        
@@ -66,6 +87,7 @@ class Order extends Model
         'notes',
         'order_date',
         'reservation_id',
+        'reservation_required',
         'branch_id',
         'organization_id',
         'table_id',
@@ -76,6 +98,7 @@ class Order extends Model
         'discount',         
         'total',            
         'requested_time',
+        'pickup_time',
         'confirmed_at',
         'prepared_at',
         'completed_at',
@@ -84,12 +107,16 @@ class Order extends Model
         'delivery_longitude',
         'delivery_instructions',
         'special_instructions',
+        'estimated_prep_time',
+        'priority',
         'metadata'
     ];
 
     protected $casts = [
+        'order_type' => OrderType::class,
         'order_date' => 'datetime',
         'requested_time' => 'datetime',
+        'pickup_time' => 'datetime',
         'confirmed_at' => 'datetime',
         'prepared_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -104,8 +131,10 @@ class Order extends Model
         'discount' => 'decimal:2',
         'total' => 'decimal:2',
         'placed_by_admin' => 'boolean',
+        'reservation_required' => 'boolean',
         'delivery_latitude' => 'decimal:8',
         'delivery_longitude' => 'decimal:8',
+        'estimated_prep_time' => 'integer',
         'metadata' => 'array'
     ];
 
@@ -123,10 +152,64 @@ class Order extends Model
             
             // Handle field mapping for compatibility
             $order->mapCompatibilityFields();
+            
+            // Set reservation requirement based on order type
+            if ($order->order_type) {
+                // Convert string to enum if needed
+                $orderTypeEnum = is_string($order->order_type) 
+                    ? OrderType::tryFrom($order->order_type) 
+                    : $order->order_type;
+                    
+                if ($orderTypeEnum) {
+                    $order->reservation_required = $orderTypeEnum->requiresReservation();
+                    
+                    // Validate dine-in orders have reservations
+                    if ($orderTypeEnum->isDineIn() && !$order->reservation_id) {
+                        throw new \Exception('Reservation required for dine-in orders');
+                    }
+                }
+            }
+            
+            // Link customer phone
+            if ($order->customer_phone && !$order->customer_phone_fk) {
+                $customer = Customer::findOrCreateByPhone($order->customer_phone, [
+                    'name' => $order->customer_name,
+                    'email' => $order->customer_email
+                ]);
+                $order->customer_phone_fk = $customer->phone;
+            }
         });
-        
+
         static::updating(function ($order) {
             $order->mapCompatibilityFields();
+            
+            // Update customer info if phone changed
+            if ($order->isDirty('customer_phone') && $order->customer_phone) {
+                $customer = Customer::findOrCreateByPhone($order->customer_phone, [
+                    'name' => $order->customer_name,
+                    'email' => $order->customer_email
+                ]);
+                $order->customer_phone_fk = $customer->phone;
+            }
+            
+            // Validate order type changes
+            if ($order->isDirty('order_type') && $order->order_type) {
+                $orderTypeEnum = is_string($order->order_type) 
+                    ? OrderType::tryFrom($order->order_type) 
+                    : $order->order_type;
+                    
+                if ($orderTypeEnum && $orderTypeEnum->isDineIn() && !$order->reservation_id) {
+                    throw new \Exception('Reservation required for dine-in orders');
+                }
+            }
+        });
+
+        static::saved(function ($order) {
+            // Update customer statistics
+            if ($order->customer_phone_fk) {
+                $customer = Customer::find($order->customer_phone_fk);
+                $customer?->updateStats();
+            }
         });
     }
 
@@ -293,6 +376,138 @@ class Order extends Model
 
         return $symbols[$this->currency] ?? $this->currency;
     }
-    
 
+    /**
+     * Mass assignment protection as requested in refactoring
+     * Protect critical fields from mass assignment
+     */
+    protected $guarded = ['id', 'status', 'created_at', 'updated_at', 'deleted_at'];
+
+    /**
+     * Check if status transition is valid
+     */
+    public function canTransitionTo(string $newStatus): bool
+    {
+        $allowedTransitions = self::VALID_STATUS_TRANSITIONS[$this->status] ?? [];
+        return in_array($newStatus, $allowedTransitions);
+    }
+
+    /**
+     * Transition order status with validation
+     */
+    public function transitionToStatus(string $newStatus): bool
+    {
+        if (!$this->canTransitionTo($newStatus)) {
+            return false;
+        }
+
+        $this->status = $newStatus;
+        
+        // Set timestamp based on status
+        switch ($newStatus) {
+            case self::STATUS_CONFIRMED:
+                $this->confirmed_at = now();
+                break;
+            case self::STATUS_PREPARING:
+                $this->prepared_at = now();
+                break;
+            case self::STATUS_COMPLETED:
+                $this->completed_at = now();
+                break;
+        }
+
+        return $this->save();
+    }
+
+    /**
+     * Scope for branch-specific orders (admin context)
+     */
+    public function scopeForBranch($query, $branchId)
+    {
+        return $query->where('branch_id', $branchId);
+    }
+
+    /**
+     * Scope for admin user's accessible orders
+     */
+    public function scopeForAdmin($query, $admin)
+    {
+        if ($admin->is_super_admin) {
+            return $query; // Super admin can see all
+        }
+        
+        if ($admin->branch_id) {
+            return $query->where('branch_id', $admin->branch_id);
+        }
+        
+        return $query->where('organization_id', $admin->organization_id);
+    }
+
+    /**
+     * Check if this is a dine-in order
+     */
+    public function isDineIn(): bool
+    {
+        if (is_string($this->order_type)) {
+            $orderType = OrderType::tryFrom($this->order_type);
+            return $orderType ? $orderType->isDineIn() : str_starts_with($this->order_type, 'dine_in_');
+        }
+        
+        return $this->order_type instanceof OrderType ? $this->order_type->isDineIn() : false;
+    }
+
+    /**
+     * Check if this is a takeaway order
+     */
+    public function isTakeaway(): bool
+    {
+        if (is_string($this->order_type)) {
+            $orderType = OrderType::tryFrom($this->order_type);
+            return $orderType ? $orderType->isTakeaway() : str_starts_with($this->order_type, 'takeaway_');
+        }
+        
+        return $this->order_type instanceof OrderType ? $this->order_type->isTakeaway() : false;
+    }
+
+    /**
+     * Check if this is a scheduled order
+     */
+    public function isScheduled(): bool
+    {
+        if (is_string($this->order_type)) {
+            $orderType = OrderType::tryFrom($this->order_type);
+            return $orderType ? $orderType->isScheduled() : str_contains($this->order_type, 'scheduled');
+        }
+        
+        return $this->order_type instanceof OrderType ? $this->order_type->isScheduled() : false;
+    }
+
+    /**
+     * Get order type enum
+     */
+    public function getOrderTypeEnum(): ?OrderType
+    {
+        if (is_string($this->order_type)) {
+            return OrderType::tryFrom($this->order_type);
+        }
+        
+        return $this->order_type instanceof OrderType ? $this->order_type : null;
+    }
+
+    /**
+     * Get display label for order type
+     */
+    public function getOrderTypeLabel(): string
+    {
+        $orderType = $this->getOrderTypeEnum();
+        return $orderType ? $orderType->getLabel() : ucfirst(str_replace('_', ' ', (string) $this->order_type));
+    }
+
+    /**
+     * Relationship to customer via phone
+     */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_phone_fk', 'phone');
+    }
 }

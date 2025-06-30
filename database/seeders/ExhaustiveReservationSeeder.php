@@ -273,7 +273,7 @@ class ExhaustiveReservationSeeder extends Seeder
                 'scenario' => 'large_group'
             ]);
             
-            // 2. Over-Capacity Requests (Waitlisted)
+            // 2. Over-Capacity Requests (Cancelled due to no availability)
             $this->createReservation($branch, [
                 'name' => 'Overflow Party',
                 'phone' => '+94778888888',
@@ -282,7 +282,7 @@ class ExhaustiveReservationSeeder extends Seeder
                 'start_time' => '20:00:00',
                 'end_time' => '22:00:00',
                 'number_of_people' => 100, // Intentionally over capacity
-                'status' => 'waitlisted',
+                'status' => 'cancelled',
                 'comments' => 'Large company party - check capacity',
                 'scenario' => 'over_capacity'
             ]);
@@ -337,14 +337,14 @@ class ExhaustiveReservationSeeder extends Seeder
                     'phone' => '+94771111101',
                     'start_time' => '20:00:00',
                     'end_time' => '22:00:00',
-                    'status' => 'waitlisted' // Due to conflict
+                    'status' => 'cancelled' // Due to conflict
                 ],
                 [
                     'name' => 'Partial Overlap',
                     'phone' => '+94771111102',
                     'start_time' => '20:30:00',
                     'end_time' => '22:30:00',
-                    'status' => 'waitlisted'
+                    'status' => 'cancelled'
                 ]
             ];
             

@@ -111,7 +111,7 @@ class GoodsTransferNoteController extends Controller
             Log::error('GTN creation failed', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'input' => $request->all()
+                'input' => $request->validated()
             ]);
 
             return back()->withErrors('Failed to create GTN. Check logs for details.')->withInput();
@@ -166,7 +166,7 @@ class GoodsTransferNoteController extends Controller
             Log::error('GTN update failed', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'input' => $request->all()
+                'input' => $request->validated()
             ]);
 
             return back()->withErrors('Failed to update GTN: ' . $e->getMessage())->withInput();

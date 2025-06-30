@@ -231,10 +231,11 @@ class OrganizationController extends Controller
             return back()->with('error', 'Invalid activation key.');
         }
 
-        $organization->is_active = true;
-        $organization->activated_at = now();
-        $organization->activation_key = null; // Optionally clear the key after activation
-        $organization->save();
+        $organization->update([
+            'is_active' => true,
+            'activated_at' => now(),
+            'activation_key' => null, // Optionally clear the key after activation
+        ]);
 
         return back()->with('success', 'Organization activated successfully!');
     }

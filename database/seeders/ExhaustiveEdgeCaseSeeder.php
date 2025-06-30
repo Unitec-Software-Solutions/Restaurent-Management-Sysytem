@@ -325,7 +325,7 @@ class ExhaustiveEdgeCaseSeeder extends Seeder
             'start_time' => '19:00:00',
             'end_time' => '21:00:00',
             'number_of_people' => 999999, // Unrealistic number
-            'status' => 'waitlisted',
+            'status' => 'cancelled',
             'branch_id' => $branch->id,
             'comments' => 'Testing over-capacity handling',
         ]);
