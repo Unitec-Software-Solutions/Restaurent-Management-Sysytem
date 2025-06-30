@@ -5,6 +5,13 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
+use App\Models\Organization;
+use App\Models\Branch;
+use App\Models\ItemMaster;
+use App\Models\KitchenStation;
+use App\Models\ItemCategory;
+use App\Models\Admin;
+use App\Models\User;
 
 /**
  * Comprehensive Database Seeder for Restaurant Management System
@@ -25,17 +32,17 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('🚀 Starting Comprehensive Restaurant Management System Database Seeding...');
         $this->command->info('═══════════════════════════════════════════════════════════════════════');
-        
+
         $startTime = microtime(true);
-        
-        // Ensure fresh migration state
+
+        // Prepare database (clear/truncate tables, handle foreign keys)
         $this->prepareDatabase();
-        
+
         try {
             // Phase 1: Core System Foundation
             $this->command->info('📋 PHASE 1: Core System Foundation');
             $this->command->line('─────────────────────────────────────');
-            
+
             // Use the existing database seeder structure but create comprehensive data
             $this->seedOrganizationsAndBranches();
             $this->seedRolesAndPermissions();
@@ -45,10 +52,10 @@ class DatabaseSeeder extends Seeder
             $this->seedReservations();
             $this->seedOrders();
             $this->simulateBusinessOperations();
-            
+
             // Display completion summary
             $this->displayCompletionSummary($startTime);
-            
+
         } catch (\Exception $e) {
             $this->command->error('❌ Database seeding failed: ' . $e->getMessage());
             $this->command->error('Stack trace: ' . $e->getTraceAsString());
@@ -64,13 +71,13 @@ class DatabaseSeeder extends Seeder
         $this->command->info('🏢 Creating organizations and branches...');
         
         // Create 2 organizations
-        $organizations = \App\Models\Organization::factory(2)->create([
+        $organizations = Organization::factory(2)->create([
             'is_active' => true,
         ]);
         
         $organizations->each(function ($org) {
             // Create 3 branches per organization
-            \App\Models\Branch::factory(3)->create([
+            Branch::factory(3)->create([
                 'organization_id' => $org->id,
                 'is_active' => true,
                 'total_capacity' => rand(50, 150),
@@ -79,7 +86,7 @@ class DatabaseSeeder extends Seeder
             ]);
         });
         
-        $this->command->info('  ✅ Created ' . $organizations->count() . ' organizations with ' . (\App\Models\Branch::count()) . ' branches');
+        $this->command->info('  ✅ Created ' . $organizations->count() . ' organizations with ' . (Branch::count()) . ' branches');
     }
     
     /**
@@ -105,7 +112,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('👥 Creating users and customers...');
         
         // Create 20 staff users
-        $branches = \App\Models\Branch::all();
+        $branches = Branch::all();
         $users = collect();
         
         for ($i = 0; $i < 20; $i++) {
@@ -133,7 +140,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('📦 Creating inventory and suppliers...');
         
-        $organizations = \App\Models\Organization::all();
+        $organizations = Organization::all();
         $suppliers = collect();
         $inventoryItems = collect();
         
@@ -195,7 +202,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->command->info('🍽️ Creating menu system...');
         
-        $branches = \App\Models\Branch::all();
+        $branches = Branch::all();
         $menuItems = collect();
         
         $branches->each(function ($branch) use (&$menuItems) {
@@ -228,7 +235,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('📅 Creating reservation scenarios...');
         
         $customers = \App\Models\Customer::all();
-        $branches = \App\Models\Branch::all();
+        $branches = Branch::all();
         $reservations = collect();
         
         // Create 100 reservations with different types and statuses
@@ -265,7 +272,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('🛍️ Creating order scenarios...');
         
         $customers = \App\Models\Customer::all();
-        $branches = \App\Models\Branch::all();
+        $branches = Branch::all();
         $orders = collect();
         
         // Create 200 orders with different types
@@ -389,79 +396,9 @@ class DatabaseSeeder extends Seeder
         $this->command->info('🔧 Preparing database for comprehensive seeding...');
         
         // Database-specific foreign key handling
-
-
-    protected $faker;
-
-    public function run(): void
-    {
-        $this->command->info('🌱 Starting comprehensive database seeding...');
-
-        // Clear existing data first (but safely)
-        $this->command->info('🧹 Clearing existing data...');
-
-        // Use database-agnostic approach for disabling foreign key checks
-
-        $databaseType = DB::connection()->getDriverName();
-
-        if ($databaseType === 'mysql') {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-            DB::statement('SET SESSION sql_mode = "";'); // Allow flexible inserts
-        } elseif ($databaseType === 'pgsql') {
-
-            $this->command->info('🐘 Using PostgreSQL optimizations...');
-        }
-        
-        $this->command->info('✅ Database prepared for seeding');
-        
-        // Re-enable foreign key checks for MySQL
- // PostgreSQL doesn't have a global foreign key disable, so we'll truncate in correct order
-            $this->command->info('🔄 Using PostgreSQL-compatible truncation...');
-        }
-          // Clear tables in dependency order (reverse of creation order)
-        $tablesToClear = [
-            'payment_allocations', 'order_items', 'orders', 'menu_items',
-            'menu_categories', 'goods_transfer_items', 'goods_transfer_notes',
-            'grn_items', 'grn_masters', 'purchase_order_items', 'purchase_orders',            'item_masters', 'item_categories', 'kitchen_stations', 'branches',
-            'organizations', 'admins', 'users', 'roles'
-        ];
-
-        foreach ($tablesToClear as $table) {
-            try {
-                // Check if table exists before attempting to clear
-                if (!DB::getSchemaBuilder()->hasTable($table)) {
-                    $this->command->warn("⚠️ Table {$table} does not exist, skipping...");
-                    continue;
-                }
-
-                if ($databaseType === 'mysql') {
-                    DB::table($table)->truncate();
-                } else {
-                    // For PostgreSQL, use TRUNCATE CASCADE to handle foreign keys
-                    DB::statement("TRUNCATE TABLE {$table} RESTART IDENTITY CASCADE;");
-                }
-                $this->command->info("✅ Cleared table: {$table}");
-            } catch (\Exception $e) {
-                $this->command->warn("⚠️ Could not clear table {$table}: {$e->getMessage()}");
-                // For PostgreSQL, try a force delete approach
-                if ($databaseType === 'pgsql') {
-                    try {
-                        DB::table($table)->delete();
-                        $this->command->info("✅ Force cleared table: {$table}");
-                    } catch (\Exception $innerE) {
-                        $this->command->warn("⚠️ Force clear also failed for {$table}: {$innerE->getMessage()}");
-                    }
-                }
-            }
-        }
-
-        // Re-enable foreign key checks
-
-        if ($databaseType === 'mysql') {
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-        }
-
     }
+
+protected $faker;
     
     /**
      * Display comprehensive completion summary
@@ -501,8 +438,8 @@ class DatabaseSeeder extends Seeder
         $this->command->info('📊 SYSTEM METRICS:');
         
         // Core entities
-        $this->command->info('  🏢 Organizations: ' . \App\Models\Organization::count());
-        $this->command->info('  🏪 Branches: ' . \App\Models\Branch::count());
+        $this->command->info('  🏢 Organizations: ' . Organization::count());
+        $this->command->info('  🏪 Branches: ' . Branch::count());
         $this->command->info('  👥 Users: ' . \App\Models\User::count());
         $this->command->info('  🎭 Roles: ' . \App\Models\Role::count());
         $this->command->info('  🔐 Permissions: ' . \App\Models\Permission::count());
@@ -614,11 +551,11 @@ class DatabaseSeeder extends Seeder
         // Show summary
         $this->command->info('  - Organizations: ' . Organization::count());
         $this->command->info('  - Branches: ' . Branch::count());
-        $this->command->info('  - Kitchen Stations: ' . \App\Models\KitchenStation::count());
-        $this->command->info('  - Item Categories: ' . \App\Models\ItemCategory::count());
+        $this->command->info('  - Kitchen Stations: ' . KitchenStation::count());
+        $this->command->info('  - Item Categories: ' . ItemCategory::count());
         $this->command->info('  - Item Masters: ' . ItemMaster::count());
-        $this->command->info('  - Admin Users: ' . \App\Models\Admin::count());
-        $this->command->info('  - Regular Users: ' . \App\Models\User::count());
+        $this->command->info('  - Admin Users: ' . Admin::count());
+        $this->command->info('  - Regular Users: ' . User::count());
 
     }
 }
