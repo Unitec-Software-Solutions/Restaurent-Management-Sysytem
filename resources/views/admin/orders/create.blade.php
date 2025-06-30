@@ -63,7 +63,8 @@
                             <!-- Order Type and Customer Information (for non-reservation orders) -->
                             @if(!isset($reservation) || !$reservation)
                             <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Order Type Selection -->
+                                <!-- Only show Order Type Selection if not already a takeaway order -->
+                                @if(!request()->routeIs('admin.orders.takeaway.*') && ($orderType ?? '') !== 'takeaway' && !request()->has('type'))
                                 <div class="bg-gray-50 rounded-xl p-4">
                                     <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
                                         <i class="fas fa-shopping-cart mr-2 text-blue-500"></i>
@@ -84,6 +85,20 @@
                                         </label>
                                     </div>
                                 </div>
+                                @elseif(($orderType ?? '') === 'takeaway' || request()->has('type') && request()->get('type') === 'takeaway')
+                                <!-- For takeaway orders, show confirmation but don't allow changing -->
+                                <div class="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                                    <h3 class="text-lg font-semibold text-blue-800 mb-3 flex items-center">
+                                        <i class="fas fa-shopping-bag mr-2 text-blue-600"></i>
+                                        Takeaway Order
+                                    </h3>
+                                    <p class="text-blue-700">This order is set for takeaway</p>
+                                    <input type="hidden" name="order_type" value="takeaway">
+                                </div>
+                                @else
+                                <!-- Default to in-house if no specific type is set -->
+                                <input type="hidden" name="order_type" value="{{ $orderType ?? 'in_house' }}">
+                                @endif
 
                                 <!-- Branch Selection (for super admin) -->
                                 @if(auth('admin')->user()->is_super_admin)
@@ -822,6 +837,316 @@ function showToast(message, type) {
         toast.remove();
     }, 5000);
 }
+
+/**
+ * Initialize quantity control buttons (+ and - buttons)
+ */
+function initializeQuantityControls() {
+    console.log('🔢 Initializing quantity controls...');
+    
+    // Handle quantity increase buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qty-increase')) {
+            e.preventDefault();
+            const button = e.target.closest('.qty-increase');
+            const itemId = button.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            const checkbox = document.querySelector(`.item-check[data-item-id="${itemId}"]`);
+            
+            if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                const currentValue = parseInt(qtyInput.value) || 1;
+                const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                
+                if (currentValue < maxValue) {
+                    qtyInput.value = currentValue + 1;
+                    updateCartDisplay(itemId, qtyInput.value);
+                    
+                    // Update decrease button state
+                    const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+                    if (decreaseBtn) {
+                        decreaseBtn.disabled = qtyInput.value <= 1;
+                    }
+                    
+                    // Update increase button state
+                    button.disabled = qtyInput.value >= maxValue;
+                }
+            }
+        }
+    });
+    
+    // Handle quantity decrease buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qty-decrease')) {
+            e.preventDefault();
+            const button = e.target.closest('.qty-decrease');
+            const itemId = button.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            
+            if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                const currentValue = parseInt(qtyInput.value) || 1;
+                
+                if (currentValue > 1) {
+                    qtyInput.value = currentValue - 1;
+                    updateCartDisplay(itemId, qtyInput.value);
+                    
+                    // Update decrease button state
+                    button.disabled = qtyInput.value <= 1;
+                    
+                    // Update increase button state
+                    const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+                    const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                    if (increaseBtn) {
+                        increaseBtn.disabled = qtyInput.value >= maxValue;
+                    }
+                }
+            }
+        }
+    });
+    
+    // Handle direct quantity input changes
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('item-qty')) {
+            const qtyInput = e.target;
+            const itemId = qtyInput.getAttribute('data-item-id');
+            let value = parseInt(qtyInput.value) || 1;
+            const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+            
+            // Validate and constrain value
+            if (value < 1) {
+                value = 1;
+                qtyInput.value = value;
+            } else if (value > maxValue) {
+                value = maxValue;
+                qtyInput.value = value;
+            }
+            
+            // Update button states
+            const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+            const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+            
+            if (decreaseBtn) {
+                decreaseBtn.disabled = value <= 1;
+            }
+            if (increaseBtn) {
+                increaseBtn.disabled = value >= maxValue;
+            }
+            
+            updateCartDisplay(itemId, value);
+        }
+    });
+}
+
+/**
+ * Initialize item selection (checkbox) functionality
+ */
+function initializeItemSelection() {
+    console.log('☑️ Initializing item selection...');
+    
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('item-check') || e.target.classList.contains('add-to-order')) {
+            const checkbox = e.target;
+            const itemId = checkbox.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+            const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+            
+            if (checkbox.checked) {
+                // Enable quantity controls
+                if (qtyInput) {
+                    qtyInput.disabled = false;
+                    qtyInput.name = `items[${itemId}][quantity]`;
+                    if (!qtyInput.value || qtyInput.value === '0') {
+                        qtyInput.value = 1;
+                    }
+                    
+                    // Set proper button states based on current value and max
+                    const currentValue = parseInt(qtyInput.value) || 1;
+                    const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                    
+                    if (decreaseBtn) {
+                        decreaseBtn.disabled = currentValue <= 1;
+                    }
+                    if (increaseBtn) {
+                        increaseBtn.disabled = currentValue >= maxValue;
+                    }
+                } else {
+                    if (increaseBtn) increaseBtn.disabled = false;
+                    if (decreaseBtn) decreaseBtn.disabled = true; // Always disable decrease when qty=1
+                }
+                
+                // Add to cart display
+                addToCartDisplay(itemId);
+            } else {
+                // Disable quantity controls
+                if (qtyInput) {
+                    qtyInput.disabled = true;
+                    qtyInput.removeAttribute('name');
+                }
+                if (increaseBtn) increaseBtn.disabled = true;
+                if (decreaseBtn) decreaseBtn.disabled = true;
+                
+                // Remove from cart display
+                removeFromCartDisplay(itemId);
+            }
+        }
+    });
+}
+
+/**
+ * Update cart display when quantity changes
+ */
+function updateCartDisplay(itemId, quantity) {
+    console.log(`🛒 Updating cart display for item ${itemId}, quantity: ${quantity}`);
+    
+    const cartItem = document.querySelector(`#cart-item-${itemId}`);
+    if (cartItem) {
+        const qtySpan = cartItem.querySelector('.cart-item-qty');
+        const priceSpan = cartItem.querySelector('.cart-item-price');
+        
+        if (qtySpan) qtySpan.textContent = quantity;
+        
+        // Update price if available
+        const itemPrice = getItemPrice(itemId);
+        if (priceSpan && itemPrice) {
+            const totalPrice = itemPrice * quantity;
+            priceSpan.textContent = `LKR ${totalPrice.toFixed(2)}`;
+        }
+    }
+    
+    updateCartTotals();
+}
+
+/**
+ * Add item to cart display
+ */
+function addToCartDisplay(itemId) {
+    console.log(`➕ Adding item ${itemId} to cart display`);
+    
+    const cartItemsContainer = document.getElementById('cart-items');
+    if (!cartItemsContainer) return;
+    
+    // Remove empty cart message if it exists
+    const emptyMessage = cartItemsContainer.querySelector('.text-center');
+    if (emptyMessage) {
+        emptyMessage.remove();
+    }
+    
+    // Check if item already exists in cart
+    if (document.querySelector(`#cart-item-${itemId}`)) {
+        return;
+    }
+    
+    const itemName = getItemName(itemId);
+    const itemPrice = getItemPrice(itemId);
+    const quantity = getItemQuantity(itemId);
+    
+    const cartItemHTML = `
+        <div id="cart-item-${itemId}" class="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+            <div class="flex-1">
+                <div class="font-medium text-sm text-gray-800">${itemName}</div>
+                <div class="text-xs text-gray-500">Qty: <span class="cart-item-qty">${quantity}</span></div>
+            </div>
+            <div class="cart-item-price text-sm font-semibold text-blue-600">LKR ${(itemPrice * quantity).toFixed(2)}</div>
+        </div>
+    `;
+    
+    cartItemsContainer.insertAdjacentHTML('beforeend', cartItemHTML);
+    updateCartTotals();
+}
+
+/**
+ * Remove item from cart display
+ */
+function removeFromCartDisplay(itemId) {
+    console.log(`➖ Removing item ${itemId} from cart display`);
+    
+    const cartItem = document.querySelector(`#cart-item-${itemId}`);
+    if (cartItem) {
+        cartItem.remove();
+    }
+    
+    // Show empty message if no items left
+    const cartItemsContainer = document.getElementById('cart-items');
+    if (cartItemsContainer && cartItemsContainer.children.length === 0) {
+        cartItemsContainer.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-shopping-basket text-gray-200 text-5xl mb-3"></i>
+                <p class="text-gray-400 font-medium">Your cart is empty</p>
+                <p class="text-gray-400 text-sm mt-1">Add items from the menu</p>
+            </div>
+        `;
+    }
+    
+    updateCartTotals();
+}
+
+/**
+ * Helper functions to get item information
+ */
+function getItemName(itemId) {
+    const itemElement = document.querySelector(`#item_${itemId}`);
+    if (itemElement) {
+        const labelElement = itemElement.closest('.item-card, .bg-white').querySelector('label');
+        return labelElement ? labelElement.textContent.trim() : `Item ${itemId}`;
+    }
+    return `Item ${itemId}`;
+}
+
+function getItemPrice(itemId) {
+    const itemElement = document.querySelector(`#item_${itemId}`);
+    if (itemElement) {
+        const priceElement = itemElement.closest('.item-card, .bg-white').querySelector('.text-blue-600, .font-semibold');
+        
+        if (priceElement) {
+            const priceText = priceElement.textContent;
+            const priceMatch = priceText.match(/[\d,]+\.?\d*/);
+            return priceMatch ? parseFloat(priceMatch[0].replace(',', '')) : 0;
+        }
+    }
+    return 0;
+}
+
+function getItemQuantity(itemId) {
+    const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+    return qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+}
+
+/**
+ * Update cart totals
+ */
+function updateCartTotals() {
+    const cartItems = document.querySelectorAll('[id^="cart-item-"]');
+    let subtotal = 0;
+    
+    cartItems.forEach(item => {
+        const priceElement = item.querySelector('.cart-item-price');
+        if (priceElement) {
+            const priceText = priceElement.textContent;
+            const priceMatch = priceText.match(/[\d,]+\.?\d*/);
+            if (priceMatch) {
+                subtotal += parseFloat(priceMatch[0].replace(',', ''));
+            }
+        }
+    });
+    
+    const tax = subtotal * 0.1; // 10% tax
+    const total = subtotal + tax;
+    
+    // Update display elements
+    const subtotalElement = document.getElementById('cart-subtotal');
+    const taxElement = document.getElementById('cart-tax');
+    const totalElement = document.getElementById('cart-total');
+    
+    if (subtotalElement) subtotalElement.textContent = `LKR ${subtotal.toFixed(2)}`;
+    if (taxElement) taxElement.textContent = `LKR ${tax.toFixed(2)}`;
+    if (totalElement) totalElement.textContent = `LKR ${total.toFixed(2)}`;
+}
+
+// Initialize quantity controls when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeQuantityControls();
+    initializeItemSelection();
+});
 
 console.log('✅ Admin Order Management JavaScript initialized successfully');
 </script>
