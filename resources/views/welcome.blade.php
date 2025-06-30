@@ -5,18 +5,8 @@
             <div class="flex justify-between items-center">
                 <a href="#" class="flex items-center text-2xl font-bold">
                     <i class="fas fa-calendar-check text-primary mr-2"></i>
-                    <span class="text-slate-800">Reserve</span>
-                </a>
-                
-                <nav class="hidden md:block">
-                    <ul class="flex space-x-8">
-                        <li><a href="#features" class="nav-link text-slate-700 hover:text-primary font-medium">Features</a></li>
-                        <li><a href="#mission" class="nav-link text-slate-700 hover:text-primary font-medium">Mission</a></li>
-                        <li><a href="#testimonials" class="nav-link text-slate-700 hover:text-primary font-medium">Testimonials</a></li>
-                        <li><a href="#" class="ml-4 px-6 py-2 border-2 border-primary text-primary font-semibold rounded-full hover:bg-primary hover:text-white transition">Sign In</a></li>
-                    </ul>
-                </nav>
-                
+                    <span class="text-slate-800">Unitec</span>
+                </a>              
                 <button class="md:hidden text-slate-700 focus:outline-none" id="menuToggle">
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
@@ -41,13 +31,9 @@
                 <div class="lg:w-1/2 mb-12 lg:mb-0 lg:pr-12 animate-fade-in">
                     <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
                         <span class="text-slate-800">Welcome to </span> 
-                        <span class="text-primary">Reserve</span>
+                        <span class="text-primary">Unitec</span>
                         <span class="text-slate-800 block mt-2">Restaurant Management System</span>
                     </h1>
-                    <p class="text-lg md:text-xl text-slate-600 mb-8 max-w-xl">
-                        Streamline your restaurant operations with our comprehensive management solution. 
-                        Manage orders, reservations, staff, and customers all in one place.
-                    </p>
                     <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                         <a href="{{ route('reservations.create') }}" 
                            class="px-8 py-4 btn-gradient font-semibold rounded-full shadow-lg text-center">
