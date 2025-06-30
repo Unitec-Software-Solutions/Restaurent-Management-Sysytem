@@ -235,6 +235,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Stock Management
             Route::prefix('stock')->name('stock.')->group(function () {
                 Route::get('/', [ItemTransactionController::class, 'index'])->name('index');
+                Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
 
                 Route::prefix('transactions')->name('transactions.')->group(function () {
