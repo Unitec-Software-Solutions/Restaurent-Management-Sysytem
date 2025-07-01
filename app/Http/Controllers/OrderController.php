@@ -299,10 +299,7 @@ class OrderController extends Controller
             // // Send order confirmation notification
             // $this->notificationService->sendOrderConfirmation($order);
 
-            return redirect()->route('orders.index', [
-                'phone' => $order->customer_phone,
-                'reservation_id' => $order->reservation_id
-            ])->with('success', 'Order created successfully! Stock deducted and KOT generated.');
+            return redirect()->route('orders.summary', $order->id)->with('success', 'Order created successfully! Stock deducted and KOT generated.');
         });
     }
 
@@ -467,12 +464,36 @@ class OrderController extends Controller
     // Takeaway order functions
     public function createTakeaway()
     {
+        $branches = Branch::where('is_active', true)->get();
+        $items = ItemMaster::where('is_menu_item', true)
+            ->where('is_active', true)
+            ->get();
+
+        // Add missing fields for the view
+        foreach ($items as $item) {
+            // Determine item type based on logic (you may need to adjust this)
+            $item->item_type = $item->is_perishable ? 'Buy & Sell' : 'KOT';
+            
+            // Add current stock information
+            $item->current_stock = $this->getCurrentStock($item->id, $branches->first()?->id ?? 1);
+        }
+
         return view('orders.takeaway.create', [
-            'branches' => Branch::all(),
-            'items' => ItemMaster::where('is_menu_item', true)->get(),
-            'defaultBranch' => null,
+            'branches' => $branches,
+            'items' => $items,
+            'defaultBranch' => $branches->first()?->id,
             'orderType' => 'takeaway_online_scheduled'
         ]);
+    }
+
+    private function getCurrentStock($itemId, $branchId)
+    {
+        try {
+            // Use the same method as in the existing system
+            return \App\Models\ItemTransaction::stockOnHand($itemId, $branchId);
+        } catch (\Exception $e) {
+            return 0; // Return 0 if there's an error
+        }
     }
 
     public function storeTakeaway(Request $request)
@@ -483,10 +504,10 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:menu_items,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
             'special_instructions' => 'nullable|string|max:1000',
-            'order_type' => 'nullable|string|in:' . implode(',', array_column(OrderType::takeawayTypes(), 'value')),
+            'order_type' => 'nullable|string|in:takeaway_walk_in_demand,takeaway_in_call_scheduled,takeaway_online_scheduled',
             'preferred_contact' => 'nullable|string|in:email,sms',
         ]);
 
@@ -521,15 +542,16 @@ class OrderController extends Controller
                 // Stock validation - check all items before creating order
                 $stockErrors = [];
                 foreach ($data['items'] as $item) {
-                    $menuItem = MenuItem::find($item['item_id']);
+                    $menuItem = ItemMaster::find($item['item_id']);
                     if (!$menuItem || !$menuItem->is_active) {
                         $stockErrors[] = "Item {$item['item_id']} is not available";
                         continue;
                     }
                     
-                    // Only check stock for items linked to inventory (ItemMaster)
-                    if ($menuItem->item_master_id && $menuItem->itemMaster) {
-                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $data['branch_id']);
+                    // Only check stock for items that track inventory
+                    if ($menuItem->is_perishable) // Using is_perishable as a proxy for inventory tracking
+                    {
+                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->id, $data['branch_id']);
                         if ($currentStock < $item['quantity']) {
                             $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
                         }
@@ -549,18 +571,18 @@ class OrderController extends Controller
                     'customer_phone' => $customer->phone,
                     'customer_phone_fk' => $customer->phone,
                     'order_type' => $orderType,
-                    'status' => Order::STATUS_SUBMITTED,
-                    'special_instructions' => $data['special_instructions'],
+                    'status' => Order::STATUS_PENDING, // Start as pending for confirmation
+                    'special_instructions' => $data['special_instructions'] ?? null,
                     'takeaway_id' => 'TW' . now()->format('YmdHis') . rand(100, 999),
                     'order_date' => now(),
                 ]);
 
                 $subtotal = 0;
                 foreach ($data['items'] as $item) {
-                    $menuItem = MenuItem::find($item['item_id']);
+                    $menuItem = ItemMaster::find($item['item_id']);
                     if (!$menuItem) continue;
                     
-                    $lineTotal = $menuItem->price * $item['quantity'];
+                    $lineTotal = $menuItem->selling_price * $item['quantity'];
                     $subtotal += $lineTotal;
 
                     OrderItem::create([
@@ -568,27 +590,11 @@ class OrderController extends Controller
                         'menu_item_id' => $item['item_id'],
                         'item_name' => $menuItem->name,
                         'quantity' => $item['quantity'],
-                        'unit_price' => $menuItem->price,
+                        'unit_price' => $menuItem->selling_price,
                         'subtotal' => $lineTotal,
                     ]);
 
-                    // Deduct stock for items linked to inventory (ItemMaster)
-                    if ($menuItem->item_master_id && $menuItem->itemMaster) {
-                        \App\Models\ItemTransaction::create([
-                            'organization_id' => $branch->organization_id,
-                            'branch_id' => $data['branch_id'],
-                            'inventory_item_id' => $menuItem->item_master_id,
-                            'transaction_type' => 'takeaway_order',
-                            'quantity' => -$item['quantity'],
-                            'cost_price' => $menuItem->itemMaster->buying_price,
-                            'unit_price' => $menuItem->price,
-                            'source_id' => $order->id,
-                            'source_type' => 'Order',
-                            'created_by_user_id' => Auth::id(),
-                            'notes' => "Stock deducted for Takeaway Order #{$order->takeaway_id}",
-                            'is_active' => true,
-                        ]);
-                    }
+                    // Note: Stock will be deducted and KOT generated when order is confirmed
                 }
 
                 // Calculate totals
@@ -603,17 +609,13 @@ class OrderController extends Controller
                     'service_charge' => $serviceCharge,
                     'discount' => $discount,
                     'total' => $total,
-                    'stock_deducted' => true,
+                    'stock_deducted' => false, // Will be set to true when confirmed
                 ]);
 
-                // Generate KOT for kitchen
-                $order->generateKOT();
+                // Note: KOT generation and stock deduction will happen on order confirmation
 
-                // // Send order confirmation notification
-                // $this->notificationService->sendOrderConfirmation($order);
-
-                return redirect()->route('orders.takeaway.show', $order)
-                    ->with('success', 'Takeaway order placed successfully! You will be notified when ready.');
+                return redirect()->route('orders.takeaway.summary', $order)
+                    ->with('success', 'Order created successfully! Please review and confirm your order below.');
 
             } catch (\Exception $e) {
                 Log::error('Takeaway order creation failed', [
@@ -629,9 +631,15 @@ class OrderController extends Controller
     {
         $order->load('items.menuItem', 'reservation', 'branch');
         
-        return view('orders.summary', [
+        // Determine the appropriate view based on order type
+        $view = 'orders.summary';
+        if ($order->order_type && str_contains((string)$order->order_type, 'takeaway')) {
+            $view = 'orders.takeaway.summary';
+        }
+        
+        return view($view, [
             'order' => $order,
-            'editable' => $order->status === 'draft',
+            'editable' => $order->status === 'pending', // Only pending orders are editable
             'reservation' => $order->reservation, // For reservation-linked orders
             'orderType' => $order->order_type ?? 'takeaway'
         ]);
@@ -786,9 +794,76 @@ class OrderController extends Controller
     // Submit takeaway order (customer)
     public function submitTakeaway(Request $request, Order $order)
     {
-        $order->update(['status' => 'submitted']);
-        return redirect()->route('orders.takeaway.show', $order->id)
-            ->with('success', 'Takeaway order submitted successfully!');
+        return DB::transaction(function () use ($order) {
+            try {
+                // Validate that order is in pending status
+                if ($order->status !== 'pending') {
+                    return redirect()->back()
+                        ->with('error', 'Order cannot be confirmed. Current status: ' . $order->status);
+                }
+
+                // Final stock validation before confirmation
+                $stockErrors = [];
+                foreach ($order->items as $orderItem) {
+                    $menuItem = $orderItem->menuItem;
+                    if ($menuItem && $menuItem->item_master_id && $menuItem->itemMaster) {
+                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $order->branch_id);
+                        if ($currentStock < $orderItem->quantity) {
+                            $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$orderItem->quantity}";
+                        }
+                    }
+                }
+
+                if (!empty($stockErrors)) {
+                    return redirect()->back()
+                        ->with('error', 'Cannot confirm order due to stock issues: ' . implode(', ', $stockErrors));
+                }
+
+                // Deduct stock for items linked to inventory
+                foreach ($order->items as $orderItem) {
+                    $menuItem = $orderItem->menuItem;
+                    if ($menuItem && $menuItem->item_master_id && $menuItem->itemMaster) {
+                        \App\Models\ItemTransaction::create([
+                            'organization_id' => $order->branch->organization_id,
+                            'branch_id' => $order->branch_id,
+                            'inventory_item_id' => $menuItem->item_master_id,
+                            'transaction_type' => 'takeaway_order',
+                            'quantity' => -$orderItem->quantity,
+                            'cost_price' => $menuItem->itemMaster->buying_price,
+                            'unit_price' => $menuItem->price,
+                            'source_id' => $order->id,
+                            'source_type' => 'Order',
+                            'created_by_user_id' => Auth::id(),
+                            'notes' => "Stock deducted for Takeaway Order #{$order->takeaway_id}",
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+
+                // Update order status and mark stock as deducted
+                $order->update([
+                    'status' => 'submitted',
+                    'stock_deducted' => true,
+                    'submitted_at' => now(),
+                ]);
+
+                // Generate KOT for kitchen
+                if (method_exists($order, 'generateKOT')) {
+                    $order->generateKOT();
+                }
+
+                return redirect()->route('orders.takeaway.summary', $order)
+                    ->with('success', 'Order confirmed successfully! Your order has been sent to the kitchen.');
+
+            } catch (\Exception $e) {
+                Log::error('Order confirmation failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage()
+                ]);
+                return redirect()->back()
+                    ->with('error', 'Failed to confirm order. Please try again.');
+            }
+        });
     }
 
     // Show a single takeaway order (customer)

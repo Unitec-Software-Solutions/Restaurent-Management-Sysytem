@@ -138,6 +138,32 @@ class Customer extends Model
     }
 
     /**
+     * Find customer by phone number
+     */
+    public static function findByPhone($phone)
+    {
+        $normalizedPhone = self::normalizePhone($phone);
+        return self::where('phone', $normalizedPhone)->first();
+    }
+
+    /**
+     * Create customer from phone number with additional data
+     */
+    public static function createFromPhone($phone, $additionalData = [])
+    {
+        $normalizedPhone = self::normalizePhone($phone);
+        
+        return self::create(array_merge([
+            'phone' => $normalizedPhone,
+            'is_active' => true,
+            'preferred_contact' => 'email',
+            'total_orders' => 0,
+            'total_spent' => 0,
+            'loyalty_points' => 0
+        ], $additionalData));
+    }
+
+    /**
      * Find or create customer by phone
      */
     public static function findOrCreateByPhone($phone, $additionalData = [])

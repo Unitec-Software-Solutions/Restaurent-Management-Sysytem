@@ -111,19 +111,20 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="flex items-center border border-gray-300 rounded overflow-hidden w-[110px]">
+                                        <div class="flex items-center border border-gray-300 rounded overflow-hidden w-[120px]">
                                             <button type="button"
-                                                    class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center"
+                                                    class="qty-decrease w-10 h-10 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 text-xl flex items-center justify-center touch-manipulation"
                                                     data-item-id="{{ $item->id }}"
-                                                    disabled>-</button>
+                                                    disabled>−</button>
                                             <input type="number"
                                                    min="1"
+                                                   max="99"
                                                    value="1"
-                                                   class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none"
+                                                   class="item-qty w-14 text-center border-x border-gray-300 text-sm focus:outline-none touch-manipulation"
                                                    data-item-id="{{ $item->id }}"
                                                    disabled>
                                             <button type="button"
-                                                    class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center"
+                                                    class="qty-increase w-10 h-10 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 text-xl flex items-center justify-center touch-manipulation"
                                                     data-item-id="{{ $item->id }}"
                                                     disabled>+</button>
                                         </div>
@@ -211,6 +212,7 @@
         document.addEventListener('click', function(e) {
             if (e.target.closest('.qty-increase')) {
                 e.preventDefault();
+                e.stopPropagation();
                 const button = e.target.closest('.qty-increase');
                 const itemId = button.getAttribute('data-item-id');
                 const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
@@ -223,6 +225,12 @@
                         qtyInput.value = currentValue + 1;
                         updateButtonStates(itemId, qtyInput.value);
                         updateCart();
+                        
+                        // Visual feedback for touch devices
+                        button.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            button.style.transform = 'scale(1)';
+                        }, 100);
                     }
                 }
             }
@@ -232,6 +240,7 @@
         document.addEventListener('click', function(e) {
             if (e.target.closest('.qty-decrease')) {
                 e.preventDefault();
+                e.stopPropagation();
                 const button = e.target.closest('.qty-decrease');
                 const itemId = button.getAttribute('data-item-id');
                 const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
@@ -243,6 +252,12 @@
                         qtyInput.value = currentValue - 1;
                         updateButtonStates(itemId, qtyInput.value);
                         updateCart();
+                        
+                        // Visual feedback for touch devices
+                        button.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            button.style.transform = 'scale(1)';
+                        }, 100);
                     }
                 }
             }
@@ -267,6 +282,19 @@
                 
                 updateButtonStates(itemId, value);
                 updateCart();
+            }
+        });
+        
+        // Handle blur event to ensure valid values
+        document.addEventListener('blur', function(e) {
+            if (e.target.classList.contains('item-qty')) {
+                const qtyInput = e.target;
+                if (!qtyInput.value || qtyInput.value === '0') {
+                    qtyInput.value = 1;
+                    const itemId = qtyInput.getAttribute('data-item-id');
+                    updateButtonStates(itemId, 1);
+                    updateCart();
+                }
             }
         });
     }
