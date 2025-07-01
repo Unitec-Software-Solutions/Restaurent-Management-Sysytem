@@ -1,119 +1,69 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto px-4 py-4 md:py-5">
-            <div class="flex justify-between items-center">
-                <a href="#" class="flex items-center text-2xl font-bold">
-                    <i class="fas fa-calendar-check text-primary mr-2"></i>
-                    <span class="text-slate-800">Unitec</span>
-                </a>              
-                <button class="md:hidden text-slate-700 focus:outline-none" id="menuToggle">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
-            </div>
-        </div>
-
-
-    <!-- Mobile Menu -->
-    <div class="md:hidden fixed inset-0 bg-white z-40 pt-20 px-4 hidden" id="mobileMenu">
-        <div class="flex flex-col space-y-6 py-6">
-            <a href="#features" class="text-lg font-medium text-slate-700 hover:text-primary">Features</a>
-            <a href="#mission" class="text-lg font-medium text-slate-700 hover:text-primary">Mission</a>
-            <a href="#testimonials" class="text-lg font-medium text-slate-700 hover:text-primary">Testimonials</a>
-            <a href="#" class="mt-4 px-6 py-3 border-2 border-primary text-primary font-semibold rounded-full hover:bg-primary hover:text-white text-center">Sign In</a>
-        </div>
-    </div>
-
-    <!-- Main Content Section -->
-    <section class="hero-bg pt-32 pb-20 md:pt-40 md:pb-28 relative overflow-hidden">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col lg:flex-row items-center">
-                <div class="lg:w-1/2 mb-12 lg:mb-0 lg:pr-12 animate-fade-in">
-                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
-                        <span class="text-slate-800">Welcome to </span> 
-                        <span class="text-primary">Unitec</span>
-                        <span class="text-slate-800 block mt-2">Restaurant Management System</span>
-                    </h1>
-                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                        <a href="{{ route('reservations.create') }}" 
-                           class="px-8 py-4 btn-gradient font-semibold rounded-full shadow-lg text-center">
-                            <i class="fas fa-calendar-alt mr-2"></i> Make a Reservation
-                        </a>
-                        <a href="{{ route('orders.takeaway.create') }}" 
-                           class="px-8 py-4 bg-green-600 text-white font-semibold rounded-full shadow-lg text-center hover:bg-green-700 transition">
-                            <i class="fas fa-utensils mr-2"></i> Place an Order
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="lg:w-1/2 relative">
-                    <div class="relative z-10 rounded-2xl overflow-hidden shadow-2xl floating">
-                        <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                             alt="Restaurant booking system" 
-                             class="w-full h-auto">
-                    </div>
-                    <div class="absolute -bottom-8 -left-8 w-64 h-64 bg-indigo-100 rounded-full opacity-50 z-0"></div>
-                    <div class="absolute -top-8 -right-8 w-64 h-64 bg-purple-100 rounded-full opacity-50 z-0"></div>
+<section class="hero-bg pt-24 pb-16 md:pt-32 md:pb-20 relative overflow-hidden">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col-reverse lg:flex-row items-center gap-12 md:pt-24 md:pb-24">
+            <!-- Left: Text & Actions -->
+            <div class="w-full lg:w-1/2 flex flex-col justify-center animate-fade-in">
+                <h1 class="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-6">
+                    <span class="text-slate-800">Welcome to </span>
+                    <span class="text-primary">Unitec</span>
+                    <span class="text-slate-800 block mt-2">Restaurant Management System</span>
+                </h1>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="{{ route('reservations.create') }}"
+                       class="px-6 py-3 btn-gradient font-semibold rounded-full shadow-lg text-center text-sm md:text-base flex items-center justify-center">
+                        <i class="fas fa-calendar-alt mr-2"></i> Make a Reservation
+                    </a>
+                    <a href="{{ route('orders.takeaway.create') }}"
+                       class="px-6 py-3 bg-green-600 text-white font-semibold rounded-full shadow-lg text-center hover:bg-green-700 transition text-sm md:text-base flex items-center justify-center">
+                        <i class="fas fa-utensils mr-2"></i> Place an Order
+                    </a>
                 </div>
             </div>
+            <!-- Right: Image -->
+            <div class="w-full lg:w-1/2 relative flex justify-center items-center">
+                <div class="relative z-10 rounded-2xl overflow-hidden shadow-2xl floating">
+                    <img src="{{ asset('images/welcome_image.jpeg') }}"
+                        alt="Chef preparing a gourmet dish in a modern restaurant kitchen with smiling staff in the background, warm lighting, and a welcoming atmosphere. The environment feels lively and inviting. Text on the image reads Unitec Restaurant Management System."
+                         alt="Restaurant booking system"
+                         class="w-full h-auto object-cover">
+                </div>
+                <div class="absolute -bottom-8 -left-8 w-64 h-64 bg-indigo-100 rounded-full opacity-50 z-0"></div>
+                <div class="absolute -top-8 -right-8 w-64 h-64 bg-purple-100 rounded-full opacity-50 z-0"></div>
+            </div>
+        </div>
     </div>
-    </section>
+</section>
 
-
-    <script>
-        // Mobile menu toggle
-        const menuToggle = document.getElementById('menuToggle');
-        const mobileMenu = document.getElementById('mobileMenu');
-        
-        menuToggle.addEventListener('click', () => {
-            mobileMenu.classList.toggle('hidden');
-        });
-        
-        // Close mobile menu when clicking a link
-        document.querySelectorAll('#mobileMenu a').forEach(link => {
-            link.addEventListener('click', () => {
-                mobileMenu.classList.add('hidden');
-            });
-        });
-        
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-        
-        // Header scroll effect
-        window.addEventListener('scroll', function() {
-            const header = document.querySelector('header');
-            if (window.scrollY > 50) {
-                header.classList.add('shadow-md');
-                header.classList.remove('shadow-sm');
-            } else {
-                header.classList.remove('shadow-md');
-                header.classList.add('shadow-sm');
+@push('scripts')
+<script>
+    // Smooth scrolling for navigation links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            if (targetId === '#') return;
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                window.scrollTo({
+                    top: targetElement.offsetTop - 80,
+                    behavior: 'smooth'
+                });
             }
         });
-        
-        // Initialize animations
-        document.addEventListener('DOMContentLoaded', function() {
-            const elements = document.querySelectorAll('.animate-fade-in');
-            elements.forEach((el, index) => {
-                el.style.animationDelay = `${index * 0.1}s`;
-            });
+    });
+
+    // Initialize animations
+    document.addEventListener('DOMContentLoaded', function() {
+        const elements = document.querySelectorAll('.animate-fade-in');
+        elements.forEach((el, index) => {
+            el.style.animationDelay = `${index * 0.1}s`;
         });
-    </script>
+    });
+</script>
+@endpush
 
 @endsection
 
