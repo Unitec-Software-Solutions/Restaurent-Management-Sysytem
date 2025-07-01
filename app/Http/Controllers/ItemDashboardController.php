@@ -13,22 +13,52 @@ class ItemDashboardController extends Controller
 {
     public function index()
     {
-        $admin = Auth::user();
+        $admin = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        if (!$admin) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to access the inventory dashboard.');
         }
 
-        $orgId = $admin->organization_id;
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $admin->isSuperAdmin();
+        
+        // Enhanced validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$admin->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
+        }
 
-        // Total Items
-        $totalItems = ItemMaster::active()->where('organization_id', $orgId)->count();
+        // Super admins can see all items, others see their organization's
+        $orgId = $isSuperAdmin ? null : $admin->organization_id;
 
-        // New Items Today
-        $newItemsToday = ItemMaster::active()
-            ->where('organization_id', $orgId)
-            ->whereDate('created_at', now()->format('Y-m-d'))
-            ->count();
+        // Total Items with proper super admin handling
+        $totalItems = $isSuperAdmin ? 
+            ItemMaster::active()->count() : 
+            ItemMaster::active()->where('organization_id', $orgId)->count();
+
+        // New Items Today with proper super admin handling
+        $newItemsToday = $isSuperAdmin ? 
+            ItemMaster::active()->whereDate('created_at', now()->format('Y-m-d'))->count() : 
+            ItemMaster::active()->where('organization_id', $orgId)->whereDate('created_at', now()->format('Y-m-d'))->count();
+
+
+        // Total Stock Value
+        $totalStockValue = DB::table('item_master')
+            ->join('item_transactions', 'item_master.id', '=', 'item_transactions.inventory_item_id')
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('item_master.organization_id', $orgId);
+            })
+            ->select(DB::raw('SUM(item_transactions.quantity * item_master.buying_price) as total_stock_value'))
+            ->first()->total_stock_value ?? 0;
+
+        // Stock Value Change (from yesterday)
+        $yesterdayStockValue = DB::table('item_master')
+            ->join('item_transactions', 'item_master.id', '=', 'item_transactions.inventory_item_id')
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('item_master.organization_id', $orgId);
+            })
+            ->whereDate('item_transactions.created_at', now()->subDay())
+            ->select(DB::raw('SUM(item_transactions.quantity * item_master.buying_price) as total_stock_value'))
+            ->first()->total_stock_value ?? 0;
 
         // Total Stock Value - calculate using current stock levels
         $totalStockValue = 0;
@@ -43,6 +73,7 @@ class ItemDashboardController extends Controller
             ->whereDate('created_at', now()->subDay())
             ->get();
 
+
         $yesterdayStockChange = 0;
         foreach ($yesterdayTransactions as $transaction) {
             $item = $transaction->item;
@@ -53,7 +84,9 @@ class ItemDashboardController extends Controller
         $stockValueChange = $yesterdayStockChange;
 
         // Purchase Orders
-        $purchaseOrders = ItemTransaction::where('organization_id', $orgId)
+        $purchaseOrders = ItemTransaction::when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->where('transaction_type', 'purchase_order')
             ->get();
 
@@ -63,7 +96,9 @@ class ItemDashboardController extends Controller
         $purchaseOrdersCount = $purchaseOrders->count();
 
         // Sales Orders
-        $salesOrders = ItemTransaction::where('organization_id', $orgId)
+        $salesOrders = ItemTransaction::when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->where('transaction_type', 'sales_order')
             ->get();
 
@@ -73,7 +108,9 @@ class ItemDashboardController extends Controller
         // Low Stock Items
         $lowStockItems = ItemMaster::with('category')
             ->active()
-            ->where('organization_id', $orgId)
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->whereHas('transactions', function ($query) {
                 $query->whereColumn('quantity', '<=', 'item_master.reorder_level');
             })
@@ -82,10 +119,14 @@ class ItemDashboardController extends Controller
         // Top Selling Items
         $topSellingItems = ItemMaster::with('category')
             ->active()
-            ->where('item_master.organization_id', $orgId)
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('item_master.organization_id', $orgId);
+            })
             ->join('item_transactions', 'item_master.id', '=', 'item_transactions.inventory_item_id')
             ->where('item_transactions.transaction_type', 'sales_order')
-            ->where('item_transactions.organization_id', $orgId)
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('item_transactions.organization_id', $orgId);
+            })
             ->select(
                 'item_master.*',
                 DB::raw('SUM(item_transactions.quantity) as quantity_sold'),
@@ -97,17 +138,23 @@ class ItemDashboardController extends Controller
             ->get();
 
         // Purchase Order Summary
-        $purchaseOrderQuantity = ItemTransaction::where('organization_id', $orgId)
+        $purchaseOrderQuantity = ItemTransaction::when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->where('transaction_type', 'purchase_order')
             ->sum('quantity');
 
-        $purchaseOrderTotalCost = ItemTransaction::where('organization_id', $orgId)
+        $purchaseOrderTotalCost = ItemTransaction::when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->where('transaction_type', 'purchase_order')
             ->sum('cost_price');
 
         // Sales Order Details
         $salesOrders = ItemTransaction::with(['item', 'branch'])
-            ->where('organization_id', $orgId)
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->where('transaction_type', 'sales_order')
             ->latest()
             ->take(10)
@@ -115,7 +162,9 @@ class ItemDashboardController extends Controller
 
         // Item list with filters
         $items = ItemMaster::with('category')
-            ->where('organization_id', $orgId)
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->when(request('search'), function ($query) {
                 $search = strtolower(request('search'));
                 $query->where(function ($q) use ($search) {
@@ -133,7 +182,9 @@ class ItemDashboardController extends Controller
 
         // Active Categories
         $categories = ItemCategory::active()
-            ->where('organization_id', $orgId)
+            ->when(!$isSuperAdmin, function($q) use ($orgId) {
+                return $q->where('organization_id', $orgId);
+            })
             ->get();
 
         return view('admin.inventory.dashboard', compact(

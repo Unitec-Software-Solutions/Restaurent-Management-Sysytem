@@ -26,52 +26,57 @@
                 }
             }">
                 <!-- Filters with Export -->
-                <x-module-filters 
-                    :action="route('admin.inventory.gtn.index')"
-                    :export-permission="'export_gtn'"
-                    :export-filename="'gtn_export.xlsx'"
-                    class="mb-6"
-                    x-data="{}"
+                <x-module-filters :action="route('admin.inventory.gtn.index')" :export-permission="'export_gtn'" :export-filename="'gtn_export.xlsx'" class="mb-6" x-data="{}"
                     @submit="document.getElementById('tab-input').value = tab">
-                    
+
                     <!-- Hidden input to keep track of tab -->
                     <input type="hidden" name="tab" id="tab-input" :value="tab">
-                    
+
                     <div>
                         <label for="from_branch_id" class="block text-sm font-medium text-gray-700 mb-1">From Branch</label>
-                        <select name="from_branch_id" id="from_branch_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <select name="from_branch_id" id="from_branch_id"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="">All Branches</option>
                             @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}" {{ request('from_branch_id') == $branch->id ? 'selected' : '' }}>
+                                <option value="{{ $branch->id }}"
+                                    {{ request('from_branch_id') == $branch->id ? 'selected' : '' }}>
                                     {{ $branch->name }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
-                    
+
                     <div>
                         <label for="to_branch_id" class="block text-sm font-medium text-gray-700 mb-1">To Branch</label>
-                        <select name="to_branch_id" id="to_branch_id" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <select name="to_branch_id" id="to_branch_id"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="">All Branches</option>
                             @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}" {{ request('to_branch_id') == $branch->id ? 'selected' : '' }}>
+                                <option value="{{ $branch->id }}"
+                                    {{ request('to_branch_id') == $branch->id ? 'selected' : '' }}>
                                     {{ $branch->name }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
-                    
+
                     <div>
-                        <label for="origin_status" class="block text-sm font-medium text-gray-700 mb-1">Origin Status</label>
-                        <select name="origin_status" id="origin_status" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label for="origin_status" class="block text-sm font-medium text-gray-700 mb-1">Origin
+                            Status</label>
+                        <select name="origin_status" id="origin_status"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="">All Origin Status</option>
-                            <option value="draft" {{ request('origin_status') == 'draft' ? 'selected' : '' }}>Draft</option>
-                            <option value="confirmed" {{ request('origin_status') == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
-                            <option value="in_delivery" {{ request('origin_status') == 'in_delivery' ? 'selected' : '' }}>In Delivery</option>
-                            <option value="delivered" {{ request('origin_status') == 'delivered' ? 'selected' : '' }}>Delivered</option>
+                            <option value="draft" {{ request('origin_status') == 'draft' ? 'selected' : '' }}>Draft
+                            </option>
+                            <option value="confirmed" {{ request('origin_status') == 'confirmed' ? 'selected' : '' }}>
+                                Confirmed</option>
+                            <option value="in_delivery" {{ request('origin_status') == 'in_delivery' ? 'selected' : '' }}>In
+                                Delivery</option>
+                            <option value="delivered" {{ request('origin_status') == 'delivered' ? 'selected' : '' }}>
+                                Delivered</option>
                         </select>
                     </div>
-                    
+
                     <div>
                         <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
                         <div class="grid grid-cols-2 gap-2">
@@ -99,7 +104,13 @@
                                 @endif
                             </p>
                             <p class="text-sm text-gray-500 mt-1">
-                                Organization: {{ Auth::user()->organization->name }}
+                                @if(Auth::guard('admin')->user()->is_super_admin)
+                                    Organization: All Organizations (Super Admin)
+                                @elseif(Auth::guard('admin')->user()->organization)
+                                    Organization: {{ Auth::guard('admin')->user()->organization->name }}
+                                @else
+                                    Organization: Not Assigned
+                                @endif
                             </p>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-3">

@@ -20,15 +20,15 @@
                         <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Order Information</h3>
                             
-                            @if(auth()->check() && auth()->user()->isAdmin())
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
-                                <select name="order_type" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border">
-                                    <option value="takeaway_walk_in_demand" selected>In-House</option>
-                                    <option value="takeaway_in_call_scheduled">In-Call</option>
-                                </select>
+                            <!-- Show Takeaway Order Type Info (No Selection Needed) -->
+                            <div class="mb-4 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <div class="flex items-center">
+                                    <i class="fas fa-shopping-bag text-blue-600 mr-2"></i>
+                                    <span class="font-semibold text-blue-800">Takeaway Order</span>
+                                </div>
+                                <p class="text-blue-700 text-sm mt-1">This order is for pickup/delivery</p>
+                                <input type="hidden" name="order_type" value="takeaway_walk_in_demand">
                             </div>
-                            @endif
 
                             <div class="mb-4" @if(auth()->check() && auth()->user()->isAdmin()) style="display:none" @endif>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Select Outlet</label>
@@ -150,21 +150,27 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Admin-specific time handling
-    if (isAdmin) {
-        const setDefaultTime = (minutesToAdd) => {
-            const time = new Date();
-            time.setMinutes(time.getMinutes() + minutesToAdd);
-            document.querySelector('input[name="order_time"]').value = time.toISOString().slice(0, 16);
-        };
+    @if(auth()->check() && auth()->user()->isAdmin())
+    const setDefaultTime = (minutesToAdd) => {
+        const time = new Date();
+        time.setMinutes(time.getMinutes() + minutesToAdd);
+        const timeInput = document.querySelector('input[name="order_time"]');
+        if (timeInput) {
+            timeInput.value = time.toISOString().slice(0, 16);
+        }
+    };
 
-        // Initial time setting
-        setDefaultTime(15);
+    // Initial time setting
+    setDefaultTime(15);
 
-        // Handle order type changes
-        document.querySelector('select[name="order_type"]').addEventListener('change', function() {
+    // Handle order type changes
+    const orderTypeSelect = document.querySelector('select[name="order_type"]');
+    if (orderTypeSelect) {
+        orderTypeSelect.addEventListener('change', function() {
             setDefaultTime(this.value === 'takeaway_in_call_scheduled' ? 30 : 15);
         });
     }
+    @endif
 
     // Enable/disable qty and buttons on checkbox change
     document.querySelectorAll('.item-check').forEach(function(checkbox) {

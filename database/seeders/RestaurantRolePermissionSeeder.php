@@ -23,7 +23,7 @@ class RestaurantRolePermissionSeeder extends Seeder
                     'view-restaurant-layout',
                     'view-table-status',
                     'customer-service',
-                    'view-waitlist'
+                    'customer-management'
                 ],
                 'description' => 'Manages guest seating, reservations, and front-of-house customer service'
             ],
@@ -126,7 +126,7 @@ class RestaurantRolePermissionSeeder extends Seeder
     {
         return [
             'host/hostess' => [
-                'permissions' => ['manage-reservations', 'view-restaurant-layout', 'view-table-status', 'customer-service', 'view-waitlist'],
+                'permissions' => ['manage-reservations', 'view-restaurant-layout', 'view-table-status', 'customer-service', 'customer-management'],
                 'middleware' => ['role:host/hostess', 'permission:manage-reservations'],
                 'blade_checks' => ['@can(\'manage-reservations\')', '@hasrole(\'host/hostess\')']
             ],

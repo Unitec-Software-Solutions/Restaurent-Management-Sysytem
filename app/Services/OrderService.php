@@ -281,6 +281,67 @@ class OrderService
     }
 
     /**
+     * Get order statistics for a branch
+     */
+    public function getOrderStatistics(int $branchId, int $days = 1): array
+    {
+        $startDate = now()->subDays($days)->startOfDay();
+        $endDate = now()->endOfDay();
+        
+        $orders = Order::where('branch_id', $branchId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get();
+            
+        return [
+            'total_orders' => $orders->count(),
+            'completed_orders' => $orders->where('status', self::STATUS_COMPLETED)->count(),
+            'pending_orders' => $orders->where('status', self::STATUS_PENDING)->count(),
+            'cancelled_orders' => $orders->where('status', self::STATUS_CANCELLED)->count(),
+            'total_revenue' => $orders->where('status', self::STATUS_COMPLETED)->sum('total_amount'),
+            'average_order_value' => $orders->where('status', self::STATUS_COMPLETED)->avg('total_amount'),
+        ];
+    }
+    
+    /**
+     * Get order alerts for dashboard
+     */
+    public function getOrderAlerts(int $branchId): array
+    {
+        $alerts = [];
+        
+        // Check for stuck orders (pending for too long)
+        $stuckOrders = Order::where('branch_id', $branchId)
+            ->where('status', self::STATUS_PENDING)
+            ->where('created_at', '<', now()->subMinutes(30))
+            ->count();
+            
+        if ($stuckOrders > 0) {
+            $alerts[] = [
+                'type' => 'warning',
+                'message' => "You have {$stuckOrders} orders pending for more than 30 minutes",
+                'action' => 'Review pending orders',
+                'count' => $stuckOrders
+            ];
+        }
+        
+        // Check for orders ready for pickup/serving
+        $readyOrders = Order::where('branch_id', $branchId)
+            ->where('status', self::STATUS_READY)
+            ->count();
+            
+        if ($readyOrders > 0) {
+            $alerts[] = [
+                'type' => 'info',
+                'message' => "You have {$readyOrders} orders ready for pickup/serving",
+                'action' => 'Complete orders',
+                'count' => $readyOrders
+            ];
+        }
+        
+        return $alerts;
+    }
+
+    /**
      * Validate order data
      */
     private function validateOrderData(array $orderData): void

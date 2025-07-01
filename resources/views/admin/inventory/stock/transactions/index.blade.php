@@ -86,13 +86,13 @@
                     </div>
                 </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
-                        <div class="relative">
-                            <select name="transaction_type"
-                                class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                <option value="">All Types</option>
-                                @foreach ([
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
+                    <div class="relative">
+                        <select name="transaction_type"
+                            class="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <option value="">All Types</option>
+                            @foreach ([
             'purchase_order' => 'Purchase Order',
             'sales_order' => 'Sales Order',
             'adjustment' => 'Adjustment',
@@ -106,14 +106,14 @@
             'production_issue' => 'Production Issue',
             'production_in' => 'Production In',
         ] as $value => $label)
-                                    <option value="{{ $value }}"
-                                        {{ request('transaction_type') == $value ? 'selected' : '' }}>
-                                        {{ $label }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+                                <option value="{{ $value }}"
+                                    {{ request('transaction_type') == $value ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
+                </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
@@ -144,7 +144,13 @@
                             @endif
                         </p>
                         <p class="text-sm text-gray-500 mt-1">
-                            Organization: {{ Auth::user()->organization->name }}
+                            @if(Auth::guard('admin')->user()->is_super_admin)
+                                Organization: All Organizations (Super Admin)
+                            @elseif(Auth::guard('admin')->user()->organization)
+                                Organization: {{ Auth::guard('admin')->user()->organization->name }}
+                            @else
+                                Organization: Not Assigned
+                            @endif
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-3">

@@ -1,0 +1,39 @@
+{
+    "timestamp": "2025-06-30 09:15:24",
+    "fixes_applied": 12,
+    "controllers_processed": [
+        "App\\Http\\Controllers\\Admin\\OrderController",
+        "App\\Http\\Controllers\\RoleController",
+        "App\\Http\\Controllers\\Admin\\GrnController",
+        "App\\Http\\Controllers\\Admin\\PurchaseOrderController",
+        "App\\Http\\Controllers\\PaymentController",
+        "App\\Http\\Controllers\\SubscriptionController"
+    ],
+    "missing_methods_added": {
+        "App\\Http\\Controllers\\Admin\\OrderController": {
+            "archive-old-menus": "archiveOldMenus",
+            "menu-safety-status": "menuSafetyStatus",
+            "update-cart": "updateCart",
+            "orders": "orders"
+        },
+        "App\\Http\\Controllers\\RoleController": {
+            "assign": "assign"
+        },
+        "App\\Http\\Controllers\\Admin\\GrnController": {
+            "update": "update",
+            "print": "print",
+            "edit": "edit"
+        },
+        "App\\Http\\Controllers\\Admin\\PurchaseOrderController": {
+            "show": "show"
+        },
+        "App\\Http\\Controllers\\PaymentController": {
+            "handle-callback": "handleCallback"
+        },
+        "App\\Http\\Controllers\\SubscriptionController": {
+            "create": "create",
+            "store": "store"
+        }
+    },
+    "status": "completed"
+}

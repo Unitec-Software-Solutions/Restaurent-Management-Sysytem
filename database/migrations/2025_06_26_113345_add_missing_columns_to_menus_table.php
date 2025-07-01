@@ -61,9 +61,21 @@ return new class extends Migration
     private function indexExists($table, $index)
     {
         try {
+            // For PostgreSQL, use information_schema
+            $connection = Schema::getConnection();
+            if ($connection->getDriverName() === 'pgsql') {
+                $exists = $connection->selectOne(
+                    "SELECT indexname FROM pg_indexes WHERE tablename = ? AND indexname = ?",
+                    [$table, $index]
+                );
+                return !is_null($exists);
+            }
+            
+            // For MySQL and other databases
             $indexes = Schema::getConnection()->getDoctrineSchemaManager()->listTableIndexes($table);
             return array_key_exists($index, $indexes);
         } catch (\Exception $e) {
+            // If we can't check, assume it doesn't exist
             return false;
         }
     }

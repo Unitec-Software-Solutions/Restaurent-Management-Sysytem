@@ -17,6 +17,8 @@ export default defineConfig({
             input: [
                 'resources/sass/app.scss',
                 'resources/js/app.js',
+                'resources/css/sidebar.css',
+                'resources/js/sidebar.js',
             ],
             refresh: true,
         }),

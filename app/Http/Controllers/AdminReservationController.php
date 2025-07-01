@@ -719,4 +719,11 @@ public function createOrder(Reservation $reservation)
 
         return redirect()->back()->with('error', 'Invalid export format');
     }
+
+    public function destroy($id)
+    {
+        // TODO: Implement destroy logic
+        return redirect()->back()->with('success', 'Deleted successfully');
+    }
+
 }

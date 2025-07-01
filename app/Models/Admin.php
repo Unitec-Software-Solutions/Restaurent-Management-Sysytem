@@ -393,6 +393,15 @@ class Admin extends Authenticatable
     }
 
     /**
+     * Check if user is an admin
+     * Since this is the Admin model, all instances are admins by definition
+     */
+    public function isAdmin(): bool
+    {
+        return true;
+    }
+
+    /**
      * Check if admin has organization-level access
      * Super admins have global access, regular admins need organization assignment
      */

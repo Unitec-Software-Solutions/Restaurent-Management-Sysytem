@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Reservation;
+use App\Models\Customer;
 use App\Models\Branch;
 use App\Models\Payment;
 use App\Models\Table;
+use App\Models\RestaurantConfig;
 use App\Services\ReservationAvailabilityService;
+use App\Services\NotificationService;
+use App\Enums\ReservationType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -19,10 +23,14 @@ use Illuminate\Support\Facades\Mail;
 class ReservationController extends Controller
 {
     protected $reservationAvailabilityService;
+    protected $notificationService;
 
-    public function __construct(ReservationAvailabilityService $reservationAvailabilityService)
-    {
+    public function __construct(
+        ReservationAvailabilityService $reservationAvailabilityService,
+        NotificationService $notificationService
+    ) {
         $this->reservationAvailabilityService = $reservationAvailabilityService;
+        $this->notificationService = $notificationService;
     }
 
     public function create(Request $request)
@@ -61,16 +69,38 @@ class ReservationController extends Controller
                 'end_time' => 'required|date_format:H:i|after:start_time',
                 'number_of_people' => 'required|integer|min:1',
                 'comments' => 'nullable|string|max:1000',
+                'type' => 'nullable|string|in:' . implode(',', ReservationType::values()),
+                'preferred_contact' => 'nullable|string|in:email,sms',
             ]);
 
             $branch = Branch::with('organization')->findOrFail($validated['branch_id']);
 
-            // Enhanced: Check branch and organization status
+            // Check branch and organization status
             if (!$branch->is_active || !$branch->organization->is_active) {
                 return back()->withErrors(['branch' => 'Selected branch is not currently available for reservations.']);
             }
 
-            // Enhanced: Use comprehensive availability checking
+            // Find or create customer by phone
+            $customer = Customer::findByPhone($validated['phone']);
+            if (!$customer) {
+                $customer = Customer::createFromPhone($validated['phone'], [
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'preferred_contact' => $validated['preferred_contact'] ?? 'email',
+                ]);
+            } else {
+                // Update customer info if provided
+                $customer->update([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'] ?: $customer->email,
+                    'preferred_contact' => $validated['preferred_contact'] ?? $customer->preferred_contact,
+                ]);
+            }
+
+            // Determine reservation type
+            $reservationType = $validated['type'] ?? ReservationType::ONLINE->value;
+
+            // Check availability
             $availabilityCheck = $this->reservationAvailabilityService->checkTimeSlotAvailability(
                 $validated['branch_id'],
                 $validated['date'],
@@ -80,33 +110,30 @@ class ReservationController extends Controller
             );
 
             if (!$availabilityCheck['available']) {
-                $errorMessage = $availabilityCheck['message'];
-                
-                // If there are conflicts, show them
-                if (!empty($availabilityCheck['conflicts'])) {
-                    $conflictDetails = collect($availabilityCheck['conflicts'])
-                        ->map(fn($conflict) => "• {$conflict['start_time']}-{$conflict['end_time']} ({$conflict['people']} people)")
-                        ->join("\n");
-                    $errorMessage .= "\n\nConflicting reservations:\n" . $conflictDetails;
-                }
-
-                return back()->withErrors(['availability' => $errorMessage])
+                // Simple error message - no waitlist option
+                return back()->withErrors(['availability' => 'No tables available for your requested time. Please try another time slot.'])
                            ->withInput();
             }
 
-            // Create reservation with default status as pending
+            // Get reservation fee from configuration
+            $reservationFee = RestaurantConfig::get('reservation_fee_' . $reservationType, 0);
+
+            // Create reservation (model will handle setting customer_phone_fk and other logic via boot)
             $reservation = Reservation::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone'],
+                'customer_phone_fk' => $customer->phone,
                 'branch_id' => $validated['branch_id'],
                 'date' => $validated['date'],
                 'start_time' => Carbon::parse($validated['date'] . ' ' . $validated['start_time']),
                 'end_time' => Carbon::parse($validated['date'] . ' ' . $validated['end_time']),
                 'number_of_people' => $validated['number_of_people'],
+                'table_size' => $validated['number_of_people'], // Set table size
                 'comments' => $validated['comments'],
+                'type' => ReservationType::from($reservationType),
                 'status' => 'pending',
-                'reservation_fee' => $branch->reservation_fee ?? 0,
+                'reservation_fee' => $reservationFee,
                 'user_id' => optional(auth())->id(),
             ]);
 
@@ -119,16 +146,19 @@ class ReservationController extends Controller
 
             DB::commit();
 
+            // Send notification
+            $this->notificationService->sendReservationConfirmation($reservation);
+
             Log::info('Reservation created successfully', [
                 'reservation_id' => $reservation->id,
+                'customer_phone' => $customer->phone,
                 'branch_id' => $branch->id,
-                'customer' => $reservation->name,
                 'date' => $reservation->date,
                 'time' => $reservation->start_time->format('H:i') . '-' . $reservation->end_time->format('H:i')
             ]);
 
             return redirect()->route('reservations.show', $reservation)
-                           ->with('success', 'Reservation created successfully! You will receive a confirmation email shortly.');
+                           ->with('success', 'Reservation created successfully! You will receive a confirmation notification shortly.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -142,45 +172,7 @@ class ReservationController extends Controller
         }
     }
 
-    private function checkTableAvailability($date, $startTime, $endTime, $people, $branchId)
-    {
-        // Get all tables in the branch
-        $branch = Branch::with('tables')->findOrFail($branchId);
-        
-        // Get existing reservations for the time slot
-        $existingReservations = Reservation::where('branch_id', $branchId)
-            ->where('date', $date)
-            ->where(function($query) use ($startTime, $endTime) {
-                $query->whereBetween('start_time', [$startTime, $endTime])
-                    ->orWhereBetween('end_time', [$startTime, $endTime])
-                    ->orWhere(function($q) use ($startTime, $endTime) {
-                        $q->where('start_time', '<=', $startTime)
-                            ->where('end_time', '>=', $endTime);
-                    });
-            })
-            ->where('status', '!=', 'cancelled')
-            ->get();
 
-        // Calculate total capacity needed
-        $totalCapacityNeeded = $people;
-        
-        // Calculate available capacity
-        $totalCapacity = $branch->total_capacity;
-        $reservedCapacity = $existingReservations->sum('number_of_people');
-        $availableCapacity = $totalCapacity - $reservedCapacity;
-
-        Log::info('Capacity calculation:', [
-            'total_capacity' => $totalCapacity,
-            'reserved_capacity' => $reservedCapacity,
-            'available_capacity' => $availableCapacity,
-            'needed_capacity' => $totalCapacityNeeded,
-            'branch_id' => $branchId,
-            'date' => $date,
-            'time_slot' => $startTime . ' - ' . $endTime
-        ]);
-
-        return $availableCapacity >= $totalCapacityNeeded;
-    }
 
     public function processPayment(Request $request, Reservation $reservation)
     {
@@ -229,10 +221,54 @@ class ReservationController extends Controller
             return back()->with('error', 'This reservation cannot be cancelled.');
         }
 
-        $reservation->update(['status' => 'cancelled']);
+        DB::beginTransaction();
+        try {
+            // Check if cancellation fee should be applied
+            if ($reservation->shouldChargeCancellationFee()) {
+                $cancellationFee = $reservation->calculateCancellationFee();
+                $reservation->update([
+                    'status' => 'cancelled',
+                    'cancellation_fee' => $cancellationFee
+                ]);
+                
+                // Create payment record for cancellation fee if applicable
+                if ($cancellationFee > 0) {
+                    Payment::create([
+                        'payable_type' => Reservation::class,
+                        'payable_id' => $reservation->id,
+                        'amount' => $cancellationFee,
+                        'payment_method' => 'system', // System-generated fee
+                        'status' => 'pending',
+                        'payment_reference' => 'CANCEL-FEE-' . $reservation->id . '-' . time(),
+                        'notes' => 'Cancellation fee'
+                    ]);
+                }
+            } else {
+                $reservation->update(['status' => 'cancelled']);
+            }
 
-        return redirect()->route('reservations.cancellation-success')
-            ->with('success', 'Reservation cancelled successfully.');
+            DB::commit();
+
+            // Send cancellation notification
+            $this->notificationService->sendReservationCancellation($reservation);
+
+            $message = 'Reservation cancelled successfully.';
+            if (isset($cancellationFee) && $cancellationFee > 0) {
+                $message .= ' A cancellation fee of $' . number_format($cancellationFee, 2) . ' applies.';
+            }
+
+            return redirect()->route('reservations.cancellation-success')
+                ->with('success', $message);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Reservation cancellation failed', [
+                'reservation_id' => $reservation->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return back()->with('error', 'Failed to cancel reservation. Please try again.');
+        }
     }
 
     public function cancellationSuccess()

@@ -18,7 +18,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    
+    <!-- Enhanced Sidebar Assets -->
+    @vite(['resources/css/sidebar.css', 'resources/js/sidebar.js'])
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -80,72 +83,66 @@
 <body class="bg-[#F3F4FF] dark:bg-gray-900 h-full">
 
 
-    <!-- Sidebar -->
+    <!-- Enhanced Sidebar -->
     @auth
-        <div class="fixed inset-0 z-30 bg-gray-900/50 lg:hidden hidden" id="sidebarBackdrop"></div>
-        @include('partials.sidebar.admin-sidebar')
+        <x-admin-sidebar />
     @endauth
 
     <!-- Header -->
-    @include('partials.header.admin-header')
+    {{-- @include('partials.header.admin-header') --}}
 
     <!-- Main Content -->
-    <main class="p-4 lg:ml-64 pt-16 h-full  bg-[#F3F4FF]">
+    <main class="lg:ml-64 transition-all duration-300">
+        
+        <!-- Mobile Header Spacer -->
+        <div class="h-16 lg:hidden"></div>
+        
+        <!-- Content Container -->
+        <div class="p-4 lg:p-6 bg-[#F3F4FF] min-h-screen">
+            <!-- Breadcrumbs -->
+            {{-- @include('partials.breadcrumbs') // Disabled for now --}}
 
-        <!-- Breadcrumbs -->
-        {{-- @include('partials.breadcrumbs') // Disabled for now --}}
+            <!-- Page Content -->
+            @yield('content')
 
-        <!-- Page Content -->
-        @yield('content')
-
-        @if(session('subscription_alert'))
-            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
-                {{ session('subscription_alert') }}
-            </div>
-        @endif
+            @if(session('subscription_alert'))
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-3"></i>
+                        {{ session('subscription_alert') }}
+                    </div>
+                </div>
+            @endif
+        </div>
     </main>
 
     <!-- Logout Modal -->
     @include('partials.modals.logout-modal')
+    @include('partials.header.profile-dropdown')
 
     <!-- Scripts -->
     <script>
-        // Sidebar toggle for mobile
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleButton = document.getElementById('toggleSidebar');
-            const sidebar = document.getElementById('sidebar');
-            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-
-            if (sidebar && !sidebar.classList.contains('lg:flex')) {
-                sidebar.classList.add('-translate-x-full');
-            }
-
-            if (toggleButton && sidebar) {
-                toggleButton.addEventListener('click', function() {
-                    sidebar.classList.toggle('-translate-x-full');
-                    // Show/hide backdrop
-                    if (sidebar.classList.contains('-translate-x-full')) {
-                        sidebarBackdrop.classList.add('hidden');
-                        sidebarBackdrop.classList.remove('flex');
-                    } else {
-                        sidebarBackdrop.classList.remove('hidden');
-                        sidebarBackdrop.classList.add('flex');
-                    }
-                    // Update aria-expanded attribute for accessibility
-                    const isExpanded = sidebar.classList.contains('-translate-x-full') ? 'false' : 'true';
-                    toggleButton.setAttribute('aria-expanded', isExpanded);
-                });
-            }
-
-            // Hide sidebar when clicking on backdrop (mobile)
-            if (sidebarBackdrop && sidebar) {
-                sidebarBackdrop.addEventListener('click', function() {
-                    sidebar.classList.add('-translate-x-full');
-                    sidebarBackdrop.classList.add('hidden');
-                    sidebarBackdrop.classList.remove('flex');
-                    if (toggleButton) toggleButton.setAttribute('aria-expanded', 'false');
-                });
-            }
+        // Enhanced sidebar functionality will be handled by sidebar.js
+        // Alpine.js store for sidebar state management
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('sidebar', {
+                collapsed: localStorage.getItem('sidebar_collapsed') === 'true',
+                
+                toggle() {
+                    this.collapsed = !this.collapsed;
+                    localStorage.setItem('sidebar_collapsed', this.collapsed);
+                },
+                
+                collapse() {
+                    this.collapsed = true;
+                    localStorage.setItem('sidebar_collapsed', true);
+                },
+                
+                expand() {
+                    this.collapsed = false;
+                    localStorage.setItem('sidebar_collapsed', false);
+                }
+            });
         });
 
         // Logout modal toggle

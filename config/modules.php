@@ -53,7 +53,7 @@ return [
                 'features' => ['basic_booking', 'table_assignment']
             ],
             'premium' => [
-                'permissions' => ['waitlist_management', 'guest_preferences', 'special_requests'],
+                'permissions' => ['customer_management', 'guest_preferences', 'special_requests'],
                 'features' => ['advanced_scheduling', 'guest_history', 'automated_reminders']
             ]
         ]

@@ -139,11 +139,11 @@ class AdminSidebarTest extends TestCase
 
         // Test super admin
         $superAdmin = Admin::factory()->create(['is_super_admin' => true]);
-        $this->actingAs($superAdmin, 'admin');
+        $this->actingAs($superAdmin instanceof \Illuminate\Contracts\Auth\Authenticatable ? $superAdmin : $superAdmin->first(), 'admin');
         $response = $this->get(route('admin.dashboard'));
         
         $response->assertSee('Dashboard');
-        $response->assertSee('Subscription Plans'); // Should see super admin items
+        $response->assertSee('Subscription Plans'); 
     }
 
     public function test_sidebar_handles_missing_routes_gracefully()

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Payment;
+use App\Enums\ReservationType;
 use Carbon\Carbon;
 
 class Reservation extends Model
@@ -14,7 +15,10 @@ class Reservation extends Model
     protected $fillable = [
         'name',
         'phone',
+        'customer_phone_fk',
         'email',
+        'type',
+        'table_size',
         'date',
         'start_time',
         'end_time',
@@ -39,7 +43,52 @@ class Reservation extends Model
         'cancellation_fee' => 'decimal:2',
         'check_in_time' => 'datetime',
         'check_out_time' => 'datetime',
+        'type' => \App\Enums\ReservationType::class,
     ];
+
+    /**
+     * Boot method to handle reservation creation
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($reservation) {
+            // Set default reservation type if not provided
+            if (!$reservation->type) {
+                $reservation->type = ReservationType::ONLINE;
+            }
+            
+            // Apply reservation fee based on type
+            if (!$reservation->reservation_fee && $reservation->branch_id) {
+                $reservation->reservation_fee = RestaurantConfig::getReservationFee(
+                    $reservation->type->value, 
+                    $reservation->branch_id,
+                    $reservation->branch?->organization_id
+                );
+            }
+            
+            // Link customer phone
+            if ($reservation->phone && !$reservation->customer_phone_fk) {
+                $customer = Customer::findOrCreateByPhone($reservation->phone, [
+                    'name' => $reservation->name,
+                    'email' => $reservation->email
+                ]);
+                $reservation->customer_phone_fk = $customer->phone;
+            }
+        });
+        
+        static::updating(function ($reservation) {
+            // Update customer info if phone changed
+            if ($reservation->isDirty('phone') && $reservation->phone) {
+                $customer = Customer::findOrCreateByPhone($reservation->phone, [
+                    'name' => $reservation->name,
+                    'email' => $reservation->email
+                ]);
+                $reservation->customer_phone_fk = $customer->phone;
+            }
+        });
+    }
 
     public function branch()
     {
@@ -94,7 +143,7 @@ class Reservation extends Model
      */
     public function canBeCancelled(): bool
     {
-        return in_array($this->status, ['pending', 'confirmed', 'waitlisted']) &&
+        return in_array($this->status, ['pending', 'confirmed']) &&
                Carbon::parse($this->date . ' ' . $this->start_time->format('H:i'))->isFuture();
     }
 
@@ -116,11 +165,6 @@ class Reservation extends Model
     public function scopeCancelled($query)
     {
         return $query->where('status', 'cancelled');
-    }
-
-    public function scopeWaitlisted($query)
-    {
-        return $query->where('status', 'waitlisted');
     }
 
     public function scopeForDate($query, $date)
@@ -163,6 +207,51 @@ class Reservation extends Model
     public function payments()
     {
         return $this->morphMany(Payment::class, 'payable');
+    }
+
+    /**
+     * Relationship to customer via phone
+     */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_phone_fk', 'phone');
+    }
+
+    /**
+     * Check if reservation is cancelled late (subject to cancellation fee)
+     */
+    public function isCancelledLate(): bool
+    {
+        if ($this->status !== 'cancelled') {
+            return false;
+        }
+        
+        $reservationTime = Carbon::parse($this->date . ' ' . $this->start_time->format('H:i'));
+        $config = RestaurantConfig::getCancellationFeeRules($this->branch_id, $this->branch?->organization_id);
+        
+        return now()->diffInHours($reservationTime) < ($config['hours_before'] ?? 24);
+    }
+
+    /**
+     * Apply cancellation fee if applicable
+     */
+    public function chargeCancellationFee(): void
+    {
+        if ($this->isCancelledLate()) {
+            $fee = RestaurantConfig::calculateCancellationFee($this);
+            $this->update(['cancellation_fee' => $fee]);
+            
+            // Here you would integrate with payment service
+            // PaymentService::charge($this->customer, $fee);
+        }
+    }
+
+    /**
+     * Get reservation type label
+     */
+    public function getTypeLabel(): string
+    {
+        return $this->type ? $this->type->getLabel() : 'Unknown';
     }
 }
 

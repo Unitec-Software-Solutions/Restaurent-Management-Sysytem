@@ -105,7 +105,13 @@
                         @endif
                     </p>
                     <p class="text-sm text-gray-500 mt-1">
-                        Organization: {{ Auth::user()->organization->name }}
+                        @if(Auth::guard('admin')->user()->is_super_admin)
+                            Organization: All Organizations (Super Admin)
+                        @elseif(Auth::guard('admin')->user()->organization)
+                            Organization: {{ Auth::guard('admin')->user()->organization->name }}
+                        @else
+                            Organization: Not Assigned
+                        @endif
                     </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
@@ -207,11 +213,11 @@
                                 <!-- Actions -->
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex justify-end space-x-3">
-                                        {{-- <a
+                                        <a
                                     href="{{ route('admin.inventory.stock.edit', ['item_id' => $stock['item']->id, 'branch_id' => $stock['branch']->id]) }}"
                                     class="text-indigo-600 hover:text-indigo-800" title="Add Transaction">
                                     <i class="fas fa-plus-circle"></i>
-                                </a> --}}
+                                </a>
 
                                         <a href="{{ route('admin.inventory.stock.transactions.index', [
                                             'search' => $stock['item']->item_code,

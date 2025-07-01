@@ -23,12 +23,14 @@
                             <h4 class="section-title border-bottom pb-2 mb-3">Order Information</h4>
                             
                             @if(auth()->check() && auth()->user()->isAdmin())
+                            <!-- Hidden field for order type since this is already a takeaway order -->
+                            <input type="hidden" name="order_type" value="{{ $order->order_type }}">
+                            
                             <div class="form-group mb-3">
-                                <label class="form-label fw-bold">Order Type</label>
-                                <select name="order_type" class="form-select">
-                                    <option value="takeaway_walk_in_demand" {{ $order->order_type == 'takeaway_walk_in_demand' ? 'selected' : '' }}>In-House</option>
-                                    <option value="takeaway_in_call_scheduled" {{ $order->order_type == 'takeaway_in_call_scheduled' ? 'selected' : '' }}>In-Call</option>
-                                </select>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Order Type:</strong> {{ ucfirst(str_replace(['_', 'takeaway'], [' ', 'Takeaway'], $order->order_type)) }}
+                                </div>
                             </div>
                             @endif
 
@@ -160,42 +162,194 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initializing takeaway order edit page...');
+
+    // Initialize quantity controls
+    initializeQuantityControls();
+    
+    // Initialize item selection
+    initializeItemSelection();
 
     // Initialize enabled quantity inputs for checked items
     document.querySelectorAll('.item-check:checked').forEach(checkbox => {
-        checkbox.closest('.menu-item-card').querySelector('.quantity-input').disabled = false;
-    });
-
-    // Admin-specific time handling
-    if (isAdmin) {
-        const setDefaultTime = (minutesToAdd) => {
-            const time = new Date();
-            time.setMinutes(time.getMinutes() + minutesToAdd);
-            document.querySelector('input[name="order_time"]').value = time.toISOString().slice(0, 16);
-        };
-
-        // Handle order type changes
-        document.querySelector('select[name="order_type"]').addEventListener('change', function() {
-            setDefaultTime(this.value === 'takeaway_in_call_scheduled' ? 30 : 15);
-        });
-    }
-
-    // Item selection handling
-    document.querySelectorAll('.item-check').forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const quantityInput = this.closest('.menu-item-card').querySelector('.quantity-input');
-            quantityInput.disabled = !this.checked;
-            if (!this.checked) quantityInput.value = 1;
-        });
+        const itemId = checkbox.getAttribute('data-item-id');
+        const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+        const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+        const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+        
+        if (qtyInput) {
+            qtyInput.disabled = false;
+            const currentValue = parseInt(qtyInput.value) || 1;
+            const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+            
+            if (decreaseBtn) decreaseBtn.disabled = currentValue <= 1;
+            if (increaseBtn) increaseBtn.disabled = currentValue >= maxValue;
+        }
     });
 
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
         const phoneInput = document.querySelector('input[name="customer_phone"]');
-        if (!phoneInput.value.trim()) {
+        if (phoneInput && !phoneInput.value.trim()) {
             e.preventDefault();
             alert('Please enter a valid phone number');
             phoneInput.focus();
+            return false;
+        }
+        
+        // Check if at least one item is selected
+        const checkedItems = document.querySelectorAll('.item-check:checked');
+        if (checkedItems.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one item');
+            return false;
+        }
+    });
+});
+
+/**
+ * Initialize quantity controls for takeaway edit
+ */
+function initializeQuantityControls() {
+    console.log('🔢 Initializing quantity controls...');
+    
+    // Handle quantity increase buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qty-increase')) {
+            e.preventDefault();
+            const button = e.target.closest('.qty-increase');
+            const itemId = button.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            
+            if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                const currentValue = parseInt(qtyInput.value) || 1;
+                const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                
+                if (currentValue < maxValue) {
+                    qtyInput.value = currentValue + 1;
+                    
+                    // Update decrease button state
+                    const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+                    if (decreaseBtn) {
+                        decreaseBtn.disabled = qtyInput.value <= 1;
+                    }
+                    
+                    // Update increase button state
+                    button.disabled = qtyInput.value >= maxValue;
+                }
+            }
+        }
+    });
+    
+    // Handle quantity decrease buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qty-decrease')) {
+            e.preventDefault();
+            const button = e.target.closest('.qty-decrease');
+            const itemId = button.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            
+            if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                const currentValue = parseInt(qtyInput.value) || 1;
+                
+                if (currentValue > 1) {
+                    qtyInput.value = currentValue - 1;
+                    
+                    // Update decrease button state
+                    button.disabled = qtyInput.value <= 1;
+                    
+                    // Update increase button state
+                    const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+                    const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                    if (increaseBtn) {
+                        increaseBtn.disabled = qtyInput.value >= maxValue;
+                    }
+                }
+            }
+        }
+    });
+    
+    // Handle direct quantity input changes
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('item-qty')) {
+            const qtyInput = e.target;
+            const itemId = qtyInput.getAttribute('data-item-id');
+            let value = parseInt(qtyInput.value) || 1;
+            const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+            
+            // Validate and constrain value
+            if (value < 1) {
+                value = 1;
+                qtyInput.value = value;
+            } else if (value > maxValue) {
+                value = maxValue;
+                qtyInput.value = value;
+            }
+            
+            // Update button states
+            const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+            const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+            
+            if (decreaseBtn) {
+                decreaseBtn.disabled = value <= 1;
+            }
+            if (increaseBtn) {
+                increaseBtn.disabled = value >= maxValue;
+            }
+        }
+    });
+}
+
+/**
+ * Initialize item selection functionality
+ */
+function initializeItemSelection() {
+    console.log('☑️ Initializing item selection...');
+    
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('item-check')) {
+            const checkbox = e.target;
+            const itemId = checkbox.getAttribute('data-item-id');
+            const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+            const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+            const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+            
+            if (checkbox.checked) {
+                // Enable quantity controls
+                if (qtyInput) {
+                    qtyInput.disabled = false;
+                    qtyInput.name = `items[${itemId}][quantity]`;
+                    if (!qtyInput.value || qtyInput.value === '0') {
+                        qtyInput.value = 1;
+                    }
+                    
+                    // Set proper button states based on current value and max
+                    const currentValue = parseInt(qtyInput.value) || 1;
+                    const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                    
+                    if (decreaseBtn) {
+                        decreaseBtn.disabled = currentValue <= 1;
+                    }
+                    if (increaseBtn) {
+                        increaseBtn.disabled = currentValue >= maxValue;
+                    }
+                } else {
+                    if (increaseBtn) increaseBtn.disabled = false;
+                    if (decreaseBtn) decreaseBtn.disabled = true; // Always disable decrease when qty=1
+                }
+            } else {
+                // Disable quantity controls
+                if (qtyInput) {
+                    qtyInput.disabled = true;
+                    qtyInput.removeAttribute('name');
+                }
+                if (increaseBtn) increaseBtn.disabled = true;
+                if (decreaseBtn) decreaseBtn.disabled = true;
+            }
+        }
+    });
+}
+</script>
         }
     });
 

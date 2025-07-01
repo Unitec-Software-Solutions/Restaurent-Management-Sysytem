@@ -7,34 +7,36 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ItemMaster;
 use App\Models\MenuItem;
-use App\Models\MenuCategory;
 use App\Models\Reservation;
+use App\Models\Customer;
 use App\Models\Branch;
 use App\Models\Employee;
 use App\Services\InventoryService;
 use App\Services\ProductCatalogService;
 use App\Services\OrderService;
-use Illuminate\Validation\Rule;
+use App\Services\NotificationService;
+use App\Enums\OrderType;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderController extends Controller
 {
     protected $inventoryService;
     protected $catalogService;
     protected $orderService;
+    protected $notificationService;
 
     public function __construct(
         InventoryService $inventoryService,
         ProductCatalogService $catalogService,
-        OrderService $orderService
+        OrderService $orderService,
+        NotificationService $notificationService
     ) {
         $this->inventoryService = $inventoryService;
         $this->catalogService = $catalogService;
         $this->orderService = $orderService;
+        $this->notificationService = $notificationService;
     }
 
     // List all orders for a reservation (dine-in)
@@ -160,46 +162,66 @@ class OrderController extends Controller
         $data = $request->validate([
             'reservation_id' => 'required|exists:reservations,id',
             'items' => 'required|array',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'customer_name' => 'required_without:reservation_id|nullable|string|max:255',
-            'customer_phone' => 'required_without:reservation_id|nullable|string|max:20',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'required|string|max:20',
             'steward_id' => 'nullable|exists:employees,id',
+            'order_type' => 'nullable|string|in:' . implode(',', array_column(OrderType::cases(), 'value')),
         ]);
 
         return DB::transaction(function () use ($data) {
-            $reservation = null;
-            if (!empty($data['reservation_id'])) {
-                $reservation = Reservation::with('branch.organization')->find($data['reservation_id']);
-                
-                // Enhanced: Validate reservation and branch/organization status
-                if (!$reservation) {
-                    throw new \Exception('Reservation not found');
-                }
-                
-                if (!in_array($reservation->status, ['confirmed', 'checked_in'])) {
-                    throw new \Exception('Orders can only be created for confirmed or checked-in reservations');
-                }
-                
-                if (!$reservation->branch->is_active || !$reservation->branch->organization->is_active) {
-                    throw new \Exception('Cannot create orders for inactive branch or organization');
-                }
-                
-                // Check time constraints for reservation orders
-                if ($reservation->date < now()->toDateString()) {
-                    throw new \Exception('Cannot create orders for past reservations');
-                }
+            $reservation = Reservation::with('branch.organization', 'customer')->find($data['reservation_id']);
+            
+            // Enhanced: Validate reservation and branch/organization status
+            if (!$reservation) {
+                throw new \Exception('Reservation not found');
+            }
+            
+            if (!in_array($reservation->status, ['confirmed', 'checked_in'])) {
+                throw new \Exception('Orders can only be created for confirmed or checked-in reservations');
+            }
+            
+            if (!$reservation->branch->is_active || !$reservation->branch->organization->is_active) {
+                throw new \Exception('Cannot create orders for inactive branch or organization');
+            }
+            
+            // Check time constraints for reservation orders
+            if ($reservation->date < now()->toDateString()) {
+                throw new \Exception('Cannot create orders for past reservations');
+            }
+
+            // Find or create customer by phone
+            $customer = Customer::findByPhone($data['customer_phone']);
+            if (!$customer) {
+                $customer = Customer::createFromPhone($data['customer_phone'], [
+                    'name' => $data['customer_name'] ?? $reservation->name,
+                    'email' => $reservation->email,
+                ]);
+            }
+
+            // Determine order type - default to dine-in demand if not specified
+            $orderType = isset($data['order_type']) 
+                ? OrderType::from($data['order_type']) 
+                : OrderType::DINE_IN_WALK_IN_DEMAND;
+
+            // Validate that dine-in orders have reservation
+            if ($orderType->isDineIn() && !$reservation) {
+                throw new \Exception('Reservation required for dine-in orders');
             }
 
             // Stock validation - check all items before creating order
             $stockErrors = [];
             foreach ($data['items'] as $item) {
-                $inventoryItem = ItemMaster::find($item['item_id']);
-                if (!$inventoryItem) continue;
+                $menuItem = MenuItem::find($item['item_id']);
+                if (!$menuItem) continue;
                 
-                $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $reservation->branch_id);
-                if ($currentStock < $item['quantity']) {
-                    $stockErrors[] = "Insufficient stock for {$inventoryItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                // Only check stock for items linked to inventory (ItemMaster)
+                if ($menuItem->item_master_id) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $reservation->branch_id);
+                    if ($currentStock < $item['quantity']) {
+                        $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                    }
                 }
             }
 
@@ -207,48 +229,54 @@ class OrderController extends Controller
                 throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
             }
 
+            // Create order (model boot method will handle customer linking)
             $order = Order::create([
-                'reservation_id' => $reservation ? $reservation->id : null,
-                'branch_id'      => $reservation ? $reservation->branch_id : null,
-                'customer_name'  => $reservation ? $reservation->name : $data['customer_name'],
-                'customer_phone' => $reservation ? $reservation->phone : $data['customer_phone'],
-                'order_type'     => $reservation ? ($reservation->order_type ?? 'dine_in_online_scheduled') : ($data['order_type'] ?? 'dine_in_online_scheduled'),
-                'status'         => Order::STATUS_SUBMITTED,
-                'steward_id'     => $data['steward_id'] ?? null,
+                'reservation_id' => $reservation->id,
+                'branch_id' => $reservation->branch_id,
+                'organization_id' => $reservation->branch->organization_id,
+                'customer_name' => $customer->name,
+                'customer_phone' => $customer->phone,
+                'customer_phone_fk' => $customer->phone,
+                'order_type' => $orderType,
+                'status' => Order::STATUS_SUBMITTED,
+                'steward_id' => $data['steward_id'] ?? null,
+                'order_date' => now(),
             ]);
 
             $subtotal = 0;
             foreach ($data['items'] as $item) {
-                $inventoryItem = ItemMaster::find($item['item_id']);
-                if (!$inventoryItem) continue;
+                $menuItem = MenuItem::find($item['item_id']);
+                if (!$menuItem) continue;
                 
-                $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                $lineTotal = $menuItem->price * $item['quantity'];
                 $subtotal += $lineTotal;
 
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $item['item_id'],
-                    'inventory_item_id' => $item['item_id'],
+                    'item_name' => $menuItem->name,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $inventoryItem->selling_price,
-                    'total_price' => $lineTotal,
+                    'unit_price' => $menuItem->price,
+                    'subtotal' => $lineTotal,
                 ]);
 
-                // Deduct stock immediately upon order submission
-                \App\Models\ItemTransaction::create([
-                    'organization_id' => $reservation->organization_id ?? Auth::user()->organization_id,
-                    'branch_id' => $reservation->branch_id,
-                    'inventory_item_id' => $item['item_id'],
-                    'transaction_type' => 'sales_order',
-                    'quantity' => -$item['quantity'], // Negative for stock deduction
-                    'cost_price' => $inventoryItem->buying_price,
-                    'unit_price' => $inventoryItem->selling_price,
-                    'source_id' => $order->id,
-                    'source_type' => 'Order',
-                    'created_by_user_id' => Auth::id(),
-                    'notes' => "Stock deducted for Order #{$order->id}",
-                    'is_active' => true,
-                ]);
+                // Deduct stock immediately upon order submission (only for inventory items)
+                if ($menuItem->item_master_id && $menuItem->itemMaster) {
+                    \App\Models\ItemTransaction::create([
+                        'organization_id' => $reservation->organization_id ?? Auth::user()->organization_id,
+                        'branch_id' => $reservation->branch_id,
+                        'inventory_item_id' => $menuItem->item_master_id,
+                        'transaction_type' => 'sales_order',
+                        'quantity' => -$item['quantity'], // Negative for stock deduction
+                        'cost_price' => $menuItem->itemMaster->buying_price,
+                        'unit_price' => $menuItem->price,
+                        'source_id' => $order->id,
+                        'source_type' => 'Order',
+                        'created_by_user_id' => Auth::id(),
+                        'notes' => "Stock deducted for Order #{$order->id}",
+                        'is_active' => true,
+                    ]);
+                }
             }
 
             $tax = $subtotal * 0.13; // 13% VAT
@@ -267,6 +295,9 @@ class OrderController extends Controller
 
             // Generate KOT immediately
             $order->generateKOT();
+
+            // // Send order confirmation notification
+            // $this->notificationService->sendOrderConfirmation($order);
 
             return redirect()->route('orders.index', [
                 'phone' => $order->customer_phone,
@@ -297,7 +328,7 @@ class OrderController extends Controller
     {
         $data = $request->validate([
             'items' => 'required|array',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
@@ -344,19 +375,19 @@ class OrderController extends Controller
             
             // Create new order items and deduct stock
             foreach ($data['items'] as $item) {
-                $inventoryItem = ItemMaster::find($item['item_id']);
-                if (!$inventoryItem) continue;
+                $menuItem = MenuItem::find($item['item_id']);
+                if (!$menuItem) continue;
                 
-                $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                $lineTotal = $menuItem->price * $item['quantity'];
                 $subtotal += $lineTotal;
                 
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $item['item_id'],
-                    'inventory_item_id' => $item['item_id'],
+                    'item_name' => $menuItem->name,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $inventoryItem->selling_price,
-                    'total_price' => $lineTotal,
+                    'unit_price' => $menuItem->price,
+                    'subtotal' => $lineTotal,
                 ]);
 
                 // Deduct stock for new quantities
@@ -452,9 +483,11 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'special_instructions' => 'nullable|string|max:1000'
+            'special_instructions' => 'nullable|string|max:1000',
+            'order_type' => 'nullable|string|in:' . implode(',', array_column(OrderType::takeawayTypes(), 'value')),
+            'preferred_contact' => 'nullable|string|in:email,sms',
         ]);
 
         return DB::transaction(function () use ($data) {
@@ -465,24 +498,41 @@ class OrderController extends Controller
                     throw new \Exception('Selected branch is not available');
                 }
 
+                // Find or create customer by phone
+                $customer = Customer::findByPhone($data['customer_phone']);
+                if (!$customer) {
+                    $customer = Customer::createFromPhone($data['customer_phone'], [
+                        'name' => $data['customer_name'],
+                        'preferred_contact' => $data['preferred_contact'] ?? 'email',
+                    ]);
+                } else {
+                    // Update customer info if provided
+                    $customer->update([
+                        'name' => $data['customer_name'],
+                        'preferred_contact' => $data['preferred_contact'] ?? $customer->preferred_contact,
+                    ]);
+                }
+
+                // Determine order type - default to takeaway online scheduled
+                $orderType = isset($data['order_type']) 
+                    ? OrderType::from($data['order_type']) 
+                    : OrderType::TAKEAWAY_ONLINE_SCHEDULED;
+
                 // Stock validation - check all items before creating order
                 $stockErrors = [];
                 foreach ($data['items'] as $item) {
-                    $inventoryItem = ItemMaster::find($item['item_id']);
-                    if (!$inventoryItem || !$inventoryItem->is_active) {
-                        $itemName = $inventoryItem ? $inventoryItem->name : 'Unknown';
-                        $stockErrors[] = "Item {$itemName} is not available";
+                    $menuItem = MenuItem::find($item['item_id']);
+                    if (!$menuItem || !$menuItem->is_active) {
+                        $stockErrors[] = "Item {$item['item_id']} is not available";
                         continue;
                     }
                     
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $data['branch_id']);
-                    if ($currentStock < $item['quantity']) {
-                        $stockErrors[] = "Insufficient stock for {$inventoryItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
-                    }
-
-                    // Check for low stock warnings
-                    if ($currentStock <= ($inventoryItem->reorder_level ?? 10)) {
-                        Log::warning("Low stock alert for item {$inventoryItem->name} at branch {$branch->name}. Current: {$currentStock}");
+                    // Only check stock for items linked to inventory (ItemMaster)
+                    if ($menuItem->item_master_id && $menuItem->itemMaster) {
+                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $data['branch_id']);
+                        if ($currentStock < $item['quantity']) {
+                            $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                        }
                     }
                 }
 
@@ -490,60 +540,86 @@ class OrderController extends Controller
                     throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
                 }
 
-                // Create order
+                // Create takeaway order (model will handle customer linking)
                 $order = Order::create([
-                    'order_type' => 'takeaway_online_scheduled',
                     'branch_id' => $data['branch_id'],
-                    'order_time' => $data['order_time'],
-                    'customer_name' => $data['customer_name'],
-                    'customer_phone' => $data['customer_phone'],
+                    'organization_id' => $branch->organization_id,
+                    'order_time' => $data['order_time'] ?? now(),
+                    'customer_name' => $customer->name,
+                    'customer_phone' => $customer->phone,
+                    'customer_phone_fk' => $customer->phone,
+                    'order_type' => $orderType,
+                    'status' => Order::STATUS_SUBMITTED,
                     'special_instructions' => $data['special_instructions'],
-                    'status' => 'draft', // Start as draft
-                    'placed_by_admin' => false,
-                    'takeaway_id' => 'TK' . str_pad(Order::count() + 1, 6, '0', STR_PAD_LEFT)
+                    'takeaway_id' => 'TW' . now()->format('YmdHis') . rand(100, 999),
+                    'order_date' => now(),
                 ]);
 
                 $subtotal = 0;
                 foreach ($data['items'] as $item) {
-                    $inventoryItem = ItemMaster::find($item['item_id']);
-                    if (!$inventoryItem) continue;
+                    $menuItem = MenuItem::find($item['item_id']);
+                    if (!$menuItem) continue;
                     
-                    $lineTotal = $inventoryItem->selling_price * $item['quantity'];
+                    $lineTotal = $menuItem->price * $item['quantity'];
                     $subtotal += $lineTotal;
 
                     OrderItem::create([
                         'order_id' => $order->id,
                         'menu_item_id' => $item['item_id'],
-                        'inventory_item_id' => $item['item_id'],
+                        'item_name' => $menuItem->name,
                         'quantity' => $item['quantity'],
-                        'unit_price' => $inventoryItem->selling_price,
-                        'total_price' => $lineTotal
+                        'unit_price' => $menuItem->price,
+                        'subtotal' => $lineTotal,
                     ]);
 
-                    // Reserve stock (don't deduct yet until submission)
-                    if (!$this->inventoryService->reserveStockForOrder($order->id, $item['item_id'], $data['branch_id'], $item['quantity'])) {
-                        throw new \Exception("Failed to reserve stock for {$inventoryItem->name}");
+                    // Deduct stock for items linked to inventory (ItemMaster)
+                    if ($menuItem->item_master_id && $menuItem->itemMaster) {
+                        \App\Models\ItemTransaction::create([
+                            'organization_id' => $branch->organization_id,
+                            'branch_id' => $data['branch_id'],
+                            'inventory_item_id' => $menuItem->item_master_id,
+                            'transaction_type' => 'takeaway_order',
+                            'quantity' => -$item['quantity'],
+                            'cost_price' => $menuItem->itemMaster->buying_price,
+                            'unit_price' => $menuItem->price,
+                            'source_id' => $order->id,
+                            'source_type' => 'Order',
+                            'created_by_user_id' => Auth::id(),
+                            'notes' => "Stock deducted for Takeaway Order #{$order->takeaway_id}",
+                            'is_active' => true,
+                        ]);
                     }
                 }
 
                 // Calculate totals
-                $tax = $subtotal * 0.10;
-                $serviceCharge = $subtotal * 0.05; // 5% service charge for takeaway
-                $total = $subtotal + $tax + $serviceCharge;
+                $tax = $subtotal * 0.13; // 13% VAT
+                $serviceCharge = 0; // Usually no service charge for takeaway
+                $discount = 0;
+                $total = $subtotal + $tax + $serviceCharge - $discount;
 
                 $order->update([
                     'subtotal' => $subtotal,
                     'tax' => $tax,
                     'service_charge' => $serviceCharge,
+                    'discount' => $discount,
                     'total' => $total,
-                    'stock_reserved' => true
+                    'stock_deducted' => true,
                 ]);
 
-                return redirect()->route('orders.takeaway.summary', ['order' => $order->id])
-                    ->with('success', 'Takeaway order created! ID: ' . $order->takeaway_id);
-                    
+                // Generate KOT for kitchen
+                $order->generateKOT();
+
+                // // Send order confirmation notification
+                // $this->notificationService->sendOrderConfirmation($order);
+
+                return redirect()->route('orders.takeaway.show', $order)
+                    ->with('success', 'Takeaway order placed successfully! You will be notified when ready.');
+
             } catch (\Exception $e) {
-                Log::error('Takeaway order creation failed: ' . $e->getMessage());
+                Log::error('Takeaway order creation failed', [
+                    'error' => $e->getMessage(),
+                    'data' => $data
+                ]);
                 throw $e;
             }
         });
@@ -551,9 +627,13 @@ class OrderController extends Controller
 
     public function summary(Order $order)
     {
-        return view('orders.takeaway.summary', [
-            'order' => $order->load('items.menuItem'),
-            'editable' => $order->status === 'draft'
+        $order->load('items.menuItem', 'reservation', 'branch');
+        
+        return view('orders.summary', [
+            'order' => $order,
+            'editable' => $order->status === 'draft',
+            'reservation' => $order->reservation, // For reservation-linked orders
+            'orderType' => $order->order_type ?? 'takeaway'
         ]);
     }
 
@@ -667,7 +747,7 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
@@ -675,16 +755,18 @@ class OrderController extends Controller
         $order->items()->delete();
         $subtotal = 0;
         foreach ($data['items'] as $item) {
-            $menuItem = ItemMaster::find($item['item_id']);
-            $lineTotal = $menuItem->selling_price * $item['quantity'];
+            $menuItem = MenuItem::find($item['item_id']);
+            if (!$menuItem) continue;
+            
+            $lineTotal = $menuItem->price * $item['quantity'];
             $subtotal += $lineTotal;
             OrderItem::create([
                 'order_id' => $order->id,
                 'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'],
+                'item_name' => $menuItem->name,
                 'quantity' => $item['quantity'],
-                'unit_price' => $menuItem->selling_price,
-                'total_price' => $lineTotal,
+                'unit_price' => $menuItem->price,
+                'subtotal' => $lineTotal,
             ]);
         }
         $tax = $subtotal * 0.10;
@@ -697,7 +779,7 @@ class OrderController extends Controller
             'tax' => $tax,
             'total' => $subtotal + $tax,
         ]);
-        return redirect()->route('orders.takeaway.summary', $order->id)
+        return redirect()->route('orders.summary', $order->id)
             ->with('success', 'Takeaway order updated successfully!');
     }
 
