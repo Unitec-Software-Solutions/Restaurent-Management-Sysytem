@@ -1,9 +1,10 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
+
 
 class GrnController extends Controller
 {
@@ -25,7 +26,7 @@ class GrnController extends Controller
         try {
             $model = $this->getModel()::findOrFail($id);
             $model->update($request->validated());
-            
+
             return redirect()->back()->with('success', 'Updated successfully');
         } catch (\Exception $e) {
             return back()->with('error', 'Update failed: ' . $e->getMessage());
