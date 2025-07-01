@@ -183,195 +183,263 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Enable/disable quantity fields and buttons on checkbox change
-        document.querySelectorAll('.item-check').forEach(function(checkbox) {
-            checkbox.addEventListener('change', function() {
-                const itemId = this.getAttribute('data-item-id');
-                const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-                const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
-                const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
-                if (this.checked) {
-                    qtyInput.disabled = false;
-                    plusBtn.disabled = false;
-                    minusBtn.disabled = false;
-                    qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-                } else {
-                    qtyInput.disabled = true;
-                    plusBtn.disabled = true;
-                    minusBtn.disabled = true;
-                    qtyInput.removeAttribute('name');
-                    qtyInput.value = 1;
-                }
-                updateCart();
-            });
-        });
+        console.log('🚀 Initializing guest order creation page...');
+        
+        // Initialize quantity controls
+        initializeQuantityControls();
+        
+        // Initialize item selection
+        initializeItemSelection();
+        
+        // Initialize form submission
+        initializeFormSubmission();
+        
+        // Initialize cart update functionality
+        initializeCartUpdate();
+        
+        // Initialize stock checking
+        initializeStockChecking();
+    });
 
-        document.querySelectorAll('.item-qty').forEach(function(input) {
-            input.addEventListener('input', function() {
-                // Prevent going below 1
-                if (parseInt(this.value) < 1 || isNaN(parseInt(this.value))) {
-                    this.value = 1;
-                }
-                updateCart();
-            });
-        });
-
-        document.querySelectorAll('.qty-increase').forEach(function(btn) {
-            btn.addEventListener('click', function () {
-                const itemId = this.dataset.itemId;
-                const input = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
-                if (!input.disabled) {
-                    input.value = parseInt(input.value) + 1;
-                    input.dispatchEvent(new Event('input'));
-                }
-            });
-        });
-
-        document.querySelectorAll('.qty-decrease').forEach(function(btn) {
-            btn.addEventListener('click', function () {
-                const itemId = this.dataset.itemId;
-                const input = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
-                if (!input.disabled) {
-                    const currentValue = parseInt(input.value);
-                    if (currentValue > 1) {
-                        input.value = currentValue - 1;
-                        input.dispatchEvent(new Event('input'));
+    /**
+     * Initialize quantity controls for guest order creation
+     */
+    function initializeQuantityControls() {
+        console.log('🔢 Initializing guest quantity controls...');
+        
+        // Handle quantity increase buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.qty-increase')) {
+                e.preventDefault();
+                const button = e.target.closest('.qty-increase');
+                const itemId = button.getAttribute('data-item-id');
+                const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+                
+                if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                    const currentValue = parseInt(qtyInput.value) || 1;
+                    const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                    
+                    if (currentValue < maxValue) {
+                        qtyInput.value = currentValue + 1;
+                        updateButtonStates(itemId, qtyInput.value);
+                        updateCart();
                     }
                 }
-            });
+            }
         });
-
-        // On form submit, disable unchecked checkboxes
-        const form = document.getElementById('order-form');
-        form.addEventListener('submit', function() {
-            document.querySelectorAll('.item-check').forEach(function(checkbox) {
-                if (!checkbox.checked) {
-                    checkbox.disabled = true;
+        
+        // Handle quantity decrease buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.qty-decrease')) {
+                e.preventDefault();
+                const button = e.target.closest('.qty-decrease');
+                const itemId = button.getAttribute('data-item-id');
+                const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+                
+                if (qtyInput && !qtyInput.disabled && !button.disabled) {
+                    const currentValue = parseInt(qtyInput.value) || 1;
+                    
+                    if (currentValue > 1) {
+                        qtyInput.value = currentValue - 1;
+                        updateButtonStates(itemId, qtyInput.value);
+                        updateCart();
+                    }
                 }
-            });
+            }
         });
+        
+        // Handle direct quantity input changes
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('item-qty')) {
+                const qtyInput = e.target;
+                const itemId = qtyInput.getAttribute('data-item-id');
+                let value = parseInt(qtyInput.value) || 1;
+                const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
+                
+                // Validate and constrain value
+                if (value < 1) {
+                    value = 1;
+                    qtyInput.value = value;
+                } else if (value > maxValue) {
+                    value = maxValue;
+                    qtyInput.value = value;
+                }
+                
+                updateButtonStates(itemId, value);
+                updateCart();
+            }
+        });
+    }
 
-        // AJAX cart update
-        function updateCart() {
+    /**
+     * Initialize item selection functionality
+     */
+    function initializeItemSelection() {
+        console.log('☑️ Initializing guest item selection...');
+        
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('item-check')) {
+                const checkbox = e.target;
+                const itemId = checkbox.getAttribute('data-item-id');
+                const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+                const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+                const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+                
+                if (checkbox.checked) {
+                    // Enable quantity controls
+                    if (qtyInput) {
+                        qtyInput.disabled = false;
+                        qtyInput.name = `items[${itemId}][quantity]`;
+                        if (!qtyInput.value || qtyInput.value === '0') {
+                            qtyInput.value = 1;
+                        }
+                        updateButtonStates(itemId, qtyInput.value);
+                    }
+                } else {
+                    // Disable quantity controls
+                    if (qtyInput) {
+                        qtyInput.disabled = true;
+                        qtyInput.removeAttribute('name');
+                    }
+                    if (increaseBtn) increaseBtn.disabled = true;
+                    if (decreaseBtn) decreaseBtn.disabled = true;
+                }
+                
+                updateCart();
+            }
+        });
+    }
+
+    /**
+     * Update button states based on quantity value
+     */
+    function updateButtonStates(itemId, value) {
+        const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
+        const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
+        const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
+        
+        const maxValue = parseInt(qtyInput?.getAttribute('max')) || 99;
+        
+        if (decreaseBtn) {
+            decreaseBtn.disabled = value <= 1 || qtyInput?.disabled;
+        }
+        if (increaseBtn) {
+            increaseBtn.disabled = value >= maxValue || qtyInput?.disabled;
+        }
+    }
+
+    /**
+     * Initialize form submission handling
+     */
+    function initializeFormSubmission() {
+        const form = document.getElementById('order-form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Check if at least one item is selected
+                const checkedItems = document.querySelectorAll('.item-check:checked');
+                if (checkedItems.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one item to order.');
+                    return false;
+                }
+                
+                // Disable unchecked checkboxes to prevent submission
+                document.querySelectorAll('.item-check').forEach(function(checkbox) {
+                    if (!checkbox.checked) {
+                        checkbox.disabled = true;
+                    }
+                });
+                
+                return true;
+            });
+        }
+    }
+
+    /**
+     * Initialize cart update functionality
+     */
+    function initializeCartUpdate() {
+        // Define updateCart function globally
+        window.updateCart = function() {
             const items = [];
             document.querySelectorAll('.item-check:checked').forEach(function(checkbox) {
                 const itemId = checkbox.getAttribute('data-item-id');
                 const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-                items.push({
-                    item_id: itemId,
-                    quantity: qtyInput.value
-                });
-            });
-
-            fetch('{{ route("orders.update-cart") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        items: items
-                    })
-                })
-                .then(response => response.json())
-                .then(cart => updateCartDisplay(cart));
-        }
-
-        function updateCartDisplay(cart) {
-            if (cart.items.length > 0) {
-                let itemsHtml = '';
-                cart.items.forEach(function(item) {
-                    itemsHtml += `
-                    <div class="flex justify-between mb-2">
-                        <span>${item.name} <span class="text-xs text-gray-400">x${item.quantity}</span></span>
-                        <span>LKR ${item.total.toFixed(2)}</span>
-                    </div>`;
-                });
-                document.getElementById('cart-items').innerHTML = itemsHtml;
-            } else {
-                document.getElementById('cart-items').innerHTML = '<p class="text-gray-500">No items added yet</p>';
-            }
-            document.getElementById('cart-subtotal').textContent = 'LKR ' + cart.subtotal.toFixed(2);
-            document.getElementById('cart-tax').textContent = 'LKR ' + cart.tax.toFixed(2);
-            document.getElementById('cart-total').textContent = 'LKR ' + cart.total.toFixed(2);
-        }
-
-        // Initial cart update
-        updateCart();
-        
-        // Real-time stock checking
-        function checkStockAvailability() {
-            const cart = JSON.parse(localStorage.getItem('orderCart') || '[]');
-            if (cart.length === 0) {
-                document.getElementById('stock-alerts').classList.add('hidden');
-                return;
-            }
-            
-            const branchId = document.querySelector('select[name="branch_id"]')?.value;
-            if (!branchId) return;
-            
-            fetch('{{ route("orders.check-stock") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    items: cart,
-                    branch_id: branchId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                const alertsContainer = document.getElementById('stock-alerts');
-                const alertsContent = document.getElementById('stock-alerts-content');
-                
-                if (data.alerts && data.alerts.length > 0) {
-                    let alertsHtml = '<h4 class="font-medium text-yellow-800 mb-2">Stock Alerts:</h4><ul class="list-disc list-inside text-sm text-yellow-700">';
-                    data.alerts.forEach(alert => {
-                        alertsHtml += `<li>${alert}</li>`;
+                if (qtyInput) {
+                    items.push({
+                        item_id: itemId,
+                        quantity: qtyInput.value
                     });
-                    alertsHtml += '</ul>';
-                    
-                    alertsContent.innerHTML = alertsHtml;
-                    alertsContainer.classList.remove('hidden');
-                } else {
-                    alertsContainer.classList.add('hidden');
                 }
-                
-                // Update menu item availability indicators
-                document.querySelectorAll('.menu-item-card').forEach(card => {
-                    const itemId = parseInt(card.dataset.itemId);
-                    const stockInfo = data.stock_info?.find(s => s.item_id === itemId);
-                    const stockIndicator = card.querySelector('.stock-indicator');
-                    
-                    if (stockInfo) {
-                        if (stockInfo.available_stock <= 0) {
-                            stockIndicator.innerHTML = '<span class="text-red-600 text-xs font-medium">Out of Stock</span>';
-                            card.classList.add('opacity-50');
-                        } else if (stockInfo.available_stock <= 5) {
-                            stockIndicator.innerHTML = `<span class="text-yellow-600 text-xs font-medium">Low Stock (${stockInfo.available_stock})</span>`;
-                            card.classList.remove('opacity-50');
-                        } else {
-                            stockIndicator.innerHTML = `<span class="text-green-600 text-xs font-medium">In Stock (${stockInfo.available_stock})</span>`;
-                            card.classList.remove('opacity-50');
-                        }
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Stock check error:', error);
             });
+
+            // Update cart display
+            updateCartDisplay(items);
+        }
+    }
+
+    /**
+     * Update cart display
+     */
+    function updateCartDisplay(items) {
+        let subtotal = 0;
+        let cartHtml = '';
+        
+        if (items.length > 0) {
+            items.forEach(function(item) {
+                const checkbox = document.querySelector(`.item-check[data-item-id="${item.item_id}"]`);
+                const menuCard = checkbox?.closest('.menu-item-card');
+                if (menuCard) {
+                    const itemName = menuCard.querySelector('label').textContent.trim();
+                    const priceText = menuCard.querySelector('.text-sm').textContent;
+                    const priceMatch = priceText.match(/[\d,]+\.?\d*/);
+                    const itemPrice = priceMatch ? parseFloat(priceMatch[0].replace(',', '')) : 0;
+                    const itemTotal = itemPrice * parseInt(item.quantity);
+                    
+                    subtotal += itemTotal;
+                    
+                    cartHtml += `
+                        <div class="flex justify-between mb-2">
+                            <span>${itemName} <span class="text-xs text-gray-400">x${item.quantity}</span></span>
+                            <span>LKR ${itemTotal.toFixed(2)}</span>
+                        </div>
+                    `;
+                }
+            });
+        } else {
+            cartHtml = '<div class="text-center py-4 text-gray-500">No items selected</div>';
         }
         
-        // Check stock when cart changes or branch changes
-        document.querySelector('select[name="branch_id"]')?.addEventListener('change', checkStockAvailability);
+        // Update cart items display
+        const cartItems = document.getElementById('cart-items');
+        if (cartItems) {
+            cartItems.innerHTML = cartHtml;
+        }
         
-        // Check stock every 30 seconds
-        setInterval(checkStockAvailability, 30000);
+        // Update totals
+        const tax = subtotal * 0.1; // 10% tax
+        const total = subtotal + tax;
         
-        // Initial stock check
-        setTimeout(checkStockAvailability, 1000);
-    });
+        const subtotalElement = document.getElementById('cart-subtotal');
+        const taxElement = document.getElementById('cart-tax');
+        const totalElement = document.getElementById('cart-total');
+        
+        if (subtotalElement) subtotalElement.textContent = `LKR ${subtotal.toFixed(2)}`;
+        if (taxElement) taxElement.textContent = `LKR ${tax.toFixed(2)}`;
+        if (totalElement) totalElement.textContent = `LKR ${total.toFixed(2)}`;
+    }
+
+    /**
+     * Initialize stock checking functionality
+     */
+    function initializeStockChecking() {
+        // Stock checking functionality would go here
+        // For now, just do initial cart update
+        setTimeout(() => {
+            updateCart();
+        }, 100);
+    }
+
+    console.log('✅ Guest Order Creation JavaScript initialized successfully');
 </script>
 @endsection

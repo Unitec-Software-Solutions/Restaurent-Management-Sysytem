@@ -2,6 +2,66 @@
 
 @section('title', 'Your Cart')
 
+@push('styles')
+<style>
+.cart-item-container {
+    transition: all 0.3s ease-in-out;
+}
+
+.cart-item-container:hover {
+    background-color: #f9fafb;
+    transform: translateX(4px);
+}
+
+.quantity-control-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.quantity-control-btn:not(:disabled):hover {
+    transform: scale(1.1);
+}
+
+.quantity-control-btn:active {
+    transform: scale(0.9);
+}
+
+.checkout-btn {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    transition: all 0.3s ease-in-out;
+}
+
+.checkout-btn:hover {
+    background: linear-gradient(135deg, #3730a3 0%, #4f46e5 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.notification-toast {
+    transform: translateX(100%);
+}
+
+.loading-shimmer {
+    background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.order-summary-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e2e8f0;
+}
+
+.modal-backdrop {
+    backdrop-filter: blur(4px);
+}
+</style>
+@endpush
+
 @section('content')
 <div class="min-h-screen bg-gray-50">
     <!-- Header -->
@@ -30,7 +90,7 @@
                 <!-- Cart Items -->
                 <div class="lg:col-span-2 space-y-4">
                     @foreach($cart as $index => $item)
-                        <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+                        <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200 cart-item-container">
                             <div class="flex items-center space-x-4">
                                 <!-- Item Image Placeholder -->
                                 <div class="bg-gray-100 rounded-lg w-20 h-20 flex items-center justify-center flex-shrink-0">
@@ -55,15 +115,15 @@
                                 <!-- Quantity Controls -->
                                 <div class="flex items-center space-x-3">
                                     <button onclick="updateQuantity({{ $item['menu_item_id'] }}, {{ $item['quantity'] - 1 }})"
-                                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center"
+                                            class="quantity-control-btn bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
                                         <i class="fas fa-minus text-xs"></i>
                                     </button>
                                     
-                                    <span class="font-semibold text-gray-900 min-w-[30px] text-center">{{ $item['quantity'] }}</span>
+                                    <span class="font-semibold text-gray-900 min-w-[30px] text-center select-none">{{ $item['quantity'] }}</span>
                                     
                                     <button onclick="updateQuantity({{ $item['menu_item_id'] }}, {{ $item['quantity'] + 1 }})"
-                                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center"
+                                            class="quantity-control-btn bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             {{ $item['quantity'] >= 10 ? 'disabled' : '' }}>
                                         <i class="fas fa-plus text-xs"></i>
                                     </button>
@@ -73,7 +133,7 @@
                                 <div class="text-right">
                                     <div class="text-lg font-bold text-gray-900">${{ number_format($item['total'], 2) }}</div>
                                     <button onclick="removeItem({{ $item['menu_item_id'] }})"
-                                            class="text-red-600 hover:text-red-700 text-sm mt-1">
+                                            class="text-red-600 hover:text-red-700 text-sm mt-1 transition-colors">
                                         <i class="fas fa-trash mr-1"></i>Remove
                                     </button>
                                 </div>
@@ -84,7 +144,7 @@
 
                 <!-- Order Summary -->
                 <div class="lg:col-span-1">
-                    <div class="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+                    <div class="order-summary-card rounded-lg shadow-sm p-6 sticky top-8">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
                         
                         <div class="space-y-3 mb-4">
@@ -109,13 +169,13 @@
                         <!-- Actions -->
                         <div class="space-y-3">
                             <button onclick="proceedToCheckout()" 
-                                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-medium">
+                                    class="checkout-btn w-full text-white px-4 py-3 rounded-lg font-medium">
                                 <i class="fas fa-credit-card mr-2"></i>
                                 Proceed to Checkout
                             </button>
                             
                             <button onclick="clearCart()" 
-                                    class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">
+                                    class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors">
                                 <i class="fas fa-trash mr-2"></i>
                                 Clear Cart
                             </button>
@@ -156,12 +216,12 @@
 </div>
 
 <!-- Checkout Modal -->
-<div id="checkoutModal" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+<div id="checkoutModal" class="fixed inset-0 z-50 bg-black/50 modal-backdrop hidden flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto transform transition-all duration-300">
         <div class="p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-semibold text-gray-900">Order Details</h3>
-                <button onclick="closeCheckoutModal()" class="text-gray-500 hover:text-gray-700">
+                <button onclick="closeCheckoutModal()" class="text-gray-500 hover:text-gray-700 transition-colors">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -265,11 +325,41 @@
 
 @push('scripts')
 <script>
+let isUpdatingCart = false;
+
+/**
+ * Update quantity with improved validation and feedback
+ */
 function updateQuantity(itemId, newQuantity) {
+    if (isUpdatingCart) return;
+    
     if (newQuantity < 1) {
         removeItem(itemId);
         return;
     }
+    
+    if (newQuantity > 10) {
+        showNotification('Maximum quantity is 10', 'warning');
+        return;
+    }
+    
+    isUpdatingCart = true;
+    
+    // Find and disable the relevant buttons
+    const buttons = document.querySelectorAll(`button[onclick*="${itemId}"]`);
+    const originalStates = [];
+    
+    buttons.forEach(btn => {
+        originalStates.push({
+            element: btn,
+            disabled: btn.disabled,
+            innerHTML: btn.innerHTML
+        });
+        btn.disabled = true;
+        if (btn.innerHTML.includes('fa-plus') || btn.innerHTML.includes('fa-minus')) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>';
+        }
+    });
     
     fetch('{{ route("guest.cart.update") }}', {
         method: 'POST',
@@ -282,73 +372,228 @@ function updateQuantity(itemId, newQuantity) {
             quantity: newQuantity
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            location.reload();
+            showNotification('Cart updated successfully!', 'success');
+            // Reload page to reflect changes
+            setTimeout(() => {
+                location.reload();
+            }, 500);
         } else {
-            alert(data.message || 'Failed to update cart');
+            throw new Error(data.message || 'Failed to update cart');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to update cart');
+        console.error('Error updating cart:', error);
+        showNotification(error.message || 'Failed to update cart', 'error');
+        
+        // Restore button states
+        originalStates.forEach(state => {
+            state.element.disabled = state.disabled;
+            state.element.innerHTML = state.innerHTML;
+        });
+    })
+    .finally(() => {
+        isUpdatingCart = false;
     });
 }
 
+/**
+ * Remove item with confirmation and improved feedback
+ */
 function removeItem(itemId) {
+    if (isUpdatingCart) return;
+    
     if (confirm('Remove this item from your cart?')) {
+        isUpdatingCart = true;
+        
+        // Find the item container and show loading state
+        const itemContainer = document.querySelector(`button[onclick="removeItem(${itemId})"]`)?.closest('.bg-white');
+        if (itemContainer) {
+            itemContainer.style.opacity = '0.5';
+            itemContainer.style.pointerEvents = 'none';
+        }
+        
         fetch('{{ route("guest.cart.remove", ["itemId" => "ITEM_ID"]) }}'.replace('ITEM_ID', itemId), {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                location.reload();
+                showNotification('Item removed from cart', 'success');
+                // Reload page to reflect changes
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
             } else {
-                alert(data.message || 'Failed to remove item');
+                throw new Error(data.message || 'Failed to remove item');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to remove item');
+            console.error('Error removing item:', error);
+            showNotification(error.message || 'Failed to remove item', 'error');
+            
+            // Restore item container state
+            if (itemContainer) {
+                itemContainer.style.opacity = '1';
+                itemContainer.style.pointerEvents = 'auto';
+            }
+        })
+        .finally(() => {
+            isUpdatingCart = false;
         });
     }
 }
 
+/**
+ * Clear entire cart with confirmation
+ */
 function clearCart() {
+    if (isUpdatingCart) return;
+    
     if (confirm('Are you sure you want to clear your entire cart?')) {
+        isUpdatingCart = true;
+        
+        // Show loading state on clear button
+        const clearButton = document.querySelector('button[onclick="clearCart()"]');
+        const originalText = clearButton?.innerHTML;
+        if (clearButton) {
+            clearButton.disabled = true;
+            clearButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Clearing...';
+        }
+        
         fetch('{{ route("guest.cart.clear") }}', {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                location.reload();
+                showNotification('Cart cleared successfully!', 'success');
+                // Reload page to reflect changes
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
             } else {
-                alert(data.message || 'Failed to clear cart');
+                throw new Error(data.message || 'Failed to clear cart');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to clear cart');
+            console.error('Error clearing cart:', error);
+            showNotification(error.message || 'Failed to clear cart', 'error');
+            
+            // Restore button state
+            if (clearButton) {
+                clearButton.disabled = false;
+                clearButton.innerHTML = originalText;
+            }
+        })
+        .finally(() => {
+            isUpdatingCart = false;
         });
     }
 }
 
+/**
+ * Proceed to checkout with validation
+ */
 function proceedToCheckout() {
-    document.getElementById('checkoutModal').classList.remove('hidden');
+    const checkoutModal = document.getElementById('checkoutModal');
+    if (checkoutModal) {
+        checkoutModal.classList.remove('hidden');
+        
+        // Focus on first input
+        const firstInput = checkoutModal.querySelector('input[type="text"]');
+        if (firstInput) {
+            setTimeout(() => firstInput.focus(), 100);
+        }
+    }
 }
 
+/**
+ * Close checkout modal
+ */
 function closeCheckoutModal() {
-    document.getElementById('checkoutModal').classList.add('hidden');
+    const checkoutModal = document.getElementById('checkoutModal');
+    if (checkoutModal) {
+        checkoutModal.classList.add('hidden');
+    }
 }
+
+/**
+ * Show enhanced notifications
+ */
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    document.querySelectorAll('.notification-toast').forEach(n => n.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification-toast fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' : 
+        type === 'error' ? 'bg-red-500 text-white' : 
+        type === 'warning' ? 'bg-yellow-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    
+    const icon = type === 'success' ? 'check-circle' : 
+                type === 'error' ? 'exclamation-triangle' : 
+                type === 'warning' ? 'exclamation-circle' : 'info-circle';
+    
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${icon} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Add with animation
+    notification.style.transform = 'translateX(100%)';
+    document.body.appendChild(notification);
+    
+    requestAnimationFrame(() => {
+        notification.style.transform = 'translateX(0)';
+    });
+    
+    // Auto remove with animation
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🛒 Guest cart view initialized');
+    
+    // Prevent double-clicks on action buttons
+    document.addEventListener('click', function(e) {
+        if (isUpdatingCart && e.target.closest('button')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
 
 // Handle order type change
 document.querySelectorAll('input[name="order_type"]').forEach(radio => {

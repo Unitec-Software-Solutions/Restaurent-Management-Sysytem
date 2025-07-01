@@ -2,6 +2,61 @@
 
 @section('title', 'Special Menu - ' . $branch->name)
 
+@push('styles')
+<style>
+.special-item-card {
+    transition: all 0.3s ease-in-out;
+    position: relative;
+}
+
+.special-item-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.special-badge {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.quantity-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.quantity-btn:not(:disabled):hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.special-add-btn {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    transition: all 0.3s ease-in-out;
+}
+
+.special-add-btn:hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.special-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+
+.notification-toast {
+    transform: translateX(100%);
+}
+
+.scale-110 {
+    transform: scale(1.1);
+}
+</style>
+@endpush
+
 @section('content')
 <div class="min-h-screen bg-gray-50">
     <!-- Header -->
@@ -29,7 +84,7 @@
         @forelse($specialMenus as $menu)
             <div class="mb-12">
                 <!-- Menu Header -->
-                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg p-8 mb-8 text-white">
+                <div class="special-header rounded-lg shadow-lg p-8 mb-8 text-white">
                     <div class="flex items-center justify-between">
                         <div>
                             <h2 class="text-3xl font-bold mb-2">{{ $menu->name }}</h2>
@@ -39,7 +94,7 @@
                         </div>
                         
                         <div class="text-right">
-                            <div class="bg-white/20 rounded-lg p-4">
+                            <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4">
                                 <div class="text-sm text-indigo-100">Available until</div>
                                 <div class="text-lg font-semibold">
                                     {{ \Carbon\Carbon::parse($menu->end_date)->format('M j, Y') }}
@@ -65,13 +120,13 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             @foreach($items as $item)
-                                <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border-2 border-yellow-200">
+                                <div class="special-item-card bg-white rounded-lg shadow-sm overflow-hidden border-2 border-yellow-200">
                                     <!-- Special Badge -->
                                     <div class="relative">
                                         <div class="bg-yellow-100 h-48 flex items-center justify-center">
                                             <i class="fas fa-star text-yellow-500 text-4xl"></i>
                                         </div>
-                                        <div class="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                        <div class="special-badge absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold">
                                             SPECIAL
                                         </div>
                                     </div>
@@ -128,19 +183,19 @@
                                         <div class="border-t border-gray-200 pt-4">
                                             <div class="flex items-center justify-between">
                                                 <div class="flex items-center gap-3">
-                                                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center"
+                                                    <button class="quantity-btn bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center"
                                                             onclick="changeQuantity({{ $item->id }}, -1)">
                                                         <i class="fas fa-minus text-xs"></i>
                                                     </button>
                                                     <span id="qty-{{ $item->id }}" class="font-semibold text-gray-900 min-w-[20px] text-center">1</span>
-                                                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center"
+                                                    <button class="quantity-btn bg-gray-200 hover:bg-gray-300 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center"
                                                             onclick="changeQuantity({{ $item->id }}, 1)">
                                                         <i class="fas fa-plus text-xs"></i>
                                                     </button>
                                                 </div>
                                                 
                                                 <button onclick="addToCart({{ $item->id }})" 
-                                                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg flex items-center font-medium"
+                                                        class="special-add-btn text-white px-4 py-2 rounded-lg flex items-center font-medium"
                                                         {{ !$item->is_available ? 'disabled' : '' }}>
                                                     <i class="fas fa-star mr-2"></i>
                                                     {{ $item->is_available ? 'Add Special' : 'Unavailable' }}
@@ -185,24 +240,98 @@
 @push('scripts')
 <script>
 let quantities = {};
+let isUpdatingQuantity = false;
 
-// Initialize quantities
+// Initialize quantities and button states
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🌟 Initializing special menu view...');
+    
     document.querySelectorAll('[id^="qty-"]').forEach(function(element) {
         const itemId = element.id.replace('qty-', '');
         quantities[itemId] = 1;
+        
+        // Initialize button states for each item
+        const itemContainer = element.closest('.bg-white');
+        const decreaseBtn = itemContainer?.querySelector('button[onclick*="changeQuantity(' + itemId + ', -1)"]');
+        const increaseBtn = itemContainer?.querySelector('button[onclick*="changeQuantity(' + itemId + ', 1)"]');
+        
+        updateButtonStates(itemId, 1, decreaseBtn, increaseBtn);
     });
 });
 
-function changeQuantity(itemId, change) {
-    const currentQty = quantities[itemId] || 1;
-    const newQty = Math.max(1, Math.min(10, currentQty + change));
-    quantities[itemId] = newQty;
-    document.getElementById(`qty-${itemId}`).textContent = newQty;
+/**
+ * Update button states based on quantity
+ */
+function updateButtonStates(itemId, quantity, decreaseBtn, increaseBtn) {
+    const minQty = 1;
+    const maxQty = 10;
+    
+    if (decreaseBtn) {
+        const isDisabled = quantity <= minQty;
+        decreaseBtn.disabled = isDisabled;
+        decreaseBtn.classList.toggle('opacity-50', isDisabled);
+        decreaseBtn.classList.toggle('cursor-not-allowed', isDisabled);
+    }
+    
+    if (increaseBtn) {
+        const isDisabled = quantity >= maxQty;
+        increaseBtn.disabled = isDisabled;
+        increaseBtn.classList.toggle('opacity-50', isDisabled);
+        increaseBtn.classList.toggle('cursor-not-allowed', isDisabled);
+    }
 }
 
+/**
+ * Change quantity with improved validation and visual feedback
+ */
+function changeQuantity(itemId, change) {
+    if (isUpdatingQuantity) return;
+    
+    const currentQty = quantities[itemId] || 1;
+    const newQty = Math.max(1, Math.min(10, currentQty + change));
+    
+    // No change needed
+    if (newQty === currentQty) return;
+    
+    quantities[itemId] = newQty;
+    
+    // Update display
+    const qtyElement = document.getElementById(`qty-${itemId}`);
+    if (qtyElement) {
+        qtyElement.textContent = newQty;
+        
+        // Add visual feedback
+        qtyElement.classList.add('scale-110');
+        setTimeout(() => {
+            qtyElement.classList.remove('scale-110');
+        }, 150);
+    }
+    
+    // Update button states
+    const itemContainer = qtyElement?.closest('.bg-white');
+    if (itemContainer) {
+        const decreaseBtn = itemContainer.querySelector('button[onclick*="changeQuantity(' + itemId + ', -1)"]');
+        const increaseBtn = itemContainer.querySelector('button[onclick*="changeQuantity(' + itemId + ', 1)"]');
+        updateButtonStates(itemId, newQty, decreaseBtn, increaseBtn);
+    }
+}
+
+/**
+ * Add special item to cart with enhanced feedback
+ */
 function addToCart(itemId) {
+    if (isUpdatingQuantity) return;
+    
     const quantity = quantities[itemId] || 1;
+    const button = document.querySelector(`button[onclick="addToCart(${itemId})"]`);
+    
+    // Disable button during request
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding Special...';
+    }
+    
+    isUpdatingQuantity = true;
     
     fetch('{{ route("guest.cart.add") }}', {
         method: 'POST',
@@ -215,34 +344,92 @@ function addToCart(itemId) {
             quantity: quantity
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            showNotification('Special item added to cart!', 'success');
+            showNotification(`${quantity} special item(s) added to cart!`, 'success');
+            
+            // Reset quantity to 1 after adding
+            quantities[itemId] = 1;
+            const qtyElement = document.getElementById(`qty-${itemId}`);
+            if (qtyElement) {
+                qtyElement.textContent = 1;
+                
+                // Update button states
+                const itemContainer = qtyElement.closest('.bg-white');
+                const decreaseBtn = itemContainer?.querySelector('button[onclick*="changeQuantity(' + itemId + ', -1)"]');
+                const increaseBtn = itemContainer?.querySelector('button[onclick*="changeQuantity(' + itemId + ', 1)"]');
+                updateButtonStates(itemId, 1, decreaseBtn, increaseBtn);
+            }
         } else {
-            showNotification(data.message || 'Failed to add item', 'error');
+            throw new Error(data.message || 'Failed to add special item to cart');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showNotification('Failed to add item to cart', 'error');
+        console.error('Error adding special item to cart:', error);
+        showNotification(error.message || 'Failed to add special item to cart', 'error');
+    })
+    .finally(() => {
+        // Re-enable button
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-star mr-2"></i>Add Special';
+        }
+        isUpdatingQuantity = false;
     });
 }
 
+/**
+ * Show enhanced notification with special styling
+ */
 function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-500 text-white' : 
-        type === 'error' ? 'bg-red-500 text-white' : 
-        'bg-blue-500 text-white'
-    }`;
-    notification.textContent = message;
+    // Remove existing notifications
+    document.querySelectorAll('.notification-toast').forEach(n => n.remove());
     
+    const notification = document.createElement('div');
+    notification.className = `notification-toast fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${
+        type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 
+        type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600 text-white' : 
+        'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
+    }`;
+    
+    const icon = type === 'success' ? 'check-circle' : 
+                type === 'error' ? 'exclamation-triangle' : 'info-circle';
+    
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${icon} mr-2"></i>
+            <span>${message}</span>
+            ${type === 'success' ? '<i class="fas fa-star ml-2 text-yellow-200"></i>' : ''}
+        </div>
+    `;
+    
+    // Add with animation
+    notification.style.transform = 'translateX(100%)';
     document.body.appendChild(notification);
     
+    requestAnimationFrame(() => {
+        notification.style.transform = 'translateX(0)';
+    });
+    
+    // Auto remove with animation
     setTimeout(() => {
-        notification.remove();
-    }, 3000);
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
 }
+
+// Prevent double-clicks during updates
+document.addEventListener('click', function(e) {
+    if (isUpdatingQuantity && e.target.closest('button')) {
+        e.preventDefault();
+        return false;
+    }
+});
 </script>
 @endpush
