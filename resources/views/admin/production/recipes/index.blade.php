@@ -157,7 +157,13 @@
                         {{ $recipes->total() }} recipes
                     </p>
                     <p class="text-sm text-gray-500 mt-1">
-                        Organization: {{ Auth::user()->organization->name }}
+                        @if (Auth::guard('admin')->user()->is_super_admin)
+                            Organization: All Organizations (Super Admin)
+                        @elseif(Auth::guard('admin')->user()->organization)
+                            Organization: {{ Auth::guard('admin')->user()->organization->name }}
+                        @else
+                            Organization: Not Assigned
+                        @endif
                     </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
