@@ -20,18 +20,18 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         $count = 0;
-        
+
         // Add pending orders
         $count += $this->getPendingOrdersCount();
-        
+
         // Add low stock items
         $count += $this->getLowStockItemsCount();
-        
+
         // Add today's reservations needing attention
         $count += $this->getPendingReservationsCount();
-        
+
         return min($count, 99); // Cap at 99 for display
     }
 
@@ -39,10 +39,10 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\Order::whereIn('status', ['pending', 'confirmed', 'preparing']);
-            
+
             // Apply scope restrictions
             if (!$admin->is_super_admin) {
                 if ($admin->branch_id) {
@@ -53,7 +53,7 @@ class AdminSidebar extends Component
                     });
                 }
             }
-            
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -64,7 +64,7 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin || !$admin->is_super_admin) return 0;
-        
+
         try {
             return \App\Models\Organization::where('status', 'pending')->count();
         } catch (\Exception $e) {
@@ -76,14 +76,14 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\Branch::where('is_active', true);
-            
+
             if (!$admin->is_super_admin && $admin->organization_id) {
                 $query->where('organization_id', $admin->organization_id);
             }
-            
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -94,10 +94,10 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\Menu::where('is_active', true);
-            
+
             if (!$admin->is_super_admin) {
                 if ($admin->branch_id) {
                     $query->where('branch_id', $admin->branch_id);
@@ -107,7 +107,7 @@ class AdminSidebar extends Component
                     });
                 }
             }
-            
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -118,10 +118,10 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\InventoryItem::whereRaw('current_stock <= reorder_level');
-            
+
             if (!$admin->is_super_admin) {
                 if ($admin->branch_id) {
                     $query->where('branch_id', $admin->branch_id);
@@ -129,7 +129,7 @@ class AdminSidebar extends Component
                     $query->where('organization_id', $admin->organization_id);
                 }
             }
-            
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -140,11 +140,11 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\Reservation::whereDate('reservation_date', today())
                 ->whereIn('status', ['confirmed', 'pending']);
-            
+
             if (!$admin->is_super_admin) {
                 if ($admin->branch_id) {
                     $query->where('branch_id', $admin->branch_id);
@@ -154,7 +154,7 @@ class AdminSidebar extends Component
                     });
                 }
             }
-            
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -165,10 +165,10 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\Reservation::where('status', 'pending');
-            
+
             if (!$admin->is_super_admin) {
                 if ($admin->branch_id) {
                     $query->where('branch_id', $admin->branch_id);
@@ -178,7 +178,7 @@ class AdminSidebar extends Component
                     });
                 }
             }
-            
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -189,15 +189,15 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\Admin::where('is_active', true)
                 ->where('is_super_admin', false);
-            
+
             if (!$admin->is_super_admin && $admin->organization_id) {
                 $query->where('organization_id', $admin->organization_id);
             }
-            
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -208,10 +208,10 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         if (!$admin) return 0;
-        
+
         try {
             $query = \App\Models\Kot::whereIn('status', ['pending', 'started', 'cooking']);
-            
+
             if (!$admin->is_super_admin) {
                 $query->whereHas('order', function ($q) use ($admin) {
                     if ($admin->branch_id) {
@@ -223,7 +223,82 @@ class AdminSidebar extends Component
                     }
                 });
             }
-            
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Production Management Badge Counts
+     */
+    private function getPendingProductionRequestsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\ProductionRequestMaster::where('status', \App\Models\ProductionRequestMaster::STATUS_SUBMITTED);
+
+            if (!$admin->is_super_admin) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getApprovedProductionRequestsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\ProductionRequestMaster::where('status', \App\Models\ProductionRequestMaster::STATUS_APPROVED);
+
+            if (!$admin->is_super_admin) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getActiveProductionOrdersCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\ProductionOrder::whereIn('status', ['approved', 'in_progress']);
+
+            if (!$admin->is_super_admin) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getActiveProductionSessionsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\ProductionSession::whereIn('status', ['scheduled', 'in_progress']);
+
+            if (!$admin->is_super_admin) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
             return $query->count();
         } catch (\Exception $e) {
             return 0;
@@ -248,29 +323,29 @@ class AdminSidebar extends Component
     private function getSidebarState(): array
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $defaultState = [
             'collapsed' => false,
             'theme' => 'light',
             'show_badges' => true,
             'auto_collapse_mobile' => true
         ];
-        
+
         if (!$admin || !isset($admin->ui_settings)) {
             return $defaultState;
         }
-        
-        $uiSettings = is_string($admin->ui_settings) 
-            ? json_decode($admin->ui_settings, true) 
+
+        $uiSettings = is_string($admin->ui_settings)
+            ? json_decode($admin->ui_settings, true)
             : $admin->ui_settings;
-            
+
         return array_merge($defaultState, $uiSettings['sidebar'] ?? []);
     }
 
     private function getMenuItems()
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             return [];
         }
@@ -507,7 +582,7 @@ class AdminSidebar extends Component
         // Add branch management
         $branchRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
         $branchParams = $admin->is_super_admin ? [] : ['organization' => $admin->organization_id];
-        
+
         if ($admin->organization_id || $admin->is_super_admin) {
             $menuItems[] = [
                 'title' => 'Branches',
@@ -551,11 +626,11 @@ class AdminSidebar extends Component
         return $menuItems;
     }
 
- 
+
     private function getMenuItemsEnhanced()
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             return [];
         }
@@ -621,7 +696,7 @@ class AdminSidebar extends Component
         if ($admin->organization_id || $admin->is_super_admin) {
             $branchRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
             $branchParams = $admin->is_super_admin ? [] : ['organization' => $admin->organization_id];
-            
+
             $menuItems[] = [
                 'title' => 'Branches',
                 'route' => $branchRoute,
@@ -679,6 +754,22 @@ class AdminSidebar extends Component
                 'badge_color' => 'orange',
                 'is_route_valid' => $this->validateRoute('admin.inventory.index'),
                 'sub_items' => $this->getInventorySubItems()
+            ];
+        }
+
+        // Production Management
+        if ($this->hasPermission($admin, 'production.view')) {
+            $menuItems[] = [
+                'title' => 'Production',
+                'route' => 'admin.production.index',
+                'route_params' => [],
+                'icon' => 'cog',
+                'icon_type' => 'svg',
+                'permission' => 'production.view',
+                'badge' => $this->getPendingProductionRequestsCount(),
+                'badge_color' => 'blue',
+                'is_route_valid' => $this->validateRoute('admin.production.index'),
+                'sub_items' => $this->getProductionSubItems()
             ];
         }
 
@@ -793,7 +884,7 @@ class AdminSidebar extends Component
             if (!Route::has($routeName)) {
                 return false;
             }
-            
+
             // Try to generate the route URL to ensure parameters are valid
             route($routeName, $params);
             return true;
@@ -810,28 +901,28 @@ class AdminSidebar extends Component
         if (!$admin) {
             return false;
         }
-        
+
         // Super admins have all permissions
         if ($admin->is_super_admin) {
             return true;
         }
-        
+
         // For now, allow all authenticated admin users to access inventory and suppliers
         // TODO: Implement proper permission checking later
-        if (in_array($permission, ['inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage'])) {
+        if (in_array($permission, ['inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage', 'production.view', 'production.manage'])) {
             return true;
         }
-        
+
         // Check using Spatie permissions if admin has hasPermissionTo method
         if (method_exists($admin, 'hasPermissionTo')) {
             return $admin->hasPermissionTo($permission);
         }
-        
+
         // Fallback to basic permission check
         if (method_exists($admin, 'hasPermission')) {
             return $admin->hasPermission($permission);
         }
-        
+
         return false;
     }
 
@@ -843,16 +934,16 @@ class AdminSidebar extends Component
         if (!$admin) {
             return true;
         }
-        
+
         if ($admin->is_super_admin) {
             return false;
         }
-        
+
         // Check if admin has organization or branch admin roles
         if ($admin->hasRole(['Admin', 'Organization Admin', 'Branch Admin', 'Branch Manager'])) {
             return false;
         }
-        
+
         return true;
     }
 
@@ -865,12 +956,12 @@ class AdminSidebar extends Component
         if (!($item['is_route_valid'] ?? true)) {
             return false;
         }
-        
+
         // Check permission
         if ($item['permission'] && !$this->hasPermission($admin, $item['permission'])) {
             return false;
         }
-        
+
         return true;
     }
 
@@ -880,11 +971,11 @@ class AdminSidebar extends Component
     private function getBranchSubItems($admin): array
     {
         $subItems = [];
-        
+
         if ($this->hasPermission($admin, 'branches.view')) {
             $listRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
             $listParams = $admin->is_super_admin ? [] : ['organization' => $admin->organization_id];
-            
+
             $subItems[] = [
                 'title' => 'All Branches',
                 'route' => $listRoute,
@@ -895,19 +986,19 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute($listRoute, $listParams)
             ];
         }
-        
+
         if ($this->hasPermission($admin, 'branches.create')) {
             // All admins need organization parameter for branch creation
             // Super admins can choose which organization, regular admins use their own
             $createRoute = 'admin.branches.create';
-            $organizationId = $admin->is_super_admin 
+            $organizationId = $admin->is_super_admin
                 ? ($admin->organization_id ?? null) // Use current org or null for super admin
                 : $admin->organization_id; // Regular admin must use their org
-            
+
             // Only show the link if we have an organization context
             if ($organizationId) {
                 $createParams = ['organization' => $organizationId];
-                
+
                 $subItems[] = [
                     'title' => 'Add Branch',
                     'route' => $createRoute,
@@ -919,7 +1010,7 @@ class AdminSidebar extends Component
                 ];
             }
         }
-        
+
         // Add branch activation option
         if ($this->hasPermission($admin, 'branches.activate')) {
             $subItems[] = [
@@ -932,7 +1023,7 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute('admin.branches.activate.form')
             ];
         }
-        
+
         return $subItems;
     }
 
@@ -1049,6 +1140,55 @@ class AdminSidebar extends Component
                 'icon_type' => 'svg',
                 'permission' => 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.grn.index')
+            ]
+        ];
+    }
+
+    /**
+     * Get production sub-items
+     */
+    private function getProductionSubItems(): array
+    {
+        return [
+            [
+                'title' => 'Production Dashboard',
+                'route' => 'admin.production.index',
+                'icon' => 'dashboard',
+                'icon_type' => 'svg',
+                'permission' => 'production.view',
+                'is_route_valid' => $this->validateRoute('admin.production.index')
+            ],
+            [
+                'title' => 'Production Requests',
+                'route' => 'admin.production.requests.index',
+                'icon' => 'clipboard-list',
+                'icon_type' => 'svg',
+                'permission' => 'production.view',
+                'is_route_valid' => $this->validateRoute('admin.production.requests.index')
+            ],
+            [
+                'title' => 'Production Orders',
+                'route' => 'admin.production.orders.index',
+                'icon' => 'cog',
+                'icon_type' => 'svg',
+                'permission' => 'production.view',
+                'is_route_valid' => $this->validateRoute('admin.production.orders.index')
+            ],
+            [
+                'title' => 'Production Sessions',
+                'route' => 'admin.production.sessions.index',
+                'icon' => 'play',
+                'icon_type' => 'svg',
+                'permission' => 'production.view',
+                'is_route_valid' => $this->validateRoute('admin.production.sessions.index')
+            ],
+            [
+                'title' => 'Production Recipes',
+                'route' => 'admin.production.recipes.index',
+                'icon' => 'book',
+                'icon_type' => 'svg',
+                'permission' => 'production.view',
+                'is_route_valid' => $this->validateRoute('admin.production.recipes.index')
             ]
         ];
     }

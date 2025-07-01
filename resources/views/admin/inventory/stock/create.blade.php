@@ -8,7 +8,7 @@
             <!-- Header -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-900 mb-1">Record Stock Transaction</h2>
-                <p class="text-sm text-gray-500">Add new stock transaction for an item at a branch</p>
+                <p class="text-sm text-gray-500"> ~ Dev Use Only~</p>
             </div>
 
             @if ($errors->any())
@@ -75,15 +75,17 @@
                                 <option value="adjustment" {{ old('transaction_type') == 'adjustment' ? 'selected' : '' }}>Adjustment</option>
                                 <option value="audit" {{ old('transaction_type') == 'audit' ? 'selected' : '' }}>Audit</option>
                                 <option value="transfer_in" {{ old('transaction_type') == 'transfer_in' ? 'selected' : '' }}>Transfer In</option>
-                                <option value="transfer_in" {{ old('transaction_type') == 'transfer_in' ? 'selected' : '' }}>Transfer In</option>
+                                <option value="grn_stock_added" {{ old('transaction_type') == 'grn_stock_added' ? 'selected' : '' }}>GRN Stock Added</option>
                             </optgroup>
-                            {{-- <optgroup label="Stock Out">
+                            <optgroup label="Stock Out">
                                 <option value="sales_order" {{ old('transaction_type') == 'sales_order' ? 'selected' : '' }}>Sales Order</option>
                                 <option value="write_off" {{ old('transaction_type') == 'write_off' ? 'selected' : '' }}>Write Off</option>
                                 <option value="transfer" {{ old('transaction_type') == 'transfer' ? 'selected' : '' }}>Transfer</option>
                                 <option value="usage" {{ old('transaction_type') == 'usage' ? 'selected' : '' }}>Usage</option>
                                 <option value="transfer_out" {{ old('transaction_type') == 'transfer_out' ? 'selected' : '' }}>Transfer Out</option>
-                            </optgroup> --}}
+                                <option value="gtn_outgoing" {{ old('transaction_type') == 'gtn_outgoing' ? 'selected' : '' }}>GTN Outgoing</option>
+                                <option value="production_issue" {{ old('transaction_type') == 'production_issue' ? 'selected' : '' }}>Production Issue</option>
+                            </optgroup>
                         </select>
                         <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                             <i class="fas fa-exchange-alt text-gray-400"></i>

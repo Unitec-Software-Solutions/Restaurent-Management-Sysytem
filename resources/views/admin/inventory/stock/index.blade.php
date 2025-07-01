@@ -217,7 +217,7 @@
                                     href="{{ route('admin.inventory.stock.edit', ['item_id' => $stock['item']->id, 'branch_id' => $stock['branch']->id]) }}"
                                     class="text-indigo-600 hover:text-indigo-800" title="Add Transaction">
                                     <i class="fas fa-plus-circle"></i>
-                                </a> 
+                                </a>
 
                                         <a href="{{ route('admin.inventory.stock.transactions.index', [
                                             'search' => $stock['item']->item_code,
