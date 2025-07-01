@@ -40,7 +40,7 @@ use App\Http\Controllers\Admin\{
 // GRN/GTN controllers
 use App\Http\Controllers\Admin\
 {
-    GrnController,
+    //GrnController,
     GrnDashboardController,
     GoodsTransferNoteController,
     GoodsTransferItemController,
