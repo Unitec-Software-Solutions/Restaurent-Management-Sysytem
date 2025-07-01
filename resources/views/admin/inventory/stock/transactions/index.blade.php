@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @php
     // Pass the controller instance to the view for helper methods
-    $controller = app(\App\Http\Controllers\ItemTransactionController::class);
+    $controller = app(\App\Http\Controllers\admin\ItemTransactionController::class);
 
     // Default date range: last 30 days
     $defaultDateFrom = now()->subDays(29)->format('Y-m-d');
