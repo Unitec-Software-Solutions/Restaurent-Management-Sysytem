@@ -195,13 +195,13 @@ class ItemTransactionController extends Controller
         return response()->json($stockData);
     }
 
-    // public function create()
-    // {
-    //     $orgId = $this->getOrganizationId();
-    //     $items = ItemMaster::where('organization_id', $orgId)->get();
-    //     $branches = Branch::where('organization_id', $orgId)->active()->get();
-    //     return view('admin.inventory.stock.create', compact('items', 'branches'));
-    // }
+    public function create()
+    {
+        $orgId = $this->getOrganizationId();
+        $items = ItemMaster::where('organization_id', $orgId)->get();
+        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        return view('admin.inventory.stock.create', compact('items', 'branches'));
+    }
 
     public function store(Request $request)
     {
