@@ -512,118 +512,116 @@ class OrderController extends Controller
         ]);
 
         return DB::transaction(function () use ($data) {
-            try {
-                // Validate branch is active
-                $branch = Branch::find($data['branch_id']);
-                if (!$branch || !$branch->is_active) {
-                    throw new \Exception('Selected branch is not available');
-                }
-
-                // Find or create customer by phone
-                $customer = Customer::findByPhone($data['customer_phone']);
-                if (!$customer) {
-                    $customer = Customer::createFromPhone($data['customer_phone'], [
-                        'name' => $data['customer_name'],
-                        'preferred_contact' => $data['preferred_contact'] ?? 'email',
-                    ]);
-                } else {
-                    // Update customer info if provided
-                    $customer->update([
-                        'name' => $data['customer_name'],
-                        'preferred_contact' => $data['preferred_contact'] ?? $customer->preferred_contact,
-                    ]);
-                }
-
-                // Determine order type - default to takeaway online scheduled
-                $orderType = isset($data['order_type']) 
-                    ? OrderType::from($data['order_type']) 
-                    : OrderType::TAKEAWAY_ONLINE_SCHEDULED;
-
-                // Stock validation - check all items before creating order
-                $stockErrors = [];
-                foreach ($data['items'] as $item) {
-                    $menuItem = ItemMaster::find($item['item_id']);
-                    if (!$menuItem || !$menuItem->is_active) {
-                        $stockErrors[] = "Item {$item['item_id']} is not available";
-                        continue;
-                    }
-                    
-                    // Only check stock for items that track inventory
-                    if ($menuItem->is_perishable) // Using is_perishable as a proxy for inventory tracking
-                    {
-                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->id, $data['branch_id']);
-                        if ($currentStock < $item['quantity']) {
-                            $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
-                        }
-                    }
-                }
-
-                if (!empty($stockErrors)) {
-                    throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
-                }
-
-                // Create takeaway order (model will handle customer linking)
-                $order = Order::create([
-                    'branch_id' => $data['branch_id'],
-                    'organization_id' => $branch->organization_id,
-                    'order_time' => $data['order_time'] ?? now(),
-                    'customer_name' => $customer->name,
-                    'customer_phone' => $customer->phone,
-                    'customer_phone_fk' => $customer->phone,
-                    'order_type' => $orderType,
-                    'status' => Order::STATUS_PENDING, // Start as pending for confirmation
-                    'special_instructions' => $data['special_instructions'] ?? null,
-                    'takeaway_id' => 'TW' . now()->format('YmdHis') . rand(100, 999),
-                    'order_date' => now(),
-                ]);
-
-                $subtotal = 0;
-                foreach ($data['items'] as $item) {
-                    $menuItem = ItemMaster::find($item['item_id']);
-                    if (!$menuItem) continue;
-                    
-                    $lineTotal = $menuItem->selling_price * $item['quantity'];
-                    $subtotal += $lineTotal;
-
-                    OrderItem::create([
-                        'order_id' => $order->id,
-                        'menu_item_id' => $item['item_id'],
-                        'item_name' => $menuItem->name,
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $menuItem->selling_price,
-                        'subtotal' => $lineTotal,
-                    ]);
-
-                    // Note: Stock will be deducted and KOT generated when order is confirmed
-                }
-
-                // Calculate totals
-                $tax = $subtotal * 0.13; // 13% VAT
-                $serviceCharge = 0; // Usually no service charge for takeaway
-                $discount = 0;
-                $total = $subtotal + $tax + $serviceCharge - $discount;
-
-                $order->update([
-                    'subtotal' => $subtotal,
-                    'tax' => $tax,
-                    'service_charge' => $serviceCharge,
-                    'discount' => $discount,
-                    'total' => $total,
-                    'stock_deducted' => false, // Will be set to true when confirmed
-                ]);
-
-                // Note: KOT generation and stock deduction will happen on order confirmation
-
-                return redirect()->route('orders.takeaway.summary', $order)
-                    ->with('success', 'Order created successfully! Please review and confirm your order below.');
-
-            } catch (\Exception $e) {
-                Log::error('Takeaway order creation failed', [
-                    'error' => $e->getMessage(),
-                    'data' => $data
-                ]);
-                throw $e;
+            // Validate branch exists and is active
+            $branch = Branch::with('organization')->findOrFail($data['branch_id']);
+            if (!$branch->is_active || !$branch->organization->is_active) {
+                throw new \Exception('Branch or organization is not active');
             }
+
+            // Find or create customer - FIX: Pass array instead of string
+            $customer = Customer::findOrCreateByPhone($data['customer_phone'], [
+                'name' => $data['customer_name']
+            ]);
+
+            // Stock validation
+            $stockErrors = [];
+            $orderItems = [];
+            $subtotal = 0;
+
+            foreach ($data['items'] as $item) {
+                $menuItem = ItemMaster::find($item['item_id']);
+                if (!$menuItem || !$menuItem->is_active) {
+                    $stockErrors[] = "Item {$item['item_id']} is not available";
+                    continue;
+                }
+                
+                // Only check stock for items that track inventory
+                if ($menuItem->is_perishable) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->id, $data['branch_id']);
+                    if ($currentStock < $item['quantity']) {
+                        $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                    }
+                }
+
+                // Calculate item total
+                $itemTotal = $menuItem->selling_price * $item['quantity'];
+                $subtotal += $itemTotal;
+
+                $orderItems[] = [
+                    'menu_item' => $menuItem,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem->selling_price,
+                    'total_price' => $itemTotal
+                ];
+            }
+
+            if (!empty($stockErrors)) {
+                throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
+            }
+
+            // Calculate totals
+            $taxRate = 0.10; // 10% tax
+            $tax = $subtotal * $taxRate;
+            $total = $subtotal + $tax;
+
+            // Generate order number
+            $orderNumber = $this->generateOrderNumber($data['branch_id']);
+
+            // Create takeaway order with all required fields
+            $order = Order::create([
+                'branch_id' => $data['branch_id'],
+                'organization_id' => $branch->organization_id,
+                'customer_name' => $customer->name,
+                'customer_phone' => $customer->phone,
+                'customer_phone_fk' => $customer->phone,
+                'order_type' => $data['order_type'],
+                'order_number' => $orderNumber,
+                'status' => 'pending',
+                'order_date' => now(),
+                'order_time' => $data['order_time'] ?? now(),
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax,
+                'total_amount' => $total,
+                'tax' => $tax, 
+                'total' => $total, 
+                'currency' => 'LKR',
+                'payment_status' => 'pending',
+                'special_instructions' => $data['special_instructions'] ?? null,
+                'takeaway_id' => 'TW' . str_pad(Order::where('branch_id', $data['branch_id'])->whereDate('created_at', today())->count() + 1, 6, '0', STR_PAD_LEFT),
+            ]);
+
+            // Create order items
+            foreach ($orderItems as $itemData) {
+                \App\Models\OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $itemData['menu_item']->id,
+                    'inventory_item_id' => $itemData['menu_item']->id,
+                    'item_name' => $itemData['menu_item']->name,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'total_price' => $itemData['total_price'],
+                    'subtotal' => $itemData['total_price'], 
+                ]);
+
+                // Deduct stock for perishable items
+                if ($itemData['menu_item']->is_perishable) {
+                    \App\Models\ItemTransaction::create([
+                        'organization_id' => $branch->organization_id,
+                        'branch_id' => $data['branch_id'],
+                        'inventory_item_id' => $itemData['menu_item']->id,
+                        'transaction_type' => 'order_deduction',
+                        'quantity' => -$itemData['quantity'],
+                        'reference_type' => 'order',
+                        'reference_id' => $order->id,
+                        'notes' => "Stock deduction for order #{$order->order_number}",
+                        'is_active' => true,
+                        'created_by_user_id' => Auth::check() ? Auth::user()->id : null,
+                    ]);
+                }
+            }
+
+            return redirect()->route('orders.takeaway.summary', $order)
+                ->with('success', 'Order created successfully!');
         });
     }
 
@@ -1239,5 +1237,19 @@ class OrderController extends Controller
         }
         
         return 'unknown';
+    }
+
+    /**
+     * Generate unique order number
+     */
+    private function generateOrderNumber($branchId)
+    {
+        $prefix = 'ORD' . str_pad($branchId, 2, '0', STR_PAD_LEFT);
+        $date = now()->format('Ymd');
+        $sequence = Order::where('branch_id', $branchId)
+            ->whereDate('created_at', today())
+            ->count() + 1;
+        
+        return $prefix . $date . str_pad($sequence, 3, '0', STR_PAD_LEFT);
     }
 }
