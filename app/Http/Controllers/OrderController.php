@@ -627,19 +627,25 @@ class OrderController extends Controller
 
     public function summary(Order $order)
     {
-        $order->load('items.menuItem', 'reservation', 'branch');
+        $order->load('orderItems.menuItem', 'reservation', 'branch');
         
         // Determine the appropriate view based on order type
         $view = 'orders.summary';
-        if ($order->order_type && str_contains((string)$order->order_type, 'takeaway')) {
+        
+        // Get order type value safely
+        $orderTypeValue = $order->order_type instanceof \App\Enums\OrderType 
+            ? $order->order_type->value 
+            : (string) $order->order_type;
+    
+        if ($orderTypeValue && str_contains($orderTypeValue, 'takeaway')) {
             $view = 'orders.takeaway.summary';
         }
-        
+    
         return view($view, [
             'order' => $order,
-            'editable' => $order->status === 'pending', // Only pending orders are editable
-            'reservation' => $order->reservation, // For reservation-linked orders
-            'orderType' => $order->order_type ?? 'takeaway'
+            'editable' => $order->status === 'pending',
+            'reservation' => $order->reservation,
+            'orderType' => $orderTypeValue ?? 'takeaway'
         ]);
     }
 

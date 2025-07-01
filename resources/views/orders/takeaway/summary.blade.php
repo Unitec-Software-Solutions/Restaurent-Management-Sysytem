@@ -236,11 +236,11 @@
                     </div>
                     
                     <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                        <!-- Track Order Button -->
-                        <a href="{{ route('orders.takeaway.show', $order->id) }}" 
+                        <!-- Dashboard Button -->
+                        <a href="{{ route('home') }}" 
                            class="flex-1 max-w-xs inline-flex items-center justify-center px-6 py-4 bg-blue-600 border border-transparent rounded-lg font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 touch-manipulation">
-                            <i class="fas fa-search mr-3 text-lg"></i>
-                            <span class="text-lg">Track Order</span>
+                            <i class="fas fa-tachometer-alt mr-3 text-lg"></i>
+                            <span class="text-lg">Go to Dashboard</span>
                         </a>
 
                         <!-- New Order Button -->
