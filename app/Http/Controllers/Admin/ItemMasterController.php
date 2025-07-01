@@ -1,0 +1,448 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+use App\Http\Controllers\Controller;
+
+use App\Models\ItemCategory;
+use App\Models\ItemMaster;
+use App\Traits\Exportable;
+use Illuminate\Http\Request;
+use App\Models\Branch;
+use Illuminate\Support\Facades\Auth;
+
+class ItemMasterController extends Controller
+{
+    use Exportable;
+
+    /**
+     * Display a listing of items.
+     */
+    public function index(Request $request)
+    {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        // For super admin, allow access to all organizations
+        $orgId = $user->is_super_admin ? null : $user->organization_id;
+
+        if ($orgId === null && !$user->is_super_admin) {
+            return redirect()->route('admin.login')->with('error', 'No organization assigned.');
+        }
+
+        $query = ItemMaster::with('category');
+
+        // Apply organization filter for non-super admins
+        if ($orgId !== null) {
+            $query->where('organization_id', $orgId);
+        }
+
+        // Apply filters
+        $query = $this->applyFiltersToQuery($query, $request);
+
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'inventory_items_export.xlsx', [
+                'Item Code', 'Name', 'Category', 'Unit', 'Cost Price', 'Selling Price', 'Status', 'Created At'
+            ]);
+        }
+
+        $items = $query->paginate(15);
+
+        $categories = ItemCategory::active();
+        if ($orgId !== null) {
+            $categories->where('organization_id', $orgId);
+        }
+        $categories = $categories->get();
+
+        $totalItemsQuery = ItemMaster::query();
+        $activeItemsQuery = ItemMaster::query();
+        $inactiveItemsQuery = ItemMaster::onlyTrashed();
+        $newItemsTodayQuery = ItemMaster::query()->whereDate('created_at', today());
+
+        if ($orgId !== null) {
+            $totalItemsQuery->where('organization_id', $orgId);
+            $activeItemsQuery->where('organization_id', $orgId);
+            $inactiveItemsQuery->where('organization_id', $orgId);
+            $newItemsTodayQuery->where('organization_id', $orgId);
+        }
+
+        $totalItems = $totalItemsQuery->count();
+        $activeItems = $activeItemsQuery->count();
+        $inactiveItems = $inactiveItemsQuery->count();
+        $newItemsToday = $newItemsTodayQuery->count();
+        $inactiveItemsChange = $inactiveItems;
+        $activeItemsChange = $activeItems;
+
+        return view('admin.inventory.items.index', compact(
+            'items',
+            'categories',
+            'totalItems',
+            'activeItems',
+            'inactiveItems',
+            'activeItemsChange',
+            'inactiveItemsChange',
+            'newItemsToday'
+        ));
+    }
+
+    /**
+     * Store a newly created item.
+     */
+    public function store(Request $request)
+    {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
+        // For super admin, allow creation but require organization_id in request
+        $orgId = $user->is_super_admin ? $request->organization_id : $user->organization_id;
+
+        if (!$orgId && !$user->is_super_admin) {
+            return response()->json(['message' => 'No organization assigned.'], 403);
+        }
+
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.name' => 'required|string|max:255',
+            'items.*.unicode_name' => 'nullable|string|max:255',
+            'items.*.item_category_id' => 'required|exists:item_categories,id' . ($orgId ? ',organization_id,' . $orgId : ''),
+            'items.*.item_code' => 'required|string|unique:item_master,item_code',
+            'items.*.unit_of_measurement' => 'required|string|max:50',
+            'items.*.reorder_level' => 'nullable|numeric|min:0',
+            'items.*.is_perishable' => 'nullable|boolean',
+            'items.*.shelf_life_in_days' => 'nullable|integer|min:0',
+            'items.*.branch_id' => 'nullable|exists:branches,id,organization_id,' . $user->organization_id,
+            'items.*.buying_price' => 'required|numeric|min:0',
+            'items.*.selling_price' => 'required|numeric|min:0',
+            'items.*.is_menu_item' => 'nullable|boolean',
+            'items.*.is_active' => 'nullable|boolean',
+            'items.*.additional_notes' => 'nullable|string',
+            'items.*.description' => 'nullable|string',
+            'items.*.attributes' => 'nullable|json',
+        ]);
+
+        // Validate menu attributes for menu items
+        foreach ($validated['items'] as $index => $itemData) {
+            if (isset($itemData['is_menu_item']) && $itemData['is_menu_item']) {
+                $attributes = isset($itemData['attributes']) ? json_decode($itemData['attributes'], true) : [];
+
+                // Required menu attributes
+                $requiredMenuAttrs = ['cuisine_type', 'prep_time_minutes', 'serving_size'];
+                $missingAttrs = [];
+
+                foreach ($requiredMenuAttrs as $attr) {
+                    if (empty($attributes[$attr])) {
+                        $missingAttrs[] = $attr;
+                    }
+                }
+
+                if (!empty($missingAttrs)) {
+                    $fieldLabels = [
+                        'cuisine_type' => 'Cuisine Type',
+                        'prep_time_minutes' => 'Preparation Time',
+                        'serving_size' => 'Serving Size'
+                    ];
+
+                    $missingLabels = array_map(fn($attr) => $fieldLabels[$attr], $missingAttrs);
+
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "items.{$index}.menu_attributes" => "Menu items require the following attributes: " . implode(', ', $missingLabels)
+                    ]);
+                }
+            }
+        }
+
+        $createdItems = [];
+
+        foreach ($validated['items'] as $itemData) {
+            $itemData['organization_id'] = $user->organization_id;
+
+            $createdItems[] = ItemMaster::create([
+                'name' => $itemData['name'],
+                'unicode_name' => $itemData['unicode_name'] ?? null,
+                'item_category_id' => $itemData['item_category_id'],
+                'item_code' => $itemData['item_code'],
+                'unit_of_measurement' => $itemData['unit_of_measurement'],
+                'reorder_level' => $itemData['reorder_level'] ?? 0,
+                'is_perishable' => $itemData['is_perishable'] ?? false,
+                'shelf_life_in_days' => $itemData['shelf_life_in_days'] ?? null,
+                'branch_id' => $itemData['branch_id'] ?? null,
+                'organization_id' => $itemData['organization_id'],
+                'buying_price' => $itemData['buying_price'],
+                'selling_price' => $itemData['selling_price'],
+                'is_menu_item' => $itemData['is_menu_item'] ?? false,
+                'is_active' => $itemData['is_active'] ?? true,
+                'additional_notes' => $itemData['additional_notes'] ?? null,
+                'description' => $itemData['description'] ?? null,
+                'attributes' => $itemData['attributes'] ?? null,
+            ]);
+        }
+
+        return redirect()->route('admin.inventory.items.added-items')
+            ->with('success', 'Items created successfully');
+    }
+
+    /**
+     * Display the specified item.
+     */
+    public function show($id)
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->with(['category', 'branch', 'organization']) // Add 'branch' here
+            ->findOrFail($id);
+
+        if (request()->wantsJson()) {
+            return response()->json($item);
+        }
+
+        return view('admin.inventory.items.show', compact('item'));
+    }
+
+
+    /**
+     * Update the specified item.
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
+        $data = $request->validate([
+            'name' => 'sometimes|string',
+            'unicode_name' => 'nullable|string',
+            'item_category_id' => 'sometimes|exists:item_categories,id,organization_id,' . $user->organization_id,
+            'item_code' => 'sometimes|string|unique:item_master,item_code,' . $id,
+            'unit_of_measurement' => 'sometimes|string',
+            'reorder_level' => 'nullable|integer',
+            'is_perishable' => 'boolean',
+            'shelf_life_in_days' => 'nullable|integer',
+            'branch_id' => 'nullable|exists:branches,id,organization_id,' . $user->organization_id,
+            'buying_price' => 'sometimes|numeric',
+            'selling_price' => 'sometimes|numeric',
+            'is_menu_item' => 'boolean',
+            'additional_notes' => 'nullable|string',
+            'description' => 'nullable|string',
+            'attributes' => 'nullable|json',
+            'menu_attributes' => 'nullable|array',
+        ]);
+
+        // Handle menu attributes validation for edit
+        if (isset($data['menu_attributes']) && $data['is_menu_item']) {
+            // Validate required menu attributes
+            $requiredMenuAttrs = ['cuisine_type', 'prep_time_minutes', 'serving_size'];
+            $missingAttrs = [];
+
+            foreach ($requiredMenuAttrs as $attr) {
+                if (empty($data['menu_attributes'][$attr])) {
+                    $missingAttrs[] = $attr;
+                }
+            }
+
+            if (!empty($missingAttrs)) {
+                $fieldLabels = [
+                    'cuisine_type' => 'Cuisine Type',
+                    'prep_time_minutes' => 'Preparation Time',
+                    'serving_size' => 'Serving Size'
+                ];
+
+                $missingLabels = array_map(fn($attr) => $fieldLabels[$attr], $missingAttrs);
+
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'menu_attributes' => "Menu items require the following attributes: " . implode(', ', $missingLabels)
+                ]);
+            }
+
+            // Get existing attributes or start with empty array
+            $existingAttributes = is_array($item->attributes) ? $item->attributes : [];
+
+            // Merge menu attributes with existing attributes
+            $attributes = array_merge($existingAttributes, $data['menu_attributes']);
+
+            // Remove empty values
+            $attributes = array_filter($attributes, function($value) {
+                return $value !== '' && $value !== null;
+            });
+
+            $data['attributes'] = $attributes;
+        } elseif (!$data['is_menu_item']) {
+            // Remove menu-specific attributes if not a menu item
+            $existingAttributes = is_array($item->attributes) ? $item->attributes : [];
+            $menuAttrKeys = [
+                'cuisine_type', 'spice_level', 'prep_time_minutes', 'serving_size',
+                'dietary_type', 'availability', 'main_ingredients', 'allergen_info',
+                'is_chefs_special', 'is_popular'
+            ];
+
+            foreach ($menuAttrKeys as $key) {
+                unset($existingAttributes[$key]);
+            }
+
+            $data['attributes'] = $existingAttributes;
+        }
+
+        // Remove the menu_attributes key as it's been processed
+        unset($data['menu_attributes']);
+
+        $item->update($data);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => 'Item updated successfully',
+                'data' => $item
+            ]);
+        }
+
+        return redirect()->route('admin.inventory.items.index')
+            ->with('success', 'Item updated successfully');
+    }
+
+    /**
+     * Show recently added items
+     */
+    public function added(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        // Get the last 10 items added
+        $items = ItemMaster::with('category')
+            ->where('organization_id', $user->organization_id)
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+
+
+        return view('admin.inventory.items.added', compact(
+            'items',
+        ));
+    }
+
+    public function getItemFormPartial($index)
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        $categories = ItemCategory::active()
+            ->where('organization_id', $user->organization_id)
+            ->get();
+
+        return view('admin.inventory.items.partials.item-form', [
+            'index' => $index,
+            'categories' => $categories
+        ]);
+    }
+
+    public function create()
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $orgId = $user->organization_id;
+
+        // Get stats for KPI cards
+        $totalItems = ItemMaster::where('organization_id', $orgId)->count();
+        $activeItems = ItemMaster::where('organization_id', $orgId)->count();
+        $inactiveItems = ItemMaster::onlyTrashed()->where('organization_id', $orgId)->count();
+        $newItemsToday = ItemMaster::where('organization_id', $orgId)
+            ->whereDate('created_at', today())
+            ->count();
+
+        $categories = ItemCategory::active()
+            ->where('organization_id', $orgId)
+            ->get();
+
+        $branches = Branch::where('is_active', true)
+            ->where('organization_id', $orgId)
+            ->get();
+
+        return view('admin.inventory.items.create', compact(
+            'categories',
+            'branches',
+            'totalItems',
+            'activeItems',
+            'inactiveItems',
+            'newItemsToday'
+        ));
+    }
+
+    public function edit($id)
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
+        $categories = ItemCategory::active()
+            ->where('organization_id', $user->organization_id)
+            ->get();
+
+        $branches = Branch::where('is_active', true)
+            ->where('organization_id', $user->organization_id)
+            ->get();
+
+        return view('admin.inventory.items.edit', compact('item', 'categories', 'branches'));
+    }
+
+    /**
+     * Soft delete the specified item.
+     */
+    public function destroy($id)
+    {
+        $user = Auth::user();
+
+        if (!$user || !$user->organization_id) {
+            return response()->json(['message' => 'Unauthorized access.'], 403);
+        }
+
+        $item = ItemMaster::where('organization_id', $user->organization_id)
+            ->findOrFail($id);
+
+        $item->delete();
+
+        if (request()->wantsJson()) {
+            return response()->json(['message' => 'Item deleted successfully.']);
+        }
+
+        return redirect()->route('admin.inventory.items.index')
+            ->with('success', 'Item deleted successfully');
+    }
+
+    /**
+     * Get searchable columns for inventory items
+     */
+    protected function getSearchableColumns(): array
+    {
+        return ['name', 'item_code', 'description'];
+    }
+}
