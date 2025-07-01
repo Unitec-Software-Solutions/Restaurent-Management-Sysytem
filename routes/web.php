@@ -662,16 +662,16 @@ Route::put('employees/{employee}', [App\Http\Controllers\Admin\EmployeeControlle
 Route::delete('employees/{employee}', [App\Http\Controllers\Admin\EmployeeController::class, 'destroy'])->middleware(['auth:admin'])->name('admin.employees.destroy');
 Route::post('employees/{employee}/restore', [App\Http\Controllers\Admin\EmployeeController::class, 'restore'])->middleware(['auth:admin'])->name('admin.employees.restore');
 Route::patch('employees/{employee}/availability', [App\Http\Controllers\Admin\EmployeeController::class, 'updateAvailability'])->middleware(['auth:admin'])->name('admin.employees.update-availability');
-Route::get('grn/link-payment', [App\Http\Controllers\Admin\GrnController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
+Route::get('grn/link-payment', [GrnDashboardController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
 
-Route::get('inventory/gtn/items-with-stock', [InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
-Route::get('inventory/gtn/update', [InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
-Route::get('inventory/gtn/print', [InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.print');
+Route::get('inventory/gtn/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
+Route::get('inventory/gtn/update', [GoodsTransferNoteController::class, 'update'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
+Route::get('inventory/gtn/print', [GoodsTransferNoteController::class, 'print'])->middleware(['auth:admin'])->name('admin.inventory.gtn.print');
 Route::get('inventory/gtn/edit', [GoodsTransferNoteController::class, 'edit'])->middleware(['auth:admin'])->name('admin.inventory.gtn.edit');
-Route::get('inventory/items/restore', [InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
-Route::get('inventory/stock/update', [InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.update');
-Route::get('inventory/stock/edit', [InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.edit');
-Route::get('inventory/stock/show', [InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.show');
+Route::post('inventory/items/restore', [ItemMasterController::class, 'restore'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
+Route::put('inventory/stock/update', [ItemTransactionController::class, 'update'])->middleware(['auth:admin'])->name('admin.inventory.stock.update');
+Route::get('inventory/stock/edit', [ItemTransactionController::class, 'edit'])->middleware(['auth:admin'])->name('admin.inventory.stock.edit');
+Route::get('inventory/stock/show', [ItemTransactionController::class, 'show'])->middleware(['auth:admin'])->name('admin.inventory.stock.show');
 // Menu routes - properly ordered to avoid conflicts
 Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
 Route::get('menus/list', [App\Http\Controllers\Admin\MenuController::class, 'list'])->middleware(['auth:admin'])->name('admin.menus.list');
