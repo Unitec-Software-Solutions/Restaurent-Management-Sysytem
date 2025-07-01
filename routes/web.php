@@ -667,7 +667,7 @@ Route::get('grn/link-payment', [App\Http\Controllers\Admin\GrnController::class,
 Route::get('inventory/gtn/items-with-stock', [InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
 Route::get('inventory/gtn/update', [InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
 Route::get('inventory/gtn/print', [InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.print');
-Route::get('inventory/gtn/edit', [InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.edit');
+Route::get('inventory/gtn/edit', [GoodsTransferNoteController::class, 'edit'])->middleware(['auth:admin'])->name('admin.inventory.gtn.edit');
 Route::get('inventory/items/restore', [InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
 Route::get('inventory/stock/update', [InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.update');
 Route::get('inventory/stock/edit', [InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.edit');
