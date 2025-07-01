@@ -730,7 +730,7 @@ Route::get('orders/reservations/summary', [App\Http\Controllers\Admin\OrderContr
 Route::get('orders/takeaway/summary', [App\Http\Controllers\Admin\OrderController::class, 'takeaway'])->middleware(['auth:admin'])->name('admin.orders.takeaway.summary');
 Route::get('orders/summary', [App\Http\Controllers\Admin\OrderController::class, 'summary'])->middleware(['auth:admin'])->name('admin.orders.summary');
 Route::get('bills/show', [App\Http\Controllers\Admin\BillController::class, 'show'])->middleware(['auth:admin'])->name('admin.bills.show');
-Route::get('inventory/items/added-items', [App\Http\Controllers\Admin\InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
+// Route::get('inventory/items/added-items', [InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
 Route::get('payments/create', [App\Http\Controllers\PaymentController::class, 'create'])->name('payments.create');
 Route::get('branch', [App\Http\Controllers\BranchController::class, 'index'])->name('branch');
 Route::get('organization', [App\Http\Controllers\OrganizationController::class, 'index'])->name('organization');
