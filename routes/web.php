@@ -662,7 +662,7 @@ Route::put('employees/{employee}', [App\Http\Controllers\Admin\EmployeeControlle
 Route::delete('employees/{employee}', [App\Http\Controllers\Admin\EmployeeController::class, 'destroy'])->middleware(['auth:admin'])->name('admin.employees.destroy');
 Route::post('employees/{employee}/restore', [App\Http\Controllers\Admin\EmployeeController::class, 'restore'])->middleware(['auth:admin'])->name('admin.employees.restore');
 Route::patch('employees/{employee}/availability', [App\Http\Controllers\Admin\EmployeeController::class, 'updateAvailability'])->middleware(['auth:admin'])->name('admin.employees.update-availability');
-Route::get('grn/link-payment', [GrnDashboardController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
+// ::get('grn/link-payment', [GrnDashboardController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
 
 Route::get('inventory/gtn/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
 Route::get('inventory/gtn/update', [GoodsTransferNoteController::class, 'update'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
