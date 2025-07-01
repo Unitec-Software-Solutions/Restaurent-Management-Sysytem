@@ -16,7 +16,7 @@ use App\Http\Controllers\{
     OrderController,
     SupplierController,
     SupplierPaymentController,
-    PurchaseOrderController,
+
     AdminOrderController,
     OrganizationController,
     RoleController,
@@ -26,6 +26,11 @@ use App\Http\Controllers\{
     RealtimeDashboardController,
     AdminTestPageController,
     DatabaseTestController,
+};
+// moved production controllers to a admin folder
+// production controllers
+use App\Http\Controllers\Admin\
+{
     ProductionRequestsMasterController,
     ProductionOrderController,
     ProductionRequestItemController,
@@ -33,10 +38,12 @@ use App\Http\Controllers\{
     ProductionController,
     ProductionRecipeController,
 };
+// Purchase Order Controller
+use App\Http\Controllers\Admin\PurchaseOrderController;
+
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Middleware\SuperAdmin;
-use App\Models\ProductionRecipe;
 
 /*-------------------------------------------------------------------------
 | Debug Routes - Removed in production refactoring
@@ -172,16 +179,16 @@ if (config('app.debug')) {
             'session_exists' => session()->isStarted(),
         ];
     });
-    
+
     // Debug route to check permissions (temporary)
     Route::get('/debug-permissions', function() {
         if (!Auth::guard('admin')->check()) {
             return 'Not logged in as admin';
         }
-        
+
         $admin = Auth::guard('admin')->user();
         $permissions = \App\Models\Permission::all()->pluck('name');
-        
+
         return [
             'admin' => $admin->email,
             'organization_id' => $admin->organization_id,
@@ -298,7 +305,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/ajax/available-stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getAvailableStewards'])->name('ajax.available-stewards');
             Route::get('/ajax/stock-alerts', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStockAlerts'])->name('ajax.stock-alerts');
 
-            
+
             // Takeaway Orders - redirect to unified create with type parameter
 
 
