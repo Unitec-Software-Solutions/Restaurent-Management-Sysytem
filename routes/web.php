@@ -708,10 +708,10 @@ Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationContr
 Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'checkOut'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
 Route::get('orders/orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.create');
 Route::get('roles/assign', [App\Http\Controllers\RoleController::class, 'assign'])->name('roles.assign');
-Route::put('grn/update', [App\Http\Controllers\Admin\GrnController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
-Route::get('grn/print', [App\Http\Controllers\Admin\GrnController::class, 'print'])->middleware(['auth:admin'])->name('admin.grn.print');
-Route::get('grn/edit', [App\Http\Controllers\Admin\GrnController::class, 'edit'])->middleware(['auth:admin'])->name('admin.grn.edit');
-Route::get('grn/verify', [App\Http\Controllers\Admin\GrnController::class, 'verify'])->middleware(['auth:admin'])->name('admin.grn.verify');
+Route::put('grn/update', [GrnDashboardController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
+Route::get('grn/print', [GrnDashboardController::class, 'print'])->middleware(['auth:admin'])->name('admin.grn.print');
+Route::get('grn/edit', [GrnDashboardController::class, 'edit'])->middleware(['auth:admin'])->name('admin.grn.edit');
+Route::get('grn/verify', [GrnDashboardController::class, 'verify'])->middleware(['auth:admin'])->name('admin.grn.verify');
 Route::get('purchase-orders/show', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'show'])->middleware(['auth:admin'])->name('admin.purchase-orders.show');
 Route::get('purchase-orders/index', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'index'])->middleware(['auth:admin'])->name('admin.purchase-orders.index');
 Route::post('purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'store'])->middleware(['auth:admin'])->name('admin.purchase-orders.store');
