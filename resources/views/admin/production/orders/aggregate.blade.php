@@ -45,7 +45,13 @@
                     <p class="text-sm text-gray-500 mt-1">Aggregate approved production requests into a single efficient
                         order</p>
                     <p class="text-sm text-gray-500 mt-1">
-                        Organization: {{ Auth::user()->organization->name }}
+                        @if (Auth::guard('admin')->user()->is_super_admin)
+                            Organization: All Organizations (Super Admin)
+                        @elseif(Auth::guard('admin')->user()->organization)
+                            Organization: {{ Auth::guard('admin')->user()->organization->name }}
+                        @else
+                            Organization: Not Assigned
+                        @endif
                     </p>
                 </div>
                 <div class="flex gap-2">
@@ -489,9 +495,9 @@
                         <div class="ml-4 flex flex-col gap-2">
                             ${isEdited ?
                                 `<button type="button" onclick="resetIngredientQuantity('${ingredientId}')"
-                                                                                 class="text-blue-600 hover:text-blue-800 text-xs">
-                                                                            <i class="fas fa-undo mr-1"></i>Reset
-                                                                         </button>` : ''}
+                                                                                         class="text-blue-600 hover:text-blue-800 text-xs">
+                                                                                    <i class="fas fa-undo mr-1"></i>Reset
+                                                                                 </button>` : ''}
                         </div>
                     </div>
                 `;
