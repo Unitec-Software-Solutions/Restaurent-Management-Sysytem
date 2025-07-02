@@ -160,8 +160,19 @@ class GrnDashboardController extends Controller
 
     public function edit(GrnMaster $grn)
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to edit GRNs.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
         $orgId = $this->getOrganizationId();
-        if ($grn->organization_id !== $orgId) {
+
+        // For non-super admin, check organization access
+        if (!$isSuperAdmin && $grn->organization_id !== $orgId) {
             abort(403);
         }
 
@@ -170,21 +181,24 @@ class GrnDashboardController extends Controller
                 ->with('error', 'Only pending GRNs can be edited');
         }
 
-        $items = ItemMaster::where('organization_id', $orgId)
+        // Use the GRN's organization for data filtering
+        $targetOrgId = $grn->organization_id;
+
+        $items = ItemMaster::where('organization_id', $targetOrgId)
             ->active()
             ->get();
 
         $grn->load(['items.item', 'purchaseOrder.items']);
 
-        $suppliers = Supplier::where('organization_id', $orgId)
+        $suppliers = Supplier::where('organization_id', $targetOrgId)
             ->active()
             ->get();
 
-        $branches = Branch::where('organization_id', $orgId)
+        $branches = Branch::where('organization_id', $targetOrgId)
             ->active()
             ->get();
 
-        $purchaseOrders = PurchaseOrder::where('organization_id', $orgId)
+        $purchaseOrders = PurchaseOrder::where('organization_id', $targetOrgId)
             ->where('supplier_id', $grn->supplier_id)
             ->where('status', 'Approved')
             ->with(['items'])
@@ -207,8 +221,19 @@ class GrnDashboardController extends Controller
 
     public function update(Request $request, GrnMaster $grn)
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to update GRNs.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
         $orgId = $this->getOrganizationId();
-        if ($grn->organization_id !== $orgId) {
+
+        // For non-super admin, check organization access
+        if (!$isSuperAdmin && $grn->organization_id !== $orgId) {
             abort(403);
         }
 
@@ -216,24 +241,27 @@ class GrnDashboardController extends Controller
             return back()->with('error', 'Only pending GRNs can be updated');
         }
 
+        // Use the GRN's organization for validation
+        $targetOrgId = $grn->organization_id;
+
         Log::info('GRN Update Request Received', ['grn_id' => $grn->grn_id, 'data' => $request->all()]);
 
         $validated = $request->validate([
             'branch_id' => [
                 'required',
                 'exists:branches,id',
-                function ($attribute, $value, $fail) use ($orgId) {
-                    if (!Branch::where('id', $value)->where('organization_id', $orgId)->exists()) {
-                        $fail('The selected branch does not belong to your organization.');
+                function ($attribute, $value, $fail) use ($targetOrgId) {
+                    if (!Branch::where('id', $value)->where('organization_id', $targetOrgId)->exists()) {
+                        $fail('The selected branch does not belong to the organization.');
                     }
                 }
             ],
             'supplier_id' => [
                 'required',
                 'exists:suppliers,id',
-                function ($attribute, $value, $fail) use ($orgId) {
-                    if (!Supplier::where('id', $value)->where('organization_id', $orgId)->exists()) {
-                        $fail('The selected supplier does not belong to your organization.');
+                function ($attribute, $value, $fail) use ($targetOrgId) {
+                    if (!Supplier::where('id', $value)->where('organization_id', $targetOrgId)->exists()) {
+                        $fail('The selected supplier does not belong to the organization.');
                     }
                 }
             ],
@@ -245,9 +273,9 @@ class GrnDashboardController extends Controller
             'items.*.item_id' => [
                 'required',
                 'exists:item_master,id',
-                function ($attribute, $value, $fail) use ($orgId) {
-                    if (!ItemMaster::where('id', $value)->where('organization_id', $orgId)->exists()) {
-                        $fail('The selected item does not belong to your organization.');
+                function ($attribute, $value, $fail) use ($targetOrgId) {
+                    if (!ItemMaster::where('id', $value)->where('organization_id', $targetOrgId)->exists()) {
+                        $fail('The selected item does not belong to the organization.');
                     }
                 }
             ],
@@ -323,12 +351,12 @@ class GrnDashboardController extends Controller
             foreach ($validated['items'] as $index => $item) {
                 // Validate item belongs to organization
                 $itemMaster = ItemMaster::where('id', $item['item_id'])
-                    ->where('organization_id', $orgId)
+                    ->where('organization_id', $targetOrgId)
                     ->first();
 
                 if (!$itemMaster) {
                     $hasCalculationErrors = true;
-                    $calculationErrors[] = "Item at position " . ($index + 1) . " does not belong to your organization.";
+                    $calculationErrors[] = "Item at position " . ($index + 1) . " does not belong to the organization.";
                     continue;
                 }
 
@@ -402,7 +430,24 @@ class GrnDashboardController extends Controller
 
     public function create()
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to create GRNs.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
+        }
+
         $orgId = $this->getOrganizationId();
+
+        // Get organizations for super admin dropdown
+        $organizations = $isSuperAdmin ? Organization::active()->get() : collect();
 
         $items = $this->applyOrganizationFilter(ItemMaster::query(), $orgId)->active()->get();
         $suppliers = $this->applyOrganizationFilter(Supplier::query(), $orgId)->active()->get();
@@ -416,15 +461,30 @@ class GrnDashboardController extends Controller
             'items',
             'suppliers',
             'branches',
-            'purchaseOrders'
+            'purchaseOrders',
+            'organizations'
         ));
     }
 
     public function store(Request $request)
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to create GRNs.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
+        }
+
         $orgId = $this->getOrganizationId();
 
-        $validated = $request->validate([
+        $validationRules = [
             'branch_id' => [
                 'required',
                 'exists:branches,id',
@@ -455,9 +515,23 @@ class GrnDashboardController extends Controller
             'items.*.manufacturing_date' => 'nullable|date|before_or_equal:today',
             'items.*.expiry_date' => 'nullable|date|after:items.*.manufacturing_date',
             'grand_discount' => 'nullable|numeric|min:0|max:99.99',
-        ]);
+        ];
 
-        Log::info('GRN Store Request Received', ['org_id' => $orgId, 'data' => $request->all()]);
+        // Super admin must select organization
+        if ($isSuperAdmin) {
+            $validationRules['organization_id'] = 'required|exists:organizations,id';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        // For super admin, use the selected organization; for others, use their assigned organization
+        if ($isSuperAdmin) {
+            $targetOrgId = $request->organization_id;
+        } else {
+            $targetOrgId = $user->organization_id;
+        }
+
+        Log::info('GRN Store Request Received', ['org_id' => $targetOrgId, 'data' => $request->all()]);
 
         DB::beginTransaction();
         try {
@@ -467,12 +541,12 @@ class GrnDashboardController extends Controller
 
             foreach ($validated['items'] as $index => $item) {
                 $itemMaster = ItemMaster::where('id', $item['item_id'])
-                    ->where('organization_id', $orgId)
+                    ->where('organization_id', $targetOrgId)
                     ->first();
 
                 if (!$itemMaster) {
                     $hasValidationErrors = true;
-                    $validationErrors[] = "Item at position " . ($index + 1) . " does not belong to your organization.";
+                    $validationErrors[] = "Item at position " . ($index + 1) . " does not belong to the selected organization.";
                     continue;
                 }
 
@@ -487,25 +561,25 @@ class GrnDashboardController extends Controller
             }
 
             $grn = GrnMaster::create([
-                'grn_number' => GrnMaster::generateGRNNumber($orgId),
+                'grn_number' => GrnMaster::generateGRNNumber($targetOrgId),
                 'branch_id' => $validated['branch_id'],
-                'organization_id' => $orgId,
+                'organization_id' => $targetOrgId,
                 'supplier_id' => $validated['supplier_id'],
-                'received_by_user_id' => Auth::id(),
+                'received_by_user_id' => Auth::guard('admin')->id(),
                 'received_date' => $validated['received_date'],
                 'delivery_note_number' => $validated['delivery_note_number'],
                 'invoice_number' => $validated['invoice_number'],
                 'notes' => $validated['notes'],
                 'status' => GrnMaster::STATUS_PENDING,
                 'is_active' => true,
-                'created_by' => Auth::id(),
+                'created_by' => Auth::guard('admin')->id(),
                 'grand_discount' => $validated['grand_discount'] ?? 0,
             ]);
 
             $total = 0;
             foreach ($validated['items'] as $item) {
                 $itemMaster = ItemMaster::where('id', $item['item_id'])
-                    ->where('organization_id', $orgId)
+                    ->where('organization_id', $targetOrgId)
                     ->firstOrFail();
 
                 // Correct calculation: (received_quantity * buying_price) - discount
@@ -549,7 +623,7 @@ class GrnDashboardController extends Controller
                 ->with('success', 'GRN created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('GRN Store Failed', ['org_id' => $orgId, 'error' => $e->getMessage()]);
+            Log::error('GRN Store Failed', ['org_id' => $targetOrgId, 'error' => $e->getMessage()]);
             return back()->withInput()
                 ->with('error', 'Error creating GRN: ' . $e->getMessage());
         }
@@ -1004,6 +1078,96 @@ class GrnDashboardController extends Controller
         } catch (\Exception $e) {
             Log::error('Error fetching GRN statistics', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Failed to fetch statistics'], 500);
+        }
+    }
+
+    /**
+     * Get suppliers for organization (API endpoint for super admin)
+     */
+    public function getSuppliersByOrganization(Request $request)
+    {
+        try {
+            $user = Auth::guard('admin')->user();
+
+            if (!$user->is_super_admin) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            $organizationId = $request->input('organization_id');
+
+            if (!$organizationId) {
+                return response()->json(['error' => 'Organization ID is required'], 400);
+            }
+
+            $suppliers = Supplier::where('organization_id', $organizationId)
+                ->where('is_active', true)
+                ->select('id', 'name', 'supplier_id')
+                ->get();
+
+            return response()->json(['suppliers' => $suppliers]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching suppliers by organization', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch suppliers'], 500);
+        }
+    }
+
+    /**
+     * Get branches for organization (API endpoint for super admin)
+     */
+    public function getBranchesByOrganization(Request $request)
+    {
+        try {
+            $user = Auth::guard('admin')->user();
+
+            if (!$user->is_super_admin) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            $organizationId = $request->input('organization_id');
+
+            if (!$organizationId) {
+                return response()->json(['error' => 'Organization ID is required'], 400);
+            }
+
+            $branches = Branch::where('organization_id', $organizationId)
+                ->where('is_active', true)
+                ->select('id', 'name')
+                ->get();
+
+            return response()->json(['branches' => $branches]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching branches by organization', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch branches'], 500);
+        }
+    }
+
+    /**
+     * Get items for organization (API endpoint for super admin)
+     */
+    public function getItemsByOrganization(Request $request)
+    {
+        try {
+            $user = Auth::guard('admin')->user();
+
+            if (!$user->is_super_admin) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            $organizationId = $request->input('organization_id');
+
+            if (!$organizationId) {
+                return response()->json(['error' => 'Organization ID is required'], 400);
+            }
+
+            $items = ItemMaster::where('organization_id', $organizationId)
+                ->where('is_active', true)
+                ->select('id', 'item_code', 'name', 'buying_price')
+                ->get();
+
+            return response()->json(['items' => $items]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching items by organization', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch items'], 500);
         }
     }
 
