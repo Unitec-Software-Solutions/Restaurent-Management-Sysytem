@@ -20,6 +20,7 @@ class Organization extends Model
         'contact_person',
         'contact_person_designation',
         'contact_person_phone',
+        'business_type',
         'is_active',
         'subscription_plan_id',
         'plan_snapshot',
