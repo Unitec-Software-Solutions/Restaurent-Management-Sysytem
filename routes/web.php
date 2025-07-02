@@ -291,6 +291,24 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
                 Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
                 Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('show');
+                Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->whereNumber('gtn')->name('edit');
+                Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->whereNumber('gtn')->name('update');
+                Route::delete('/{gtn}', [GoodsTransferNoteController::class, 'destroy'])->whereNumber('gtn')->name('destroy');
+                Route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'print'])->whereNumber('gtn')->name('print');
+
+                // Workflow endpoints
+                Route::post('/{gtn}/confirm', [GoodsTransferNoteController::class, 'confirm'])->whereNumber('gtn')->name('confirm');
+                Route::post('/{gtn}/receive', [GoodsTransferNoteController::class, 'receive'])->whereNumber('gtn')->name('receive');
+                Route::post('/{gtn}/verify', [GoodsTransferNoteController::class, 'verify'])->whereNumber('gtn')->name('verify');
+                Route::post('/{gtn}/accept', [GoodsTransferNoteController::class, 'processAcceptance'])->whereNumber('gtn')->name('accept');
+                Route::post('/{gtn}/reject', [GoodsTransferNoteController::class, 'reject'])->whereNumber('gtn')->name('reject');
+                Route::get('/{gtn}/audit-trail', [GoodsTransferNoteController::class, 'auditTrail'])->whereNumber('gtn')->name('audit-trail');
+                Route::post('/{gtn}/change-status', [GoodsTransferNoteController::class, 'changeStatus'])->whereNumber('gtn')->name('change-status');
+
+                // AJAX endpoints
+                Route::get('/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->name('items-with-stock');
+                Route::get('/search-items-ajax', [GoodsTransferNoteController::class, 'searchItems'])->name('search-items-ajax');
+                Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
         });
 
@@ -693,10 +711,7 @@ Route::post('employees/{employee}/restore', [App\Http\Controllers\Admin\Employee
 Route::patch('employees/{employee}/availability', [App\Http\Controllers\Admin\EmployeeController::class, 'updateAvailability'])->middleware(['auth:admin'])->name('admin.employees.update-availability');
 // ::get('grn/link-payment', [GrnDashboardController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
 
-Route::get('inventory/gtn/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
-Route::get('inventory/gtn/update', [GoodsTransferNoteController::class, 'update'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
-Route::get('inventory/gtn/print', [GoodsTransferNoteController::class, 'print'])->middleware(['auth:admin'])->name('admin.inventory.gtn.print');
-Route::get('inventory/gtn/edit', [GoodsTransferNoteController::class, 'edit'])->middleware(['auth:admin'])->name('admin.inventory.gtn.edit');
+
 Route::post('inventory/items/restore', [ItemMasterController::class, 'restore'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
 // Menu routes - properly ordered to avoid conflicts
 Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
