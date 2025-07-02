@@ -44,7 +44,6 @@ use App\Http\Controllers\Admin\
     GrnDashboardController,
     GoodsTransferNoteController,
     GoodsTransferItemController,
-    GrnMasterController,
     GrnItemController,
 };
 // inventory controllers
