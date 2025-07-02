@@ -7,7 +7,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
-use App\Models\InventoryItem;
+use App\Models\ItemMaster;
 use App\Models\ItemTransaction;
 use App\Models\Customer;
 use App\Models\Branch;
@@ -51,26 +51,35 @@ class ReportingScenarioSeeder extends Seeder
             ['days_ago' => 90, 'orders' => 5, 'label' => 'Last Quarter'],
         ];
 
-        $orderNumber = 1000;
+        $orderNumber = time() + 1000; // Use timestamp for uniqueness
 
         foreach ($timeperiods as $period) {
             for ($i = 0; $i < $period['orders']; $i++) {
                 $orderDate = Carbon::now()->subDays($period['days_ago'])->addHours(rand(-12, 12));
                 
+                $subtotal = round(rand(1500, 8000) / 100, 2); // $15.00 to $80.00
+                $discountAmount = round(rand(0, 500) / 100, 2); // $0.00 to $5.00
+                $taxAmount = round($subtotal * 0.075, 2);
+                $serviceCharge = round($subtotal * 0.10, 2);
+                $totalAmount = round($subtotal + $taxAmount + $serviceCharge - $discountAmount, 2);
+                
                 $order = Order::create([
                     'order_number' => 'RPT-' . $orderNumber++,
-                    'customer_id' => $customer->id,
+                    'customer_phone' => $customer->phone,
+                    'customer_name' => $customer->name,
                     'branch_id' => $branch->id,
                     'organization_id' => $organization->id,
-                    'order_type' => collect(['dine_in', 'takeaway', 'delivery'])->random(),
+                    'order_type' => collect([
+                        'takeaway_walk_in_demand', 
+                        'takeaway_online_scheduled'
+                    ])->random(),
                     'status' => 'completed',
-                    'subtotal' => rand(1500, 8000) / 100, // $15.00 to $80.00
-                    'tax_amount' => function($subtotal) { return $subtotal * 0.075; },
-                    'service_charge' => function($subtotal) { return $subtotal * 0.10; },
-                    'discount_amount' => rand(0, 500) / 100, // $0.00 to $5.00
-                    'total_amount' => function($subtotal, $tax, $service, $discount) {
-                        return $subtotal + $tax + $service - $discount;
-                    },
+                    'subtotal' => $subtotal,
+                    'tax_amount' => $taxAmount,
+                    'service_charge' => $serviceCharge,
+                    'discount_amount' => $discountAmount,
+                    'total_amount' => $totalAmount,
+                    'order_date' => $orderDate,
                     'created_at' => $orderDate,
                     'completed_at' => $orderDate->copy()->addMinutes(rand(15, 45)),
                 ]);
@@ -89,15 +98,13 @@ class ReportingScenarioSeeder extends Seeder
 
                 // Create corresponding payment
                 Payment::create([
-                    'reference_number' => 'PAY-RPT-' . $order->id,
-                    'amount' => $total,
+                    'payable_type' => Order::class,
+                    'payable_id' => $order->id,
+                    'amount' => $totalAmount,
                     'payment_method' => collect(['cash', 'card', 'digital_wallet'])->random(),
-                    'payment_type' => 'customer_payment',
                     'status' => 'completed',
-                    'order_id' => $order->id,
-                    'organization_id' => $organization->id,
-                    'branch_id' => $branch->id,
-                    'created_at' => $orderDate->copy()->addMinutes(rand(30, 60)),
+                    'payment_reference' => 'PAY-RPT-' . $order->id,
+                    'notes' => 'Historical data payment',
                 ]);
             }
         }
@@ -115,50 +122,70 @@ class ReportingScenarioSeeder extends Seeder
             return;
         }
 
-        $inventoryItems = InventoryItem::limit(10)->get();
+        $inventoryItems = ItemMaster::where('organization_id', $organization->id)->limit(10)->get();
+
+        if ($inventoryItems->isEmpty()) {
+            return; // Skip if no inventory items exist
+        }
 
         foreach ($inventoryItems as $item) {
+            $qty = rand(50, 200);
+            $unitCost = rand(200, 1000) / 100; // $2.00 to $10.00
+            $totalCost = round($qty * $unitCost, 2);
+
             // Stock in transaction
             ItemTransaction::create([
                 'inventory_item_id' => $item->id,
-                'transaction_type' => 'stock_in',
-                'quantity' => rand(50, 200),
-                'unit_cost' => rand(200, 1000) / 100, // $2.00 to $10.00
-                'total_cost' => function($qty, $cost) { return $qty * $cost; },
+                'transaction_type' => 'purchase',
+                'quantity' => $qty,
+                'unit_price' => $unitCost,
+                'cost_price' => $unitCost,
+                'total_amount' => $totalCost,
                 'reference_number' => 'GRN-' . rand(1000, 9999),
                 'notes' => 'Stock replenishment for reporting test',
                 'organization_id' => $organization->id,
                 'branch_id' => $branch->id,
+                'is_active' => true,
                 'created_at' => Carbon::now()->subDays(rand(1, 30)),
             ]);
 
             // Stock out transaction (usage)
             $stockOutQty = rand(20, 80);
+            $itemCost = $item->buying_price ?? $unitCost;
+            $stockOutTotal = round($stockOutQty * $itemCost, 2);
+            
             ItemTransaction::create([
                 'inventory_item_id' => $item->id,
-                'transaction_type' => 'stock_out',
-                'quantity' => $stockOutQty,
-                'unit_cost' => $item->unit_cost ?? rand(200, 1000) / 100,
-                'total_cost' => $stockOutQty * ($item->unit_cost ?? rand(200, 1000) / 100),
+                'transaction_type' => 'sale',
+                'quantity' => -$stockOutQty, // Negative for stock out
+                'unit_price' => $itemCost,
+                'cost_price' => $itemCost,
+                'total_amount' => -$stockOutTotal, // Negative for stock out
                 'reference_number' => 'USAGE-' . rand(1000, 9999),
                 'notes' => 'Kitchen usage for production',
                 'organization_id' => $organization->id,
                 'branch_id' => $branch->id,
+                'is_active' => true,
                 'created_at' => Carbon::now()->subDays(rand(1, 15)),
             ]);
 
             // Wastage transaction
             if (rand(1, 3) === 1) { // 33% chance of wastage
+                $wasteQty = rand(2, 10);
+                $wasteTotal = round($wasteQty * $itemCost, 2);
+                
                 ItemTransaction::create([
                     'inventory_item_id' => $item->id,
-                    'transaction_type' => 'wastage',
-                    'quantity' => rand(2, 10),
-                    'unit_cost' => $item->unit_cost ?? rand(200, 1000) / 100,
-                    'total_cost' => function($qty, $cost) { return $qty * $cost; },
+                    'transaction_type' => 'adjustment',
+                    'quantity' => -$wasteQty, // Negative for waste
+                    'unit_price' => $itemCost,
+                    'cost_price' => $itemCost,
+                    'total_amount' => -$wasteTotal, // Negative for waste
                     'reference_number' => 'WST-' . rand(1000, 9999),
                     'notes' => 'Expired items - ' . collect(['damaged', 'expired', 'contaminated'])->random(),
                     'organization_id' => $organization->id,
                     'branch_id' => $branch->id,
+                    'is_active' => true,
                     'created_at' => Carbon::now()->subDays(rand(1, 20)),
                 ]);
             }
@@ -191,25 +218,35 @@ class ReportingScenarioSeeder extends Seeder
                     'one_time' => Carbon::now()->subDays(rand(90, 180)),
                 };
 
+                $subtotal = match($customerType) {
+                    'frequent' => rand(2000, 5000) / 100, // Regular spender
+                    'occasional' => rand(3000, 8000) / 100, // Higher value when visits
+                    'one_time' => rand(1500, 3500) / 100, // Lower value
+                };
+                
+                $discountAmount = match($customerType) {
+                    'frequent' => rand(200, 800) / 100, // Loyalty discounts
+                    default => rand(0, 200) / 100,
+                };
+                
+                $taxAmount = round($subtotal * 0.075, 2);
+                $serviceCharge = round($subtotal * 0.10, 2);
+                $totalAmount = round($subtotal + $taxAmount + $serviceCharge - $discountAmount, 2);
+
                 $order = Order::create([
-                    'order_number' => 'CUST-' . $customer->id . '-' . ($i + 1),
-                    'customer_id' => $customer->id,
+                    'order_number' => 'CUST-' . $customer->id . '-' . microtime(true) . '-' . $i,
+                    'customer_name' => $customer->name,
+                    'customer_phone' => $customer->phone,
                     'branch_id' => $branch->id,
                     'organization_id' => $organization->id,
-                    'order_type' => $customer->preferred_order_type ?? 'dine_in',
+                    'order_type' => $customer->preferred_order_type ?? 'takeaway_walk_in_demand',
                     'status' => 'completed',
-                    'subtotal' => match($customerType) {
-                        'frequent' => rand(2000, 5000) / 100, // Regular spender
-                        'occasional' => rand(3000, 8000) / 100, // Higher value when visits
-                        'one_time' => rand(1500, 3500) / 100, // Lower value
-                    },
-                    'tax_amount' => function($subtotal) { return $subtotal * 0.075; },
-                    'service_charge' => function($subtotal) { return $subtotal * 0.10; },
-                    'discount_amount' => match($customerType) {
-                        'frequent' => rand(200, 800) / 100, // Loyalty discounts
-                        default => rand(0, 200) / 100,
-                    },
-                    'total_amount' => 0, // Will be calculated
+                    'subtotal' => $subtotal,
+                    'tax_amount' => $taxAmount,
+                    'service_charge' => $serviceCharge,
+                    'discount_amount' => $discountAmount,
+                    'total_amount' => $totalAmount,
+                    'order_date' => $orderDate,
                     'created_at' => $orderDate,
                     'completed_at' => $orderDate->copy()->addMinutes(rand(20, 60)),
                 ]);
@@ -260,36 +297,32 @@ class ReportingScenarioSeeder extends Seeder
                     $baseAmount = 3000; // $30.00 base
                     $seasonalAmount = intval($baseAmount * $data['multiplier']);
                     
+                    $subtotal = round(($seasonalAmount + rand(-500, 500)) / 100, 2);
+                    $discountAmount = round(rand(0, 300) / 100, 2);
+                    $taxAmount = round($subtotal * 0.075, 2);
+                    $serviceCharge = round($subtotal * 0.10, 2);
+                    $totalAmount = round($subtotal + $taxAmount + $serviceCharge - $discountAmount, 2);
+                    
                     $order = Order::create([
-                        'order_number' => 'SEAS-' . $season . '-' . $month . '-' . $i,
-                        'customer_id' => $customer->id,
+                        'order_number' => 'SEAS-' . $season . '-' . $month . '-' . microtime(true) . '-' . $i,
+                        'customer_phone' => $customer->phone,
+                        'customer_name' => $customer->name,
                         'branch_id' => $branch->id,
                         'organization_id' => $organization->id,
                         'order_type' => match($season) {
-                            'summer' => collect(['takeaway', 'delivery'])->random(),
-                            'winter' => 'dine_in',
-                            default => collect(['dine_in', 'takeaway'])->random(),
+                            'summer' => collect(['takeaway_walk_in_demand', 'takeaway_online_scheduled'])->random(),
+                            'winter' => 'takeaway_walk_in_demand',
+                            default => collect(['takeaway_walk_in_demand', 'takeaway_online_scheduled'])->random(),
                         },
                         'status' => 'completed',
-                        'subtotal' => ($seasonalAmount + rand(-500, 500)) / 100,
-                        'tax_amount' => 0, // Will calculate
-                        'service_charge' => 0, // Will calculate
-                        'discount_amount' => rand(0, 300) / 100,
-                        'total_amount' => 0, // Will calculate
+                        'subtotal' => $subtotal,
+                        'tax_amount' => $taxAmount,
+                        'service_charge' => $serviceCharge,
+                        'discount_amount' => $discountAmount,
+                        'total_amount' => $totalAmount,
+                        'order_date' => $orderDate,
                         'created_at' => $orderDate,
                         'completed_at' => $orderDate->copy()->addMinutes(rand(15, 45)),
-                    ]);
-
-                    // Calculate totals
-                    $subtotal = $order->subtotal;
-                    $tax = round($subtotal * 0.075, 2);
-                    $service = round($subtotal * 0.10, 2);
-                    $total = $subtotal + $tax + $service - $order->discount_amount;
-
-                    $order->update([
-                        'tax_amount' => $tax,
-                        'service_charge' => $service,
-                        'total_amount' => $total,
                     ]);
                 }
             }
