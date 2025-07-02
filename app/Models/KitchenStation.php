@@ -35,6 +35,7 @@ class KitchenStation extends Model
 
     protected $fillable = [
         'branch_id',
+        'organization_id',
         'name',
         'code',
         'type',
