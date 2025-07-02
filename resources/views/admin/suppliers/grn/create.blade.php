@@ -11,6 +11,15 @@
                 <div>
                     <h2 class="text-xl font-semibold text-gray-900">Create New Goods Received Note</h2>
                     <p class="text-sm text-gray-500">Record items received from suppliers</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        @if (Auth::guard('admin')->user()->is_super_admin)
+                            Organization: All Organizations (Super Admin)
+                        @elseif(Auth::guard('admin')->user()->organization)
+                            Organization: {{ Auth::guard('admin')->user()->organization->name }}
+                        @else
+                            Organization: Not Assigned
+                        @endif
+                    </p>
                 </div>
                 <a href="{{ route('admin.grn.index') }}"
                     class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
@@ -30,6 +39,54 @@
                                 <li>{{ $error }}</li>
                             @endforeach
                         </ul>
+                    </div>
+                @endif
+
+                <!-- Organization Selection for Super Admin -->
+                @if (Auth::guard('admin')->user()->is_super_admin)
+                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-building text-blue-600 mr-2"></i>
+                            <h3 class="text-lg font-semibold text-blue-900">Organization Selection</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Target Organization <span class="text-red-500">*</span>
+                                </label>
+                                <select name="organization_id" id="organization_id" required
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select Organization</option>
+                                    @foreach ($organizations as $org)
+                                        <option value="{{ $org->id }}"
+                                            {{ old('organization_id') == $org->id ? 'selected' : '' }}>
+                                            {{ $org->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('organization_id')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex items-end">
+                                <div class="text-sm text-blue-700">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    GRN will be created for the selected organization
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <!-- Display current organization for non-super admins -->
+                    <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-building text-gray-600 mr-2"></i>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-700">Organization</h3>
+                                <p class="text-gray-900 font-semibold">
+                                    {{ Auth::guard('admin')->user()->organization->name }}</p>
+                            </div>
+                        </div>
                     </div>
                 @endif
 
@@ -192,10 +249,11 @@
                                             value="{{ $item['batch_no'] }}">
                                     </td> --}}
                                             <td class="px-4 py-3">
-                                                <input type="number" name="items[{{ $index }}][received_quantity]"
+                                                <input type="number"
+                                                    name="items[{{ $index }}][received_quantity]"
                                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent received-qty"
-                                                    min="0.01" step="0.01" value="{{ $item['received_quantity'] }}"
-                                                    required>
+                                                    min="0.01" step="0.01"
+                                                    value="{{ $item['received_quantity'] }}" required>
                                                 <input type="hidden" name="items[{{ $index }}][ordered_quantity]"
                                                     class="ordered-qty" value="{{ $item['received_quantity'] }}">
                                             </td>
@@ -373,7 +431,7 @@
     @push('scripts')
         <script>
             // Preload items data
-            const itemsData = {
+            let itemsData = {
                 @foreach ($items as $item)
                     "{{ $item->id }}": {
                         buying_price: {{ $item->buying_price }}
@@ -385,7 +443,91 @@
                 const itemsContainer = document.getElementById('itemsContainer');
                 const addItemBtn = document.getElementById('addItemBtn');
                 const grandTotalEl = document.getElementById('grand-total');
+                const organizationSelect = document.getElementById('organization_id');
+                const supplierSelect = document.getElementById('supplier_id');
+                const branchSelect = document.getElementById('branch_id');
+                const isSuperAdmin = {{ Auth::guard('admin')->user()->is_super_admin ? 'true' : 'false' }};
                 let itemCount = {{ count($oldItems) }};
+
+                // Super admin organization selection handler
+                if (isSuperAdmin && organizationSelect) {
+                    organizationSelect.addEventListener('change', async function() {
+                        const selectedOrgId = this.value;
+
+                        // Clear dependent dropdowns
+                        supplierSelect.innerHTML = '<option value="">Select Supplier</option>';
+                        branchSelect.innerHTML = '<option value="">Select Branch</option>';
+
+                        // Clear items in existing rows
+                        document.querySelectorAll('.item-select').forEach(select => {
+                            select.innerHTML = '<option value="">Select Item</option>';
+                        });
+
+                        if (selectedOrgId) {
+                            try {
+                                // Fetch suppliers
+                                const suppliersResponse = await fetch(
+                                    `/admin/api/grn/suppliers-by-organization?organization_id=${selectedOrgId}`
+                                    );
+                                if (suppliersResponse.ok) {
+                                    const suppliersData = await suppliersResponse.json();
+                                    suppliersData.suppliers.forEach(supplier => {
+                                        const option = document.createElement('option');
+                                        option.value = supplier.id;
+                                        option.textContent =
+                                            `${supplier.name} (${supplier.supplier_id})`;
+                                        supplierSelect.appendChild(option);
+                                    });
+                                }
+
+                                // Fetch branches
+                                const branchesResponse = await fetch(
+                                    `/admin/api/grn/branches-by-organization?organization_id=${selectedOrgId}`
+                                    );
+                                if (branchesResponse.ok) {
+                                    const branchesData = await branchesResponse.json();
+                                    branchesData.branches.forEach(branch => {
+                                        const option = document.createElement('option');
+                                        option.value = branch.id;
+                                        option.textContent = branch.name;
+                                        branchSelect.appendChild(option);
+                                    });
+                                }
+
+                                // Fetch items and update itemsData
+                                const itemsResponse = await fetch(
+                                    `/admin/api/grn/items-by-organization?organization_id=${selectedOrgId}`
+                                    );
+                                if (itemsResponse.ok) {
+                                    const itemsResponseData = await itemsResponse.json();
+                                    itemsData = {};
+                                    itemsResponseData.items.forEach(item => {
+                                        itemsData[item.id] = {
+                                            buying_price: item.buying_price
+                                        };
+                                    });
+
+                                    // Update all item selects
+                                    document.querySelectorAll('.item-select').forEach(select => {
+                                        select.innerHTML = '<option value="">Select Item</option>';
+                                        itemsResponseData.items.forEach(item => {
+                                            const option = document.createElement('option');
+                                            option.value = item.id;
+                                            option.setAttribute('data-price', item
+                                                .buying_price);
+                                            option.textContent =
+                                                `${item.item_code} - ${item.name}`;
+                                            select.appendChild(option);
+                                        });
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('Error fetching organization data:', error);
+                                alert('Error loading organization data. Please try again.');
+                            }
+                        }
+                    });
+                }
 
                 // Function to handle item selection change
                 function handleItemChange() {
@@ -419,6 +561,19 @@
                     if (placeholder) placeholder.remove();
                 }
 
+                // Function to generate item select options
+                function generateItemSelectOptions() {
+                    let options = '<option value="">Select Item</option>';
+                    Object.keys(itemsData).forEach(itemId => {
+                        // Since we don't have full item data when dynamically loaded, we'll use the DOM
+                        const existingOption = document.querySelector(`.item-select option[value="${itemId}"]`);
+                        if (existingOption) {
+                            options += existingOption.outerHTML;
+                        }
+                    });
+                    return options;
+                }
+
                 // Attach event to existing item selects
                 document.querySelectorAll('.item-select').forEach(select => {
                     select.addEventListener('change', handleItemChange);
@@ -426,21 +581,27 @@
 
                 // Add new item row
                 addItemBtn.addEventListener('click', function() {
+                    // For super admin, ensure organization is selected before adding items
+                    if (isSuperAdmin && organizationSelect && !organizationSelect.value) {
+                        alert('Please select an organization first.');
+                        return;
+                    }
+
                     removePlaceholderRow();
                     const newRow = document.createElement('tr');
                     newRow.className = 'item-row border-b bg-white hover:bg-gray-50';
                     newRow.dataset.index = itemCount;
+
+                    // Get current item options
+                    const itemOptions = document.querySelector('.item-select')?.innerHTML ||
+                        '<option value="">Select Item</option>';
+
                     newRow.innerHTML = `
                 <td class="px-4 py-3">
                     <select name="items[${itemCount}][item_id]"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent item-select"
                             required>
-                        <option value="">Select Item</option>
-                        @foreach ($items as $item)
-                            <option value="{{ $item->id }}" data-price="{{ $item->buying_price }}">
-                                                                 {{ $item->item_code }} - {{ $item->name }}
-                            </option>
-                        @endforeach
+                        ${itemOptions}
                     </select>
                     <input type="hidden" name="items[${itemCount}][item_code]" value="">
                 </td>
@@ -542,9 +703,6 @@
                     attachRemoveHandler(row);
                 });
 
-                // Add event listeners to remove buttons for dynamically added rows
-                // (already handled in addItemBtn click above)
-
                 // When page loads, if no item-row exists, show placeholder
                 if (itemsContainer.querySelectorAll('.item-row').length === 0) {
                     addPlaceholderRow();
@@ -616,6 +774,13 @@
 
                 // Form validation
                 document.getElementById('grnForm').addEventListener('submit', function(e) {
+                    // For super admin, ensure organization is selected
+                    if (isSuperAdmin && organizationSelect && !organizationSelect.value) {
+                        e.preventDefault();
+                        alert('Please select an organization');
+                        return false;
+                    }
+
                     const itemRows = document.querySelectorAll('.item-row');
                     if (itemRows.length === 0) {
                         e.preventDefault();
@@ -661,40 +826,6 @@
                         .toFixed(2);
                 });
                 updateSummaryFooter();
-
-                // Remove modal logic and make the button submit the form directly
-                // const openConfirmModalBtn = document.getElementById('openConfirmModalBtn');
-                // const grnConfirmModal = document.getElementById('grnConfirmModal');
-                // const confirmCreateGrnBtn = document.getElementById('confirmCreateGrnBtn');
-                // const cancelCreateGrnBtn = document.getElementById('cancelCreateGrnBtn');
-
-                // openConfirmModalBtn.addEventListener('click', function() {
-                //     grnConfirmModal.classList.remove('hidden');
-                // });
-
-                // cancelCreateGrnBtn.addEventListener('click', function() {
-                //     grnConfirmModal.classList.add('hidden');
-                // });
-
-                // confirmCreateGrnBtn.addEventListener('click', function() {
-                //     grnConfirmModal.classList.add('hidden');
-                //     grnForm.requestSubmit();
-                // });
-
-                // Override form submit to show modal instead
-                // grnForm.addEventListener('submit', function(e) {
-                //     if (!grnConfirmModal.classList.contains('hidden')) {
-                //         // Modal is already open, allow submit (user confirmed)
-                //         return;
-                //     }
-                //     // Only show modal if submit is triggered by button (not programmatically)
-                //     if (document.activeElement === openConfirmModalBtn) {
-                //         // Prevent default, modal will handle submit
-                //         e.preventDefault();
-                //     }
-                // });
-
-                // No modal, so nothing else needed here
             });
         </script>
     @endpush
