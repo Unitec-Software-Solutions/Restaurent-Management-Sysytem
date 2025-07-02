@@ -650,7 +650,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'building-office',
                 'icon_type' => 'svg',
-                'permission' => 'organizations.view',
+                'permission' => null, 
                 'badge' => $this->getPendingOrganizationsCount(),
                 'badge_color' => 'blue',
                 'is_route_valid' => $this->validateRoute('admin.organizations.index'),
@@ -660,7 +660,7 @@ class AdminSidebar extends Component
                         'route' => 'admin.organizations.index',
                         'icon' => 'list',
                         'icon_type' => 'svg',
-                        'permission' => 'organizations.view',
+                        'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.index')
                     ],
                     [
@@ -668,7 +668,7 @@ class AdminSidebar extends Component
                         'route' => 'admin.organizations.create',
                         'icon' => 'plus',
                         'icon_type' => 'svg',
-                        'permission' => 'organizations.create',
+                        'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.create')
                     ],
                     [
@@ -676,7 +676,7 @@ class AdminSidebar extends Component
                         'route' => 'admin.organizations.activate.form',
                         'icon' => 'key',
                         'icon_type' => 'svg',
-                        'permission' => 'organizations.activate',
+                        'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.activate.form')
                     ]
                 ]
@@ -800,7 +800,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'credit-card',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.view',
+                'permission' => null,
                 'badge' => $this->getActiveSubscriptionsCount(),
                 'badge_color' => 'green',
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.index'),
@@ -952,6 +952,22 @@ class AdminSidebar extends Component
             ];
         }
 
+        // KOT Management (Kitchen Order Tickets)
+        if ($this->hasPermission($admin, 'kitchen.view')) {
+            $menuItems[] = [
+                'title' => 'KOT Management',
+                'route' => 'admin.kot.index',
+                'route_params' => [],
+                'icon' => 'clipboard-list',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.view',
+                'badge' => $this->getActiveKOTsCount(),
+                'badge_color' => 'orange',
+                'is_route_valid' => $this->validateRoute('admin.kot.index'),
+                'sub_items' => $this->getKOTSubItems()
+            ];
+        }
+
         // Settings (Admin level and above)
         if (!$this->isStaffLevel($admin)) {
             $menuItems[] = [
@@ -1013,7 +1029,8 @@ class AdminSidebar extends Component
             'production.view', 'production.manage', 'organizations.view', 'branches.view',
             'branches.create', 'branches.activate', 'modules.view', 'roles.view',
             'subscription.view', 'menus.view', 'orders.view', 'reservations.view',
-            'users.view', 'reports.view', 'kitchen.view', 'settings.view'
+            'users.view', 'reports.view', 'kitchen.view', 'kitchen.create', 'kitchen.manage',
+            'settings.view'
         ];
         
         if (in_array($permission, $allowedPermissions)) {
@@ -1723,7 +1740,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.subscription-plans.index',
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.view',
+                'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.index')
             ],
             [
@@ -1731,7 +1748,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.subscription-plans.create',
                 'icon' => 'plus',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.create',
+                'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.create')
             ],
             [
@@ -1739,7 +1756,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.subscription-plans.analytics',
                 'icon' => 'chart-bar',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.analytics',
+                'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.analytics')
             ]
         ];
@@ -1864,5 +1881,54 @@ class AdminSidebar extends Component
         }
 
         return $items;
+    }
+
+    /**
+     * Get KOT (Kitchen Order Tickets) sub-items
+     */
+    private function getKOTSubItems(): array
+    {
+        return [
+            [
+                'title' => 'Active KOTs',
+                'route' => 'admin.kot.active',
+                'icon' => 'clock',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.view',
+                'is_route_valid' => $this->validateRoute('admin.kot.active')
+            ],
+            [
+                'title' => 'All KOTs',
+                'route' => 'admin.kot.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.view',
+                'is_route_valid' => $this->validateRoute('admin.kot.index')
+            ],
+            [
+                'title' => 'Create KOT',
+                'route' => 'admin.kot.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.create',
+                'is_route_valid' => $this->validateRoute('admin.kot.create')
+            ],
+            [
+                'title' => 'KOT Templates',
+                'route' => 'admin.kot.templates',
+                'icon' => 'document-duplicate',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.manage',
+                'is_route_valid' => $this->validateRoute('admin.kot.templates')
+            ],
+            [
+                'title' => 'Kitchen Stations',
+                'route' => 'admin.kitchen.stations',
+                'icon' => 'grid',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.manage',
+                'is_route_valid' => $this->validateRoute('admin.kitchen.stations')
+            ]
+        ];
     }
 }
