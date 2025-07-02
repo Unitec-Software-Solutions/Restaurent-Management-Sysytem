@@ -2,19 +2,22 @@
 
 namespace Database\Factories;
 
-use App\Models\ItemCategory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Models\ItemCategory>
+ */
 class ItemCategoryFactory extends Factory
 {
-    protected $model = ItemCategory::class;    public function definition()
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
     {
         return [
-            'organization_id' => \App\Models\Organization::factory(),
-            'name' => $this->faker->word(),
-            'code' => $this->faker->bothify('CAT-####'),
-            'description' => $this->faker->sentence(),
-            'is_active' => $this->faker->boolean(),
+            //
         ];
     }
 }

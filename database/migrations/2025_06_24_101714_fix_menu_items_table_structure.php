@@ -18,7 +18,7 @@ return new class extends Migration
                 $table->foreignId('menu_category_id')->nullable()->constrained('menu_categories')->onDelete('cascade');
                 $table->foreignId('organization_id')->nullable()->constrained('organizations')->onDelete('cascade');
                 $table->foreignId('branch_id')->nullable()->constrained('branches')->onDelete('cascade');
-                $table->foreignId('item_master_id')->nullable()->constrained('item_master')->onDelete('set null');
+                $table->foreignId('item_masters_id')->nullable()->constrained('item_masters')->onDelete('set null');
                 $table->string('name');
                 $table->text('description')->nullable();
                 $table->decimal('price', 10, 2);
@@ -68,11 +68,11 @@ return new class extends Migration
                     'branch_id' => function($table) {
                         $table->foreignId('branch_id')->nullable()->after('organization_id')->constrained('branches')->onDelete('cascade');
                     },
-                    'item_master_id' => function($table) {
-                        if (Schema::hasTable('item_master')) {
-                            $table->foreignId('item_master_id')->nullable()->after('branch_id')->constrained('item_master')->onDelete('set null');
+                    'item_masters_id' => function($table) {
+                        if (Schema::hasTable('item_masters')) {
+                            $table->foreignId('item_masters_id')->nullable()->after('branch_id')->constrained('item_masters')->onDelete('set null');
                         } else {
-                            $table->unsignedBigInteger('item_master_id')->nullable()->after('branch_id');
+                            $table->unsignedBigInteger('item_masters_id')->nullable()->after('branch_id');
                         }
                     },
                     'promotion_price' => function($table) {

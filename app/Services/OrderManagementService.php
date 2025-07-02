@@ -587,7 +587,7 @@ class OrderManagementService
                 $consumedQuantity = $inventoryItem->pivot->quantity_required * $orderItem->quantity;
                 
                 // Update inventory
-                $branchInventory = InventoryItem::where('item_master_id', $inventoryItem->id)
+                $branchInventory = InventoryItem::where('item_masters_id', $inventoryItem->id)
                     ->where('branch_id', $order->branch_id)
                     ->first();
                     

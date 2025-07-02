@@ -6,7 +6,6 @@ use App\Models\Reservation;
 use App\Models\Customer;
 use App\Models\Branch;
 use App\Models\Payment;
-use App\Models\Table;
 use App\Models\RestaurantConfig;
 use App\Services\ReservationAvailabilityService;
 use App\Services\NotificationService;
@@ -15,10 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use App\Mail\ReservationConfirmed;
-use App\Mail\ReservationRejected;
-use App\Mail\ReservationCancellationMail;
-use Illuminate\Support\Facades\Mail;
+use App\Models\Organization;
 
 class ReservationController extends Controller
 {
@@ -35,22 +31,34 @@ class ReservationController extends Controller
 
     public function create(Request $request)
     {
-        $branches = Branch::where('is_active', true)->get();
-        
-        // Check if we're in edit mode and populate from request
-        $input = [];
-        if ($request->has('edit_mode')) {
-            $input = $request->only([
-                'name', 'email', 'phone', 'branch_id', 
-                'date', 'start_time', 'end_time', 
-                'number_of_people', 'comments'
-            ]);
+        try {
+            // Get all active organizations (minimal data for dropdown)
+            $organizations = Organization::where('is_active', true)
+                ->select('id', 'name', 'trading_name')
+                ->orderBy('name')
+                ->get()
+                ->map(function($org) {
+                    return [
+                        'id' => $org->id,
+                        'name' => $org->trading_name ?: $org->name
+                    ];
+                });
+
+            $organization_id = $request->get('organization_id');
+            $branch_id = $request->get('branch_id');
+
+            return view('reservations.create', compact(
+                'organizations',
+                'organization_id', 
+                'branch_id'
+            ));
+
+        } catch (\Exception $e) {
+            Log::error('Error in reservation create: ' . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Unable to load reservation form. Please try again.');
         }
-        
-        return view('reservations.create', [
-            'branches' => $branches,
-            'input' => $input  // Pass input data to pre-fill form
-        ]);
     }
 
     
@@ -422,5 +430,199 @@ class ReservationController extends Controller
         return view('reservations.payment', compact('reservation'));
     }
 
-    
+    /**
+     * Get branches for a specific organization (API endpoint)
+     *
+     * @param int $organizationId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getBranches($organizationId)
+    {
+        try {
+            // Validate organization exists
+            $organization = Organization::find($organizationId);
+            
+            if (!$organization) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Organization not found',
+                    'branches' => []
+                ], 404);
+            }
+
+            // Get active branches for the organization
+            $branches = Branch::where('organization_id', $organizationId)
+                ->where('is_active', true)
+                ->select([
+                    'id',
+                    'name',
+                    'address',
+                    'phone',
+                    'email',
+                    'opening_time',
+                    'closing_time',
+                    'is_active',
+                    'organization_id'
+                ])
+                ->orderBy('name')
+                ->get();
+
+            // Log the request for debugging
+            Log::info('Branches fetched for organization', [
+                'organization_id' => $organizationId,
+                'organization_name' => $organization->name,
+                'branches_count' => $branches->count(),
+                'branches' => $branches->pluck('name')->toArray()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Branches retrieved successfully',
+                'branches' => $branches,
+                'organization' => [
+                    'id' => $organization->id,
+                    'name' => $organization->name
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching branches for organization', [
+                'organization_id' => $organizationId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch branches: ' . $e->getMessage(),
+                'branches' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Get available time slots for a branch on a specific date
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getAvailableTimeSlots(Request $request)
+    {
+        try {
+            $request->validate([
+                'branch_id' => 'required|exists:branches,id',
+                'date' => 'required|date|after_or_equal:today',
+                'party_size' => 'required|integer|min:1|max:20'
+            ]);
+
+            $branch = Branch::find($request->branch_id);
+            $date = Carbon::parse($request->date);
+            $partySize = $request->party_size;
+
+            // Check if branch is open on this date
+            $dayOfWeek = $date->dayOfWeek;
+            
+            // Get available time slots (simplified logic)
+            $openingTime = $branch->opening_time ?: '09:00';
+            $closingTime = $branch->closing_time ?: '22:00';
+            
+            $timeSlots = $this->generateTimeSlots($openingTime, $closingTime, $date, $branch->id, $partySize);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Time slots retrieved successfully',
+                'time_slots' => $timeSlots,
+                'branch_info' => [
+                    'name' => $branch->name,
+                    'opening_time' => $openingTime,
+                    'closing_time' => $closingTime
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching time slots', [
+                'request_data' => $request->all(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch time slots: ' . $e->getMessage(),
+                'time_slots' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate available time slots for a branch
+     *
+     * @param string $openingTime
+     * @param string $closingTime
+     * @param Carbon $date
+     * @param int $branchId
+     * @param int $partySize
+     * @return array
+     */
+    private function generateTimeSlots($openingTime, $closingTime, $date, $branchId, $partySize)
+    {
+        $slots = [];
+        $interval = 30; // 30 minutes interval
+        
+        $start = Carbon::createFromFormat('H:i', $openingTime);
+        $end = Carbon::createFromFormat('H:i', $closingTime);
+        
+        // If requesting for today, start from current time + 1 hour
+        if ($date->isToday()) {
+            $minTime = now()->addHour();
+            if ($start->lt($minTime)) {
+                $start = $minTime->copy()->minute(0)->second(0);
+                if ($minTime->minute > 0) {
+                    $start->addHour();
+                }
+            }
+        }
+        
+        while ($start->lt($end->subHours(2))) { // Stop 2 hours before closing
+            $timeString = $start->format('H:i');
+            $displayTime = $start->format('g:i A');
+            
+            // Check availability (simplified - you can add more complex logic)
+            $isAvailable = $this->isTimeSlotAvailable($branchId, $date->format('Y-m-d'), $timeString, $partySize);
+            
+            $slots[] = [
+                'time' => $timeString,
+                'display_time' => $displayTime,
+                'available' => $isAvailable,
+                'party_size' => $partySize
+            ];
+            
+            $start->addMinutes($interval);
+        }
+        
+        return $slots;
+    }
+
+    /**
+     * Check if a time slot is available
+     *
+     * @param int $branchId
+     * @param string $date
+     * @param string $time
+     * @param int $partySize
+     * @return bool
+     */
+    private function isTimeSlotAvailable($branchId, $date, $time, $partySize)
+    {
+        // Simple availability check - you can enhance this with table capacity logic
+        $existingReservations = Reservation::where('branch_id', $branchId)
+            ->where('date', $date)
+            ->where('start_time', $time)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+        
+        // Assume max 5 reservations per time slot (you can make this configurable)
+        return $existingReservations < 5;
+    }
+
+    // ...existing methods...
 }

@@ -46,8 +46,17 @@
                                 <input type="datetime-local" name="order_time" 
                                     value="{{ auth()->check() && auth()->user()->isAdmin() ? now()->format('Y-m-d\TH:i') : '' }}"
                                     min="{{ now()->format('Y-m-d\TH:i') }}"
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
                                     required>
+                            </div>
+
+                            <!-- Add Special Instructions Field -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Special Instructions <span class="text-gray-500 text-xs">(Optional)</span></label>
+                                <textarea name="special_instructions" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    rows="3"
+                                    placeholder="Any special requests or instructions for your order..."></textarea>
                             </div>
                         </div>
 
@@ -84,7 +93,6 @@
                                 <div class="flex items-center">
                                     <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
                                         type="checkbox" 
-                                        name="items[{{ $item->id }}][item_id]" 
                                         value="{{ $item->id }}" 
                                         id="item_{{ $item->id }}" 
                                         data-item-id="{{ $item->id }}">
@@ -110,20 +118,21 @@
                                         @endif
                                     </label>
                                     
-                                    <div class="flex items-center">
+                                    <div class="flex items-center border border-gray-300 rounded overflow-hidden touch-friendly-controls">
                                         <button type="button"
-                                            class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                            class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
                                             data-item-id="{{ $item->id }}"
-                                            disabled>-</button>
+                                            disabled>−</button>
                                         <input type="number"
                                             min="1"
-                                            value="{{ isset($existingItem) ? $existingItem->quantity : 1 }}"
-                                            class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
+                                            max="99"
+                                            value="1"
+                                            class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
                                             data-item-id="{{ $item->id }}"
-                                            name="items[{{ $item->id }}][quantity]"
-                                            @if(empty($existingItem)) disabled @endif>
+                                            disabled
+                                            readonly>
                                         <button type="button"
-                                            class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                                            class="qty-increase w-12 h-12 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-l border-gray-300"
                                             data-item-id="{{ $item->id }}"
                                             disabled>+</button>
                                     </div>
@@ -134,12 +143,24 @@
                     </div>
                 </div>
 
+                <!-- Order Summary Section -->
+                <div class="mt-6 bg-gray-50 p-5 rounded-lg border border-gray-200" id="order-summary" style="display: none;">
+                    <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Order Summary</h3>
+                    <div id="selected-items" class="space-y-2"></div>
+                    <div class="border-t pt-3 mt-3">
+                        <div class="flex justify-between items-center text-lg font-semibold">
+                            <span>Total Items:</span>
+                            <span id="total-items">0</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end mt-6">
-                    <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 border border-transparent rounded-md font-semibold text-white hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <button type="submit" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 border border-transparent rounded-lg font-bold text-white text-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all shadow-lg transform hover:scale-105 touch-manipulation">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                         </svg>
-                        Place Order
+                        Create Order for Review
                     </button>
                 </div>
             </form>
@@ -172,6 +193,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     @endif
 
+    // Initialize quantity controls first
+    initializeQuantityControls();
+
     // Enable/disable qty and buttons on checkbox change
     document.querySelectorAll('.item-check').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
@@ -179,32 +203,106 @@ document.addEventListener('DOMContentLoaded', function() {
             const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
             const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
             const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
+            const itemContainer = this.closest('.bg-white');
+            
             if (this.checked) {
+                // Enable controls
                 qtyInput.disabled = false;
+                qtyInput.removeAttribute('readonly');
                 plusBtn.disabled = false;
                 minusBtn.disabled = false;
+                
+                // Set proper form field names for Laravel validation
                 qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+                
+                // Create hidden input for item_id to ensure it's submitted with form
+                let hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'items[' + itemId + '][item_id]';
+                    hiddenInput.value = itemId;
+                    hiddenInput.className = 'item-hidden-' + itemId;
+                    itemContainer.appendChild(hiddenInput);
+                }
+                
+                // Visual feedback - highlight selected item
+                itemContainer.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+                
+                updateButtonStates(itemId, qtyInput.value);
+                console.log('✅ Item selected:', itemId, 'Quantity:', qtyInput.value);
+                updateOrderSummary();
             } else {
+                // Disable controls
                 qtyInput.disabled = true;
+                qtyInput.setAttribute('readonly', 'readonly');
                 plusBtn.disabled = true;
                 minusBtn.disabled = true;
+                
+                // Remove form field names
                 qtyInput.removeAttribute('name');
                 qtyInput.value = 1;
+                
+                // Remove hidden input
+                const hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
+                if (hiddenInput) {
+                    hiddenInput.remove();
+                }
+                
+                // Remove visual feedback
+                itemContainer.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+                
+                console.log('❌ Item deselected:', itemId);
+                updateOrderSummary();
             }
-            if (typeof updateCart === 'function') updateCart();
         });
     });
 
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const phoneInput = document.querySelector('input[name="customer_phone"]');
+        if (phoneInput && !phoneInput.value.trim()) {
+            e.preventDefault();
+            alert('Please enter a valid phone number');
+            phoneInput.focus();
+            return false;
+        }
+        
+        // Check if at least one item is selected
+        const checkedItems = document.querySelectorAll('.item-check:checked');
+        if (checkedItems.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one item');
+            return false;
+        }
+        
+        // Add loading state to form
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <svg class="animate-spin h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating Order...
+            `;
+            this.classList.add('form-submitting');
+        }
+    });
+});
+
 /**
- * Initialize quantity controls for takeaway orders
+ * Initialize quantity controls for takeaway orders with enhanced touch support
  */
 function initializeQuantityControls() {
-    console.log('🔢 Initializing takeaway quantity controls...');
+    console.log('🔢 Initializing enhanced touch-friendly quantity controls...');
     
-    // Handle quantity increase buttons
+    // Handle quantity increase buttons with enhanced touch feedback
     document.addEventListener('click', function(e) {
         if (e.target.closest('.qty-increase')) {
             e.preventDefault();
+            e.stopPropagation();
             const button = e.target.closest('.qty-increase');
             const itemId = button.getAttribute('data-item-id');
             const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
@@ -216,16 +314,32 @@ function initializeQuantityControls() {
                 if (currentValue < maxValue) {
                     qtyInput.value = currentValue + 1;
                     updateButtonStates(itemId, qtyInput.value);
+                    console.log('➕ Quantity increased for item', itemId, 'to', qtyInput.value);
                     if (typeof updateCart === 'function') updateCart();
+                    updateOrderSummary();
+                    
+                    // Enhanced visual feedback for touch devices
+                    button.style.transform = 'scale(0.9)';
+                    button.style.backgroundColor = '#22c55e';
+                    setTimeout(() => {
+                        button.style.transform = 'scale(1)';
+                        button.style.backgroundColor = '';
+                    }, 150);
+                    
+                    // Haptic feedback for mobile devices (if supported)
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate(50);
+                    }
                 }
             }
         }
     });
     
-    // Handle quantity decrease buttons
+    // Handle quantity decrease buttons with enhanced touch feedback
     document.addEventListener('click', function(e) {
         if (e.target.closest('.qty-decrease')) {
             e.preventDefault();
+            e.stopPropagation();
             const button = e.target.closest('.qty-decrease');
             const itemId = button.getAttribute('data-item-id');
             const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
@@ -236,29 +350,57 @@ function initializeQuantityControls() {
                 if (currentValue > 1) {
                     qtyInput.value = currentValue - 1;
                     updateButtonStates(itemId, qtyInput.value);
+                    console.log('➖ Quantity decreased for item', itemId, 'to', qtyInput.value);
                     if (typeof updateCart === 'function') updateCart();
+                    updateOrderSummary();
+                    
+                    // Enhanced visual feedback for touch devices
+                    button.style.transform = 'scale(0.9)';
+                    button.style.backgroundColor = '#ef4444';
+                    setTimeout(() => {
+                        button.style.transform = 'scale(1)';
+                        button.style.backgroundColor = '';
+                    }, 150);
+                    
+                    // Haptic feedback for mobile devices (if supported)
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate(50);
+                    }
                 }
             }
         }
     });
     
-    // Handle direct quantity input changes
+    // Prevent manual input changes since we want touch-only interaction
+    document.addEventListener('keydown', function(e) {
+        if (e.target.classList.contains('item-qty')) {
+            // Allow only Tab, Enter, and arrow keys for accessibility
+            const allowedKeys = ['Tab', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+            if (!allowedKeys.includes(e.key)) {
+                e.preventDefault();
+            }
+        }
+    });
+    
     document.addEventListener('input', function(e) {
         if (e.target.classList.contains('item-qty')) {
+            e.preventDefault(); // Prevent manual typing
+        }
+    });
+    
+    // Handle blur event to ensure valid values
+    document.addEventListener('blur', function(e) {
+        if (e.target.classList.contains('item-qty')) {
             const qtyInput = e.target;
-            const itemId = qtyInput.getAttribute('data-item-id');
             let value = parseInt(qtyInput.value) || 1;
             const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
             
-            // Validate and constrain value
-            if (value < 1) {
-                value = 1;
-                qtyInput.value = value;
-            } else if (value > maxValue) {
-                value = maxValue;
-                qtyInput.value = value;
-            }
+            // Ensure value is within bounds
+            if (value < 1) value = 1;
+            if (value > maxValue) value = maxValue;
             
+            qtyInput.value = value;
+            const itemId = qtyInput.getAttribute('data-item-id');
             updateButtonStates(itemId, value);
             if (typeof updateCart === 'function') updateCart();
         }
@@ -283,54 +425,144 @@ function updateButtonStates(itemId, value) {
     }
 }
 
-// Initialize the controls when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Initializing takeaway order creation page...');
+/**
+ * Update the order summary display
+ */
+function updateOrderSummary() {
+    const selectedItems = document.querySelectorAll('.item-check:checked');
+    const summaryContainer = document.getElementById('order-summary');
+    const selectedItemsContainer = document.getElementById('selected-items');
+    const totalItemsSpan = document.getElementById('total-items');
     
-    initializeQuantityControls();
+    if (selectedItems.length === 0) {
+        summaryContainer.style.display = 'none';
+        return;
+    }
     
-    // Initialize item selection with proper button states
-    document.querySelectorAll('.item-check').forEach(function(checkbox) {
-        checkbox.addEventListener('change', function() {
-            const itemId = this.getAttribute('data-item-id');
-            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
-            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
-            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
-            
-            if (this.checked) {
-                qtyInput.disabled = false;
-                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-                updateButtonStates(itemId, qtyInput.value);
-            } else {
-                qtyInput.disabled = true;
-                qtyInput.removeAttribute('name');
-                qtyInput.value = 1;
-                if (plusBtn) plusBtn.disabled = true;
-                if (minusBtn) minusBtn.disabled = true;
-            }
-            if (typeof updateCart === 'function') updateCart();
-        });
-    });
-
-    // Form validation
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const phoneInput = document.querySelector('input[name="customer_phone"]');
-        if (phoneInput && !phoneInput.value.trim()) {
-            e.preventDefault();
-            alert('Please enter a valid phone number');
-            phoneInput.focus();
-            return false;
-        }
+    summaryContainer.style.display = 'block';
+    selectedItemsContainer.innerHTML = '';
+    
+    let totalItems = 0;
+    
+    selectedItems.forEach(function(checkbox) {
+        const itemId = checkbox.getAttribute('data-item-id');
+        const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+        const label = document.querySelector('label[for="item_' + itemId + '"]');
+        const itemName = label.querySelector('.font-medium').textContent;
+        const quantity = parseInt(qtyInput.value) || 1;
         
-        // Check if at least one item is selected
-        const checkedItems = document.querySelectorAll('.item-check:checked');
-        if (checkedItems.length === 0) {
-            e.preventDefault();
-            alert('Please select at least one item');
-            return false;
-        }
+        totalItems += quantity;
+        
+        const summaryItem = document.createElement('div');
+        summaryItem.className = 'flex justify-between items-center text-sm';
+        summaryItem.innerHTML = `
+            <span>${itemName}</span>
+            <span class="font-medium">Qty: ${quantity}</span>
+        `;
+        selectedItemsContainer.appendChild(summaryItem);
     });
-});
-});
+    
+    totalItemsSpan.textContent = totalItems;
+}
 </script>
+
+<style>
+/* Enhanced touch-friendly controls */
+.touch-friendly-controls {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.touch-friendly-controls button {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.touch-friendly-controls button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: #f3f4f6 !important;
+    color: #9ca3af !important;
+}
+
+.touch-friendly-controls button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.touch-friendly-controls button:not(:disabled):active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.touch-friendly-controls input[type="number"] {
+    -moz-appearance: textfield;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #fff;
+    border: none;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.touch-friendly-controls input[type="number"]::-webkit-outer-spin-button,
+.touch-friendly-controls input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.touch-friendly-controls input[type="number"]:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+}
+
+.touch-friendly-controls input[type="number"]:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px #3b82f6;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+    .touch-friendly-controls button {
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+    }
+    
+    .touch-friendly-controls input[type="number"] {
+        width: 64px;
+        height: 48px;
+        font-size: 1.125rem;
+    }
+}
+
+/* Loading state for form submission */
+.form-submitting {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Item selection highlight */
+.item-check:checked + label {
+    background-color: #eff6ff;
+    border-color: #3b82f6;
+}
+
+/* Smooth animations */
+.transition-all {
+    transition: all 0.15s ease;
+}
+
+/* Touch feedback */
+@media (hover: none) and (pointer: coarse) {
+    .touch-friendly-controls button:not(:disabled):active {
+        transform: scale(0.95);
+    }
+}
+</style>
 @endsection

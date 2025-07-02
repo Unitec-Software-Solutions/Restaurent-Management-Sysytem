@@ -186,27 +186,7 @@
             </ul>
         </div>
 
-        {{-- 4. CUSTOMER MANAGEMENT --}}
-        <div class="sidebar-section">
-            <div class="sidebar-group-title" x-show="!collapsed" x-transition>
-                <span>CUSTOMERS</span>
-            </div>
-            <ul class="space-y-1 px-3">
-                
-                {{-- Customers --}}
-                @canany(['view_customers', 'manage_customers'])
-                <li class="sidebar-item {{ request()->routeIs('admin.customers*') ? 'active' : '' }}">
-                    <a href="#" class="sidebar-link group">
-                        <i class="fas fa-users sidebar-icon"></i>
-                        <span class="sidebar-text" x-show="!collapsed" x-transition>Customers</span>
-                        <div class="tooltip" x-show="collapsed" x-cloak>Customer Management (Coming Soon)</div>
-                    </a>
-                </li>
-                @endcanany
-            </ul>
-        </div>
-
-        {{-- 5. ADMINISTRATION --}}
+        {{-- 4. ADMINISTRATION --}}
         @canany(['manage_organization', 'manage_users', 'manage_branches'])
         <div class="sidebar-section">
             <div class="sidebar-group-title" x-show="!collapsed" x-transition>

@@ -15,7 +15,7 @@ return new class extends Migration
             // Foreign keys
             $table->foreignId('grn_id')->constrained('grn_master', 'grn_id')->cascadeOnDelete();
             $table->foreignId('po_detail_id')->nullable()->constrained('po_details', 'po_detail_id');
-            $table->foreignId('item_id')->constrained('item_master', 'id')->cascadeOnDelete();
+            $table->foreignId('item_id')->constrained('item_masters', 'id')->cascadeOnDelete();
 
             // Item identification
             $table->string('item_code');
@@ -48,7 +48,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Add index for item_code
-            // $table->foreign('item_code')->references('item_code')->on('item_master');
+            // $table->foreign('item_code')->references('item_code')->on('item_masters');
         });
     }
 

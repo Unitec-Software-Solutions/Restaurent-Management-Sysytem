@@ -3,7 +3,11 @@
 namespace App\Models;
 
 use App\Models\Organization;
+use App\Models\Branch;
+use App\Models\Supplier;
 use App\Models\ItemCategory;
+use App\Models\ItemTransaction;
+use App\Models\MenuItem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,217 +17,192 @@ class ItemMaster extends Model
 {
     use SoftDeletes, HasFactory;
 
-    protected $table = 'item_master';
+
+    protected $table = 'item_masters'; 
+    
 
     protected $fillable = [
         'name',
         'unicode_name',
+        'description',
+        'short_description',
         'item_category_id',
-        'item_code',
-        'unit_of_measurement',
-        'reorder_level',
-        'is_perishable',
-        'shelf_life_in_days',
-        'branch_id',
         'organization_id',
+        'branch_id',
+        'category',
+        'subcategory',
+        'item_type',
+        'item_code',
+        'barcode',
+        'sku',
+        'unit_of_measurement',
+        'cost_price',
         'buying_price',
         'selling_price',
-        'is_menu_item',
+        'markup_percentage',
+        'current_stock',
+        'minimum_stock',
+        'maximum_stock',
+        'reorder_level',
+        'brand',
+        'model',
+        'specifications',
         'is_active',
+        'is_menu_item',
+        'is_inventory_item',
+        'is_perishable',
+        'track_expiry',
+        'shelf_life_in_days',
+        'primary_supplier_id',
+        'supplier_ids',
+        'storage_location',
+        'storage_requirements',
         'additional_notes',
-        'description',
         'attributes',
+        'metadata',
+        'created_by',
+        'updated_by'
     ];
+
 
     protected $casts = [
-        'attributes'      => 'array',
-        'is_perishable'   => 'boolean',
-        'is_menu_item'    => 'boolean',
-        'is_active'       => 'boolean',
-        'buying_price'    => 'decimal:2',
-        'selling_price'   => 'decimal:2',
+        'supplier_ids' => 'array',
+        'attributes' => 'array',
+        'metadata' => 'array',
+        'cost_price' => 'decimal:4',
+        'buying_price' => 'decimal:4',
+        'selling_price' => 'decimal:4',
+        'current_stock' => 'decimal:2',
+        'minimum_stock' => 'decimal:2',
+        'maximum_stock' => 'decimal:2',
+        'reorder_level' => 'integer',
+        'markup_percentage' => 'decimal:2',
+        'is_active' => 'boolean',
+        'is_menu_item' => 'boolean',
+        'is_inventory_item' => 'boolean',
+        'is_perishable' => 'boolean',
+        'track_expiry' => 'boolean',
+        'shelf_life_in_days' => 'integer'
     ];
 
-    /**
-     * Relationships
-     */
-    public function category()
+    public function organization()
     {
-        return $this->belongsTo(ItemCategory::class, 'item_category_id');
+        return $this->belongsTo(Organization::class);
     }
 
     public function branch()
     {
-        return $this->belongsTo(Branch::class, 'branch_id');
+        return $this->belongsTo(Branch::class);
     }
 
-    public function organization()
+    public function itemCategory()
     {
-        return $this->belongsTo(Organization::class, 'organization_id');
+        return $this->belongsTo(ItemCategory::class);
     }
 
-    /**
-     * Define the transactions relationship
-     */
+    public function primarySupplier()
+    {
+        return $this->belongsTo(Supplier::class, 'primary_supplier_id');
+    }
+
     public function transactions()
     {
         return $this->hasMany(ItemTransaction::class, 'inventory_item_id');
     }
 
-    /**
-     * Production request items relationship
-     */
-    public function productionRequestItems()
+    public function menuItems()
     {
-        return $this->hasMany(ProductionRequestItem::class, 'item_id');
-    }
-
-    /**
-     * Production order items relationship
-     */
-    public function productionOrderItems()
-    {
-        return $this->hasMany(ProductionOrderItem::class, 'item_id');
-    }
-
-    /**
-     * Production recipes where this item is the production item
-     */
-    public function productionRecipes()
-    {
-        return $this->hasMany(ProductionRecipe::class, 'production_item_id');
-    }
-
-    /**
-     * Production recipe details where this item is a raw material
-     */
-    public function rawMaterialRecipes()
-    {
-        return $this->hasMany(ProductionRecipeDetail::class, 'raw_material_item_id');
-    }
-
-    /**
-     * Accessor Example: Get Ingredients if available in attributes
-     */
-    public function getIngredientsAttribute()
-    {
-        return $this->attributes['attributes']['ingredients'] ?? null;
-    }
-
-    /**
-     * Accessor Example: Get Image if available in attributes
-     */
-    public function getImageUrlAttribute()
-    {
-        if (isset($this->attributes['attributes']['img'])) {
-            return asset('storage/'.$this->attributes['attributes']['img']);
-        }
-        return asset('storage/default.png');
+        return $this->hasMany(MenuItem::class, 'item_masters_id');
     }
 
 
-    /**
-     * Scope: Active Items Only (not soft deleted)
-     */
     public function scopeActive($query)
     {
-        return $query->whereNull('deleted_at');
+        return $query->where('is_active', true);
     }
 
-    // New scope for menu items
-    public function scopeMenuItem($query)
+    public function scopeMenuItems($query)
     {
         return $query->where('is_menu_item', true);
     }
 
-    // New scope for perishable items
+    public function scopeLowStock($query)
+    {
+        return $query->whereColumn('current_stock', '<=', 'minimum_stock');
+    }
+
+    public function scopeByCategory($query, $category)
+    {
+        return $query->where('category', $category);
+    }
+
     public function scopePerishable($query)
     {
         return $query->where('is_perishable', true);
     }
 
-    /**
-     * Scope to get production items only
-     */
-    public function scopeProductionItems($query)
+    protected static function boot()
     {
-        return $query->whereHas('category', function($q) {
-            $q->where('name', 'Production Items');
+        parent::boot();
+
+        static::creating(function ($itemMaster) {
+            
+            if (empty($itemMaster->item_code)) {
+                $itemMaster->item_code = static::generateItemCode($itemMaster);
+            }
         });
     }
 
-    // New scope for raw materials
-    public function scopeRawMaterials($query)
+    private static function generateItemCode($itemMaster)
     {
-        return $query->whereHas('category', function($q) {
-            $q->where('name', 'Raw Materials');
-        });
-    }
-
-    // In ItemMaster model
-    public function purchaseOrderItems()
-    {
-        return $this->hasMany(PurchaseOrderItem::class, 'item_id');
-    }
-
-    public function latestPurchaseOrderItem()
-    {
-        return $this->hasOne(PurchaseOrderItem::class, 'item_id')
-            ->latest();
-    }
-
-    /**
-     * Get current stock level for this item at a specific branch
-     */
-    public function getStockLevel(int $branchId): float
-    {
-        return $this->transactions()
-            ->where('branch_id', $branchId)
-            ->sum('quantity');
-    }
-
-    /**
-     * Check if item is low stock
-     */
-    public function isLowStock(int $branchId): bool
-    {
-        $currentStock = $this->getStockLevel($branchId);
-        return $currentStock <= $this->reorder_level;
-    }
-
-    /**
-     * Check if item is out of stock
-     */
-    public function isOutOfStock(int $branchId): bool
-    {
-        $currentStock = $this->getStockLevel($branchId);
-        return $currentStock <= 0;
-    }
-
-    /**
-     * Get stock status for display
-     */
-    public function getStockStatus(int $branchId): string
-    {
-        $currentStock = $this->getStockLevel($branchId);
+        $prefix = strtoupper(substr($itemMaster->category ?? 'ITM', 0, 3));
+        $lastItem = static::where('item_code', 'like', $prefix . '%')
+                         ->orderBy('item_code', 'desc')
+                         ->first();
         
-        if ($currentStock <= 0) return 'out_of_stock';
-        if ($currentStock <= $this->reorder_level) return 'low_stock';
-        if ($currentStock <= $this->reorder_level * 2) return 'medium_stock';
-        return 'good_stock';
+        if ($lastItem) {
+            $lastNumber = (int) substr($lastItem->item_code, 3);
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+        
+        return $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Get stock percentage for UI indicators
-     */
-    public function getStockPercentage(int $branchId): int
+
+    public function isLowStock()
     {
-        $currentStock = $this->getStockLevel($branchId);
-        $maxStock = $this->reorder_level * 5; // Assume max stock is 5x reorder level
-        
-        if ($maxStock <= 0) return 0;
-        
-        return min(100, max(0, round(($currentStock / $maxStock) * 100)));
+        return $this->current_stock <= $this->minimum_stock;
     }
 
+
+    public function needsReorder()
+    {
+        return $this->current_stock <= $this->reorder_level;
+    }
+
+    public function getStockStatusAttribute()
+    {
+        if ($this->current_stock <= 0) {
+            return 'out_of_stock';
+        } elseif ($this->isLowStock()) {
+            return 'low_stock';
+        } elseif ($this->needsReorder()) {
+            return 'reorder_needed';
+        } else {
+            return 'in_stock';
+        }
+    }
+
+    public function getStockColorAttribute()
+    {
+        return match($this->stock_status) {
+            'out_of_stock' => 'red',
+            'low_stock' => 'orange',
+            'reorder_needed' => 'yellow',
+            'in_stock' => 'green',
+            default => 'gray'
+        };
+    }
 }

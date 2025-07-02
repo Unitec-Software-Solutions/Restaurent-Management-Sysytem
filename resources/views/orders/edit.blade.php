@@ -22,20 +22,21 @@
                     <span class="font-semibold">{{ $item->name }}</span>
                     <span class="ml-2 text-gray-500">LKR {{ number_format($item->selling_price, 2) }}</span>
                 </label>
-                <div class="flex items-center ml-4">
+                <div class="flex items-center ml-4 border border-gray-300 rounded overflow-hidden">
                     <button type="button"
-                        class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                        class="qty-decrease w-10 h-10 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 text-xl flex items-center justify-center touch-manipulation"
                         data-item-id="{{ $item->id }}"
-                        @if(!$existing) disabled @endif>-</button>
+                        @if(!$existing) disabled @endif>−</button>
                     <input type="number"
                         min="1"
+                        max="99"
                         value="{{ $existing ? $existing->quantity : 1 }}"
-                        class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
+                        class="item-qty w-14 text-center border-x border-gray-300 text-sm focus:outline-none touch-manipulation"
                         data-item-id="{{ $item->id }}"
                         @if(!$existing) disabled @endif
                         @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
                     <button type="button"
-                        class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
+                        class="qty-increase w-10 h-10 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 text-xl flex items-center justify-center touch-manipulation"
                         data-item-id="{{ $item->id }}"
                         @if(!$existing) disabled @endif>+</button>
                 </div>

@@ -60,7 +60,7 @@ class PurchaseOrderItem extends Model
     ];
 
     public static $rules = [
-        'item_id' => 'required|exists:item_master,id',
+        'item_id' => 'required|exists:item_masters,id',
         'buying_price' => 'required|numeric|min:0',
         'quantity' => 'required|numeric|min:0.01'
     ];

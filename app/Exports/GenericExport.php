@@ -3,14 +3,18 @@
 namespace App\Exports;
 
 use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 
-class GenericExport
+class GenericExport implements FromCollection, WithHeadings, WithMapping, WithStrictNullComparison
 {
     protected $data;
     protected $headers;
     protected $mappingCallback;
 
-    public function __construct($data, array $headers = [], callable $mappingCallback = null)
+    public function __construct($data, array $headers = [], ?callable $mappingCallback = null)
     {
         $this->data = $data instanceof Collection ? $data : collect($data);
         $this->headers = $headers;
@@ -45,6 +49,67 @@ class GenericExport
         }
 
         return [];
+    }
+
+    /**
+     * Map each row of data
+     *
+     * @param mixed $row
+     */
+    public function map($row): array
+    {
+        // Convert model to array if needed
+        $data = is_object($row) ? $row->toArray() : $row;
+        
+        // Apply custom mapping callback if provided
+        if ($this->mappingCallback) {
+            $data = call_user_func($this->mappingCallback, $data);
+        }
+        
+        // Format the data
+        $data = $this->formatRowData($data);
+        
+        // Return values in the same order as headers
+        if (!empty($this->headers)) {
+            $result = [];
+            foreach ($this->headers as $header) {
+                // Try to match header with data key (case-insensitive)
+                $key = $this->findMatchingKey($data, $header);
+                $result[] = $key ? $data[$key] : '';
+            }
+            return $result;
+        }
+        
+        return array_values($data);
+    }
+
+    /**
+     * Find matching key in data array for header
+     */
+    protected function findMatchingKey(array $data, string $header): ?string
+    {
+        // First try exact match
+        if (isset($data[$header])) {
+            return $header;
+        }
+        
+        // Try case-insensitive match
+        $lowerHeader = strtolower($header);
+        foreach ($data as $key => $value) {
+            if (strtolower($key) === $lowerHeader) {
+                return $key;
+            }
+        }
+        
+        // Try snake_case conversion
+        $snakeHeader = strtolower(str_replace(' ', '_', $header));
+        foreach ($data as $key => $value) {
+            if (strtolower($key) === $snakeHeader) {
+                return $key;
+            }
+        }
+        
+        return null;
     }
 
     /**

@@ -20,7 +20,7 @@ class MenuItem extends Model
         'organization_id',
         'branch_id',
         'menu_category_id',
-        'item_master_id',
+        'item_masters_id',
         'name',
         'description',
         'price',
@@ -75,7 +75,7 @@ class MenuItem extends Model
 
     public function itemMaster(): BelongsTo
     {
-        return $this->belongsTo(ItemMaster::class, 'item_master_id');
+        return $this->belongsTo(ItemMaster::class, 'item_masters_id');
     }
 
     public function kitchenStation(): BelongsTo

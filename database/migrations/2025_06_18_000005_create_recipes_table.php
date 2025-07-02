@@ -30,7 +30,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('organization_id')->references('id')->on('organizations');
-            $table->foreign('production_item_id')->references('id')->on('item_master');
+            $table->foreign('production_item_id')->references('id')->on('item_masters');
 
             $table->index(['organization_id', 'production_item_id', 'is_active']);
         });

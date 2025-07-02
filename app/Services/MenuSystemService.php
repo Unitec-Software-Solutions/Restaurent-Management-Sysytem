@@ -132,7 +132,7 @@ class MenuSystemService
         // Check if required ingredients are in stock
         foreach ($item->ingredients ?? [] as $ingredient) {
             $inventoryItem = \App\Models\InventoryItem::where('branch_id', $item->branch_id)
-                ->where('item_master_id', $ingredient['item_master_id'])
+                ->where('item_masters_id', $ingredient['item_masters_id'])
                 ->first();
                 
             if (!$inventoryItem || $inventoryItem->current_stock < $ingredient['required_quantity']) {

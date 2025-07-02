@@ -20,6 +20,7 @@ class Organization extends Model
         'contact_person',
         'contact_person_designation',
         'contact_person_phone',
+        'business_type',
         'is_active',
         'subscription_plan_id',
         'plan_snapshot',
@@ -95,6 +96,14 @@ class Organization extends Model
     public function branches()
     {
         return $this->hasMany(Branch::class);
+    }
+
+    /**
+     * Get active branches for the organization.
+     */
+    public function activeBranches()
+    {
+        return $this->hasMany(Branch::class)->where('is_active', true);
     }
 
     public function menuItems()
