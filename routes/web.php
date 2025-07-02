@@ -264,9 +264,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
 
+                // Show individual transaction
+                Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->name('show');
+                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
+
+                // Edit and Update for specific item+branch combination
+                Route::get('/edit/{item_id}/{branch_id}', [ItemTransactionController::class, 'edit'])->name('edit');
+                Route::put('/update/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->name('update');
+
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
+            });
+
+            // API endpoints for inventory stock
+            Route::prefix('api/stock')->name('api.stock.')->group(function () {
+                Route::get('/summary', [ItemTransactionController::class, 'stockSummary'])->name('summary');
             });
 
             // GTN Management
@@ -684,9 +697,6 @@ Route::get('inventory/gtn/update', [GoodsTransferNoteController::class, 'update'
 Route::get('inventory/gtn/print', [GoodsTransferNoteController::class, 'print'])->middleware(['auth:admin'])->name('admin.inventory.gtn.print');
 Route::get('inventory/gtn/edit', [GoodsTransferNoteController::class, 'edit'])->middleware(['auth:admin'])->name('admin.inventory.gtn.edit');
 Route::post('inventory/items/restore', [ItemMasterController::class, 'restore'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
-Route::put('inventory/stock/update', [ItemTransactionController::class, 'update'])->middleware(['auth:admin'])->name('admin.inventory.stock.update');
-Route::get('inventory/stock/edit', [ItemTransactionController::class, 'edit'])->middleware(['auth:admin'])->name('admin.inventory.stock.edit');
-Route::get('inventory/stock/show', [ItemTransactionController::class, 'show'])->middleware(['auth:admin'])->name('admin.inventory.stock.show');
 // Menu routes - properly ordered to avoid conflicts
 Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
 Route::get('menus/list', [App\Http\Controllers\Admin\MenuController::class, 'list'])->middleware(['auth:admin'])->name('admin.menus.list');
