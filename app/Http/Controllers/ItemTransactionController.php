@@ -208,7 +208,7 @@ class ItemTransactionController extends Controller
         $orgId = $this->getOrganizationId();
 
         $validated = $request->validate([
-            'inventory_item_id' => 'required|exists:item_master,id,organization_id,' . $orgId,
+            'inventory_item_id' => 'required|exists:item_masters,id,organization_id,' . $orgId,
             'branch_id' => 'required|exists:branches,id,organization_id,' . $orgId,
             'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out,grn_stock_in,gtn_stock_in,gtn_stock_out',
             'quantity' => 'required|numeric|min:0.01',

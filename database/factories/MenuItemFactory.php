@@ -2,35 +2,52 @@
 
 namespace Database\Factories;
 
+use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\MenuItem;
 use App\Models\MenuCategory;
-use App\Models\KitchenStation;
 use App\Models\ItemMaster;
-use App\Models\Organization;
 use App\Models\Branch;
-use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Organization;
+
 
 class MenuItemFactory extends Factory
 {
     protected $model = MenuItem::class;
 
+    /**
+     * Define the model's default state for Laravel + PostgreSQL + Tailwind CSS
+     */
     public function definition(): array
     {
-        // UI/UX focused allergen categories for better status indicators
-        $allergens = ['dairy', 'eggs', 'nuts', 'gluten', 'soy', 'shellfish', 'fish', 'sesame'];
-        
-        // Restaurant-focused menu item names for better UI display
+        // Safe menu item types with guaranteed minimum items
         $menuItemTypes = [
-            'appetizers' => ['Caesar Salad', 'Bruschetta', 'Mozzarella Sticks', 'Chicken Wings', 'Nachos'],
-            'mains' => ['Grilled Salmon', 'Beef Steak', 'Chicken Parmesan', 'Pasta Carbonara', 'BBQ Ribs'],
-            'beverages' => ['Fresh Orange Juice', 'Cappuccino', 'Iced Tea', 'Smoothie Bowl', 'Wine Selection'],
-            'desserts' => ['Chocolate Cake', 'Tiramisu', 'Ice Cream', 'Cheesecake', 'Fruit Tart']
+            'appetizers' => [
+                'Caesar Salad', 'Buffalo Wings', 'Mozzarella Sticks', 'Bruschetta Trio',
+                'Calamari Rings', 'Spinach Dip', 'Chicken Quesadilla', 'Loaded Nachos'
+            ],
+            'mains' => [
+                'Grilled Salmon', 'Beef Steak', 'Chicken Parmesan', 'Pasta Carbonara',
+                'Fish and Chips', 'BBQ Ribs', 'Vegetable Stir Fry', 'Lamb Chops'
+            ],
+            'beverages' => [
+                'Fresh Juice', 'Coffee', 'Tea', 'Smoothie',
+                'Iced Coffee', 'Hot Chocolate', 'Lemonade', 'Craft Beer'
+            ],
+            'desserts' => [
+                'Chocolate Cake', 'Ice Cream', 'Cheesecake', 'Fruit Tart',
+                'Tiramisu', 'Apple Pie', 'Crème Brûlée', 'Chocolate Mousse'
+            ]
         ];
         
-        $category = $this->faker->randomElement(array_keys($menuItemTypes));
-        $itemName = $this->faker->randomElement($menuItemTypes[$category]);
+        // Safely select category and item
+        $categories = array_keys($menuItemTypes);
+        $category = $this->faker->randomElement($categories);
+        $availableItems = $menuItemTypes[$category];
         
-        // UI-optimized pricing for card displays
+        // Safely get an item name - no array size issues
+        $itemName = $this->faker->randomElement($availableItems);
+        
+        // UI-optimized pricing for Tailwind CSS displays
         $basePrice = $this->faker->randomFloat(2, 8, 45);
         $isPromotional = $this->faker->boolean(25); // 25% chance of promotion
         
@@ -40,279 +57,244 @@ class MenuItemFactory extends Factory
             'description' => $this->generateRestaurantDescription($category),
             'price' => $basePrice,
             
-            // Foreign key relationships - FIXED kitchen station dependency
+            // Foreign key relationships - safe defaults
             'menu_category_id' => MenuCategory::factory(),
-            'item_master_id' => ItemMaster::factory(),
-            'organization_id' => function (array $attributes) {
-                return Organization::first()?->id ?? Organization::factory()->create()->id;
-            },
-            'branch_id' => function (array $attributes) {
-                return Branch::first()?->id ?? Branch::factory()->create()->id;
-            },
-            
-            // Kitchen workflow - properly linked to kitchen stations with code generation
-            'kitchen_station_id' => function (array $attributes) {
-                $branch_id = $attributes['branch_id'];
-                
-                // First try to find existing station for this branch
-                $existingStation = KitchenStation::where('branch_id', $branch_id)->first();
-                
-                if ($existingStation) {
-                    return $existingStation->id;
-                }
-                
-                // Create station with proper code if none exists
-                return KitchenStation::factory()->create([
-                    'branch_id' => $branch_id,
-                    'code' => 'FACT-' . str_pad($branch_id, 2, '0', STR_PAD_LEFT) . '-' . rand(100, 999)
+            'item_masters_id' => function (array $attributes) {
+                return ItemMaster::factory()->create([
+                    'organization_id' => $this->getOrganizationId($attributes),
+                    'is_menu_item' => true,
+                    'is_active' => true,
                 ])->id;
             },
             
-            // UI/UX Display attributes - following card-based design
-            'image_path' => function (array $attributes) {
-                return 'menu-items/' . strtolower(str_replace(' ', '-', $attributes['name'])) . '.jpg';
+            // Branch and organization relationships
+            'branch_id' => function (array $attributes) {
+                return MenuCategory::find($attributes['menu_category_id'])?->branch_id ?? Branch::factory()->create()->id;
             },
+            'organization_id' => function (array $attributes) {
+                return MenuCategory::find($attributes['menu_category_id'])?->organization_id ?? Organization::factory()->create()->id;
+            },
+            
+            // PostgreSQL-optimized fields
+            'unicode_name' => function (array $attributes) {
+                return $attributes['name']; // Same as name for simplicity
+            },
+            'short_description' => function (array $attributes) {
+                return substr($attributes['description'], 0, 100);
+            },
+            
+            // Restaurant operation fields
+            'cost_price' => $basePrice * 0.6, // 40% markup
+            'preparation_time' => $this->faker->numberBetween(5, 30),
+            'calories' => $this->faker->numberBetween(150, 800),
+            'serving_size' => $this->faker->randomElement(['Small', 'Medium', 'Large', 'Regular']),
+            
+            // Availability and pricing
+            'is_available' => $this->faker->boolean(90), // Most items available
+            'is_featured' => $this->faker->boolean(20), // Some items featured
+            'promotional_price' => $isPromotional ? ($basePrice * 0.85) : null,
+            'promotion_start_date' => $isPromotional ? $this->faker->dateTimeBetween('-1 week', 'now') : null,
+            'promotion_end_date' => $isPromotional ? $this->faker->dateTimeBetween('now', '+1 month') : null,
+            
+            // Kitchen and dietary information
+            'kitchen_station' => $this->getKitchenStation($category),
+            'dietary_info' => $this->faker->optional(30)->randomElement([
+                'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'nut-free'
+            ]),
+            'allergen_info' => $this->faker->optional(25)->randomElement([
+                'contains nuts', 'contains dairy', 'contains gluten', 'contains eggs'
+            ]),
+            'spice_level' => $this->faker->optional(40)->randomElement([
+                'mild', 'medium', 'hot', 'extra hot'
+            ]),
+            
+            // Ordering and display
+            'sort_order' => $this->faker->numberBetween(1, 100),
             'display_order' => $this->faker->numberBetween(1, 100),
             
-            // Status indicators (using status badge patterns from guidelines)
-            'is_available' => $this->faker->boolean(90),  // Green badge - bg-green-100 text-green-800
-            'is_active' => $this->faker->boolean(95),     // Success indicator
-            'is_featured' => $this->faker->boolean(20),   // Primary highlight - bg-indigo-600
+            // Tailwind CSS optimized metadata for UI
+            'metadata' => [
+                'ui_color' => $this->faker->randomElement(['red', 'green', 'blue', 'yellow', 'purple']),
+                'display_image' => 'menu-items/' . strtolower(str_replace(' ', '-', $itemName)) . '.jpg',
+                'tags' => $this->generateMenuTags($category),
+                'nutrition_facts' => [
+                    'protein' => $this->faker->numberBetween(5, 40) . 'g',
+                    'carbs' => $this->faker->numberBetween(10, 60) . 'g',
+                    'fat' => $this->faker->numberBetween(2, 25) . 'g'
+                ]
+            ],
             
-            // Dietary filter badges (for responsive filter controls)
-            'is_vegetarian' => $this->getVegetarianStatus($category),
-            'is_spicy' => $this->faker->boolean(30),
-            'contains_alcohol' => $category === 'beverages' ? $this->faker->boolean(30) : false,
-            
-            // Kitchen workflow (for dashboard views)
-            'requires_preparation' => $category !== 'beverages' ? $this->faker->boolean(85) : $this->faker->boolean(40),
-            'preparation_time' => $this->getPreparationTime($category),
-            'station' => $this->getKitchenStation($category),
-            
-            // JSON fields for detailed views and modals
-            'allergens' => $this->faker->randomElements($allergens, $this->faker->numberBetween(0, 4)),
-            'calories' => $this->getCalorieRange($category),
-            'ingredients' => $this->generateIngredientsList($category),
-            
-            // Promotional pricing (for featured card displays)
-            'promotion_price' => $isPromotional ? round($basePrice * 0.85, 2) : null,
-            'promotion_start' => $isPromotional ? $this->faker->dateTimeBetween('now', '+1 week') : null,
-            'promotion_end' => $isPromotional ? $this->faker->dateTimeBetween('+1 week', '+1 month') : null,
+            // Status and tracking
+            'is_active' => true,
+            'created_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
         ];
     }
 
     /**
-     * Generate restaurant-appropriate descriptions for UI cards
+     * Generate restaurant-appropriate description based on category
      */
     private function generateRestaurantDescription(string $category): string
     {
         $descriptions = [
             'appetizers' => [
-                'Fresh, crispy starter perfect for sharing',
-                'Traditional appetizer with modern twist',
-                'Light and flavorful beginning to your meal',
-                'Chef\'s signature appetizer selection'
+                'A delightful starter to begin your dining experience',
+                'Fresh and flavorful small plate perfect for sharing',
+                'Crispy and satisfying appetizer made with premium ingredients',
+                'Traditional favorite prepared with our signature touch'
             ],
             'mains' => [
-                'Expertly prepared main course with seasonal vegetables',
-                'House specialty served with chef\'s choice sides',
-                'Premium cut cooked to perfection',
-                'Traditional recipe with contemporary presentation'
+                'Hearty main course prepared with fresh, locally sourced ingredients',
+                'Signature dish featuring our chef\'s secret recipe and premium cuts',
+                'Satisfying entrée that combines traditional flavors with modern presentation',
+                'Generous portion of expertly prepared ingredients'
             ],
             'beverages' => [
-                'Refreshing beverage made with premium ingredients',
-                'Carefully crafted drink selection',
-                'Fresh, natural ingredients in every sip',
-                'Perfect complement to any meal'
+                'Refreshing beverage crafted with premium ingredients',
+                'Perfectly balanced drink to complement your meal',
+                'House specialty beverage made fresh to order',
+                'Carefully selected beverage to enhance your dining experience'
             ],
             'desserts' => [
-                'Decadent dessert to complete your dining experience',
-                'Sweet finale made fresh daily',
-                'Indulgent treat crafted by our pastry chef',
-                'Perfect ending to your meal'
+                'Indulgent dessert that provides the perfect sweet ending',
+                'Artfully crafted dessert made with finest quality ingredients',
+                'Decadent treat that will satisfy your sweet tooth',
+                'Classic dessert with our signature presentation'
             ]
         ];
         
-        return $this->faker->randomElement($descriptions[$category] ?? $descriptions['mains']);
+        $categoryDescriptions = $descriptions[$category] ?? $descriptions['mains'];
+        return $this->faker->randomElement($categoryDescriptions);
     }
 
     /**
-     * Get appropriate vegetarian status based on category
-     */
-    private function getVegetarianStatus(string $category): bool
-    {
-        return match($category) {
-            'appetizers' => $this->faker->boolean(60),
-            'mains' => $this->faker->boolean(25),
-            'beverages' => $this->faker->boolean(80),
-            'desserts' => $this->faker->boolean(70),
-            default => $this->faker->boolean(40)
-        };
-    }
-
-    /**
-     * Get realistic preparation times for kitchen workflow
-     */
-    private function getPreparationTime(string $category): int
-    {
-        return match($category) {
-            'appetizers' => $this->faker->numberBetween(8, 15),
-            'mains' => $this->faker->numberBetween(20, 35),
-            'beverages' => $this->faker->numberBetween(3, 8),
-            'desserts' => $this->faker->numberBetween(10, 20),
-            default => $this->faker->numberBetween(15, 25)
-        };
-    }
-
-    /**
-     * Assign appropriate kitchen station
+     * Get appropriate kitchen station based on menu category
      */
     private function getKitchenStation(string $category): string
     {
         return match($category) {
-            'appetizers' => $this->faker->randomElement(['prep', 'grill']),
-            'mains' => $this->faker->randomElement(['cooking', 'grill']),
-            'beverages' => 'beverage',
-            'desserts' => 'prep',
-            default => 'cooking'
+            'appetizers' => $this->faker->randomElement(['cold_prep', 'hot_prep', 'fry_station']),
+            'mains' => $this->faker->randomElement(['grill', 'sauté', 'roast', 'fry_station']),
+            'beverages' => 'beverage_station',
+            'desserts' => 'pastry_station',
+            default => 'general_prep'
         };
     }
 
     /**
-     * Get realistic calorie ranges
+     * Generate menu tags for Tailwind CSS filtering
      */
-    private function getCalorieRange(string $category): int
+    private function generateMenuTags(string $category): array
     {
-        return match($category) {
-            'appetizers' => $this->faker->numberBetween(150, 400),
-            'mains' => $this->faker->numberBetween(400, 800),
-            'beverages' => $this->faker->numberBetween(50, 200),
-            'desserts' => $this->faker->numberBetween(250, 500),
-            default => $this->faker->numberBetween(300, 600)
-        };
-    }
-
-    /**
-     * Generate realistic ingredients list
-     */
-    private function generateIngredientsList(string $category): string
-    {
-        $ingredients = [
-            'appetizers' => ['lettuce', 'tomatoes', 'cheese', 'herbs', 'olive oil', 'garlic'],
-            'mains' => ['protein', 'vegetables', 'herbs', 'spices', 'sauce', 'sides'],
-            'beverages' => ['fresh fruits', 'natural flavors', 'premium ingredients'],
-            'desserts' => ['flour', 'sugar', 'eggs', 'cream', 'vanilla', 'chocolate']
+        $baseTags = [$category];
+        
+        $additionalTags = [
+            'appetizers' => ['starter', 'small-plate', 'sharing'],
+            'mains' => ['entrée', 'main-course', 'signature'],
+            'beverages' => ['drink', 'refreshing', 'cold'],
+            'desserts' => ['sweet', 'dessert', 'indulgent']
         ];
         
-        $categoryIngredients = $ingredients[$category] ?? $ingredients['mains'];
-        $selected = $this->faker->randomElements($categoryIngredients, $this->faker->numberBetween(3, 5));
+        $categoryTags = $additionalTags[$category] ?? ['special'];
         
-        return implode(', ', $selected);
+        // Safely add 1-2 additional tags
+        $numAdditionalTags = min(2, count($categoryTags));
+        $selectedTags = $this->faker->randomElements($categoryTags, $numAdditionalTags);
+        
+        return array_merge($baseTags, $selectedTags);
     }
 
     /**
-     * UI States for different display contexts following design system
+     * Get organization ID safely
      */
+    private function getOrganizationId(array $attributes): int
+    {
+        if (isset($attributes['organization_id'])) {
+            return $attributes['organization_id'];
+        }
+        
+        return Organization::first()?->id ?? Organization::factory()->create()->id;
+    }
 
-    // Primary button state - featured items (bg-indigo-600)
+    /**
+     * State for appetizers
+     */
+    public function appetizer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => $this->faker->randomElement([
+                'Caesar Salad', 'Buffalo Wings', 'Mozzarella Sticks', 'Bruschetta'
+            ]),
+            'preparation_time' => $this->faker->numberBetween(5, 12),
+            'kitchen_station' => 'cold_prep',
+            'is_available' => true,
+        ]);
+    }
+
+    /**
+     * State for main courses
+     */
+    public function mainCourse(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => $this->faker->randomElement([
+                'Grilled Salmon', 'Beef Steak', 'Chicken Parmesan', 'Pasta Carbonara'
+            ]),
+            'preparation_time' => $this->faker->numberBetween(15, 35),
+            'kitchen_station' => 'grill',
+            'is_available' => true,
+        ]);
+    }
+
+    /**
+     * State for beverages
+     */
+    public function beverage(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => $this->faker->randomElement([
+                'Fresh Juice', 'Coffee', 'Tea', 'Smoothie'
+            ]),
+            'preparation_time' => $this->faker->numberBetween(2, 8),
+            'kitchen_station' => 'beverage_station',
+            'is_available' => true,
+        ]);
+    }
+
+    /**
+     * State for desserts
+     */
+    public function dessert(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => $this->faker->randomElement([
+                'Chocolate Cake', 'Ice Cream', 'Cheesecake', 'Fruit Tart'
+            ]),
+            'preparation_time' => $this->faker->numberBetween(5, 15),
+            'kitchen_station' => 'pastry_station',
+            'is_available' => true,
+        ]);
+    }
+
+    /**
+     * State for featured items
+     */
     public function featured(): static
     {
         return $this->state(fn (array $attributes) => [
             'is_featured' => true,
-            'is_active' => true,
-            'is_available' => true,
-            'display_order' => $this->faker->numberBetween(1, 20), // High priority display
-            'image_path' => 'menu-items/featured/' . strtolower(str_replace(' ', '-', $attributes['name'])) . '.jpg'
+            'promotional_price' => $attributes['price'] * 0.9, // 10% discount
+            'promotion_start_date' => now(),
+            'promotion_end_date' => now()->addDays(30),
         ]);
     }
 
-    // Success state - popular/recommended items (bg-green-600)
-    public function recommended(): static
+    /**
+     * State for unavailable items
+     */
+    public function unavailable(): static
     {
         return $this->state(fn (array $attributes) => [
-            'is_featured' => true,
-            'is_active' => true,
-            'is_available' => true,
-            'calories' => $this->faker->numberBetween(300, 500), // Balanced nutrition
-        ]);
-    }
-
-    // Warning state - items requiring attention (bg-yellow-500)
-    public function lowStock(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_available' => $this->faker->boolean(60), // Sometimes unavailable
-            'requires_preparation' => true,
-            'preparation_time' => $attributes['preparation_time'] + 10, // Longer prep time
-        ]);
-    }
-
-    // Info state - special dietary items (bg-blue-600)
-    public function specialDiet(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_vegetarian' => true,
-            'allergens' => ['gluten'], // Common dietary restriction
-            'calories' => $this->faker->numberBetween(200, 400), // Lower calorie
-        ]);
-    }
-
-    // Promotional state (primary button highlight)
-    public function onPromotion(): static
-    {
-        return $this->state(function (array $attributes) {
-            $originalPrice = $attributes['price'] ?? $this->faker->randomFloat(2, 10, 50);
-            $discountPercent = $this->faker->numberBetween(15, 30);
-            $promotionPrice = $originalPrice * (1 - $discountPercent / 100);
-            
-            return [
-                'promotion_price' => round($promotionPrice, 2),
-                'promotion_start' => now(),
-                'promotion_end' => now()->addDays($this->faker->numberBetween(7, 30)),
-                'is_featured' => true, // Highlight in UI
-                'display_order' => $this->faker->numberBetween(1, 10), // Top of list
-            ];
-        });
-    }
-
-    // Quick service items (for dashboard quick actions)
-    public function quickServe(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'requires_preparation' => true,
-            'preparation_time' => $this->faker->numberBetween(5, 12),
-            'station' => 'prep',
-            'is_available' => true,
-        ]);
-    }
-
-    // Kitchen workflow states
-    public function beverage(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'station' => 'beverage',
-            'requires_preparation' => $this->faker->boolean(60),
-            'preparation_time' => $this->faker->numberBetween(2, 8),
-            'contains_alcohol' => $this->faker->boolean(40),
-            'calories' => $this->faker->numberBetween(50, 200),
-        ]);
-    }
-
-    public function grillItem(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'station' => 'grill',
-            'requires_preparation' => true,
-            'preparation_time' => $this->faker->numberBetween(15, 25),
-            'is_spicy' => $this->faker->boolean(40),
-        ]);
-    }
-
-    // Card display optimization following UI guidelines
-    public function withImage(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'image_path' => 'menu-items/featured/' . strtolower(str_replace(' ', '-', $attributes['name'])) . '.jpg',
+            'is_available' => false,
         ]);
     }
 }

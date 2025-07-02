@@ -14,86 +14,124 @@ class Branch extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name',
-        'slug',
         'organization_id',
+        'name',
         'address',
         'phone',
+        'email',
         'opening_time',
         'closing_time',
+        'is_active',
+        'is_head_office',
+        'activation_key',
+        'type',
+        'status',
+        'settings',
+        'max_capacity',
+        'features',
         'total_capacity',
         'reservation_fee',
         'cancellation_fee',
+        'slug',
         'contact_person',
         'contact_person_designation',
         'contact_person_phone',
-        'is_active',
-        'activation_key',
+        'opened_at',
         'activated_at',
-        'is_head_office',
-        'type',
+        'manager_name',
+        'manager_phone',
+        'operating_hours',
+        'code'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'is_head_office' => 'boolean',
-        'opening_time' => 'datetime',
-        'closing_time' => 'datetime',
+        'settings' => 'array',
+        'features' => 'array',
+        'operating_hours' => 'array',
+        'opening_time' => 'string',
+        'closing_time' => 'string',
+        'max_capacity' => 'integer',
+        'total_capacity' => 'integer',
         'reservation_fee' => 'decimal:2',
         'cancellation_fee' => 'decimal:2',
+        'opened_at' => 'datetime',
+        'activated_at' => 'datetime'
     ];
 
     /**
-     * Boot method to set defaults and handle activation constraints
+     * Get default kitchen stations configuration for PostgreSQL with valid constraint types
      */
-    protected static function boot()
+    public function getDefaultKitchenStations(): array
     {
-        parent::boot();
-
-        static::creating(function ($branch) {
-            // Default status: Branch must default to "inactive"
-            if (!isset($branch->is_active)) {
-                $branch->is_active = false;
-            }
-        });
-
-        static::updating(function ($branch) {
-            // Activation constraint: Branch cannot be active if parent Organization is inactive
-            if ($branch->is_active && $branch->isDirty('is_active')) {
-                $organization = $branch->organization;
-                if (!$organization || !$organization->is_active) {
-                    throw new \Exception('Branch cannot be activated while parent organization is inactive');
-                }
-            }
-        });
-
-        static::updated(function ($branch) {
-            // Log status changes for audit
-            if ($branch->isDirty('is_active')) {
-                Log::info('Branch status changed', [
-                    'branch_id' => $branch->id,
-                    'organization_id' => $branch->organization_id,
-                    'old_status' => $branch->getOriginal('is_active') ? 'active' : 'inactive',
-                    'new_status' => $branch->is_active ? 'active' : 'inactive'
-                ]);
-            }
-        });
+        return [
+            [
+                'name' => 'Hot Kitchen',
+                'code' => $this->generateStationCode('HOT', 1),
+                'type' => 'cooking', // Valid type
+                'description' => 'Main cooking station for hot dishes',
+                'is_active' => true,
+                'max_concurrent_orders' => 8,
+                'order_priority' => 1
+            ],
+            [
+                'name' => 'Cold Kitchen',
+                'code' => $this->generateStationCode('COLD', 2),
+                'type' => 'preparation', // Changed from 'preparation' to valid type
+                'description' => 'Cold preparations, salads, and appetizers',
+                'is_active' => true,
+                'max_concurrent_orders' => 6,
+                'order_priority' => 2
+            ],
+            [
+                'name' => 'Grill Station',
+                'code' => $this->generateStationCode('GRILL', 3),
+                'type' => 'grilling', // Valid type
+                'description' => 'Grilled items and BBQ',
+                'is_active' => true,
+                'max_concurrent_orders' => 5,
+                'order_priority' => 3
+            ],
+            [
+                'name' => 'Beverage Station',
+                'code' => $this->generateStationCode('BEV', 4),
+                'type' => 'beverage', // Valid type
+                'description' => 'Drinks, juices, and beverages',
+                'is_active' => true,
+                'max_concurrent_orders' => 10,
+                'order_priority' => 4
+            ],
+            [
+                'name' => 'Pastry Station',
+                'code' => $this->generateStationCode('PASTRY', 5),
+                'type' => 'dessert', // Valid type
+                'description' => 'Desserts, pastries, and sweet items',
+                'is_active' => true,
+                'max_concurrent_orders' => 4,
+                'order_priority' => 5
+            ]
+        ];
     }
 
     /**
-     * Accessor: Ensure consistent status checking with organization validation
+     * Generate unique station code for PostgreSQL compatibility
+     */
+    private function generateStationCode(string $type, int $sequence): string
+    {
+        return strtoupper($type) . '_' . str_pad($this->id ?? 1, 3, '0', STR_PAD_LEFT) . '_' . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get the is_active attribute with proper boolean conversion
      */
     public function getIsActiveAttribute($value)
     {
-        // Branch can only be active if organization is also active
-        if ($value && $this->organization && !$this->organization->is_active) {
-            return false;
-        }
         return (bool) $value;
     }
 
     /**
-     * Mutator: Ensure boolean conversion and validation
+     * Set the is_active attribute with proper boolean conversion
      */
     public function setIsActiveAttribute($value)
     {
@@ -101,142 +139,186 @@ class Branch extends Model
     }
 
     /**
-     * Check if branch can be activated based on organization status
+     * Check if branch can be activated
      */
     public function canBeActivated(): bool
     {
-        return $this->organization && $this->organization->is_active;
+        return $this->organization && 
+               $this->organization->is_active && 
+               !empty($this->activation_key);
+    }
+
+    /**
+     * Get formatted opening hours
+     */
+    public function getFormattedHoursAttribute()
+    {
+        if (!$this->opening_time || !$this->closing_time) {
+            return 'Hours not set';
+        }
+
+        return $this->formatTime($this->opening_time) . ' - ' . $this->formatTime($this->closing_time);
+    }
+
+    /**
+     * Format time to 12-hour format
+     */
+    private function formatTime($time)
+    {
+        try {
+            return \Carbon\Carbon::createFromFormat('H:i', $time)->format('g:i A');
+        } catch (\Exception $e) {
+            return $time;
+        }
+    }
+
+    /**
+     * Check if branch is currently open
+     */
+    public function isCurrentlyOpen()
+    {
+        if (!$this->is_active || !$this->opening_time || !$this->closing_time) {
+            return false;
+        }
+
+        $now = now()->format('H:i');
+        return $now >= $this->opening_time && $now <= $this->closing_time;
     }
 
     // Relationships
+    /**
+     * Get the organization that owns the branch
+     */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
-    public function roles(): HasMany
-    {
-        return $this->hasMany(Role::class);
-    }
-
-    public function subscriptions(): HasMany
-    {
-        return $this->hasMany(Subscription::class);
-    }
-
-    public function reservations(): HasMany
-    {
-        return $this->hasMany(Reservation::class);
-    }
-
-    public function tables(): HasMany
-    {
-        return $this->hasMany(Table::class);
-    }
-
+    /**
+     * Get the kitchen stations for the branch
+     */
     public function kitchenStations(): HasMany
     {
-        return $this->hasMany(KitchenStation::class);
+        return $this->hasMany(\App\Models\KitchenStation::class);
     }
 
+    /**
+     * Get the roles for the branch
+     */
+    public function roles(): HasMany
+    {
+        return $this->hasMany(\App\Models\Role::class);
+    }
+
+    /**
+     * Get the subscriptions for the branch
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(\App\Models\Subscription::class);
+    }
+
+    /**
+     * Get the reservations for the branch
+     */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(\App\Models\Reservation::class);
+    }
+
+    /**
+     * Get the tables for the branch
+     */
+    public function tables(): HasMany
+    {
+        return $this->hasMany(\App\Models\Table::class);
+    }
+
+    /**
+     * Get the users for the branch
+     */
     public function users(): HasMany
     {
-        return $this->hasMany(User::class);
+        return $this->hasMany(\App\Models\User::class);
     }
 
-    public function admins(): HasMany
+    /**
+     * Get the menu categories for the branch
+     */
+    public function menuCategories(): HasMany
     {
-        return $this->hasMany(Admin::class);
+        return $this->hasMany(\App\Models\MenuCategory::class);
     }
 
-    // Scopes
+    /**
+     * Get the menu items for the branch
+     */
+    public function menuItems(): HasMany
+    {
+        return $this->hasMany(\App\Models\MenuItem::class);
+    }
+
+    /**
+     * Get the orders for the branch
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(\App\Models\Order::class);
+    }
+
+    /**
+     * Scope for active branches
+     */
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function getAvailableCapacity($date, $startTime, $endTime)
-    {
-        $reservedCapacity = $this->reservations()
-            ->where('date', $date)
-            ->where(function($query) use ($startTime, $endTime) {
-                $query->whereBetween('start_time', [$startTime, $endTime])
-                    ->orWhereBetween('end_time', [$startTime, $endTime])
-                    ->orWhere(function($q) use ($startTime, $endTime) {
-                        $q->where('start_time', '<=', $startTime)
-                            ->where('end_time', '>=', $endTime);
-                    });
-            })
-            ->where('status', '!=', 'cancelled')
-            ->sum('number_of_people');
-
-        return $this->total_capacity - $reservedCapacity;
-    }
-
-    public function getAvailableTables($date, $startTime, $endTime, $requiredCapacity)
-    {
-        return $this->tables()
-            ->available($date, $startTime, $endTime)
-            ->withCapacity($requiredCapacity)
-            ->get();
-    }
-
+    /**
+     * Scope for branches by organization
+     */
     public function scopeForOrganization($query, $organizationId)
     {
         return $query->where('organization_id', $organizationId);
     }
 
-    // Activation Key Logic
-    public function activate()
+    /**
+     * Scope for head office branches
+     */
+    public function scopeHeadOffice($query)
     {
-        $this->update(['is_active' => true]);
-    }
-
-    public function deactivate()
-    {
-        $this->update(['is_active' => false]);
-    }
-
-    public function isSystemActive()
-    {
-        return $this->organization->is_active && $this->is_active;
+        return $query->where('is_head_office', true);
     }
 
     /**
-     * Helper methods for branch type management
+     * Boot method for model events
      */
-    public function isHeadOffice(): bool
+    protected static function boot()
     {
-        return $this->is_head_office;
-    }
+        parent::boot();
 
-    public function getDefaultKitchenStations(): array
-    {
-        $defaultStations = [
-            'Hot Kitchen' => ['type' => 'cooking', 'priority' => 1],
-            'Cold Kitchen' => ['type' => 'prep', 'priority' => 2],
-            'Grill Station' => ['type' => 'grill', 'priority' => 3],
-            'Fry Station' => ['type' => 'fry', 'priority' => 4],
-            'Dessert Station' => ['type' => 'dessert', 'priority' => 5],
-        ];
+        static::creating(function ($branch) {
+            Log::info('Creating new branch', [
+                'name' => $branch->name,
+                'organization_id' => $branch->organization_id
+            ]);
 
-        // Add beverage/bar stations for appropriate types
-        if (in_array($this->type, ['bar', 'pub', 'restaurant'])) {
-            $defaultStations['Bar Station'] = ['type' => 'bar', 'priority' => 6];
-            $defaultStations['Beverage Station'] = ['type' => 'beverage', 'priority' => 7];
-        }
+            // Generate activation key if not provided
+            if (empty($branch->activation_key)) {
+                $branch->activation_key = \Illuminate\Support\Str::random(40);
+            }
 
-        return $defaultStations;
-    }
+            // Generate slug if not provided
+            if (empty($branch->slug)) {
+                $branch->slug = \Illuminate\Support\Str::slug($branch->name);
+            }
+        });
 
-    /**
-     * Manually trigger the automated setup for this branch
-     * 
-     * @return void
-     */
-    public function setupAutomation(): void
-    {
-        $automationService = app(\App\Services\BranchAutomationService::class);
-        $automationService->setupNewBranch($this);
+        static::created(function ($branch) {
+            Log::info('Branch created successfully', [
+                'id' => $branch->id,
+                'name' => $branch->name
+            ]);
+        });
     }
 }

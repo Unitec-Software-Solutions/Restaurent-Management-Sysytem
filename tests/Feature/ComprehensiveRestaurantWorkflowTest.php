@@ -231,7 +231,7 @@ class ComprehensiveRestaurantWorkflowTest extends TestCase
 
         // Create inventory with stock below reorder level
         $inventory = InventoryItem::create([
-            'item_master_id' => $itemMaster->id,
+            'item_masters_id' => $itemMaster->id,
             'organization_id' => $this->proOrg->id,
             'branch_id' => $branch->id,
             'current_stock' => 5, // Below reorder level of 10

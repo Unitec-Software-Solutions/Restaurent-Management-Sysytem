@@ -3,165 +3,311 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class ItemTransaction extends Model
 {
+    use SoftDeletes;
+    
     protected $table = 'item_transactions';
 
+    /**
+     * The attributes that are mass assignable for Laravel + PostgreSQL + Tailwind CSS
+     */
     protected $fillable = [
         'organization_id',
         'branch_id',
         'inventory_item_id',
+        'item_master_id', 
         'transaction_type',
+        'transaction_status',
         'incoming_branch_id',
         'receiver_user_id',
-        'quantity', // Can be positive (stock in) or negative (stock out)
+        'quantity',
         'received_quantity',
         'damaged_quantity',
+        'waste_quantity',
+        'waste_reason',
+        'stock_before',
+        'stock_after',
         'cost_price',
         'unit_price',
+        'total_amount',
+        'tax_amount',
         'source_id',
         'source_type',
-        'gtn_id', // Reference to GTN
-        'created_by_user_id',
-        'verified_by', // User who verified the transaction
+        'reference_type',
+        'reference_id',
+        'reference_number',
+        'batch_code',
+        'expiry_date',
+        'quality_status',
+        'quality_notes',
+        'from_location',
+        'to_location',
+        'approved_at',
+        'approved_by_id',
+        'gtn_id',
+        'production_session_id',
+        'production_order_id',
+        'created_by_id',
+        'updated_by_id',
+        'verified_by',
         'notes',
+        'transaction_metadata',
         'is_active',
     ];
 
+    /**
+     * The attributes that should be cast for PostgreSQL
+     */
     protected $casts = [
         'quantity' => 'decimal:2',
         'received_quantity' => 'decimal:2',
         'damaged_quantity' => 'decimal:2',
+        'waste_quantity' => 'decimal:2',
+        'stock_before' => 'decimal:2',
+        'stock_after' => 'decimal:2',
         'cost_price' => 'decimal:4',
         'unit_price' => 'decimal:4',
+        'total_amount' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'approved_at' => 'datetime',
+        'expiry_date' => 'date',
+        'transaction_metadata' => 'array',
         'is_active' => 'boolean',
-        'source_id' => 'string', // Ensure source_id is always treated as a string
     ];
 
-    /*
-     * Relationships
+    /**
+     * Relationships for Laravel + PostgreSQL + Tailwind CSS
      */
-    public function item()
-    {
-        return $this->belongsTo(ItemMaster::class, 'inventory_item_id');
-    }
-
-    public function organization()
+    public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
-    public function branch()
+    public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    public function receiver()
+    public function incomingBranch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'incoming_branch_id');
+    }
+
+    public function inventoryItem(): BelongsTo
+    {
+        return $this->belongsTo(ItemMaster::class, 'inventory_item_id');
+    }
+
+    public function itemMaster(): BelongsTo
+    {
+        return $this->belongsTo(ItemMaster::class, 'item_master_id');
+    }
+
+    public function receiverUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'receiver_user_id');
     }
 
-    public function createdBy()
+    public function approvedByUser(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by_user_id');
+        return $this->belongsTo(User::class, 'approved_by_id');
     }
 
-    public function verifiedBy()
+    public function createdByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    public function updatedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by_id');
+    }
+
+    public function verifiedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
     }
 
-    public function gtn()
+    public function gtn(): BelongsTo
     {
-        return $this->belongsTo(GoodsTransferNote::class, 'gtn_id', 'gtn_id');
+        return $this->belongsTo(GoodsTransferNote::class, 'gtn_id');
     }
 
-    /*
-     * Scope: Only active transactions
+    public function productionSession(): BelongsTo
+    {
+        return $this->belongsTo(ProductionSession::class);
+    }
+
+    public function productionOrder(): BelongsTo
+    {
+        return $this->belongsTo(ProductionOrder::class);
+    }
+
+    /**
+     * Scopes for PostgreSQL queries optimized for Tailwind CSS filtering
      */
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    /*
-     * Accessor: Net Stock Effect
-     */
-    public function getNetQuantityAttribute()
+    public function scopeByType($query, $type)
     {
-        return $this->quantity - $this->damaged_quantity;
+        return $query->where('transaction_type', $type);
     }
 
-    /*
-     * Stock on Hand (can also be used as a static helper elsewhere)
-     */
-    public static function stockOnHand($itemId, $branchId = null)
+    public function scopeByStatus($query, $status)
     {
-        //Log::info('Calculating stock on hand', ['item_id' => $itemId, 'branch_id' => $branchId]);
+        return $query->where('transaction_status', $status);
+    }
 
-        $query = self::where('inventory_item_id', $itemId)->where('is_active', true);
+    public function scopeByQualityStatus($query, $status)
+    {
+        return $query->where('quality_status', $status);
+    }
 
+    public function scopeIncoming($query)
+    {
+        return $query->whereIn('transaction_type', ['stock_in', 'transfer_in', 'purchase', 'production_in']);
+    }
+
+    public function scopeOutgoing($query)
+    {
+        return $query->whereIn('transaction_type', ['stock_out', 'transfer_out', 'sale', 'production_out']);
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->whereNotNull('approved_at');
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('transaction_status', 'pending');
+    }
+
+    public function scopeForItem($query, $itemId)
+    {
+        return $query->where(function($q) use ($itemId) {
+            $q->where('inventory_item_id', $itemId)
+              ->orWhere('item_master_id', $itemId);
+        });
+    }
+
+    public function scopeForBranch($query, $branchId)
+    {
+        return $query->where('branch_id', $branchId);
+    }
+
+    public function scopeRecent($query, $days = 30)
+    {
+        return $query->where('created_at', '>=', now()->subDays($days));
+    }
+
+    /**
+     * Static method to calculate stock on hand for an item at a branch
+     * Supports both inventory_item_id and item_master_id for compatibility
+     */
+    public static function stockOnHand($itemId, $branchId = null): float
+    {
+        $query = static::query()
+            ->where(function($q) use ($itemId) {
+                $q->where('inventory_item_id', $itemId)
+                  ->orWhere('item_master_id', $itemId);
+            })
+            ->where('is_active', true);
+            
         if ($branchId) {
             $query->where('branch_id', $branchId);
         }
-
-        $transactions = $query->get();
-
-        $stock = $transactions->sum('quantity');
-        //Log::info('Stock on hand calculated', ['item_id' => $itemId, 'branch_id' => $branchId, 'stock' => $stock]);
-
-        return $stock;
+        
+        // Calculate stock movements
+        $stockIn = $query->clone()
+            ->whereIn('transaction_type', ['stock_in', 'transfer_in', 'purchase', 'production_in', 'adjustment'])
+            ->where('quantity', '>', 0)
+            ->sum('quantity');
+            
+        $stockOut = $query->clone()
+            ->whereIn('transaction_type', ['stock_out', 'transfer_out', 'sale', 'production_out', 'adjustment'])
+            ->where('quantity', '<', 0)
+            ->sum(DB::raw('ABS(quantity)'));
+        
+        return $stockIn - $stockOut;
     }
 
-    // GTN-specific helper methods
-    public static function createGTNOutgoingTransaction($data)
+    /**
+     * Mutators and Accessors for Tailwind CSS UI
+     */
+    public function getStatusColorAttribute()
     {
-        return self::create(array_merge($data, [
-            'transaction_type' => 'gtn_outgoing',
-            'quantity' => -abs($data['quantity']), // Ensure negative for outgoing
-            'is_active' => true,
-        ]));
+        return match($this->transaction_status) {
+            'pending' => 'yellow',
+            'completed' => 'green',
+            'cancelled' => 'red',
+            'failed' => 'red',
+            default => 'gray'
+        };
     }
 
-    public static function createGTNIncomingTransaction($data)
+    public function getQualityColorAttribute()
     {
-        return self::create(array_merge($data, [
-            'transaction_type' => 'gtn_incoming',
-            'quantity' => abs($data['quantity']), // Ensure positive for incoming
-            'is_active' => true,
-        ]));
+        return match($this->quality_status) {
+            'pending' => 'yellow',
+            'passed' => 'green',
+            'failed' => 'red',
+            'rejected' => 'red',
+            default => 'gray'
+        };
     }
 
-    public static function createGTNRejectionTransaction($data)
+    public function getTransactionTypeColorAttribute()
     {
-        return self::create(array_merge($data, [
-            'transaction_type' => 'gtn_rejection',
-            'quantity' => abs($data['quantity']), // Positive for return to sender
-            'is_active' => true,
-        ]));
+        return match($this->transaction_type) {
+            'stock_in', 'purchase', 'transfer_in' => 'green',
+            'stock_out', 'sale', 'transfer_out' => 'red',
+            'adjustment' => 'yellow',
+            'production_in', 'production_out' => 'blue',
+            default => 'gray'
+        };
     }
 
-    // Scope for GTN transactions
-    public function scopeGTNTransactions($query, $gtnId = null)
+    public function getFormattedQuantityAttribute()
     {
-        $query->whereIn('transaction_type', ['gtn_outgoing', 'gtn_incoming', 'gtn_rejection']);
-
-        if ($gtnId) {
-            $query->where('gtn_id', $gtnId);
-        }
-
-        return $query;
+        $item = $this->inventoryItem ?? $this->itemMaster;
+        return number_format($this->quantity, 2) . ' ' . ($item?->unit_of_measurement ?? 'units');
     }
 
-    // Get stock movements for a specific GTN
-    public static function getGTNStockMovements($gtnId)
+    public function getFormattedAmountAttribute()
     {
-        return self::where('gtn_id', $gtnId)
-                  ->whereIn('transaction_type', ['gtn_outgoing', 'gtn_incoming', 'gtn_rejection'])
-                  ->with(['item', 'branch', 'createdBy'])
-                  ->orderBy('created_at')
-                  ->get();
+        return '$' . number_format($this->total_amount, 2);
+    }
+
+    /**
+     * Boot method for model events
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($transaction) {
+            // Auto-calculate total_amount using available price column
+            if (empty($transaction->total_amount)) {
+                $price = $transaction->cost_price ?? $transaction->unit_price ?? 0;
+                $transaction->total_amount = $transaction->quantity * $price;
+            }
+        });
+
+        static::updating(function ($transaction) {
+            // Recalculate total_amount if quantity or price changes
+            if ($transaction->isDirty(['quantity', 'cost_price', 'unit_price'])) {
+                $price = $transaction->cost_price ?? $transaction->unit_price ?? 0;
+                $transaction->total_amount = $transaction->quantity * $price;
+            }
+        });
     }
 }

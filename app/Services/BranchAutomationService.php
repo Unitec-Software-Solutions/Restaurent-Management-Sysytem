@@ -154,7 +154,7 @@ class BranchAutomationService
             InventoryItem::create([
                 'organization_id' => $branch->organization_id,
                 'branch_id' => $branch->id,
-                'item_master_id' => $item->id,
+                'item_masters_id' => $item->id,
                 'current_stock' => 0,
                 'minimum_stock' => $item->minimum_stock ?? 10,
                 'maximum_stock' => $item->maximum_stock ?? 100,

@@ -13,54 +13,64 @@ use App\Models\ItemCategory;
 use App\Models\Admin;
 use App\Models\User;
 
+use Illuminate\Support\Facades\Schema;
+
 /**
  * Comprehensive Database Seeder for Restaurant Management System
  * 
- * This seeder implements the complete refactored system including:
- * - Phone-based customer tracking
- * - Enhanced reservation and order type enums
- * - Fee management system
- * - Notification system
- * - Admin enhancements
- * - 30 days of realistic operational data
- * - Removal of all waitlist functionality
+ * This seeder implements the complete refactored system for Laravel + PostgreSQL + Tailwind CSS
  */
 class DatabaseSeeder extends Seeder
 {
-
     public function run(): void
     {
+        $startTime = microtime(true);
+        
         $this->command->info('🚀 Starting Comprehensive Restaurant Management System Database Seeding...');
         $this->command->info('═══════════════════════════════════════════════════════════════════════');
-
-        $startTime = microtime(true);
-
-        // Prepare database (clear/truncate tables, handle foreign keys)
-        $this->prepareDatabase();
-
+        
+        // Validate prerequisites
+        $this->validatePrerequisites();
+        
+        $this->command->info('🔧 Preparing database for comprehensive seeding...');
+        
         try {
-            // Phase 1: Core System Foundation
-            $this->command->info('📋 PHASE 1: Core System Foundation');
-            $this->command->line('─────────────────────────────────────');
-
-            // Use the existing database seeder structure but create comprehensive data
+            // Core system setup
             $this->seedOrganizationsAndBranches();
-            $this->seedRolesAndPermissions();
+            $this->seedRolesAndPermissions(); 
             $this->seedUsersAndCustomers();
             $this->seedInventoryAndSuppliers();
             $this->seedMenuSystem();
             $this->seedReservations();
             $this->seedOrders();
-            $this->simulateBusinessOperations();
-
-            // Display completion summary
+            $this->seedPaymentsAndTransactions();
+            
             $this->displayCompletionSummary($startTime);
-
+            
         } catch (\Exception $e) {
             $this->command->error('❌ Database seeding failed: ' . $e->getMessage());
-            $this->command->error('Stack trace: ' . $e->getTraceAsString());
             throw $e;
         }
+    }
+
+    /**
+     * Validate prerequisites before seeding for Laravel + PostgreSQL + Tailwind CSS
+     */
+    private function validatePrerequisites(): void
+    {
+        // Check if required tables exist
+        $requiredTables = [
+            'organizations', 'branches', 'users', 'customers', 
+            'suppliers', 'item_masters', 'menu_categories', 'menu_items'
+        ];
+        
+        foreach ($requiredTables as $table) {
+            if (!Schema::hasTable($table)) {
+                throw new \Exception("Required table '{$table}' does not exist. Please run migrations first.");
+            }
+        }
+        
+        $this->command->info('✅ All required tables exist');
     }
 
     /**
@@ -134,7 +144,7 @@ class DatabaseSeeder extends Seeder
     }
     
     /**
-     * Seed inventory and suppliers
+     * Seed inventory and suppliers - FIXED VERSION for PostgreSQL
      */
     private function seedInventoryAndSuppliers(): void
     {
@@ -145,58 +155,56 @@ class DatabaseSeeder extends Seeder
         $inventoryItems = collect();
         
         $organizations->each(function ($org) use (&$suppliers, &$inventoryItems) {
-            // Create 5 suppliers per organization
+            // Create suppliers for this organization
             $orgSuppliers = \App\Models\Supplier::factory(5)->create([
                 'organization_id' => $org->id,
                 'is_active' => true,
             ]);
             $suppliers = $suppliers->merge($orgSuppliers);
             
-            // Create inventory categories
-            $categories = \App\Models\ItemCategory::factory(6)->create([
+            // Get organization branches for proper branch assignment
+            $orgBranches = Branch::where('organization_id', $org->id)->get();
+            
+            // Create inventory items for this organization
+            $orgInventoryItems = ItemMaster::factory(24)->create([
                 'organization_id' => $org->id,
                 'is_active' => true,
             ]);
+            $inventoryItems = $inventoryItems->merge($orgInventoryItems);
             
-            // Create 25 inventory items per organization
-            $categories->each(function ($category) use (&$inventoryItems) {
-                $items = \App\Models\ItemMaster::factory(4)->create([
-                    'organization_id' => $category->organization_id,
-                    'item_category_id' => $category->id,
+            // Get a user from this organization for transaction creation
+            $user = \App\Models\User::where('organization_id', $org->id)->first();
+            
+            // Create initial stock transactions for inventory items
+            $orgInventoryItems->each(function ($item) use ($user, $orgBranches, $orgSuppliers) {
+                // Get the branch for this item (use item's branch_id or get a random branch)
+                $branch = $orgBranches->where('id', $item->branch_id)->first() ?? $orgBranches->random();
+                $supplier = $orgSuppliers->random();
+                
+                // Create opening stock transaction with all required fields for PostgreSQL
+                \App\Models\ItemTransaction::create([
+                    'organization_id' => $item->organization_id,
+                    'branch_id' => $branch->id,
+                    'inventory_item_id' => $item->id,
+                    'transaction_type' => 'opening_stock',
+                    'quantity' => $item->current_stock ?? rand(50, 200),
+                    'received_quantity' => $item->current_stock ?? rand(50, 200),
+                    'damaged_quantity' => 0,
+                    'cost_price' => $item->buying_price ?? $item->cost_price ?? 0,
+                    'unit_price' => $item->selling_price ?? 0,
+                    'source_type' => 'Manual',
+                    'created_by_user_id' => $user ? $user->id : 1,
+                    'notes' => 'Initial stock entry for ' . $item->name,
                     'is_active' => true,
                 ]);
-                $inventoryItems = $inventoryItems->merge($items);
             });
-        });
-        
-        // Create initial stock transactions for inventory items
-        $inventoryItems->each(function ($item) {
-            $initialStock = rand(50, 200);
-            // Get a user to assign as creator
-            $user = \App\Models\User::where('organization_id', $item->organization_id)
-                         ->orWhere('organization_id', null)
-                         ->first();
-            
-            \App\Models\ItemTransaction::create([
-                'organization_id' => $item->organization_id,
-                'branch_id' => $item->branch_id,
-                'inventory_item_id' => $item->id,
-                'transaction_type' => 'opening_stock',
-                'quantity' => $initialStock,
-                'cost_price' => $item->buying_price,
-                'unit_price' => $item->selling_price,
-                'source_type' => 'Manual',
-                'created_by_user_id' => $user ? $user->id : 1, // Fallback to user ID 1
-                'notes' => 'Initial stock entry',
-                'is_active' => true,
-            ]);
         });
         
         $this->command->info('  ✅ Created ' . $suppliers->count() . ' suppliers and ' . $inventoryItems->count() . ' inventory items');
     }
     
     /**
-     * Seed menu system
+     * Seed menu system with proper branch relationships for PostgreSQL - FIXED VERSION
      */
     private function seedMenuSystem(): void
     {
@@ -205,30 +213,141 @@ class DatabaseSeeder extends Seeder
         $branches = Branch::all();
         $menuItems = collect();
         
-        $branches->each(function ($branch) use (&$menuItems) {
-            // Create menu categories
-            $categories = \App\Models\MenuCategory::factory(4)->create([
-                'branch_id' => $branch->id,
-                'is_active' => true,
-            ]);
+        // Predefined category names to avoid randomization issues
+        $categoryNames = ['Appetizers', 'Main Course', 'Desserts', 'Beverages'];
+        
+        $branches->each(function ($branch) use (&$menuItems, $categoryNames) {
+            // Create menu categories with fixed names for PostgreSQL compatibility
+            $categories = collect();
             
-            // Create 10 menu items per category
-            $categories->each(function ($category) use (&$menuItems) {
-                $items = \App\Models\MenuItem::factory(10)->create([
-                    'branch_id' => $category->branch_id,
-                    'category_id' => $category->id,
-                    'is_available' => true,
-                    'price' => rand(8, 30) + (rand(0, 99) / 100), // Random price between $8.00 and $30.99
+            foreach ($categoryNames as $index => $categoryName) {
+                $category = \App\Models\MenuCategory::factory()->create([
+                    'branch_id' => $branch->id,
+                    'organization_id' => $branch->organization_id,
+                    'name' => $categoryName,
+                    'unicode_name' => $categoryName,
+                    'description' => $this->getCategoryDescription($categoryName),
+                    'sort_order' => $index + 1,
+                    'display_order' => $index + 1,
+                    'is_active' => true,
+                    'is_featured' => $index < 2, // First 2 categories are featured
                 ]);
-                $menuItems = $menuItems->merge($items);
+                $categories->push($category);
+            }
+            
+            // Create menu items for each category (FIXED - avoid array size issues)
+            $categories->each(function ($category) use (&$menuItems, $branch) {
+                // Get inventory items for this organization
+                $availableInventoryItems = ItemMaster::where('organization_id', $branch->organization_id)
+                    ->where('is_active', true)
+                    ->get();
+                
+                // Calculate safe number of items to create
+                $maxItemsPerCategory = 6; // Reduced from 8 to be safer
+                $availableItemCount = $availableInventoryItems->count();
+                $itemsToCreate = min($maxItemsPerCategory, $availableItemCount, 6);
+                
+                // Only proceed if we have inventory items
+                if ($availableItemCount > 0 && $itemsToCreate > 0) {
+                    // Get a safe subset of inventory items
+                    $inventoryItemsToUse = $availableInventoryItems->take($itemsToCreate);
+                    
+                    $inventoryItemsToUse->each(function ($inventoryItem, $index) use ($category, $branch, &$menuItems) {
+                        $menuItem = \App\Models\MenuItem::factory()->create([
+                            'branch_id' => $branch->id,
+                            'organization_id' => $branch->organization_id,
+                            'menu_category_id' => $category->id,
+                            'item_masters_id' => $inventoryItem->id,
+                            'name' => $this->generateMenuItemName($category->name, $index + 1),
+                            'price' => rand(8, 30) + (rand(0, 99) / 100), // Random price between $8.00 and $30.99
+                            'is_available' => true,
+                            'preparation_time' => rand(10, 30),
+                            'calories' => rand(200, 800),
+                            'sort_order' => $index + 1,
+                        ]);
+                        
+                        $menuItems->push($menuItem);
+                    });
+                } else {
+                    // Create basic menu items without inventory links if no inventory available
+                    for ($i = 0; $i < 3; $i++) {
+                        $menuItem = \App\Models\MenuItem::factory()->create([
+                            'branch_id' => $branch->id,
+                            'organization_id' => $branch->organization_id,
+                            'menu_category_id' => $category->id,
+                            'item_masters_id' => null, // No inventory link
+                            'name' => $this->generateMenuItemName($category->name, $i + 1),
+                            'price' => rand(8, 30) + (rand(0, 99) / 100),
+                            'is_available' => true,
+                            'preparation_time' => rand(10, 30),
+                            'calories' => rand(200, 800),
+                            'sort_order' => $i + 1,
+                        ]);
+                        
+                        $menuItems->push($menuItem);
+                    }
+                }
             });
         });
         
-        $this->command->info('  ✅ Created ' . $menuItems->count() . ' menu items across all branches');
+        $this->command->info('  ✅ Created ' . $menuItems->count() . ' menu items across ' . $branches->count() . ' branches');
     }
     
     /**
-     * Seed reservations with various scenarios
+     * Get category description based on category name
+     */
+    private function getCategoryDescription(string $categoryName): string
+    {
+        return match($categoryName) {
+            'Appetizers' => 'Start your meal with our delicious appetizers and small plates',
+            'Main Course' => 'Hearty and satisfying main dishes prepared with fresh ingredients',
+            'Desserts' => 'Sweet endings to your perfect meal, crafted by our pastry chefs',
+            'Beverages' => 'Refreshing drinks, specialty beverages, and curated selections',
+            default => "Delicious {$categoryName} prepared fresh daily"
+        };
+    }
+    
+    /**
+     * Generate menu item name based on category and index - FIXED with more items
+     */
+    private function generateMenuItemName(string $categoryName, int $index): string
+    {
+        $names = [
+            'Appetizers' => [
+                'Classic Caesar Salad', 'Buffalo Wings', 'Mozzarella Sticks', 'Bruschetta Trio',
+                'Calamari Rings', 'Spinach Dip', 'Chicken Quesadilla', 'Loaded Nachos',
+                'Garlic Bread', 'Soup of the Day', 'Fresh Spring Rolls', 'Deviled Eggs'
+            ],
+            'Main Course' => [
+                'Grilled Salmon', 'Beef Tenderloin', 'Chicken Parmesan', 'Pasta Carbonara',
+                'Fish and Chips', 'BBQ Ribs', 'Vegetable Stir Fry', 'Lamb Chops',
+                'Mushroom Risotto', 'Grilled Chicken', 'Beef Steak', 'Seafood Paella'
+            ],
+            'Desserts' => [
+                'Chocolate Brownie', 'Tiramisu', 'Ice Cream Sundae', 'Cheesecake',
+                'Fruit Tart', 'Crème Brûlée', 'Apple Pie', 'Chocolate Mousse',
+                'Panna Cotta', 'Lemon Tart', 'Bread Pudding', 'Key Lime Pie'
+            ],
+            'Beverages' => [
+                'Fresh Lemonade', 'Iced Coffee', 'Fruit Smoothie', 'Hot Chocolate',
+                'Green Tea', 'Fresh Orange Juice', 'Specialty Cocktail', 'Craft Beer',
+                'Herbal Tea', 'Fresh Coconut Water', 'Iced Tea', 'House Wine'
+            ]
+        ];
+        
+        $categoryNames = $names[$categoryName] ?? [
+            'Special Item 1', 'Special Item 2', 'Special Item 3', 'Special Item 4', 
+            'Special Item 5', 'Special Item 6', 'Special Item 7', 'Special Item 8',
+            'Special Item 9', 'Special Item 10', 'Special Item 11', 'Special Item 12'
+        ];
+        
+        // Use modulo to safely cycle through available names
+        $nameIndex = ($index - 1) % count($categoryNames);
+        return $categoryNames[$nameIndex] ?? "Special {$categoryName} {$index}";
+    }
+    
+    /**
+     * Seed reservations with different scenarios
      */
     private function seedReservations(): void
     {
@@ -238,21 +357,22 @@ class DatabaseSeeder extends Seeder
         $branches = Branch::all();
         $reservations = collect();
         
-        // Create 100 reservations with different types and statuses
+        // Create 100 reservations with different scenarios
         for ($i = 0; $i < 100; $i++) {
             $customer = $customers->random();
             $branch = $branches->random();
-            $date = now()->addDays(rand(-30, 30));
+            
+            $date = fake()->dateTimeBetween('-15 days', '+30 days');
             
             $reservation = \App\Models\Reservation::factory()->create([
-                'name' => $customer->name,
-                'phone' => $customer->phone,
-                'email' => $customer->email,
                 'customer_phone_fk' => $customer->phone,
+                'name' => $customer->name,
+                'email' => $customer->email,
+                'phone' => $customer->phone,
                 'branch_id' => $branch->id,
                 'date' => $date->format('Y-m-d'),
-                'start_time' => $date->setTime(rand(11, 20), rand(0, 3) * 15),
-                'end_time' => $date->copy()->addHours(2),
+                'start_time' => $date,
+                'end_time' => (clone $date)->modify('+2 hours'),
                 'number_of_people' => rand(2, 8),
                 'type' => \App\Enums\ReservationType::cases()[array_rand(\App\Enums\ReservationType::cases())],
                 'status' => ['pending', 'confirmed', 'completed', 'cancelled'][array_rand(['pending', 'confirmed', 'completed', 'cancelled'])],
@@ -265,7 +385,7 @@ class DatabaseSeeder extends Seeder
     }
     
     /**
-     * Seed orders with different types
+     * Seed orders with different types - FIXED VERSION for Laravel + PostgreSQL + Tailwind CSS
      */
     private function seedOrders(): void
     {
@@ -279,283 +399,113 @@ class DatabaseSeeder extends Seeder
         for ($i = 0; $i < 200; $i++) {
             $customer = $customers->random();
             $branch = $branches->random();
-            $orderDate = now()->subDays(rand(0, 30));
+            
+            $orderDate = fake()->dateTimeBetween('-30 days', 'now');
             
             $order = \App\Models\Order::factory()->create([
+                'customer_phone_fk' => $customer->phone,
                 'customer_name' => $customer->name,
                 'customer_phone' => $customer->phone,
-                'customer_phone_fk' => $customer->phone,
                 'customer_email' => $customer->email,
                 'branch_id' => $branch->id,
-                'order_type' => \App\Enums\OrderType::cases()[array_rand(\App\Enums\OrderType::cases())],
-                'status' => ['submitted', 'preparing', 'ready', 'completed'][array_rand(['submitted', 'preparing', 'ready', 'completed'])],
                 'order_date' => $orderDate,
                 'order_time' => $orderDate,
+                'order_type' => \App\Enums\OrderType::cases()[array_rand(\App\Enums\OrderType::cases())],
+                'status' => ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'][array_rand(['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'])],
                 'subtotal' => rand(20, 100),
-                'tax' => 0,
-                'service_charge' => 0,
-                'total' => 0,
-            ]);
-            
-            // Add order items
-            $menuItems = \App\Models\MenuItem::where('branch_id', $branch->id)->take(rand(1, 5))->get();
-            $subtotal = 0;
-            
-            $menuItems->each(function ($menuItem) use ($order, &$subtotal) {
-                $quantity = rand(1, 3);
-                $unitPrice = $menuItem->price;
-                $totalPrice = $unitPrice * $quantity;
-                $subtotal += $totalPrice;
-                
-                \App\Models\OrderItem::factory()->create([
-                    'order_id' => $order->id,
-                    'menu_item_id' => $menuItem->id,
-                    'quantity' => $quantity,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $totalPrice,
-                ]);
-            });
-            
-            // Update order totals
-            $tax = $subtotal * 0.13;
-            $serviceCharge = $subtotal * 0.10;
-            $total = $subtotal + $tax + $serviceCharge;
-            
-            $order->update([
-                'subtotal' => $subtotal,
-                'tax' => $tax,
-                'service_charge' => $serviceCharge,
-                'total' => $total,
+                'tax' => rand(2, 10),
+                'service_charge' => rand(2, 8),
+                'total' => function(array $attributes) {
+                    return $attributes['subtotal'] + $attributes['tax'] + $attributes['service_charge'];
+                },
             ]);
             
             $orders->push($order);
+            
+            // Add order items (1-5 items per order) - FIXED to handle small arrays
+            $menuItems = \App\Models\MenuItem::where('branch_id', $branch->id)->get();
+            
+            if ($menuItems->count() > 0) {
+                // Calculate safe number of items to select
+                $maxItemsToSelect = min(5, $menuItems->count());
+                $itemsToSelect = rand(1, $maxItemsToSelect);
+                
+                // Use take() instead of random() to avoid LengthException
+                $selectedItems = $menuItems->shuffle()->take($itemsToSelect);
+                
+                $selectedItems->each(function ($menuItem) use ($order) {
+                    \App\Models\OrderItem::factory()->create([
+                        'order_id' => $order->id,
+                        'menu_item_id' => $menuItem->id,
+                        'item_masters_id' => $menuItem->item_masters_id,
+                        'quantity' => rand(1, 3),
+                        'unit_price' => $menuItem->price,
+                        'total_price' => function(array $attributes) {
+                            return $attributes['quantity'] * $attributes['unit_price'];
+                        },
+                    ]);
+                });
+            }
         }
         
-        $this->command->info('  ✅ Created ' . $orders->count() . ' orders with realistic items');
+        $this->command->info('  ✅ Created ' . $orders->count() . ' orders with realistic scenarios');
     }
     
     /**
-     * Simulate business operations
+     * Seed payments and transactions
      */
-    private function simulateBusinessOperations(): void
+    private function seedPaymentsAndTransactions(): void
     {
-        $this->command->info('📊 Simulating business operations...');
+        $this->command->info('💳 Creating payment scenarios...');
         
-        // Create payments for completed orders
         $completedOrders = \App\Models\Order::where('status', 'completed')->get();
         $payments = collect();
         
         $completedOrders->each(function ($order) use (&$payments) {
             $payment = \App\Models\Payment::factory()->create([
-                'payable_type' => \App\Models\Order::class,
+                'payable_type' => get_class($order),
                 'payable_id' => $order->id,
                 'amount' => $order->total,
-                'payment_method' => ['cash', 'card', 'online_portal'][array_rand(['cash', 'card', 'online_portal'])],
                 'status' => 'completed',
+                'payment_method' => ['cash', 'card', 'digital_wallet', 'bank_transfer'][array_rand(['cash', 'card', 'digital_wallet', 'bank_transfer'])],
                 'payment_reference' => 'PAY-' . $order->id . '-' . time(),
             ]);
             $payments->push($payment);
         });
         
-        // Create some additional stock transactions for business simulation
-        $inventoryItems = \App\Models\ItemMaster::take(20)->get();
-        $transactions = collect();
-        
-        $inventoryItems->each(function ($item) use (&$transactions) {
-            // Get a user to assign as creator
-            $user = \App\Models\User::where('organization_id', $item->organization_id)
-                         ->orWhere('organization_id', null)
-                         ->first();
-            
-            // Additional stock movement (purchase)
-            $purchaseQuantity = rand(20, 100);
-            $transaction = \App\Models\ItemTransaction::create([
-                'organization_id' => $item->organization_id,
-                'branch_id' => $item->branch_id,
-                'inventory_item_id' => $item->id,
-                'transaction_type' => 'purchase_order',
-                'quantity' => $purchaseQuantity,
-                'cost_price' => $item->buying_price,
-                'unit_price' => $item->selling_price,
-                'source_type' => 'PurchaseOrder',
-                'created_by_user_id' => $user ? $user->id : 1, // Fallback to user ID 1
-                'notes' => 'Stock replenishment',
-                'is_active' => true,
-            ]);
-            $transactions->push($transaction);
-        });
-        
-        $this->command->info('  ✅ Created ' . $payments->count() . ' payments and ' . $transactions->count() . ' stock transactions');
+        $this->command->info('  ✅ Created ' . $payments->count() . ' payment transactions');
     }
     
     /**
-     * Prepare database for seeding with proper foreign key handling
-     */
-    private function prepareDatabase(): void
-    {
-        $this->command->info('🔧 Preparing database for comprehensive seeding...');
-        
-        // Database-specific foreign key handling
-    }
-
-protected $faker;
-    
-    /**
-     * Display comprehensive completion summary
+     * Display completion summary
      */
     private function displayCompletionSummary(float $startTime): void
     {
-        $endTime = microtime(true);
-        $executionTime = round($endTime - $startTime, 2);
+        $executionTime = round(microtime(true) - $startTime, 2);
         
         $this->command->info('');
-        $this->command->info('🎉 COMPREHENSIVE SEEDING COMPLETE!');
-        $this->command->info('═══════════════════════════════════════════════════════════════════════');
-        
-        // System metrics
-        $this->displaySystemMetrics();
-        
-        // Business metrics
-        $this->displayBusinessMetrics();
-        
-        // Test credentials
-        $this->displayTestCredentials();
-        
-        // Feature highlights
-        $this->displayFeatureHighlights();
-        
-        $this->command->info('');
+        $this->command->info('🎉 RESTAURANT MANAGEMENT SYSTEM SEEDING COMPLETED!');
+        $this->command->info('══════════════════════════════════════════════════════');
         $this->command->info("⏱️  Total execution time: {$executionTime} seconds");
-        $this->command->info('🚀 System ready for comprehensive testing and demonstration!');
-        $this->command->info('═══════════════════════════════════════════════════════════════════════');
-    }
-    
-    /**
-     * Display system-level metrics
-     */
-    private function displaySystemMetrics(): void
-    {
-        $this->command->info('📊 SYSTEM METRICS:');
-        
-        // Core entities
-        $this->command->info('  🏢 Organizations: ' . Organization::count());
-        $this->command->info('  🏪 Branches: ' . Branch::count());
-        $this->command->info('  👥 Users: ' . \App\Models\User::count());
-        $this->command->info('  🎭 Roles: ' . \App\Models\Role::count());
-        $this->command->info('  🔐 Permissions: ' . \App\Models\Permission::count());
-        
-        // Infrastructure
-        $this->command->info('  🪑 Tables: ' . \App\Models\Table::count());
-        $this->command->info('  🏪 Suppliers: ' . \App\Models\Supplier::count());
-        $this->command->info('  ⚙️  Restaurant Configs: ' . \App\Models\RestaurantConfig::count());
-    }
-    
-    /**
-     * Display business operation metrics
-     */
-    private function displayBusinessMetrics(): void
-    {
         $this->command->info('');
-        $this->command->info('💼 BUSINESS OPERATIONS (30 Days):');
         
-        // Customer data
-        $this->command->info('  📞 Customers: ' . \App\Models\Customer::count() . ' (phone-based)');
+        // Display statistics
+        $this->command->info('📊 SEEDED DATA SUMMARY:');
+        $this->command->info('─────────────────────────────');
+        $this->command->info('🏢 Organizations: ' . Organization::count());
+        $this->command->info('🏪 Branches: ' . Branch::count());
+        $this->command->info('👥 Users: ' . \App\Models\User::count());
+        $this->command->info('📞 Customers: ' . \App\Models\Customer::count());
+        $this->command->info('🚚 Suppliers: ' . \App\Models\Supplier::count());
+        $this->command->info('📦 Inventory Items: ' . ItemMaster::count());
+        $this->command->info('🔄 Item Transactions: ' . \App\Models\ItemTransaction::count());
+        $this->command->info('🍽️ Menu Categories: ' . \App\Models\MenuCategory::count());
+        $this->command->info('🍕 Menu Items: ' . \App\Models\MenuItem::count());
+        $this->command->info('📅 Reservations: ' . \App\Models\Reservation::count());
+        $this->command->info('🛍️ Orders: ' . \App\Models\Order::count());
+        $this->command->info('💳 Payments: ' . \App\Models\Payment::count());
         
-        // Menu system
-        $this->command->info('  🍽️  Menu Categories: ' . \App\Models\MenuCategory::count());
-        $this->command->info('  🍲 Menu Items: ' . \App\Models\MenuItem::count());
-        
-        // Reservations
-        $reservationCount = \App\Models\Reservation::count();
-        $confirmedReservations = \App\Models\Reservation::where('status', 'confirmed')->count();
-        $this->command->info("  📅 Reservations: {$reservationCount} (Confirmed: {$confirmedReservations})");
-        
-        // Orders
-        $orderCount = \App\Models\Order::count();
-        $completedOrders = \App\Models\Order::where('status', 'completed')->count();
-        $this->command->info("  🧾 Orders: {$orderCount} (Completed: {$completedOrders})");
-        
-        // Financial
-        $totalPayments = \App\Models\Payment::sum('amount');
-        $this->command->info("  💰 Total Payments: $" . number_format($totalPayments, 2));
-        
-        // Inventory
-        $this->command->info('  📦 Inventory Items: ' . \App\Models\ItemMaster::count());
-        $this->command->info('  📈 Stock Transactions: ' . \App\Models\ItemTransaction::count());
-    }
-    
-    /**
-     * Display test login credentials
-     */
-    private function displayTestCredentials(): void
-    {
         $this->command->info('');
-        $this->command->info('🔐 TEST LOGIN CREDENTIALS:');
-        $this->command->info('  Super Admin:');
-        $this->command->info('    Email: superadmin@rms.com');
-        $this->command->info('    Password: password');
-        $this->command->info('');
-        $this->command->info('  Restaurant Admins:');
-        $this->command->info('    Spice Garden: admin@spicegarden.lk / password123');
-        $this->command->info('    Ocean View: admin@oceanview.lk / password123');
-        $this->command->info('    Mountain Peak: admin@mountainpeak.lk / password123');
-        $this->command->info('');
-        $this->command->info('  Staff Members: staff@[restaurant].lk / staffpass123');
-    }
-    
-    /**
-     * Display implemented feature highlights
-     */
-    private function displayFeatureHighlights(): void
-    {
-        $this->command->info('');
-        $this->command->info('🎯 IMPLEMENTED FEATURES:');
-        $this->command->info('  ✅ Phone-based customer tracking system');
-        $this->command->info('  ✅ Enhanced ReservationType and OrderType enums');
-        $this->command->info('  ✅ Configurable reservation and cancellation fees');
-        $this->command->info('  ✅ Dine-in orders require reservations');
-        $this->command->info('  ✅ Comprehensive notification system (Email/SMS)');
-        $this->command->info('  ✅ Admin fee configuration interface');
-        $this->command->info('  ✅ Order type filtering for admins');
-        $this->command->info('  ✅ Advanced table management');
-        $this->command->info('  ✅ 30 days of realistic operational data');
-        $this->command->info('  ✅ Complete removal of waitlist functionality');
-        $this->command->info('  ✅ Comprehensive error handling and validation');
-        $this->command->info('  ✅ Modern UI components with Tailwind CSS');
-
-          // Run our stable, tested seeders only
-        $this->command->info('🌱 Running core seeders...');
-
-        // 0. Create super admin first
-        $this->call(SuperAdminSeeder::class);
-
-        // 0.1. Also create super admin in users table (LoginSeeder)
-        $this->call(LoginSeeder::class);
-          // 1. Organizations first (creates kitchen stations automatically)
-        $this->call(OrganizationSeeder::class);
-
-        // 2. Branches (creates additional kitchen stations)
-        $this->call(BranchSeeder::class);
-
-        // 2.1. Create roles for the organizations
-        $this->call(RoleSeeder::class);
-
-        // 3. Item categories (required for item masters)
-        $this->call(ItemCategorySeeder::class);
-
-        // 4. Item masters with valid references
-        $this->call(ItemMasterSeeder::class);
-          $this->command->info('✅ Core database seeding completed successfully!');
-        $this->command->info('📊 Current state:');
-
-        // Show summary
-        $this->command->info('  - Organizations: ' . Organization::count());
-        $this->command->info('  - Branches: ' . Branch::count());
-        $this->command->info('  - Kitchen Stations: ' . KitchenStation::count());
-        $this->command->info('  - Item Categories: ' . ItemCategory::count());
-        $this->command->info('  - Item Masters: ' . ItemMaster::count());
-        $this->command->info('  - Admin Users: ' . Admin::count());
-        $this->command->info('  - Regular Users: ' . User::count());
-
+        $this->command->info('✅ Your Laravel + PostgreSQL + Tailwind CSS restaurant management system is ready!');
     }
 }

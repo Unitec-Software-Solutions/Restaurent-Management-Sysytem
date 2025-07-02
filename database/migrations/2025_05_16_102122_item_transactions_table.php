@@ -7,34 +7,66 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Run the migrations for Laravel + PostgreSQL + Tailwind CSS
      */
     public function up(): void
     {
         Schema::create('item_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained('organizations');
-            $table->foreignId('branch_id')->constrained('branches')->nullable();
-            $table->foreignId('inventory_item_id')->constrained('item_master');
-            $table->string('transaction_type', 50);
-            $table->foreignId('incoming_branch_id')->nullable()->constrained('branches');
-            $table->foreignId('receiver_user_id')->nullable()->constrained('users');
-            $table->decimal('quantity', 12, 2);
-            $table->decimal('received_quantity', 12, 2)->default(0);
-            $table->decimal('damaged_quantity', 12, 2)->default(0);
-            $table->decimal('cost_price', 12, 4)->default(0.0000);
-            $table->decimal('unit_price', 12, 4)->default(0.0000);
-            $table->string('source_id')->nullable();
-            $table->string('source_type', 50)->nullable();
-            $table->foreignId('created_by_user_id')->constrained('users');
+            
+            // Organization and branch relationships
+            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('branch_id')->nullable();
+            
+            // Item reference - FIXED to use correct table name
+            $table->unsignedBigInteger('inventory_item_id');
+            $table->unsignedBigInteger('item_masters_id')->nullable(); // Alternative reference
+            
+            // Transaction details
+            $table->string('transaction_type'); // in, out, adjustment, transfer
+            $table->decimal('quantity', 10, 2);
+            $table->decimal('unit_price', 10, 4)->default(0);
+            $table->decimal('total_amount', 12, 2)->default(0);
+            
+            // Reference documents
+            $table->string('reference_type')->nullable(); // order, purchase, adjustment
+            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->string('reference_number')->nullable();
+            
+            // Transaction metadata
             $table->text('notes')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->string('batch_number')->nullable();
+            $table->date('expiry_date')->nullable();
+            
+            // PostgreSQL JSON for Tailwind CSS UI
+            $table->json('metadata')->nullable();
+            
+            // Audit fields
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
+            
+            // PostgreSQL optimized indexes
+            $table->index(['organization_id', 'branch_id']);
+            $table->index(['inventory_item_id', 'transaction_type']);
+            $table->index(['reference_type', 'reference_id']);
+            $table->index(['created_at']);
+        });
+        
+        // Add foreign key constraints - FIXED table names
+        Schema::table('item_transactions', function (Blueprint $table) {
+            $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('cascade');
+            $table->foreign('branch_id')->references('id')->on('branches')->onDelete('set null');
+            
+            // FIXED: Use correct table name (plural)
+            $table->foreign('inventory_item_id')->references('id')->on('item_masters')->onDelete('cascade');
+            $table->foreign('item_masters_id')->references('id')->on('item_masters')->onDelete('set null');
+            
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

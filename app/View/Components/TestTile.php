@@ -132,7 +132,7 @@ class TestTile extends Component
      */
     private function validateInventorySystem(): bool
     {
-        $requiredTables = ['item_master', 'item_categories'];
+        $requiredTables = ['item_masters', 'item_categories'];
         
         foreach ($requiredTables as $table) {
             if (!Schema::hasTable($table)) {
