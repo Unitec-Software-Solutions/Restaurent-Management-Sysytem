@@ -683,7 +683,14 @@ class GrnDashboardController extends Controller
 
     public function print(GrnMaster $grn)
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to print GRNs.');
+        }
+
         $orgId = $this->getOrganizationId();
+
         if (!$this->canAccessOrganization($grn->organization_id, $orgId)) {
             abort(403);
         }
@@ -699,12 +706,16 @@ class GrnDashboardController extends Controller
             'createdByUser'
         ]);
 
-        $organization = Organization::find($orgId);
+        // For super admin, use the GRN's organization; for others, use user's organization
+        $organizationForPrint = $user->is_super_admin ?
+            Organization::find($grn->organization_id) :
+            Organization::find($orgId);
+
         $printedDate = now()->format('M d, Y h:i A');
 
         return view('admin.suppliers.grn.print', compact(
             'grn',
-            'organization',
+            'organizationForPrint',
             'printedDate'
         ));
     }
@@ -713,8 +724,15 @@ class GrnDashboardController extends Controller
     {
         Log::info('Starting GRN verification', ['grn_id' => $grn->grn_id]);
 
-        if ($grn->organization_id !== $this->getOrganizationId()) {
-            Log::error('Unauthorized access to GRN verification', ['grn_id' => $grn->grn_id]);
+        $user = Auth::guard('admin')->user();
+        $orgId = $this->getOrganizationId();
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // For non-super admin, check organization access
+        if (!$isSuperAdmin && !$this->canAccessOrganization($grn->organization_id, $orgId)) {
+            Log::error('Unauthorized access to GRN verification', ['grn_id' => $grn->grn_id, 'user_org' => $orgId, 'grn_org' => $grn->organization_id]);
             abort(403);
         }
 
@@ -758,7 +776,7 @@ class GrnDashboardController extends Controller
         try {
             Log::info('Updating GRN status', ['grn_id' => $grn->grn_id, 'new_status' => $validated['status']]);
 
-            $grn->verified_by_user_id = Auth::id();
+            $grn->verified_by_user_id = Auth::guard('admin')->id();
             $grn->verified_at = now();
             $grn->status = $validated['status'];
             $grn->notes = $validated['notes'] ?? $grn->notes;
@@ -817,7 +835,7 @@ class GrnDashboardController extends Controller
                                 'unit_price' => $isFromGTN ? 0 : $grnItem->buying_price,
                                 'source_id' => $isFromGTN ? (string) $grn->delivery_note_number : (string) $grnItem->batch_no,
                                 'source_type' => $sourceType,
-                                'created_by_user_id' => Auth::id(),
+                                'created_by_user_id' => Auth::guard('admin')->id(),
                                 'notes' => $isFromGTN
                                     ? 'Stock received from GTN #' . $grn->delivery_note_number
                                     : 'Stock added from GRN #' . $grn->grn_number,
@@ -1081,12 +1099,21 @@ class GrnDashboardController extends Controller
     public function getGrnStatistics(Request $request)
     {
         try {
+            $user = Auth::guard('admin')->user();
+
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
             $orgId = $this->getOrganizationId();
             $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
             $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-            $baseQuery = GrnMaster::where('organization_id', $orgId)
-                ->whereBetween('received_date', [$startDate, $endDate]);
+            $baseQuery = GrnMaster::query();
+
+            // Apply organization filter for non-super admins
+            $this->applyOrganizationFilter($baseQuery, $orgId);
+            $baseQuery->whereBetween('received_date', [$startDate, $endDate]);
 
             $stats = [
                 'total_grns' => $baseQuery->count(),
@@ -1096,12 +1123,16 @@ class GrnDashboardController extends Controller
                 'total_value' => $baseQuery->clone()->sum('total_amount'),
                 'average_value' => $baseQuery->clone()->avg('total_amount'),
                 'items_received' => GrnItem::whereHas('grn', function ($q) use ($orgId, $startDate, $endDate) {
-                    $q->where('organization_id', $orgId)
-                      ->whereBetween('received_date', [$startDate, $endDate]);
+                    if ($orgId !== null) {
+                        $q->where('organization_id', $orgId);
+                    }
+                    $q->whereBetween('received_date', [$startDate, $endDate]);
                 })->sum('received_quantity'),
                 'items_accepted' => GrnItem::whereHas('grn', function ($q) use ($orgId, $startDate, $endDate) {
-                    $q->where('organization_id', $orgId)
-                      ->whereBetween('received_date', [$startDate, $endDate]);
+                    if ($orgId !== null) {
+                        $q->where('organization_id', $orgId);
+                    }
+                    $q->whereBetween('received_date', [$startDate, $endDate]);
                 })->sum('accepted_quantity'),
             ];
 
@@ -1226,24 +1257,34 @@ class GrnDashboardController extends Controller
     public function exportGrns(Request $request)
     {
         try {
+            $user = Auth::guard('admin')->user();
+
+            if (!$user) {
+                return back()->with('error', 'Unauthorized access');
+            }
+
             $orgId = $this->getOrganizationId();
             $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
             $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-            $grns = GrnMaster::with(['supplier', 'branch', 'items.item'])
-                ->where('organization_id', $orgId)
-                ->whereBetween('received_date', [$startDate, $endDate])
-                ->get();
+            $query = GrnMaster::with(['supplier', 'branch', 'items.item'])
+                ->whereBetween('received_date', [$startDate, $endDate]);
+
+            // Apply organization filter for non-super admins
+            $this->applyOrganizationFilter($query, $orgId);
+
+            $grns = $query->get();
 
             $csvData = [];
             $csvData[] = [
-                'GRN Number', 'Supplier', 'Branch', 'Received Date', 'Status',
+                'GRN Number', 'Organization', 'Supplier', 'Branch', 'Received Date', 'Status',
                 'Total Amount', 'Items Count', 'Verified By', 'Verified At'
             ];
 
             foreach ($grns as $grn) {
                 $csvData[] = [
                     $grn->grn_number,
+                    $grn->organization->name ?? 'N/A',
                     $grn->supplier->name ?? 'N/A',
                     $grn->branch->name ?? 'N/A',
                     $grn->received_date->format('Y-m-d'),
@@ -1275,8 +1316,37 @@ class GrnDashboardController extends Controller
 
     public function statistics()
     {
-        // TODO: Implement statistics logic
-        return response()->json(['message' => 'Statistics data']);
+        try {
+            $user = Auth::guard('admin')->user();
+
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $orgId = $this->getOrganizationId();
+
+            $query = GrnMaster::query();
+            $this->applyOrganizationFilter($query, $orgId);
+
+            $stats = [
+                'total_grns' => $query->count(),
+                'pending_grns' => $query->clone()->where('status', GrnMaster::STATUS_PENDING)->count(),
+                'verified_grns' => $query->clone()->where('status', GrnMaster::STATUS_VERIFIED)->count(),
+                'rejected_grns' => $query->clone()->where('status', GrnMaster::STATUS_REJECTED)->count(),
+                'total_value' => $query->clone()->sum('total_amount'),
+                'current_month_grns' => $query->clone()
+                    ->whereBetween('received_date', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->count(),
+                'current_month_value' => $query->clone()
+                    ->whereBetween('received_date', [now()->startOfMonth(), now()->endOfMonth()])
+                    ->sum('total_amount'),
+            ];
+
+            return response()->json($stats);
+        } catch (\Exception $e) {
+            Log::error('Error fetching GRN statistics', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch statistics'], 500);
+        }
     }
 
 }
