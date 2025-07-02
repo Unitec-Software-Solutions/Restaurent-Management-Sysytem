@@ -20,6 +20,20 @@ use App\Models\Organization;
 
 class GrnDashboardController extends Controller
 {
+    /**
+     * Item categories allowed for GRN (Goods Received Note)
+     * These are items that can be purchased/received from suppliers
+     * Add more categories here as needed
+     */
+    const ALLOWED_GRN_CATEGORIES = [
+        'Buy & sell',
+        'Ingredients',
+        // Add more categories here as needed:
+        // 'Raw Materials',
+        // 'Packaging Materials',
+        // 'Supplies',
+    ];
+
     protected function getOrganizationId()
     {
         $user = Auth::guard('admin')->user();
@@ -184,8 +198,15 @@ class GrnDashboardController extends Controller
         // Use the GRN's organization for data filtering
         $targetOrgId = $grn->organization_id;
 
+        // Filter items by category for GRN - only show items that can be purchased
+        $allowedCategories = self::ALLOWED_GRN_CATEGORIES;
         $items = ItemMaster::where('organization_id', $targetOrgId)
             ->active()
+            ->whereHas('category', function($q) use ($allowedCategories) {
+                $q->whereIn('name', $allowedCategories);
+            })
+            ->with('category')
+            ->orderBy('name')
             ->get();
 
         $grn->load(['items.item', 'purchaseOrder.items']);
@@ -449,7 +470,17 @@ class GrnDashboardController extends Controller
         // Get organizations for super admin dropdown
         $organizations = $isSuperAdmin ? Organization::active()->get() : collect();
 
-        $items = $this->applyOrganizationFilter(ItemMaster::query(), $orgId)->active()->get();
+        // Filter items by category for GRN - only show items that can be purchased
+        $allowedCategories = self::ALLOWED_GRN_CATEGORIES;
+        $items = $this->applyOrganizationFilter(ItemMaster::query(), $orgId)
+            ->active()
+            ->whereHas('category', function($q) use ($allowedCategories) {
+                $q->whereIn('name', $allowedCategories);
+            })
+            ->with('category')
+            ->orderBy('name')
+            ->get();
+
         $suppliers = $this->applyOrganizationFilter(Supplier::query(), $orgId)->active()->get();
         $branches = $this->applyOrganizationFilter(Branch::query(), $orgId)->active()->get();
         $purchaseOrders = $this->applyOrganizationFilter(PurchaseOrder::query(), $orgId)
@@ -1159,12 +1190,30 @@ class GrnDashboardController extends Controller
                 return response()->json(['error' => 'Organization ID is required'], 400);
             }
 
+            // Filter items by category for GRN - only show items that can be purchased
+            $allowedCategories = self::ALLOWED_GRN_CATEGORIES;
             $items = ItemMaster::where('organization_id', $organizationId)
                 ->where('is_active', true)
-                ->select('id', 'item_code', 'name', 'buying_price')
+                ->whereHas('category', function($q) use ($allowedCategories) {
+                    $q->whereIn('name', $allowedCategories);
+                })
+                ->with('category')
+                ->select('id', 'item_code', 'name', 'buying_price', 'item_category_id')
+                ->orderBy('name')
                 ->get();
 
-            return response()->json(['items' => $items]);
+            // Transform items to include category name
+            $itemsForResponse = $items->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'item_code' => $item->item_code,
+                    'name' => $item->name,
+                    'buying_price' => $item->buying_price,
+                    'category' => $item->category->name ?? 'N/A'
+                ];
+            });
+
+            return response()->json(['items' => $itemsForResponse]);
         } catch (\Exception $e) {
             Log::error('Error fetching items by organization', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Failed to fetch items'], 500);
