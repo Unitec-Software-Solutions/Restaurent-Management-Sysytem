@@ -2,23 +2,22 @@
 
 namespace Database\Factories;
 
-use App\Models\PaymentAllocation;
-use App\Models\GrnMaster;
-use App\Models\PurchaseOrder;
-use App\Models\SupplierPaymentMaster;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Models\PaymentAllocation>
+ */
 class PaymentAllocationFactory extends Factory
 {
-    protected $model = PaymentAllocation::class;    public function definition()
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
     {
         return [
-            'payment_id' => SupplierPaymentMaster::factory(),
-            'grn_id' => GrnMaster::factory(),
-            'po_id' => PurchaseOrder::factory(),
-            'amount' => $this->faker->randomFloat(2, 1, 1000),
-            'allocated_at' => $this->faker->dateTime(),
-            'allocated_by' => $this->faker->randomNumber(),
+            //
         ];
     }
 }

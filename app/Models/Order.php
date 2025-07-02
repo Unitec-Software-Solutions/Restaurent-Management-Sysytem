@@ -291,6 +291,14 @@ class Order extends Model
     }
 
     /**
+     * Alias for orderItems (for backward compatibility)
+     */
+    public function items()
+    {
+        return $this->orderItems();
+    }
+
+    /**
      * Calculate totals automatically with proper field mapping
      */
     public function calculateTotals()

@@ -4,9 +4,10 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateAdminsTable extends Migration
+return new class extends Migration
 {
-    public function up()
+    
+    public function up(): void
     {
         Schema::create('admins', function (Blueprint $table) {
             $table->id();
@@ -17,14 +18,20 @@ class CreateAdminsTable extends Migration
             $table->foreign('branch_id')->references('id')->on('branches')->onDelete('set null');
             $table->unsignedBigInteger('organization_id')->nullable();
             $table->foreign('organization_id')->references('id')->on('organizations')->onDelete('set null');
-
             $table->rememberToken();
             $table->timestamps();
+            
+            // PostgreSQL indexes for performance
+            $table->index(['organization_id', 'branch_id']);
+            $table->index(['email']);
         });
     }
 
-    public function down()
+    /**
+     * Reverse the migrations for PostgreSQL
+     */
+    public function down(): void
     {
         Schema::dropIfExists('admins');
     }
-}
+};

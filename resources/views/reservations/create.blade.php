@@ -45,6 +45,7 @@
                 $name = old('name', $input['name'] ?? '');
                 $email = old('email', $input['email'] ?? '');
                 $phone = old('phone', $input['phone'] ?? '');
+                $organization_id = old('organization_id', $input['organization_id'] ?? '');
                 $branch_id = old('branch_id', $input['branch_id'] ?? '');
                 $date = old('date', $input['date'] ?? '');
                 $start_time = old('start_time', $input['start_time'] ?? '');
@@ -121,32 +122,45 @@
                     
                     <!-- Reservation Details -->
                     <div class="space-y-4">
-                        <div>
-                            <label for="branch_id" class="block text-gray-700 text-sm font-medium mb-1 flex items-center">
-                                <span>Select Branch</span>
-                                <span class="text-red-500 ml-1">*</span>
+                        <!-- Organization Selection -->
+                        <div class="mb-4">
+                            <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                Restaurant <span class="text-red-500">*</span>
                             </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-store text-gray-400"></i>
-                                </div>
-                                <select id="branch_id" name="branch_id" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none appearance-none bg-white" required>
-                                    <option value="" disabled selected>Select a branch</option>
-                                    @foreach($branches as $branch)
-                                        <option value="{{ $branch->id }}" 
-                                                data-opening="{{ \Carbon\Carbon::parse($branch->opening_time)->format('H:i') }}" 
-                                                data-closing="{{ \Carbon\Carbon::parse($branch->closing_time)->format('H:i') }}"
-                                                {{ $branch_id == $branch->id ? 'selected' : '' }}>
-                                            {{ $branch->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <i class="fas fa-chevron-down text-gray-400"></i>
-                                </div>
-                            </div>
+                            <select name="organization_id" id="organization_id" 
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                                    required>
+                                <option value="" disabled selected>Select a restaurant</option>
+                                @foreach($organizations as $organization)
+                                    <option value="{{ $organization['id'] }}" 
+                                            {{ old('organization_id', $organization_id) == $organization['id'] ? 'selected' : '' }}>
+                                        {{ $organization['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('organization_id')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
-                        
+
+                        <!-- Branch Selection -->
+                        <div class="mb-4">
+                            <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                Branch <span class="text-red-500">*</span>
+                            </label>
+                            <select name="branch_id" id="branch_id" 
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" 
+                                    required disabled>
+                                <option value="" disabled selected>First select a restaurant</option>
+                            </select>
+                            <div id="branch-hours-text" class="mt-2 text-sm text-blue-700 flex items-center">
+                                Select a branch to view hours
+                            </div>
+                            @error('branch_id')
+                                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <div>
                             <label for="date" class="block text-gray-700 text-sm font-medium mb-1 flex items-center">
                                 <span>Date</span>
@@ -186,22 +200,6 @@
                                     <input id="end_time" name="end_time" type="time" value="{{ $end_time }}" class="input-highlight w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2 focus:outline-none" required>
                                 </div>
                             </div>
-                        </div>
-                        
-                        {{-- Branch hours info --}}
-                        <div id="branch-hours-info" class="mb-2 text-sm text-blue-700 flex items-center space-x-2">
-                            <i class="fas fa-clock"></i>
-                            <span id="branch-hours-text">
-                                @php
-                                    $selectedBranch = $branches->firstWhere('id', $branch_id);
-                                @endphp
-                                @if($selectedBranch)
-                                    Open: {{ \Carbon\Carbon::parse($selectedBranch->opening_time)->format('h:i A') }}
-                                    - {{ \Carbon\Carbon::parse($selectedBranch->closing_time)->format('h:i A') }}
-                                @else
-                                    Select a branch to view hours
-                                @endif
-                            </span>
                         </div>
                     </div>
                 </div>
@@ -269,309 +267,706 @@
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('reservationForm');
-        const branchSelect = document.getElementById('branch_id');
-        const dateInput = document.getElementById('date');
-        const startTimeInput = document.getElementById('start_time');
-        const endTimeInput = document.getElementById('end_time');
-        const timeSuggestions = document.getElementById('timeSuggestions');
-        const errorContainer = document.getElementById('errorContainer');
-        const errorList = document.getElementById('errorList');
-        const submitButton = document.getElementById('submitButton');
-        const successMessage = document.getElementById('successMessage');
-        const confirmationDetails = document.getElementById('confirmationDetails');
-        const branchHoursText = document.getElementById('branch-hours-text');
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration - Fix the API endpoint
+    const CONFIG = {
+        API_ENDPOINTS: {
+            BRANCHES: '/api/organizations/{organizationId}/branches', // Fixed endpoint
+            AVAILABILITY: '/api/branches/{branchId}/availability'
+        },
+        CACHE_EXPIRY: 5 * 60 * 1000, // 5 minutes
+        DEBOUNCE_DELAY: 300,
+        MIN_RESERVATION_DURATION: 30, // minutes
+        MAX_RESERVATION_DURATION: 240 // 4 hours
+    };
 
-        // Format date to display in confirmation
-        function formatDate(dateString) {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            return new Date(dateString).toLocaleDateString('en-US', options);
+    // State management
+    const state = {
+        branchCache: new Map(),
+        currentOrganizationId: null,
+        currentBranchId: null,
+        isLoading: false,
+        formValidation: {
+            name: false,
+            phone: false,
+            organization_id: false,
+            branch_id: false,
+            date: false,
+            start_time: false,
+            end_time: false,
+            number_of_people: false
         }
+    };
+
+    // DOM elements
+    const elements = {
+        form: document.getElementById('reservationForm'),
+        organizationSelect: document.getElementById('organization_id'),
+        branchSelect: document.getElementById('branch_id'),
+        branchHoursText: document.getElementById('branch-hours-text'),
+        errorContainer: document.getElementById('errorContainer'),
+        errorList: document.getElementById('errorList'),
+        submitButton: document.getElementById('submitButton'),
+        
+        // Form fields
+        name: document.getElementById('name'),
+        email: document.getElementById('email'),
+        phone: document.getElementById('phone'),
+        date: document.getElementById('date'),
+        startTime: document.getElementById('start_time'),
+        endTime: document.getElementById('end_time'),
+        numberOfPeople: document.getElementById('number_of_people'),
+        comments: document.getElementById('comments')
+    };
+
+    // Validation patterns
+    const VALIDATION_PATTERNS = {
+        name: /^[a-zA-Z\s]{2,50}$/,
+        email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+        phone: /^[\+]?[\d\s\-\(\)]{10,15}$/
+    };
+
+    /**
+     * Utility functions
+     */
+    const utils = {
+        // Debounce function for input validation
+        debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        },
 
         // Format time to 12-hour format
-        function formatTime(timeString) {
-            const [hours, minutes] = timeString.split(':');
-            const hour = parseInt(hours, 10);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const hour12 = hour % 12 || 12;
-            return `${hour12}:${minutes} ${ampm}`;
+        formatTime(timeString) {
+            if (!timeString || !timeString.includes(':')) return timeString;
+            
+            try {
+                const [hours, minutes] = timeString.split(':');
+                const hour = parseInt(hours, 10);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const hour12 = hour % 12 || 12;
+                return `${hour12}:${minutes.padStart(2, '0')} ${ampm}`;
+            } catch (e) {
+                console.error('Error formatting time:', timeString, e);
+                return timeString;
+            }
+        },
+
+        // Calculate time difference in minutes
+        getTimeDifference(startTime, endTime) {
+            if (!startTime || !endTime) return 0;
+            
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            
+            if (end <= start) {
+                end.setDate(end.getDate() + 1); // Next day
+            }
+            
+            return (end - start) / (1000 * 60); // Minutes
+        },
+
+        // Show loading spinner
+        showLoading(element, message = 'Loading...') {
+            const spinner = `
+                <div class="flex items-center justify-center py-2">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                    <span class="ml-2 text-sm text-gray-600">${message}</span>
+                </div>
+            `;
+            element.innerHTML = spinner;
+        },
+
+        // Get CSRF token
+        getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         }
+    };
 
-        // Set minimum date to today
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.min = today;
-        dateInput.value = today;
+    /**
+     * Validation functions
+     */
+    const validation = {
+        // Validate individual field
+        validateField(fieldName, value) {
+            const field = elements[fieldName];
+            if (!field) return false;
 
-        // Set min/max times based on branch hours
-        function setTimeConstraints() {
-            const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
-            if (!selectedBranch.value) return;
-            
-            const opening = selectedBranch.dataset.opening;
-            const closing = selectedBranch.dataset.closing;
-            
-            startTimeInput.min = opening;
-            endTimeInput.max = closing;
-            
-            // Set end time min based on start time
-            if (startTimeInput.value) {
-                const start = new Date(`2000-01-01T${startTimeInput.value}`);
-                const minEnd = new Date(start.getTime() + 30 * 60000);
-                endTimeInput.min = minEnd.toTimeString().slice(0,5);
+            let isValid = false;
+            let errorMessage = '';
+
+            switch (fieldName) {
+                case 'name':
+                    isValid = VALIDATION_PATTERNS.name.test(value.trim());
+                    errorMessage = 'Name must be 2-50 characters and contain only letters and spaces';
+                    break;
+
+                case 'email':
+                    isValid = !value || VALIDATION_PATTERNS.email.test(value.trim());
+                    errorMessage = 'Please enter a valid email address';
+                    break;
+
+                case 'phone':
+                    isValid = VALIDATION_PATTERNS.phone.test(value.replace(/\s/g, ''));
+                    errorMessage = 'Please enter a valid phone number (10-15 digits)';
+                    break;
+
+                case 'date':
+                    const selectedDate = new Date(value);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    isValid = selectedDate >= today;
+                    errorMessage = 'Please select a future date';
+                    break;
+
+                case 'startTime':
+                case 'endTime':
+                    isValid = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value);
+                    errorMessage = 'Please select a valid time';
+                    break;
+
+                case 'numberOfPeople':
+                    const num = parseInt(value);
+                    isValid = num >= 1 && num <= 20;
+                    errorMessage = 'Number of people must be between 1 and 20';
+                    break;
+
+                default:
+                    isValid = value.trim().length > 0;
+                    errorMessage = 'This field is required';
             }
-        }
 
-        // Update time constraints when branch changes
-        branchSelect.addEventListener('change', function() {
-            setTimeConstraints();
-            validateTimeInputs();
-        });
+            this.updateFieldValidation(field, isValid, errorMessage);
+            state.formValidation[fieldName] = isValid;
+            return isValid;
+        },
 
-        // Update end time constraints when start time changes
-        startTimeInput.addEventListener('change', function() {
-            if (!startTimeInput.value) return;
-            
-            const start = new Date(`2000-01-01T${startTimeInput.value}`);
-            const minEnd = new Date(start.getTime() + 30 * 60000);
-            endTimeInput.min = minEnd.toTimeString().slice(0,5);
-            
-            // Adjust end time if needed
-            if (endTimeInput.value && endTimeInput.value < endTimeInput.min) {
-                endTimeInput.value = endTimeInput.min;
+        // Update field visual validation state
+        updateFieldValidation(field, isValid, errorMessage = '') {
+            const container = field.closest('div');
+            const existingError = container.querySelector('.field-error');
+
+            // Remove existing error
+            if (existingError) {
+                existingError.remove();
             }
-            
-            validateTimeInputs();
-        });
 
-        // Set initial constraints
-        setTimeConstraints();
-        
-        // Update date input handler to respect branch hours
-        dateInput.addEventListener('change', function() {
-            if (dateInput.value) {
-                timeSuggestions.classList.remove('hidden');
-                
-                // If date is today, set minimum start time to current time + 30 minutes
-                if (dateInput.value === today) {
-                    const now = new Date();
-                    const minStart = new Date(now.getTime() + 30 * 60000);
-                    const minStartTime = minStart.toTimeString().slice(0,5);
-                    
-                    // Apply branch opening time constraint
-                    const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
-                    if (selectedBranch.value) {
-                        const opening = selectedBranch.dataset.opening;
-                        startTimeInput.min = minStartTime > opening ? minStartTime : opening;
-                    } else {
-                        startTimeInput.min = minStartTime;
-                    }
-                    
-                    // If current time is after 8 PM, suggest tomorrow
-                    if (now.getHours() >= 20) {
-                        const tomorrow = new Date();
-                        tomorrow.setDate(tomorrow.getDate() + 1);
-                        dateInput.value = tomorrow.toISOString().split('T')[0];
-                    }
-                } else {
-                    // Apply branch opening time constraint for future dates
-                    const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
-                    if (selectedBranch.value) {
-                        startTimeInput.min = selectedBranch.dataset.opening;
-                    } else {
-                        startTimeInput.min = '';
-                    }
-                }
-            } else {
-                timeSuggestions.classList.add('hidden');
-            }
-            validateTimeInputs();
-        });
+            // Update field styling
+            if (isValid) {
+                field.classList.remove('border-red-500', 'focus:ring-red-500');
+                field.classList.add('border-gray-300', 'focus:ring-indigo-500');
+            } else if (field.value.trim()) {
+                field.classList.remove('border-gray-300', 'focus:ring-indigo-500');
+                field.classList.add('border-red-500', 'focus:ring-red-500');
 
-        // Show time suggestions when date is selected
-        dateInput.addEventListener('change', function() {
-            if (dateInput.value) {
-                timeSuggestions.classList.remove('hidden');
-                
-                // If date is today, set minimum start time to current time + 30 minutes
-                if (dateInput.value === today) {
-                    const now = new Date();
-                    const minStart = new Date(now.getTime() + 30 * 60000);
-                    startTimeInput.min = minStart.toTimeString().slice(0,5);
-                    
-                    // If current time is after 8 PM, suggest tomorrow
-                    if (now.getHours() >= 20) {
-                        const tomorrow = new Date();
-                        tomorrow.setDate(tomorrow.getDate() + 1);
-                        dateInput.value = tomorrow.toISOString().split('T')[0];
-                    }
-                } else {
-                    startTimeInput.min = '';
-                }
-            } else {
-                timeSuggestions.classList.add('hidden');
-            }
-            validateTimeInputs();
-        });
-
-        // Time suggestion buttons
-        document.querySelectorAll('.time-suggestion').forEach(button => {
-            button.addEventListener('click', function() {
-                startTimeInput.value = this.dataset.start;
-                endTimeInput.value = this.dataset.end;
-                validateTimeInputs();
-            });
-        });
-
-        // Validate time inputs based on branch opening hours
-        function validateTimeInputs() {
-            const startTime = startTimeInput.value;
-            const endTime = endTimeInput.value;
-            const selectedBranch = branchSelect.options[branchSelect.selectedIndex];
-            
-            // Clear previous errors
-            errorContainer.classList.add('hidden');
-            errorList.innerHTML = '';
-            
-            if (startTime && endTime && selectedBranch.value) {
-                const openingTime = selectedBranch.dataset.opening;
-                const closingTime = selectedBranch.dataset.closing;
-                
-                let errors = [];
-                
-                if (startTime < openingTime) {
-                    errors.push(`Start time must be after ${formatTime(openingTime)} (branch opening time)`);
-                }
-                
-                if (endTime > closingTime) {
-                    errors.push(`End time must be before ${formatTime(closingTime)} (branch closing time)`);
-                }
-                
-                if (startTime >= endTime) {
-                    errors.push('End time must be after start time');
-                }
-                
-                // Check if reservation is at least 30 minutes
-                const start = new Date(`2000-01-01T${startTime}`);
-                const end = new Date(`2000-01-01T${endTime}`);
-                const duration = (end - start) / (1000 * 60); // in minutes
-                
-                if (duration < 30) {
-                    errors.push('Reservation must be at least 30 minutes');
-                }
-                
-                if (errors.length > 0) {
-                    showErrors(errors);
-                    return false;
+                // Add error message
+                if (errorMessage) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'field-error mt-1 text-sm text-red-600 flex items-center';
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i>${errorMessage}`;
+                    container.appendChild(errorDiv);
                 }
             }
+        },
+
+        // Validate time range
+        validateTimeRange() {
+            const startTime = elements.startTime.value;
+            const endTime = elements.endTime.value;
+
+            if (!startTime || !endTime) return true;
+
+            const duration = utils.getTimeDifference(startTime, endTime);
             
+            if (duration < CONFIG.MIN_RESERVATION_DURATION) {
+                this.showTimeError('Minimum reservation duration is 30 minutes');
+                return false;
+            }
+
+            if (duration > CONFIG.MAX_RESERVATION_DURATION) {
+                this.showTimeError('Maximum reservation duration is 4 hours');
+                return false;
+            }
+
+            this.clearTimeError();
             return true;
-        }
-        
-        function showErrors(errors) {
-            errorList.innerHTML = '';
-            errors.forEach(error => {
-                const li = document.createElement('li');
-                li.textContent = error;
-                li.className = 'flex items-start';
-                errorList.appendChild(li);
-            });
-            errorContainer.classList.remove('hidden');
-            
-            // Scroll to errors
-            errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
+        },
 
-        // Validate on branch or time change
-        branchSelect.addEventListener('change', validateTimeInputs);
-        startTimeInput.addEventListener('change', validateTimeInputs);
-        endTimeInput.addEventListener('change', validateTimeInputs);
-
-        // Form submission
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Show time validation error
+        showTimeError(message) {
+            const timeContainer = elements.endTime.closest('.grid');
+            let errorDiv = timeContainer.querySelector('.time-error');
             
-            // Show loading state
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
-            
-            // Validate all required fields
-            let isValid = true;
-            const requiredFields = form.querySelectorAll('[required]');
-            let errors = [];
-            
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    errors.push(`${field.labels[0].textContent.trim().replace(' *', '')} is required`);
-                    isValid = false;
-                }
-            });
-            
-            // Validate time inputs
-            if (!validateTimeInputs()) {
-                isValid = false;
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'time-error col-span-2 mt-2 text-sm text-red-600 flex items-center';
+                timeContainer.appendChild(errorDiv);
             }
             
-            if (!isValid) {
-                if (errors.length > 0) {
-                    showErrors(errors);
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i>${message}`;
+        },
+
+        // Clear time validation error
+        clearTimeError() {
+            const timeContainer = elements.endTime.closest('.grid');
+            const errorDiv = timeContainer.querySelector('.time-error');
+            if (errorDiv) {
+                errorDiv.remove();
+            }
+        },
+
+        // Validate entire form
+        validateForm() {
+            const requiredFields = ['name', 'phone', 'date', 'startTime', 'endTime', 'numberOfPeople'];
+            let isFormValid = true;
+
+            requiredFields.forEach(fieldName => {
+                const field = elements[fieldName];
+                if (field && !this.validateField(fieldName, field.value)) {
+                    isFormValid = false;
                 }
-                submitButton.disabled = false;
-                submitButton.innerHTML = '<i class="fas fa-search mr-2"></i> Review Reservation';
+            });
+
+            // Additional validations
+            if (!state.currentOrganizationId) {
+                isFormValid = false;
+                this.showFormError('Please select a restaurant');
+            }
+
+            if (!state.currentBranchId) {
+                isFormValid = false;
+                this.showFormError('Please select a branch');
+            }
+
+            if (!this.validateTimeRange()) {
+                isFormValid = false;
+            }
+
+            this.updateSubmitButton(isFormValid);
+            return isFormValid;
+        },
+
+        // Show form-level error
+        showFormError(message) {
+            if (!elements.errorContainer || !elements.errorList) return;
+            
+            elements.errorList.innerHTML = `<li>${message}</li>`;
+            elements.errorContainer.classList.remove('hidden');
+        },
+
+        // Clear form errors
+        clearFormErrors() {
+            if (elements.errorContainer) {
+                elements.errorContainer.classList.add('hidden');
+            }
+            if (elements.errorList) {
+                elements.errorList.innerHTML = '';
+            }
+        },
+
+        // Update submit button state
+        updateSubmitButton(isValid) {
+            if (!elements.submitButton) return;
+
+            if (isValid && !state.isLoading) {
+                elements.submitButton.disabled = false;
+                elements.submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                elements.submitButton.classList.add('hover:from-blue-700', 'hover:to-indigo-700');
+            } else {
+                elements.submitButton.disabled = true;
+                elements.submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+                elements.submitButton.classList.remove('hover:from-blue-700', 'hover:to-indigo-700');
+            }
+        }
+    };
+
+    /**
+     * Branch management functions
+     */
+    const branchManager = {
+        // Clear branch dropdown
+        clearBranchDropdown() {
+            elements.branchSelect.innerHTML = '<option value="" disabled selected>First select a restaurant</option>';
+            elements.branchSelect.disabled = true;
+            state.currentBranchId = null;
+            
+            if (elements.branchHoursText) {
+                elements.branchHoursText.innerHTML = `
+                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                    <span>Select a branch to view hours</span>
+                `;
+                elements.branchHoursText.className = 'mt-2 text-sm text-blue-700 flex items-center';
+            }
+        },
+
+        // Show loading state
+        showBranchLoading() {
+            elements.branchSelect.innerHTML = '<option value="">Loading branches...</option>';
+            elements.branchSelect.disabled = true;
+            state.isLoading = true;
+            
+            if (elements.branchHoursText) {
+                elements.branchHoursText.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600 mr-2"></div>
+                        <span>Loading branch information...</span>
+                    </div>
+                `;
+                elements.branchHoursText.className = 'mt-2 text-sm text-gray-600';
+            }
+        },
+
+        // Show error state
+        showBranchError(message = 'Failed to load branches') {
+            elements.branchSelect.innerHTML = `<option value="" disabled selected>${message}</option>`;
+            elements.branchSelect.disabled = true;
+            state.isLoading = false;
+            
+            if (elements.branchHoursText) {
+                elements.branchHoursText.innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                    <span>Error loading branch information</span>
+                `;
+                elements.branchHoursText.className = 'mt-2 text-sm text-red-600 flex items-center';
+            }
+        },
+
+        // Populate branch dropdown
+        populateBranches(branches) {
+            state.isLoading = false;
+            
+            if (!branches || branches.length === 0) {
+                elements.branchSelect.innerHTML = '<option value="" disabled selected>No branches available</option>';
+                elements.branchSelect.disabled = true;
+                
+                if (elements.branchHoursText) {
+                    elements.branchHoursText.innerHTML = `
+                        <i class="fas fa-info-circle text-orange-600 mr-2"></i>
+                        <span>No branches available for this restaurant</span>
+                    `;
+                    elements.branchHoursText.className = 'mt-2 text-sm text-orange-600 flex items-center';
+                }
+                return;
+            }
+
+            // Clear and populate options
+            elements.branchSelect.innerHTML = '<option value="" disabled selected>Select a branch</option>';
+            
+            branches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch.id;
+                option.textContent = `${branch.name}${branch.address ? ' - ' + branch.address : ''}`;
+                
+                // Store branch data
+                option.dataset.opening = branch.opening_time || '';
+                option.dataset.closing = branch.closing_time || '';
+                option.dataset.address = branch.address || '';
+                option.dataset.phone = branch.phone || '';
+                
+                elements.branchSelect.appendChild(option);
+            });
+
+            elements.branchSelect.disabled = false;
+            
+            if (elements.branchHoursText) {
+                elements.branchHoursText.innerHTML = `
+                    <i class="fas fa-map-marker-alt text-blue-600 mr-2"></i>
+                    <span>Select a branch to view details and hours</span>
+                `;
+                elements.branchHoursText.className = 'mt-2 text-sm text-blue-700 flex items-center';
+            }
+            
+            console.log(`Successfully loaded ${branches.length} branches`);
+        },
+
+        // Fetch branches for organization
+        async fetchBranches(organizationId) {
+            // Check cache first
+            const cacheKey = `org_${organizationId}`;
+            if (state.branchCache.has(cacheKey)) {
+                const cached = state.branchCache.get(cacheKey);
+                if (Date.now() - cached.timestamp < CONFIG.CACHE_EXPIRY) {
+                    console.log('Using cached branches for organization:', organizationId);
+                    this.populateBranches(cached.data);
+                    return;
+                }
+            }
+
+            this.showBranchLoading();
+            
+            try {
+                const url = CONFIG.API_ENDPOINTS.BRANCHES.replace('{organizationId}', organizationId);
+                console.log('Fetching branches from URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': utils.getCsrfToken()
+                    }
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (data.success && Array.isArray(data.branches)) {
+                    // Cache the results
+                    state.branchCache.set(cacheKey, {
+                        data: data.branches,
+                        timestamp: Date.now()
+                    });
+                    
+                    this.populateBranches(data.branches);
+                } else {
+                    throw new Error(data.message || 'Invalid response format');
+                }
+                
+            } catch (error) {
+                console.error('Error fetching branches:', error);
+                
+                // Show appropriate error message
+                if (error.message.includes('NetworkError') || error.name === 'TypeError') {
+                    this.showBranchError('Network error. Please check your connection.');
+                } else if (error.message.includes('404')) {
+                    this.showBranchError('Restaurant not found');
+                } else if (error.message.includes('500')) {
+                    this.showBranchError('Server error. Please try again later.');
+                } else {
+                    this.showBranchError('Failed to load branches. Please try again.');
+                }
+                
+                validation.showFormError(`Error loading branches: ${error.message}`);
+            }
+        },
+
+        // Update branch details display
+        updateBranchDetails(branchOption) {
+            if (!branchOption || !elements.branchHoursText) return;
+
+            const opening = branchOption.dataset.opening;
+            const closing = branchOption.dataset.closing;
+            const address = branchOption.dataset.address;
+
+            let hoursHtml = '';
+            let className = 'mt-2 text-sm flex items-center space-x-2';
+
+            if (opening && closing) {
+                const formattedOpening = utils.formatTime(opening);
+                const formattedClosing = utils.formatTime(closing);
+                
+                hoursHtml = `
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center text-green-700">
+                            <i class="fas fa-clock mr-1"></i>
+                            <span class="font-medium">${formattedOpening} - ${formattedClosing}</span>
+                        </div>
+                `;
+                
+                if (address) {
+                    hoursHtml += `
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-map-marker-alt mr-1"></i>
+                            <span class="text-xs">${address}</span>
+                        </div>
+                    `;
+                }
+                
+                hoursHtml += '</div>';
+                className = 'mt-2 text-sm';
+            } else {
+                hoursHtml = `
+                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                    <span class="text-yellow-700">Branch hours not available</span>
+                `;
+                className = 'mt-2 text-sm text-yellow-600 flex items-center';
+            }
+
+            elements.branchHoursText.innerHTML = hoursHtml;
+            elements.branchHoursText.className = className;
+        }
+    };
+
+    /**
+     * Event handlers
+     */
+    const eventHandlers = {
+        // Handle organization selection
+        handleOrganizationChange(event) {
+            const organizationId = parseInt(event.target.value);
+            console.log('Organization changed to:', organizationId);
+            
+            // Clear previous selections
+            branchManager.clearBranchDropdown();
+            state.currentOrganizationId = organizationId;
+            validation.clearFormErrors();
+            
+            if (!organizationId || isNaN(organizationId)) {
+                console.log('No valid organization selected');
                 return;
             }
             
-            // Simulate API call delay
-            setTimeout(() => {
-                // Show success message
-                const branchName = branchSelect.options[branchSelect.selectedIndex].text;
-                const formattedDate = formatDate(dateInput.value);
-                const formattedStartTime = formatTime(startTimeInput.value);
-                const formattedEndTime = formatTime(endTimeInput.value);
-                
-                confirmationDetails.innerHTML = `
-                    Your reservation at <strong>${branchName}</strong> is confirmed for 
-                    <strong>${formattedDate}</strong> from <strong>${formattedStartTime}</strong> 
-                    to <strong>${formattedEndTime}</strong>. A confirmation has been sent to your email.
-                `;
-                
-                // Hide form and show success
-                form.classList.add('hidden');
-                successMessage.classList.remove('hidden');
-                
-                // Scroll to top
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                
-                // Reset button
-                submitButton.disabled = false;
-                submitButton.innerHTML = '<i class="fas fa-search mr-2"></i> Review Reservation';
-                
-                // Add pulse animation to success message
-                successMessage.classList.add('animate-pulse');
-                setTimeout(() => {
-                    successMessage.classList.remove('animate-pulse');
-                    
-                    // Actually submit the form after showing the success message
-                    setTimeout(() => {
-                        form.submit();
-                    }, 3000);
-                }, 3000);
-                
-            }, 1500);
+            // Fetch branches
+            branchManager.fetchBranches(organizationId);
+        },
+
+        // Handle branch selection
+        handleBranchChange(event) {
+            const branchId = parseInt(event.target.value);
+            const selectedOption = event.target.options[event.target.selectedIndex];
+            
+            console.log('Branch changed to:', branchId);
+            
+            state.currentBranchId = branchId;
+            
+            if (selectedOption && selectedOption.value) {
+                branchManager.updateBranchDetails(selectedOption);
+            }
+            
+            validation.validateForm();
+        },
+
+        // Handle form input with debounced validation
+        handleInputChange: utils.debounce(function(event) {
+            const fieldName = event.target.name;
+            const value = event.target.value;
+            
+            if (fieldName in state.formValidation) {
+                validation.validateField(fieldName, value);
+                validation.validateForm();
+            }
+        }, CONFIG.DEBOUNCE_DELAY),
+
+        // Handle time input changes
+        handleTimeChange(event) {
+            validation.validateField(event.target.name, event.target.value);
+            validation.validateTimeRange();
+            validation.validateForm();
+        },
+
+        // Handle form submission
+        handleFormSubmit(event) {
+            event.preventDefault();
+            
+            validation.clearFormErrors();
+            
+            if (!validation.validateForm()) {
+                validation.showFormError('Please correct the errors below before proceeding.');
+                return false;
+            }
+            
+            // Show loading state
+            elements.submitButton.innerHTML = `
+                <div class="flex items-center">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <span>Processing...</span>
+                </div>
+            `;
+            elements.submitButton.disabled = true;
+            
+            // Submit form
+            event.target.submit();
+        }
+    };
+
+    /**
+     * Initialize the form
+     */
+    function initializeForm() {
+        // Check if required elements exist
+        if (!elements.organizationSelect || !elements.branchSelect) {
+            console.error('Required form elements not found');
+            return;
+        }
+
+        console.log('Form elements found:', {
+            organizationSelect: !!elements.organizationSelect,
+            branchSelect: !!elements.branchSelect,
+            branchHoursText: !!elements.branchHoursText
         });
+
+        // Add event listeners
+        elements.organizationSelect.addEventListener('change', eventHandlers.handleOrganizationChange);
+        elements.branchSelect.addEventListener('change', eventHandlers.handleBranchChange);
         
-        // Update branch hours text on branch change
-        branchSelect.addEventListener('change', function() {
-            const selected = branchSelect.options[branchSelect.selectedIndex];
-            if (selected && selected.value) {
-                const opening = selected.dataset.opening;
-                const closing = selected.dataset.closing;
-                branchHoursText.textContent = `Open: ${formatTime(opening)} - ${formatTime(closing)}`;
-            } else {
-                branchHoursText.textContent = 'Select a branch to view hours';
+        // Add input validation listeners
+        Object.keys(elements).forEach(key => {
+            const element = elements[key];
+            if (element && element.tagName && ['INPUT', 'SELECT', 'TEXTAREA'].includes(element.tagName)) {
+                if (element.type === 'time') {
+                    element.addEventListener('change', eventHandlers.handleTimeChange);
+                } else {
+                    element.addEventListener('input', eventHandlers.handleInputChange);
+                    element.addEventListener('change', eventHandlers.handleInputChange);
+                }
             }
         });
-    });
+
+        // Add form submission handler
+        if (elements.form) {
+            elements.form.addEventListener('submit', eventHandlers.handleFormSubmit);
+        }
+
+        // Initialize with pre-selected values
+        if (elements.organizationSelect.value) {
+            console.log('Pre-selected organization detected:', elements.organizationSelect.value);
+            setTimeout(() => {
+                eventHandlers.handleOrganizationChange({ target: elements.organizationSelect });
+            }, 100);
+        }
+
+        // Clean up cache periodically
+        setInterval(() => {
+            if (state.branchCache.size > 10) {
+                const oldestKey = state.branchCache.keys().next().value;
+                state.branchCache.delete(oldestKey);
+            }
+        }, CONFIG.CACHE_EXPIRY);
+
+        console.log('Reservation form initialized successfully');
+    }
+
+    // Initialize the form
+    initializeForm();
+
+    // Add this to your JavaScript for debugging
+    window.debugBranchSelection = function() {
+        console.log('=== Debug Branch Selection ===');
+        console.log('Organization Select:', elements.organizationSelect);
+        console.log('Branch Select:', elements.branchSelect);
+        console.log('Current Organization ID:', state.currentOrganizationId);
+        console.log('Current Branch ID:', state.currentBranchId);
+        console.log('Branch Cache:', state.branchCache);
+        
+        // Test API endpoint
+        if (state.currentOrganizationId) {
+            const testUrl = `/api/organizations/${state.currentOrganizationId}/branches`;
+            console.log('Testing API URL:', testUrl);
+            
+            fetch(testUrl)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API Response:', data);
+                })
+                .catch(error => {
+                    console.error('API Error:', error);
+                });
+        }
+    }
+});
 </script>
 @endpush

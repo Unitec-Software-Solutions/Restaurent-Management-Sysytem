@@ -794,7 +794,7 @@ class GoodsTransferNoteController extends Controller
         }
 
         $request->validate([
-            'item_id' => 'required|exists:item_master,id',
+            'item_id' => 'required|exists:item_masters,id',
             'branch_id' => 'required|exists:branches,id'
         ]);
 

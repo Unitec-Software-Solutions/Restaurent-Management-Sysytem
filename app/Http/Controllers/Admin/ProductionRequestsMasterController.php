@@ -119,7 +119,7 @@ class ProductionRequestsMasterController extends Controller
             'required_date' => 'required|date|after:today',
             'branch_id' => 'required|exists:branches,id',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.item_id' => 'required|exists:item_masters,id',
             'items.*.quantity_requested' => 'required|numeric|min:1',
             'notes' => 'nullable|string|max:1000'
         ]);

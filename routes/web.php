@@ -12,7 +12,6 @@ use App\Http\Controllers\{
     OrderController,
     SupplierController,
     SupplierPaymentController,
-
     AdminOrderController,
     OrganizationController,
     RoleController,
@@ -21,17 +20,25 @@ use App\Http\Controllers\{
     RealtimeDashboardController,
     AdminTestPageController,
     DatabaseTestController,
+    BranchController,
+    UserController,
+    RoleController,
+    MenuController,
+    SubscriptionController,
+    ModuleController,
+    OrganizationController
 };
-// moved production controllers to a admin folder
-// production controllers
-use App\Http\Controllers\Admin\
-{
-    ProductionRequestsMasterController,
+
+// Admin namespace controllers
+use App\Http\Controllers\Admin\{
+    PurchaseOrderController,
     ProductionOrderController,
-    ProductionRequestItemController,
-    ProductionSessionController,
     ProductionController,
+    ProductionRequestsMasterController,
     ProductionRecipeController,
+    ProductionSessionController,
+    SubscriptionPlanController,
+    PaymentController
 };
 // Purchase Order Controller
 use App\Http\Controllers\Admin\{
@@ -58,8 +65,7 @@ use App\Http\Controllers\Admin\
 };
 
 
-use App\Http\Controllers\Admin\MenuController;
-use App\Http\Controllers\Admin\SubscriptionPlanController;
+use App\Http\Controllers\PaymentController as MainPaymentController;
 use App\Http\Middleware\SuperAdmin;
 
 /*-------------------------------------------------------------------------
@@ -482,6 +488,33 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 });
 
+/*-------------------------------------------------------------------------
+| Debugging Route for Branches - Development Only
+|------------------------------------------------------------------------*/
+Route::get('/debug/branches', function() {
+    $user = auth('admin')->user();
+    $branches = \App\Models\Branch::when($user && !$user->is_super_admin, function($query) use ($user) {
+        return $query->where('organization_id', $user->organization_id);
+    })->get();
+
+    return response()->json([
+        'user' => $user ? [
+            'id' => $user->id,
+            'name' => $user->name,
+            'organization_id' => $user->organization_id,
+            'is_super_admin' => $user->is_super_admin ?? false
+        ] : null,
+        'branches' => $branches->map(function($branch) {
+            return [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'organization_id' => $branch->organization_id,
+                'is_active' => $branch->is_active
+            ];
+        })
+    ]);
+})->middleware(['auth:admin']);
+
 // Add this route in the admin middleware group
 Route::middleware(['auth:admin'])->group(function () {
     // API routes for super admin organization selection
@@ -491,12 +524,9 @@ Route::middleware(['auth:admin'])->group(function () {
     ])->name('admin.api.organizations.categories');
 });
 
-/* Super Admin Routes */
+// Super Admin Routes
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     // Organizations CRUD
-    Route::resource('organizations', OrganizationController::class)->except(['show']);
-    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
-    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
 
     // Branches: Organization-specific CRUD
     Route::prefix('organizations/{organization}')->group(function () {
@@ -535,8 +565,6 @@ Route::middleware(['auth:admin'])->group(function () {
 });
 
 // Show activation form for all admins
-Route::get('admin/organizations/activate', [OrganizationController::class, 'showActivationForm'])->name('admin.organizations.activate.form');
-Route::post('admin/organizations/activate', [OrganizationController::class, 'activateOrganization'])->name('admin.organizations.activate.submit');
 
 Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
     Route::get('branches/activate', [BranchController::class, 'showActivationForm'])->name('branches.activate.form');
@@ -548,9 +576,6 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
     ->name('admin.')
     ->group(function () {
         // Organizations CRUD
-        Route::resource('organizations', OrganizationController::class)->except(['show']);
-        Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
-        Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
 
         // Branches: Organization-specific CRUD
         Route::prefix('organizations/{organization}')->group(function () {
@@ -580,9 +605,6 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
 
 Route::middleware(['auth:admin'])->group(function () {
     // Organizations CRUD
-    Route::resource('organizations', OrganizationController::class)->except(['show']);
-    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
-    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
 
     // Branches: Organization-specific CRUD
     Route::prefix('organizations/{organization}')->group(function () {
@@ -774,8 +796,35 @@ Route::get('bills/show', [App\Http\Controllers\Admin\BillController::class, 'sho
 // Route::get('inventory/items/added-items', [InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
 Route::get('payments/create', [App\Http\Controllers\PaymentController::class, 'create'])->name('payments.create');
 Route::get('branch', [App\Http\Controllers\BranchController::class, 'index'])->name('branch');
-Route::get('organization', [App\Http\Controllers\OrganizationController::class, 'index'])->name('organization');
+
 Route::get('role', [App\Http\Controllers\RoleController::class, 'index'])->name('role');
 Route::get('subscription/expired', [App\Http\Controllers\SubscriptionController::class, 'expired'])->name('subscription.expired');
 Route::get('subscription/upgrade', [App\Http\Controllers\SubscriptionController::class, 'upgrade'])->name('subscription.upgrade');
 Route::get('subscription/required', [App\Http\Controllers\SubscriptionController::class, 'required'])->name('subscription.required');
+
+/*-------------------------------------------------------------------------
+| API Routes
+|------------------------------------------------------------------------*/
+Route::prefix('api')->middleware(['web'])->group(function () {
+    // Organization branches
+    Route::get('/organizations/{organization}/branches', [ReservationController::class, 'getBranches'])
+        ->name('api.organizations.branches');
+
+    // Branch availability
+    Route::get('/branches/{branch}/availability', [ReservationController::class, 'getAvailableTimeSlots'])
+        ->name('api.branches.availability');
+});
+
+// Remove the duplicate test route - keep only one for debugging
+Route::get('/test-branches/{organization}', function($organizationId) {
+    try {
+        $controller = app(App\Http\Controllers\ReservationController::class);
+        return $controller->getBranches($organizationId);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => config('app.debug') ? $e->getTraceAsString() : null
+        ], 500);
+    }
+})->name('test.branches');

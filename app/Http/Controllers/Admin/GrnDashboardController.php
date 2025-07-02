@@ -293,14 +293,14 @@ class GrnDashboardController extends Controller
             'items' => 'required|array|min:1',
             'items.*.item_id' => [
                 'required',
-                'exists:item_master,id',
+                'exists:item_masters,id',
                 function ($attribute, $value, $fail) use ($targetOrgId) {
                     if (!ItemMaster::where('id', $value)->where('organization_id', $targetOrgId)->exists()) {
                         $fail('The selected item does not belong to the organization.');
                     }
                 }
             ],
-            'items.*.item_code' => 'required|exists:item_master,item_code',
+            'items.*.item_code' => 'required|exists:item_masters,item_code',
             'items.*.po_detail_id' => 'nullable|exists:po_details,po_detail_id',
             'items.*.batch_no' => 'nullable|string|max:50',
             'items.*.ordered_quantity' => 'required|numeric|min:0',
@@ -533,10 +533,10 @@ class GrnDashboardController extends Controller
             'items' => 'required|array|min:1',
             'items.*.item_id' => [
                 'required',
-                'exists:item_master,id',
-                $this->createOrganizationValidationRule('item_master', $orgId)
+                'exists:item_masters,id',
+                $this->createOrganizationValidationRule('item_masters', $orgId)
             ],
-            'items.*.item_code' => 'nullable|exists:item_master,item_code',
+            'items.*.item_code' => 'nullable|exists:item_masters,item_code',
             'items.*.batch_no' => 'nullable|string|max:50',
             'items.*.ordered_quantity' => 'required|numeric|min:0',
             'items.*.received_quantity' => 'required|numeric|min:0|max:999999.99',

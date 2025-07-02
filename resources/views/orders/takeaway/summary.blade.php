@@ -4,56 +4,138 @@
 <div class="container mx-auto px-4 py-6">
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <!-- Card Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
-            <h2 class="text-2xl font-bold text-white">Order Summary</h2>
-            <p class="text-blue-100 mt-1">Order ID: {{ $order->takeaway_id }}</p>
+        <div class="bg-gradient-to-r from-green-600 to-green-800 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Order Confirmation</h2>
+                    <p class="text-green-100 mt-1">Order ID: {{ $order->takeaway_id }}</p>
+                </div>
+                <div class="text-right">
+                    <div class="bg-white/20 rounded-lg px-3 py-2">
+                        <i class="fas fa-clock text-white mr-2"></i>
+                        <span class="text-white font-medium">{{ now()->format('H:i') }}</span>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- Alert for Order Status -->
+        @if($order->status === 'pending')
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Order Pending:</strong> Please review your order details below and confirm to submit your order to the kitchen.
+                    </p>
+                </div>
+            </div>
+        </div>
+        @elseif($order->status === 'submitted')
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        <strong>Order Confirmed:</strong> Your order has been submitted to the kitchen. You'll be notified when it's ready for pickup.
+                    </p>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <!-- Card Body -->
         <div class="p-6">
             <!-- Order and Customer Details -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <!-- Order Details -->
-                <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">Order Details</h3>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Branch:</span>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4 flex items-center">
+                        <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>
+                        Order Details
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 flex items-center">
+                                <i class="fas fa-store text-gray-400 mr-2"></i>
+                                Branch:
+                            </span>
                             <span class="font-medium">{{ $order->branch->name }}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Pickup Time:</span>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 flex items-center">
+                                <i class="fas fa-clock text-gray-400 mr-2"></i>
+                                Pickup Time:
+                            </span>
                             <span class="font-medium">
                                 @if ($order->order_time instanceof \Carbon\Carbon)
                                     {{ $order->order_time->format('M j, Y H:i') }}
                                 @elseif(!empty($order->order_time))
                                     {{ \Carbon\Carbon::parse($order->order_time)->format('M j, Y H:i') }}
                                 @else
-                                    N/A
+                                    ASAP
                                 @endif
                             </span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Status:</span>
-                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 flex items-center">
+                                <i class="fas fa-info-circle text-gray-400 mr-2"></i>
+                                Status:
+                            </span>
+                            <span class="px-3 py-1 rounded-full text-xs font-medium 
+                                {{ $order->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                {{ $order->status === 'submitted' ? 'bg-blue-100 text-blue-800' : '' }}
+                                {{ $order->status === 'preparing' ? 'bg-orange-100 text-orange-800' : '' }}
+                                {{ $order->status === 'ready' ? 'bg-green-100 text-green-800' : '' }}">
                                 {{ ucfirst($order->status) }}
                             </span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 flex items-center">
+                                <i class="fas fa-calendar text-gray-400 mr-2"></i>
+                                Order Date:
+                            </span>
+                            <span class="font-medium">{{ $order->created_at->format('M j, Y H:i') }}</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Customer Details -->
-                <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-                    <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">Customer Details</h3>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Name:</span>
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4 flex items-center">
+                        <i class="fas fa-user text-green-600 mr-2"></i>
+                        Customer Details
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 flex items-center">
+                                <i class="fas fa-user-circle text-gray-400 mr-2"></i>
+                                Name:
+                            </span>
                             <span class="font-medium">{{ $order->customer_name }}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Phone:</span>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600 flex items-center">
+                                <i class="fas fa-phone text-gray-400 mr-2"></i>
+                                Phone:
+                            </span>
                             <span class="font-medium">{{ $order->customer_phone }}</span>
                         </div>
+                        @if($order->special_instructions)
+                        <div class="pt-2 border-t border-gray-200">
+                            <span class="text-gray-600 flex items-start">
+                                <i class="fas fa-sticky-note text-gray-400 mr-2 mt-1"></i>
+                                <div>
+                                    <div class="font-medium text-gray-700 mb-1">Special Instructions:</div>
+                                    <div class="text-sm bg-white p-2 rounded border">{{ $order->special_instructions }}</div>
+                                </div>
+                            </span>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -77,7 +159,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $item->menuItem->name }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $item->quantity }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">LKR {{ number_format($item->unit_price, 2) }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">LKR {{ number_format($item->total_price, 2) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">LKR {{ number_format($item->subtotal ?? ($item->quantity * $item->unit_price), 2) }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -100,43 +182,184 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex flex-wrap justify-between gap-4 mt-6">
-                <!-- Update Order Button -->
-                <a href="{{ route('orders.takeaway.edit', $order->id) }}" 
-                   class="inline-flex items-center px-4 py-2 bg-yellow-500 border border-transparent rounded-md font-semibold text-white hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
-                    Update Order
-                </a>
+            <div class="mt-8 space-y-4">
+                @if($order->status === 'pending')
+                <!-- Pending Order Actions -->
+                <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-lg border border-yellow-200">
+                    <div class="text-center mb-4">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Ready to confirm your order?</h4>
+                        <p class="text-gray-600 text-sm">Review your items above and confirm to send your order to the kitchen.</p>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <!-- Edit Order Button -->
+                        <a href="{{ route('orders.takeaway.edit', $order->id) }}" 
+                           class="flex-1 max-w-xs inline-flex items-center justify-center px-6 py-4 bg-blue-600 border border-transparent rounded-lg font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 touch-manipulation">
+                            <i class="fas fa-edit mr-3 text-lg"></i>
+                            <span class="text-lg">Edit Order</span>
+                        </a>
 
-                <!-- Submit Order Button -->
-                <form action="{{ route('orders.takeaway.submit', $order->id) }}" method="POST" class="inline-flex">
-                    @csrf
-                    <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                        </svg>
-                        Submit Order
-                    </button>
-                </form>
+                        <!-- Confirm Order Button -->
+                        <form action="{{ route('orders.takeaway.submit', $order->id) }}" method="POST" class="flex-1 max-w-xs">
+                            @csrf
+                            <button type="submit" 
+                                    class="w-full inline-flex items-center justify-center px-6 py-4 bg-green-600 border border-transparent rounded-lg font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 touch-manipulation confirm-order-btn">
+                                <i class="fas fa-check-circle mr-3 text-lg"></i>
+                                <span class="text-lg">Confirm Order</span>
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Cancel Order Button -->
+                    <div class="mt-4 text-center">
+                        <form action="{{ route('orders.takeaway.destroy', ['order' => $order->id]) }}" method="POST" class="inline-block">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" 
+                                    class="inline-flex items-center px-4 py-2 text-red-600 hover:text-red-800 transition-colors touch-manipulation"
+                                    onclick="return confirm('Are you sure you want to cancel this order?')">
+                                <i class="fas fa-times mr-2"></i>
+                                Cancel Order
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                @else
+                <!-- Submitted Order Actions -->
+                <div class="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg border border-green-200">
+                    <div class="text-center mb-4">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                            <i class="fas fa-check text-green-600 text-2xl"></i>
+                        </div>
+                        <h4 class="text-xl font-semibold text-gray-800 mb-2">Order Confirmed!</h4>
+                        <p class="text-gray-600">Your order has been sent to the kitchen. We'll notify you when it's ready for pickup.</p>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <!-- Dashboard Button -->
+                        <a href="{{ route('home') }}" 
+                           class="flex-1 max-w-xs inline-flex items-center justify-center px-6 py-4 bg-blue-600 border border-transparent rounded-lg font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 touch-manipulation">
+                            <i class="fas fa-tachometer-alt mr-3 text-lg"></i>
+                            <span class="text-lg">Go to Dashboard</span>
+                        </a>
 
-                <!-- Delete Order Button -->
-                <form action="{{ route('orders.takeaway.destroy', ['order' => $order->id]) }}" method="POST" class="inline-flex">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                            onclick="return confirm('Are you sure you want to delete this order?')">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                        Delete Order
-                    </button>
-                </form>
+                        <!-- New Order Button -->
+                        <a href="{{ route('orders.takeaway.create') }}" 
+                           class="flex-1 max-w-xs inline-flex items-center justify-center px-6 py-4 bg-green-600 border border-transparent rounded-lg font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 touch-manipulation">
+                            <i class="fas fa-plus mr-3 text-lg"></i>
+                            <span class="text-lg">New Order</span>
+                        </a>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add confirmation dialog for order submission
+    const confirmBtn = document.querySelector('.confirm-order-btn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const confirmation = confirm('Are you sure you want to confirm this order? Once confirmed, it will be sent to the kitchen for preparation.');
+            
+            if (confirmation) {
+                // Add loading state
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin mr-3 text-lg"></i><span class="text-lg">Confirming...</span>';
+                
+                // Submit the form
+                this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Auto-refresh for order status updates (if needed)
+    @if($order->status !== 'pending')
+    setInterval(function() {
+        // Could implement real-time status updates here
+        console.log('Checking order status...');
+    }, 30000); // Check every 30 seconds
+    @endif
+});
+</script>
+
+<style>
+/* Touch-friendly buttons */
+.touch-manipulation {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.touch-manipulation:active {
+    transform: scale(0.98);
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+    .touch-manipulation {
+        min-height: 50px;
+        font-size: 1.1rem;
+    }
+    
+    .touch-manipulation i {
+        font-size: 1.2rem;
+    }
+}
+
+/* Loading state */
+.touch-manipulation:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Enhanced shadows for touch feedback */
+.touch-manipulation:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.touch-manipulation:active:not(:disabled) {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(0);
+}
+
+/* Status badges animation */
+.status-badge {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Order confirmation animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+}
+</style>
 @endsection

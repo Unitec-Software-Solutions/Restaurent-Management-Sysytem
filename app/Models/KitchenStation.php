@@ -4,122 +4,160 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KitchenStation extends Model
 {
+    use HasFactory, SoftDeletes;
 
-    use HasFactory;
+    /**
+     * Valid station types for PostgreSQL constraint
+     */
+    public const VALID_TYPES = [
+        'cooking',
+        'preparation',
+        'prep',
+        'beverage',
+        'dessert',
+        'grill',
+        'grilling',
+        'fry',
+        'bar',
+        'pastry',
+        'salad',
+        'cold_kitchen',
+        'hot_kitchen',
+        'expo',
+        'service'
+    ];
 
     protected $fillable = [
         'branch_id',
+        'organization_id',
         'name',
-        'code', // REQUIRED FIELD
+        'code',
         'type',
+        'station_type',
         'description',
-        'order_priority',
-        'max_capacity',
         'is_active',
+        'order_priority',
+        'priority_level',
+        'max_concurrent_orders',
+        'current_orders',
+        'max_capacity',
         'printer_config',
         'settings',
+        'equipment_list',
         'notes'
     ];
 
     protected $casts = [
-        'printer_config' => 'array',
-        'settings' => 'array',
+        'is_active' => 'boolean',
+        'max_concurrent_orders' => 'integer',
+        'current_orders' => 'integer',
+        'order_priority' => 'integer',
+        'priority_level' => 'integer',
         'max_capacity' => 'decimal:2',
-        'is_active' => 'boolean'
+        'settings' => 'array',
+        'printer_config' => 'array',
+        'equipment_list' => 'array'
+    ];
+
+    protected $attributes = [
+        'is_active' => true,
+        'max_concurrent_orders' => 5,
+        'current_orders' => 0,
+        'order_priority' => 1,
+        'priority_level' => 1,
+        'type' => 'cooking',
+        'station_type' => 'standard'
     ];
 
     /**
-     * Get the branch that owns the kitchen station
+     * Boot the model for Laravel + PostgreSQL + Tailwind CSS
      */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        // Validate type before saving
+        static::saving(function ($station) {
+            if (!in_array($station->type, self::VALID_TYPES)) {
+                $station->type = 'cooking'; // Default to valid type
+            }
+            
+            // Auto-generate code if not provided
+            if (empty($station->code)) {
+                $station->code = static::generateUniqueCode($station->type, $station->branch_id);
+            }
+        });
+    }
+
+    /**
+     * Generate unique kitchen station code for PostgreSQL
+     */
+    public static function generateUniqueCode(string $type, int $branchId): string
+    {
+        $typePrefix = match($type) {
+            'cooking' => 'COOK',
+            'preparation' => 'PREP',
+            'prep' => 'PREP',
+            'beverage' => 'BEV',
+            'dessert' => 'DESS',
+            'grilling' => 'GRILL',
+            'grill' => 'GRILL',
+            'fry' => 'FRY',
+            'bar' => 'BAR',
+            'pastry' => 'PAST',
+            'salad' => 'SALAD',
+            'cold_kitchen' => 'COLD',
+            'hot_kitchen' => 'HOT',
+            'expo' => 'EXPO',
+            'service' => 'SERV',
+            default => 'MAIN'
+        };
+
+        $branchCode = str_pad($branchId, 3, '0', STR_PAD_LEFT);
+        
+        // Find next available sequence number
+        $sequence = 1;
+        do {
+            $sequenceCode = str_pad($sequence, 2, '0', STR_PAD_LEFT);
+            $code = $typePrefix . '_' . $branchCode . '_' . $sequenceCode;
+            
+            $exists = static::where('code', $code)->exists();
+            $sequence++;
+        } while ($exists && $sequence < 100);
+
+        if ($exists) {
+            // Fallback to timestamp-based code
+            $code = $typePrefix . '_' . $branchCode . '_' . time();
+        }
+
+        return $code;
+    }
+
+    // Relationships
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    /**
-     * Get UI color class for status badge
-     */
-    public function getStatusColorAttribute(): string
+    public function kots(): HasMany
     {
-        if (!$this->is_active) {
-            return 'bg-red-100 text-red-800'; // Danger - offline
-        }
-
-        $settings = $this->settings ?? [];
-
-        return match($settings['ui_state'] ?? 'default') {
-            'active' => 'bg-indigo-100 text-indigo-800', // Primary
-            'high-performance' => 'bg-green-100 text-green-800', // Success
-            'maintenance' => 'bg-yellow-100 text-yellow-800', // Warning
-            'offline' => 'bg-red-100 text-red-800', // Danger
-            'premium' => 'bg-purple-100 text-purple-800', // Premium
-            'compact' => 'bg-blue-100 text-blue-800', // Info
-            default => 'bg-gray-100 text-gray-800' // Default
-        };
+        return $this->hasMany(\App\Models\Kot::class);
     }
 
-    /**
-     * Get UI icon for dashboard cards
-     */
-    public function getIconAttribute(): string
-    {
-        $settings = $this->settings ?? [];
-        return $settings['ui_icon'] ?? 'fas fa-utensils';
-    }
-
-    /**
-     * Get dashboard priority for layout ordering
-     */
-    public function getDashboardPriorityAttribute(): int
-    {
-        $settings = $this->settings ?? [];
-        return $settings['dashboard_priority'] ?? 5;
-    }
-
-    /**
-     * Check if station is in maintenance mode
-     */
-    public function isInMaintenance(): bool
-    {
-        $settings = $this->settings ?? [];
-        return $settings['maintenance_mode'] ?? false;
-    }
-
-    /**
-     * Check if station supports mobile optimization
-     */
-    public function isMobileOptimized(): bool
-    {
-        $settings = $this->settings ?? [];
-        return $settings['mobile_optimized'] ?? true;
-    }
-
-    /**
-     * Scope for active stations only
-     */
+    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    /**
-     * Scope for stations by type
-     */
-    public function scopeOfType($query, string $type)
+    public function scopeByType($query, $type)
     {
         return $query->where('type', $type);
-    }
-
-    /**
-     * Scope for high priority stations (dashboard ordering)
-     */
-    public function scopeHighPriority($query)
-    {
-        return $query->whereJsonContains('settings->dashboard_priority', [1, 2, 3]);
     }
 }

@@ -4,9 +4,10 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateOrganizationsTable extends Migration
+return new class extends Migration
 {
-    public function up()
+    
+    public function up(): void
     {
         Schema::create('organizations', function (Blueprint $table) {
             $table->id();
@@ -23,16 +24,22 @@ class CreateOrganizationsTable extends Migration
             $table->string('activation_key')->unique();
             $table->boolean('is_active')->default(false);
             $table->timestamp('activated_at')->nullable();
-            $table->json('business_hours')->nullable();
-            $table->enum('business_type', ['restaurant', 'cafe', 'bar', 'food_truck', 'catering', 'other'])->default('restaurant');
-            $table->enum('status', ['pending', 'active', 'suspended', 'inactive'])->default('pending');
+            $table->json('business_hours')->nullable(); // PostgreSQL JSON column
             $table->timestamps();
             $table->softDeletes();
+            
+            // PostgreSQL indexes for performance
+            $table->index(['is_active']);
+            $table->index(['registration_number']);
+            $table->index(['email']);
         });
     }
 
-    public function down()
+    /**
+     * Reverse the migrations for PostgreSQL
+     */
+    public function down(): void
     {
         Schema::dropIfExists('organizations');
     }
-}
+};

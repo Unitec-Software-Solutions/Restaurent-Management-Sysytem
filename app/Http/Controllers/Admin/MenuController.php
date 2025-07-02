@@ -709,7 +709,7 @@ class MenuController extends Controller
         }
 
         $request->validate([
-            'item_id' => 'required|exists:item_master,id',
+            'item_id' => 'required|exists:item_masters,id',
             'is_menu' => 'required|boolean'
         ]);
 
@@ -737,7 +737,7 @@ class MenuController extends Controller
 
         $request->validate([
             'item_ids' => 'required|array',
-            'item_ids.*' => 'exists:item_master,id',
+            'item_ids.*' => 'exists:item_masters,id',
             'is_menu' => 'required|boolean'
         ]);
 

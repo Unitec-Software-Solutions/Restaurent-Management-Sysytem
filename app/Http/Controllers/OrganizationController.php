@@ -4,239 +4,458 @@ namespace App\Http\Controllers;
 
 use App\Models\Organization;
 use App\Models\Branch;
+use App\Models\User;
+use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
 {
+    /**
+     * Display a listing of organizations
+     */
     public function index()
     {
-        Gate::authorize('viewAny', Organization::class);
-        $organizations = Organization::with(['branches', 'subscriptions'])->get();
+        $organizations = Organization::with(['branches', 'users', 'subscriptionPlan'])
+            ->withCount(['branches', 'users'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
         return view('admin.organizations.index', compact('organizations'));
     }
 
-    // Add create method for organization registration
+    /**
+     * Show the form for creating a new organization
+     */
     public function create()
     {
-        $organizations = \App\Models\Organization::all();
-        $modules = \App\Models\Module::all();
-        $branches = \App\Models\Branch::all();
-        $plans = \App\Models\SubscriptionPlan::all(); 
-        $noPlans = $plans->isEmpty();
-
-        return view('admin.organizations.create', compact('organizations', 'modules', 'branches', 'plans', 'noPlans'));
+        $subscriptionPlans = SubscriptionPlan::where('is_active', true)->get();
+        
+        return view('admin.organizations.create', compact('subscriptionPlans'));
     }
 
-    // Add store method for organization registration
+    /**
+     * Store a newly created organization
+     */
     public function store(Request $request)
     {
-        Gate::authorize('create', Organization::class);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:organizations,email',
-            'phone' => 'required|regex:/^\d{10,15}$/',
-            'password' => 'required|string|min:6',
-            'address' => 'required|string|max:255',
-            'contact_person' => 'required|string|max:255',
-            'contact_person_designation' => 'required|string|max:255',
-            'contact_person_phone' => 'required|regex:/^\d{10,15}$/',
-            'is_active' => 'required|boolean',
+        $request->validate([
+            'name' => 'required|string|max:255|unique:organizations',
+            'email' => 'required|email|unique:organizations',
+            'phone' => 'required|string|max:20',
+            'address' => 'nullable|string|max:500',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
-            'discount_percentage' => 'required|numeric|min:0|max:100',
-        ], [
-            'phone.regex' => 'Phone must be 10-15 digits.',
-            'contact_person_phone.regex' => 'Contact person phone must be 10-15 digits.',
+            'admin_name' => 'required|string|max:255',
+            'admin_email' => 'required|email|unique:users,email',
+            'admin_password' => 'required|string|min:8|confirmed',
         ]);
 
-        // Create organization
-        $organization = Organization::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'],
-            'password' => bcrypt($validated['password']),
-            'address' => $validated['address'],
-            'contact_person' => $validated['contact_person'],
-            'contact_person_designation' => $validated['contact_person_designation'],
-            'contact_person_phone' => $validated['contact_person_phone'],
-            'is_active' => $validated['is_active'],
-            'subscription_plan_id' => $validated['subscription_plan_id'],
-            'discount_percentage' => $validated['discount_percentage'],
-        ]);
-
-        $plan = \App\Models\SubscriptionPlan::find($validated['subscription_plan_id']);
-
-        $organization->plan_name = $plan->name;
-        $organization->plan_price = $plan->price;
-        $organization->plan_currency = $plan->currency;
-        $organization->plan_modules = json_encode($plan->modules);
-        $organization->save();
-
-        $isTrial = $plan->is_trial ? true : false;
-        $trialDays = $plan->trial_period_days ?? 30;
-
-        $startDate = now();
-        $endDate = $isTrial ? now()->addDays($trialDays) : now()->addYear();
-
-        $organization->subscriptions()->create([
-            'plan_id' => $plan->id,
-            'status' => 'active',
-            'is_active' => true,
-            'is_trial' => $isTrial,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            
-        ]);
-
-        return redirect()->route('admin.organizations.index')->with('success', 'Organization created successfully');
-    }
-
-    public function update(Request $request, Organization $organization)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:organizations,email,' . $organization->id,
-            'phone' => 'required|regex:/^\d{10,15}$/',
-            'address' => 'required|string|max:255',
-            'contact_person' => 'required|string|max:255',
-            'contact_person_designation' => 'required|string|max:255',
-            'contact_person_phone' => 'required|regex:/^\d{10,15}$/',
-            'is_active' => 'required|boolean',
-            'subscription_plan_id' => 'required|exists:subscription_plans,id',
-            'password' => 'nullable|string|min:6|confirmed',
-            'discount_percentage' => 'required|numeric|min:0|max:100',
-        ], [
-            'phone.regex' => 'Phone must be 10-15 digits.',
-            'contact_person_phone.regex' => 'Contact person phone must be 10-15 digits.',
-        ]);
-
-        $data = $validated;
-        if (!empty($validated['password'])) {
-            $data['password'] = bcrypt($validated['password']);
-        } else {
-            unset($data['password']);
-        }
-
-        $organization->update($data);
-
-        // Update subscription if a new plan is selected
-        if ($request->filled('subscription_plan_id')) {
-            // Optionally, end previous active subscription
-            $organization->subscriptions()->where('is_active', true)->update(['is_active' => false, 'end_date' => now()]);
-
-            // Create new subscription
-            $organization->subscriptions()->create([
-                'plan_id' => $request->subscription_plan_id,
+        DB::beginTransaction();
+        
+        try {
+            // Create organization
+            $organization = Organization::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'subscription_plan_id' => $request->subscription_plan_id,
+                'api_key' => Str::random(32),
                 'status' => 'active',
                 'is_active' => true,
-                'start_date' => now(),
-                'end_date' => now()->addYear(),
+                'subscription_start_date' => now(),
+                'subscription_end_date' => now()->addYear(),
             ]);
+
+            // Create admin user
+            $admin = User::create([
+                'name' => $request->admin_name,
+                'email' => $request->admin_email,
+                'password' => Hash::make($request->admin_password),
+                'organization_id' => $organization->id,
+                'is_admin' => true,
+                'email_verified_at' => now(),
+                'status' => 'active',
+            ]);
+
+            // Create default head office branch
+            $headOfficeBranch = Branch::create([
+                'organization_id' => $organization->id,
+                'name' => $organization->name . ' - Head Office',
+                'address' => $organization->address,
+                'phone' => $organization->phone,
+                'email' => $organization->email,
+                'is_head_office' => true,
+                'is_active' => false, // Requires activation
+                'activation_key' => Str::random(40),
+                'type' => 'restaurant',
+                'status' => 'inactive',
+            ]);
+
+            DB::commit();
+
+            Log::info('Organization created successfully', [
+                'organization_id' => $organization->id,
+                'admin_user_id' => $admin->id,
+                'head_office_branch_id' => $headOfficeBranch->id
+            ]);
+
+            return redirect()->route('admin.organizations.index')
+                ->with('success', 'Organization created successfully with head office branch.');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            Log::error('Failed to create organization', [
+                'error' => $e->getMessage(),
+                'request_data' => $request->except(['admin_password', 'admin_password_confirmation'])
+            ]);
+            
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to create organization: ' . $e->getMessage());
         }
-
-        return redirect()->route('admin.organizations.index')->with('success', 'Organization updated successfully');
     }
 
-    public function deactivate(Organization $organization)
+    /**
+     * Display the specified organization
+     */
+    public function show(Organization $organization)
     {
-        Gate::authorize('deactivate', $organization);
-        $organization->update(['is_active' => false]);
-        $organization->branches()->update(['is_active' => false]);
-        return response()->json(['message' => 'Organization and branches deactivated']);
-    }
+        $organization->load([
+            'branches.users',
+            'users.roles',
+            'subscriptionPlan'
+        ]);
 
-    private function createDefaultRoles(Organization $org, Branch $branch)
-    {
-        $adminRole = $org->roles()->create(['name' => 'Organization Admin']);
-        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
-
-        $branchRoles = [
-            'Branch Manager' => ['manage_reservation', 'manage_order', 'manage_inventory'],
-            'Staff' => ['create_order', 'view_inventory']
+        $stats = [
+            'total_branches' => $organization->branches()->count(),
+            'active_branches' => $organization->branches()->where('is_active', true)->count(),
+            'total_users' => $organization->users()->count(),
+            'active_users' => $organization->users()->where('status', 'active')->count(),
+            'subscription_days_left' => $organization->subscription_end_date ? 
+                now()->diffInDays($organization->subscription_end_date, false) : 0,
         ];
 
-        foreach ($branchRoles as $name => $permissions) {
-            $role = $org->roles()->create([
-                'name' => $name,
-                'branch_id' => $branch->id
-            ]);
-            $role->givePermissionTo($permissions);
-        }
+        return view('admin.organizations.show', compact('organization', 'stats'));
     }
 
+    /**
+     * Show the form for editing the specified organization
+     */
     public function edit(Organization $organization)
     {
-        $plans = \App\Models\SubscriptionPlan::all();
-        return view('admin.organizations.edit', compact('organization', 'plans'));
+        $subscriptionPlans = SubscriptionPlan::where('is_active', true)->get();
+        
+        return view('admin.organizations.edit', compact('organization', 'subscriptionPlans'));
     }
 
-    public function destroy(Organization $organization)
+    /**
+     * Update the specified organization
+     */
+    public function update(Request $request, Organization $organization)
     {
-        // Optional: Add authorization if needed
-        $this->authorize('delete', $organization);
+        $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('organizations')->ignore($organization->id)],
+            'email' => ['required', 'email', Rule::unique('organizations')->ignore($organization->id)],
+            'phone' => 'required|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'subscription_plan_id' => 'required|exists:subscription_plans,id',
+            'status' => 'required|in:active,inactive,suspended',
+            'is_active' => 'boolean',
+        ]);
 
-        // Delete related branches if needed
-        $organization->branches()->delete();
+        $wasInactive = !$organization->is_active;
+        $willBeActive = $request->boolean('is_active');
 
-        // Delete the organization
-        $organization->delete();
+        DB::beginTransaction();
+        
+        try {
+            $organization->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'subscription_plan_id' => $request->subscription_plan_id,
+                'status' => $request->status,
+                'is_active' => $willBeActive,
+            ]);
 
-        return redirect()
-            ->route('admin.organizations.index')
-            ->with('success', 'Organization deleted successfully.');
-    }
+            // If organization is being deactivated, deactivate all branches
+            if (!$willBeActive && $organization->is_active) {
+                $organization->branches()->update(['is_active' => false]);
+            }
 
-    public function summary(Organization $organization)
-    {
-        $organization->load(['plan', 'branches']);
-        return view('admin.organizations.summary', compact('organization'));
-    }
+            DB::commit();
 
-    public function regenerateKey(Organization $organization)
-    {
-        $this->authorize('update', $organization);
-        $organization->activation_key = \Illuminate\Support\Str::random(40);
-        $organization->save();
+            Log::info('Organization updated successfully', [
+                'organization_id' => $organization->id,
+                'changes' => $organization->getChanges()
+            ]);
 
-        return back()->with('success', 'Activation key regenerated!');
-    }
+            return redirect()->route('admin.organizations.index')
+                ->with('success', 'Organization updated successfully.');
 
-    public function showActivationForm()
-    {
-        $admin = auth('admin')->user();
-
-        if ($admin->is_super_admin) {
-            $organizations = \App\Models\Organization::all();
-            return view('admin.organizations.activate', compact('organizations'));
-        } else {
-            $organization = \App\Models\Organization::find($admin->organization_id);
-            return view('admin.organizations.activate', compact('organization'));
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            Log::error('Failed to update organization', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to update organization: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Remove the specified organization
+     */
+    public function destroy(Organization $organization)
+    {
+        try {
+            // Check if organization has active branches or users
+            $branchCount = $organization->branches()->count();
+            $userCount = $organization->users()->count();
+            
+            if ($branchCount > 0 || $userCount > 0) {
+                return redirect()->back()
+                    ->with('error', "Cannot delete organization with {$branchCount} branches and {$userCount} users. Please remove them first.");
+            }
+
+            $organizationName = $organization->name;
+            $organization->delete();
+
+            Log::info('Organization deleted successfully', [
+                'organization_name' => $organizationName,
+                'deleted_by' => Auth::id()
+            ]);
+
+            return redirect()->route('admin.organizations.index')
+                ->with('success', 'Organization deleted successfully.');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to delete organization', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->back()
+                ->with('error', 'Failed to delete organization: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show organization summary
+     */
+    public function summary(Organization $organization)
+    {
+        $organization->load([
+            'branches.users',
+            'users.roles',
+            'subscriptionPlan'
+        ]);
+
+        $stats = [
+            'total_branches' => $organization->branches()->count(),
+            'active_branches' => $organization->branches()->where('is_active', true)->count(),
+            'total_users' => $organization->users()->count(),
+            'active_users' => $organization->users()->where('status', 'active')->count(),
+            'subscription_days_left' => $organization->subscription_end_date ? 
+                now()->diffInDays($organization->subscription_end_date, false) : 0,
+        ];
+
+        // Get recent activity
+        $recentActivity = [
+            'orders' => $this->getRecentOrders($organization),
+            'reservations' => $this->getRecentReservations($organization),
+            'users' => $this->getRecentUsers($organization),
+        ];
+
+        return view('admin.organizations.summary', compact('organization', 'stats', 'recentActivity'));
+    }
+
+    /**
+     * Regenerate API key
+     */
+    public function regenerateKey(Organization $organization)
+    {
+        $oldKey = $organization->api_key;
+        $newKey = Str::random(32);
+        
+        $organization->update([
+            'api_key' => $newKey
+        ]);
+
+        Log::info('Organization API key regenerated', [
+            'organization_id' => $organization->id,
+            'old_key_preview' => substr($oldKey, 0, 8) . '...',
+            'new_key_preview' => substr($newKey, 0, 8) . '...',
+            'regenerated_by' => Auth::id()
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'API key regenerated successfully.');
+    }
+
+    /**
+     * Show activation form
+     */
+    public function showActivationForm()
+    {
+        return view('admin.organizations.activate');
+    }
+
+    /**
+     * Activate organization with key
+     */
     public function activateOrganization(Request $request)
     {
         $request->validate([
-            'activation_key' => 'required|string',
-            'organization_id' => 'required|exists:organizations,id'
+            'api_key' => 'required|string',
         ]);
 
-        $organization = \App\Models\Organization::find($request->organization_id);
+        $organization = Organization::where('api_key', $request->api_key)->first();
 
-        if (!$organization || $organization->activation_key !== $request->activation_key) {
-            return back()->with('error', 'Invalid activation key.');
+        if (!$organization) {
+            return redirect()->back()
+                ->with('error', 'Invalid API key.');
         }
 
-        $organization->update([
-            'is_active' => true,
-            'activated_at' => now(),
-            'activation_key' => null, // Optionally clear the key after activation
+        if (!$organization->is_active) {
+            return redirect()->back()
+                ->with('error', 'Organization is not active.');
+        }
+
+        // Update user's organization
+        $user = Auth::user();
+        $user->update([
+            'organization_id' => $organization->id
         ]);
 
-        return back()->with('success', 'Organization activated successfully!');
+        Log::info('User activated organization', [
+            'user_id' => $user->id,
+            'organization_id' => $organization->id
+        ]);
+
+        return redirect()->route('admin.dashboard')
+            ->with('success', 'Organization activated successfully.');
+    }
+
+    /**
+     * Get recent orders for organization
+     */
+    private function getRecentOrders(Organization $organization)
+    {
+        if (!class_exists(\App\Models\Order::class)) {
+            return collect();
+        }
+
+        return \App\Models\Order::where('organization_id', $organization->id)
+            ->with(['customer', 'branch'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+    }
+
+    /**
+     * Get recent reservations for organization
+     */
+    private function getRecentReservations(Organization $organization)
+    {
+        if (!class_exists(\App\Models\Reservation::class)) {
+            return collect();
+        }
+
+        return \App\Models\Reservation::where('organization_id', $organization->id)
+            ->with(['customer', 'branch'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+    }
+
+    /**
+     * Get recent users for organization
+     */
+    private function getRecentUsers(Organization $organization)
+    {
+        return $organization->users()
+            ->with(['roles', 'branch'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+    }
+
+    /**
+     * Get organization statistics
+     */
+    public function getStats(Organization $organization)
+    {
+        $stats = [
+            'branches' => [
+                'total' => $organization->branches()->count(),
+                'active' => $organization->branches()->where('is_active', true)->count(),
+                'inactive' => $organization->branches()->where('is_active', false)->count(),
+            ],
+            'users' => [
+                'total' => $organization->users()->count(),
+                'active' => $organization->users()->where('status', 'active')->count(),
+                'inactive' => $organization->users()->where('status', 'inactive')->count(),
+            ],
+            'subscription' => [
+                'plan' => $organization->subscriptionPlan->name ?? 'No Plan',
+                'status' => $organization->subscription_end_date > now() ? 'Active' : 'Expired',
+                'days_left' => $organization->subscription_end_date ? 
+                    now()->diffInDays($organization->subscription_end_date, false) : 0,
+            ]
+        ];
+
+        return response()->json($stats);
+    }
+
+    /**
+     * Activate all branches for organization
+     */
+    public function activateAllBranches(Organization $organization)
+    {
+        if (!$organization->is_active) {
+            return redirect()->back()
+                ->with('error', 'Cannot activate branches. Organization is not active.');
+        }
+
+        $count = $organization->branches()->update(['is_active' => true]);
+
+        Log::info('All branches activated for organization', [
+            'organization_id' => $organization->id,
+            'branches_activated' => $count,
+            'activated_by' => Auth::id()
+        ]);
+
+        return redirect()->back()
+            ->with('success', "{$count} branches activated successfully.");
+    }
+
+    /**
+     * Deactivate all branches for organization
+     */
+    public function deactivateAllBranches(Organization $organization)
+    {
+        $count = $organization->branches()->update(['is_active' => false]);
+
+        Log::info('All branches deactivated for organization', [
+            'organization_id' => $organization->id,
+            'branches_deactivated' => $count,
+            'deactivated_by' => Auth::id()
+        ]);
+
+        return redirect()->back()
+            ->with('success', "{$count} branches deactivated successfully.");
     }
 }

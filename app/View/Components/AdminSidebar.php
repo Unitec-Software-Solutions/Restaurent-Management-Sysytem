@@ -486,15 +486,6 @@ class AdminSidebar extends Component
                 ]
             ],
             [
-                'title' => 'Customers',
-                'route' => 'admin.customers.index',
-                'icon' => 'users',
-                'icon_type' => 'svg',
-                'permission' => 'customers.view',
-                'badge' => 0,
-                'sub_items' => []
-            ],
-            [
                 'title' => 'Suppliers',
                 'route' => 'admin.suppliers.index',
                 'icon' => 'truck',
@@ -692,6 +683,50 @@ class AdminSidebar extends Component
             ];
         }
 
+        // Organization Management (For Organization Admins to manage their own organization)
+        if ($admin->organization_id && !$admin->is_super_admin && $this->hasPermission($admin, 'organizations.view')) {
+            $menuItems[] = [
+                'title' => 'Organization Management',
+                'route' => 'admin.organization.show',
+                'route_params' => ['organization' => $admin->organization_id],
+                'icon' => 'building-office-2',
+                'icon_type' => 'svg',
+                'permission' => 'organizations.view',
+                'badge' => 0,
+                'badge_color' => 'blue',
+                'is_route_valid' => $this->validateRoute('admin.organization.show'),
+                'sub_items' => [
+                    [
+                        'title' => 'Organization Details',
+                        'route' => 'admin.organization.show',
+                        'route_params' => ['organization' => $admin->organization_id],
+                        'icon' => 'eye',
+                        'icon_type' => 'svg',
+                        'permission' => 'organization.view',
+                        'is_route_valid' => $this->validateRoute('admin.organization.show')
+                    ],
+                    [
+                        'title' => 'Edit Organization',
+                        'route' => 'admin.organization.edit',
+                        'route_params' => ['organization' => $admin->organization_id],
+                        'icon' => 'pencil',
+                        'icon_type' => 'svg',
+                        'permission' => 'organization.edit',
+                        'is_route_valid' => $this->validateRoute('admin.organization.edit')
+                    ],
+                    [
+                        'title' => 'Organization Settings',
+                        'route' => 'admin.organization.settings',
+                        'route_params' => ['organization' => $admin->organization_id],
+                        'icon' => 'cog',
+                        'icon_type' => 'svg',
+                        'permission' => 'organization.settings',
+                        'is_route_valid' => $this->validateRoute('admin.organization.settings')
+                    ]
+                ]
+            ];
+        }
+
         // Branches (Organization/Super Admin)
         if ($admin->organization_id || $admin->is_super_admin) {
             $branchRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
@@ -738,6 +773,70 @@ class AdminSidebar extends Component
                 'badge_color' => 'yellow',
                 'is_route_valid' => $this->validateRoute('admin.menus.index'),
                 'sub_items' => $this->getMenuSubItems()
+            ];
+        }
+
+        // Modules Management (Super Admin and Organization Admin)
+        if ($admin->is_super_admin || ($admin->organization_id && $this->hasPermission($admin, 'modules.view'))) {
+            $menuItems[] = [
+                'title' => 'Modules',
+                'route' => 'admin.modules.index',
+                'route_params' => [],
+                'icon' => 'puzzle-piece',
+                'icon_type' => 'svg',
+                'permission' => 'modules.view',
+                'badge' => $this->getActiveModulesCount(),
+                'badge_color' => 'indigo',
+                'is_route_valid' => $this->validateRoute('admin.modules.index'),
+                'sub_items' => $this->getModulesSubItems()
+            ];
+        }
+
+        // Subscription Plans Management (Super Admin only)
+        if ($admin->is_super_admin) {
+            $menuItems[] = [
+                'title' => 'Subscription Plans',
+                'route' => 'admin.subscription-plans.index',
+                'route_params' => [],
+                'icon' => 'credit-card',
+                'icon_type' => 'svg',
+                'permission' => 'subscription-plans.view',
+                'badge' => $this->getActiveSubscriptionsCount(),
+                'badge_color' => 'green',
+                'is_route_valid' => $this->validateRoute('admin.subscription-plans.index'),
+                'sub_items' => $this->getSubscriptionPlanSubItems()
+            ];
+        }
+
+        // Subscription Management (For Organization Admins)
+        if (!$admin->is_super_admin && $admin->organization_id && $this->hasPermission($admin, 'subscription.view')) {
+            $menuItems[] = [
+                'title' => 'Subscription',
+                'route' => 'admin.subscription.current',
+                'route_params' => [],
+                'icon' => 'document-text',
+                'icon_type' => 'svg',
+                'permission' => 'subscription.view',
+                'badge' => 0,
+                'badge_color' => 'yellow',
+                'is_route_valid' => $this->validateRoute('admin.subscription.current'),
+                'sub_items' => $this->getSubscriptionManagementSubItems($admin)
+            ];
+        }
+
+        // Roles & Permissions Management (Super Admin and Organization Admin)
+        if ($admin->is_super_admin || ($admin->organization_id && $this->hasPermission($admin, 'roles.view'))) {
+            $menuItems[] = [
+                'title' => 'Roles & Permissions',
+                'route' => 'admin.roles.index',
+                'route_params' => [],
+                'icon' => 'shield-check',
+                'icon_type' => 'svg',
+                'permission' => 'roles.view',
+                'badge' => $this->getActiveRolesCount(),
+                'badge_color' => 'emerald',
+                'is_route_valid' => $this->validateRoute('admin.roles.index'),
+                'sub_items' => $this->getRolesPermissionsSubItems()
             ];
         }
 
@@ -805,10 +904,10 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Staff Management (Admin level and above)
+        // User Management (Admin level and above)
         if ($this->hasPermission($admin, 'users.view') && !$this->isStaffLevel($admin)) {
             $menuItems[] = [
-                'title' => 'Staff',
+                'title' => 'User Management',
                 'route' => 'admin.users.index',
                 'route_params' => [],
                 'icon' => 'users',
@@ -907,23 +1006,36 @@ class AdminSidebar extends Component
             return true;
         }
 
-        // For now, allow all authenticated admin users to access inventory and suppliers
+        // For now, allow all authenticated admin users to access these permissions
         // TODO: Implement proper permission checking later
-        if (in_array($permission, ['inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage', 'production.view', 'production.manage'])) {
+        $allowedPermissions = [
+            'inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage', 
+            'production.view', 'production.manage', 'organizations.view', 'branches.view',
+            'branches.create', 'branches.activate', 'modules.view', 'roles.view',
+            'subscription.view', 'menus.view', 'orders.view', 'reservations.view',
+            'users.view', 'reports.view', 'kitchen.view', 'settings.view'
+        ];
+        
+        if (in_array($permission, $allowedPermissions)) {
             return true;
         }
 
-        // Check using Spatie permissions if admin has hasPermissionTo method
-        if (method_exists($admin, 'hasPermissionTo')) {
-            return $admin->hasPermissionTo($permission);
-        }
+        try {
+            // Check using Spatie permissions if admin has hasPermissionTo method
+            if (method_exists($admin, 'hasPermissionTo')) {
+                return $admin->hasPermissionTo($permission);
+            }
 
-        // Fallback to basic permission check
-        if (method_exists($admin, 'hasPermission')) {
-            return $admin->hasPermission($permission);
-        }
+            // Fallback to basic permission check
+            if (method_exists($admin, 'hasPermission')) {
+                return $admin->hasPermission($permission);
+            }
 
-        return false;
+            return false;
+        } catch (\Exception $e) {
+            // If permission doesn't exist, return false gracefully
+            return false;
+        }
     }
 
     /**
@@ -1085,12 +1197,28 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute('admin.menus.index')
             ],
             [
+                'title' => 'Create Menu',
+                'route' => 'admin.menus.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'menus.create',
+                'is_route_valid' => $this->validateRoute('admin.menus.create')
+            ],
+            [
                 'title' => 'Menu Items',
-                'route' => 'admin.menu-items.index',
+                'route' => 'admin.inventory.items.index',
                 'icon' => 'utensils',
                 'icon_type' => 'svg',
                 'permission' => 'menus.view',
-                'is_route_valid' => $this->validateRoute('admin.menu-items.index')
+                'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
+            ],
+            [
+                'title' => 'Create Items for Menu',
+                'route' => 'admin.inventory.items.create',
+                'icon' => 'plus-circle',
+                'icon_type' => 'svg',
+                'permission' => 'menus.create',
+                'is_route_valid' => $this->validateRoute('admin.inventory.items.create')
             ],
             [
                 'title' => 'Categories',
@@ -1349,5 +1477,392 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute('admin.settings.payments')
             ]
         ];
+    }
+
+    /**
+     * Get subscription-related badge counts
+     */
+    private function getActiveSubscriptionsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin || !$admin->is_super_admin) return 0;
+
+        try {
+            return \App\Models\Organization::whereHas('currentSubscription', function ($q) {
+                $q->where('is_active', true)
+                  ->where('ends_at', '>=', now());
+            })->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getExpiredSubscriptionsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin || !$admin->is_super_admin) return 0;
+
+        try {
+            return \App\Models\Organization::whereHas('currentSubscription', function ($q) {
+                $q->where('is_active', true)
+                  ->where('ends_at', '<', now());
+            })->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getPendingSubscriptionRequestsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin || !$admin->is_super_admin) return 0;
+
+        try {
+            return \App\Models\Organization::where('status', 'subscription_pending')->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get module access and usage statistics
+     */
+    private function getActiveModulesCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            if ($admin->is_super_admin) {
+                return \App\Models\Module::where('is_active', true)->count();
+            }
+
+            if ($admin->organization_id) {
+                $organization = \App\Models\Organization::find($admin->organization_id);
+                if ($organization && $organization->subscriptionPlan) {
+                    $modules = $organization->subscriptionPlan->getModulesArray();
+                    return count($modules);
+                }
+            }
+
+            return 0;
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getInactiveModulesCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin || !$admin->is_super_admin) return 0;
+
+        try {
+            return \App\Models\Module::where('is_active', false)->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get organization-specific metrics
+     */
+    private function getInactiveOrganizationsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin || !$admin->is_super_admin) return 0;
+
+        try {
+            return \App\Models\Organization::where('is_active', false)->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getOrganizationsNeedingAttentionCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin || !$admin->is_super_admin) return 0;
+
+        try {
+            return \App\Models\Organization::where(function ($query) {
+                $query->whereNull('activated_at')
+                      ->orWhere('is_active', false)
+                      ->orWhereHas('currentSubscription', function ($q) {
+                          $q->where('ends_at', '<=', now()->addDays(7));
+                      });
+            })->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get branch-related metrics  
+     */
+    private function getInactiveBranchesCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\Branch::where('is_active', false);
+
+            if (!$admin->is_super_admin && $admin->organization_id) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getBranchesNeedingActivationCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\Branch::whereNotNull('activation_key')
+                                     ->where('is_active', false);
+
+            if (!$admin->is_super_admin && $admin->organization_id) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get user management metrics
+     */
+    private function getPendingUsersCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\Admin::where('is_active', false)
+                                    ->whereNotNull('email_verified_at');
+
+            if (!$admin->is_super_admin && $admin->organization_id) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getUnverifiedUsersCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \App\Models\Admin::whereNull('email_verified_at');
+
+            if (!$admin->is_super_admin && $admin->organization_id) {
+                $query->where('organization_id', $admin->organization_id);
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get role and permission metrics
+     */
+    private function getActiveRolesCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            $query = \Spatie\Permission\Models\Role::where('guard_name', 'admin');
+
+            if (!$admin->is_super_admin && $admin->organization_id) {
+                $query->where(function ($q) use ($admin) {
+                    $q->whereNull('organization_id')
+                      ->orWhere('organization_id', $admin->organization_id);
+                });
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function getCustomPermissionsCount(): int
+    {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return 0;
+
+        try {
+            return \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Get subscription plans sub-items (Super Admin only)
+     */
+    private function getSubscriptionPlanSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Plans',
+                'route' => 'admin.subscription-plans.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'subscription-plans.view',
+                'is_route_valid' => $this->validateRoute('admin.subscription-plans.index')
+            ],
+            [
+                'title' => 'Create Plan',
+                'route' => 'admin.subscription-plans.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'subscription-plans.create',
+                'is_route_valid' => $this->validateRoute('admin.subscription-plans.create')
+            ],
+            [
+                'title' => 'Plan Analytics',
+                'route' => 'admin.subscription-plans.analytics',
+                'icon' => 'chart-bar',
+                'icon_type' => 'svg',
+                'permission' => 'subscription-plans.analytics',
+                'is_route_valid' => $this->validateRoute('admin.subscription-plans.analytics')
+            ]
+        ];
+    }
+
+    /**
+     * Get modules management sub-items
+     */
+    private function getModulesSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Modules',
+                'route' => 'admin.modules.index',
+                'icon' => 'list',
+                'icon_type' => 'svg',
+                'permission' => 'modules.view',
+                'is_route_valid' => $this->validateRoute('admin.modules.index')
+            ],
+            [
+                'title' => 'Add Module',
+                'route' => 'admin.modules.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'modules.create',
+                'is_route_valid' => $this->validateRoute('admin.modules.create')
+            ],
+            [
+                'title' => 'Module Configuration',
+                'route' => 'admin.modules.config',
+                'icon' => 'cog',
+                'icon_type' => 'svg',
+                'permission' => 'modules.configure',
+                'is_route_valid' => $this->validateRoute('admin.modules.config')
+            ],
+            [
+                'title' => 'Module Usage Stats',
+                'route' => 'admin.modules.stats',
+                'icon' => 'chart-bar',
+                'icon_type' => 'svg',
+                'permission' => 'modules.analytics',
+                'is_route_valid' => $this->validateRoute('admin.modules.stats')
+            ]
+        ];
+    }
+
+    /**
+     * Get roles and permissions sub-items
+     */
+    private function getRolesPermissionsSubItems(): array
+    {
+        return [
+            [
+                'title' => 'All Roles',
+                'route' => 'admin.roles.index',
+                'icon' => 'users',
+                'icon_type' => 'svg',
+                'permission' => 'roles.view',
+                'is_route_valid' => $this->validateRoute('admin.roles.index')
+            ],
+            [
+                'title' => 'Create Role',
+                'route' => 'admin.roles.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'roles.create',
+                'is_route_valid' => $this->validateRoute('admin.roles.create')
+            ],
+            [
+                'title' => 'Permissions',
+                'route' => 'admin.permissions.index',
+                'icon' => 'shield-check',
+                'icon_type' => 'svg',
+                'permission' => 'permissions.view',
+                'is_route_valid' => $this->validateRoute('admin.permissions.index')
+            ],
+            [
+                'title' => 'Role Templates',
+                'route' => 'admin.roles.templates',
+                'icon' => 'document-duplicate',
+                'icon_type' => 'svg',
+                'permission' => 'roles.templates',
+                'is_route_valid' => $this->validateRoute('admin.roles.templates')
+            ]
+        ];
+    }
+
+    /**
+     * Get subscription management sub-items (for organization admins)
+     */
+    private function getSubscriptionManagementSubItems($admin): array
+    {
+        $items = [
+            [
+                'title' => 'Current Subscription',
+                'route' => 'admin.subscription.current',
+                'icon' => 'eye',
+                'icon_type' => 'svg',
+                'permission' => 'subscription.view',
+                'is_route_valid' => $this->validateRoute('admin.subscription.current')
+            ],
+            [
+                'title' => 'Billing History',
+                'route' => 'admin.subscription.billing',
+                'icon' => 'receipt',
+                'icon_type' => 'svg',
+                'permission' => 'subscription.billing',
+                'is_route_valid' => $this->validateRoute('admin.subscription.billing')
+            ]
+        ];
+
+        // Add upgrade option if not on highest tier
+        if ($admin->organization_id) {
+            $items[] = [
+                'title' => 'Upgrade Plan',
+                'route' => 'admin.subscription.upgrade',
+                'icon' => 'arrow-up',
+                'icon_type' => 'svg',
+                'permission' => 'subscription.upgrade',
+                'is_route_valid' => $this->validateRoute('admin.subscription.upgrade')
+            ];
+        }
+
+        return $items;
     }
 }

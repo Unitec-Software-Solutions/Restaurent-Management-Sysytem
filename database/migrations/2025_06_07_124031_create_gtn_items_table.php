@@ -13,7 +13,7 @@ return new class extends Migration
 
             // Foreign Keys
             $table->foreignId('gtn_id')->constrained('gtn_master', 'gtn_id')->cascadeOnDelete();
-            $table->foreignId('item_id')->constrained('item_master')->cascadeOnDelete();
+            $table->foreignId('item_id')->constrained('item_masters')->cascadeOnDelete();
 
             // Item Details
             $table->string('item_code')->index();

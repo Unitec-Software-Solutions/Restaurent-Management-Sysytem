@@ -369,13 +369,6 @@ class Sidebar extends Component
                     'permission' => 'manage_modules',
                     'active' => $this->safeRouteCheck('admin.modules*')
                 ],
-                [
-                    'name' => 'System Settings',
-                    'icon' => 'cogs',
-                    'route' => 'admin.settings.index',
-                    'permission' => 'manage_settings',
-                    'active' => $this->safeRouteCheck('admin.settings*')
-                ]
             ]
         ];
     }    /**

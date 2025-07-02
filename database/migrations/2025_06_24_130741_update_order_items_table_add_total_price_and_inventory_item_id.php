@@ -22,7 +22,7 @@ return new class extends Migration
             // Add inventory_item_id if missing (referenced in OrderItem model)
             if (!in_array('inventory_item_id', $existingColumns)) {
                 $table->foreignId('inventory_item_id')->nullable()->after('menu_item_id')
-                      ->constrained('item_master')->onDelete('set null');
+                      ->constrained('item_masters')->onDelete('set null');
             }
         });
     }

@@ -74,7 +74,7 @@ class ProductionRecipeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'production_item_id' => 'required|exists:item_master,id',
+            'production_item_id' => 'required|exists:item_masters,id',
             'recipe_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'instructions' => 'nullable|string',
@@ -83,7 +83,7 @@ class ProductionRecipeController extends Controller
             'cooking_time' => 'nullable|integer|min:0',
             'difficulty_level' => 'nullable|string|max:50',
             'raw_materials' => 'required|array|min:1',
-            'raw_materials.*.item_id' => 'required|exists:item_master,id',
+            'raw_materials.*.item_id' => 'required|exists:item_masters,id',
             'raw_materials.*.quantity_required' => 'required|numeric|min:0.001',
             'raw_materials.*.unit_of_measurement' => 'nullable|string|max:50',
             'raw_materials.*.preparation_notes' => 'nullable|string|max:255',
@@ -164,7 +164,7 @@ class ProductionRecipeController extends Controller
     public function update(Request $request, ProductionRecipe $recipe)
     {
         $request->validate([
-            'production_item_id' => 'required|exists:item_master,id',
+            'production_item_id' => 'required|exists:item_masters,id',
             'recipe_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'instructions' => 'nullable|string',
@@ -173,7 +173,7 @@ class ProductionRecipeController extends Controller
             'cooking_time' => 'nullable|integer|min:0',
             'difficulty_level' => 'nullable|string|max:50',
             'raw_materials' => 'required|array|min:1',
-            'raw_materials.*.item_id' => 'required|exists:item_master,id',
+            'raw_materials.*.item_id' => 'required|exists:item_masters,id',
             'raw_materials.*.quantity_required' => 'required|numeric|min:0.001',
             'raw_materials.*.unit_of_measurement' => 'nullable|string|max:50',
             'raw_materials.*.preparation_notes' => 'nullable|string|max:255',

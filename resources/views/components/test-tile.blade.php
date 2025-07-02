@@ -137,7 +137,7 @@
             <x-test-tile label="Table Management" route="tables.index" icon="fa-chair" />
             <x-test-tile label="POS System" route="pos.index" icon="fa-cash-register" />
             <x-test-tile label="Financial Management" route="finance.index" icon="fa-dollar-sign" />
-            <x-test-tile label="System Settings" route="settings.index" icon="fa-cog" />
+            
         </div>
     </div>
 
