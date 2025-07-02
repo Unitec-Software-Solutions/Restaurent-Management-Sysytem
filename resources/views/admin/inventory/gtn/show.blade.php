@@ -24,6 +24,19 @@
             </div>
         </div>
 
+        <!-- Organization Info for Super Admin -->
+        @if (Auth::guard('admin')->user()->is_super_admin && isset($gtn->organization))
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center">
+                    <i class="fas fa-building text-blue-600 mr-3"></i>
+                    <div>
+                        <h3 class="text-sm font-medium text-blue-800">GTN Organization</h3>
+                        <p class="text-sm text-blue-700 mt-1">{{ $gtn->organization->name }}</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Workflow Progress Card -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Workflow Progress</h3>
@@ -673,15 +686,16 @@
                                         name="acceptance_data[{{ $item->gtn_item_id }}][quantity_accepted]"
                                         value="{{ $item->transfer_quantity }}" max="{{ $item->transfer_quantity }}"
                                         min="0" step="0.01"
-                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500">
+                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                                        readonly disabled>
                                 </div>
-                                <div>
+                                {{-- <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Rejection Reason</label>
                                     <input type="text"
                                         name="acceptance_data[{{ $item->gtn_item_id }}][rejection_reason]"
                                         placeholder="Optional"
                                         class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-red-500">
-                                </div>
+                                </div> --}}
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Quality Notes</label>
                                     <input type="text" name="acceptance_data[{{ $item->gtn_item_id }}][quality_notes]"
