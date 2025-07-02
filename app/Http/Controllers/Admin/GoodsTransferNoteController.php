@@ -34,22 +34,22 @@ class GoodsTransferNoteController extends Controller
 
     public function index(Request $request)
     {
-        // Directly serve the GTN listing instead of redirecting
-        $admin = Auth::guard('admin')->user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin) {
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access the GTN dashboard.');
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->is_super_admin;
+        $isSuperAdmin = $user->is_super_admin;
 
-        if (!$isSuperAdmin && !$admin->organization_id) {
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
         // Super admins can see all GTNs, others see their organization's
-        $orgId = $isSuperAdmin ? null : $admin->organization_id;
+        $orgId = $isSuperAdmin ? null : $user->organization_id;
 
         // Set default date range: 30 days back to today
         $startDate = request('start_date', now()->subDays(30)->format('Y-m-d'));
@@ -94,31 +94,30 @@ class GoodsTransferNoteController extends Controller
 
     public function create()
     {
-        $admin = Auth::guard('admin')->user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin) {
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access GTN creation.');
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->is_super_admin;
+        $isSuperAdmin = $user->is_super_admin;
 
-        if (!$isSuperAdmin && !$admin->organization_id) {
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
-        // Super admins can access all organizations, others only their own
-        $orgId = $isSuperAdmin ? null : $admin->organization_id;
+        // Get organizations for super admin dropdown
+        $organizations = $isSuperAdmin ? Organization::active()->get() : collect();
 
-        // Generate next GTN number (simple example: GTN-YYYYMMDD-XXX)
         // For super admin, require organization_id parameter for GTN creation
         if ($isSuperAdmin && !request('organization_id')) {
             // For super admin, show organization selection or require organization_id
-            $organizations = Organization::active()->get();
             return view('admin.inventory.gtn.select-organization', compact('organizations'));
         }
 
-        $targetOrgId = $isSuperAdmin ? request('organization_id') : $orgId;
+        $targetOrgId = $isSuperAdmin ? request('organization_id') : $user->organization_id;
 
         $lastGtn = GoodsTransferNote::where('organization_id', $targetOrgId)->orderByDesc('gtn_id')->first();
         $datePrefix = now()->format('Ymd');
@@ -132,19 +131,19 @@ class GoodsTransferNoteController extends Controller
         // Get data with proper super admin handling
         $branches = $isSuperAdmin ?
             Branch::where('organization_id', $targetOrgId)->active()->get() :
-            Branch::where('organization_id', $orgId)->active()->get();
+            Branch::where('organization_id', $targetOrgId)->active()->get();
 
         $items = $isSuperAdmin ?
             ItemMaster::where('organization_id', $targetOrgId)->active()->get() :
-            ItemMaster::where('organization_id', $orgId)->active()->get();
+            ItemMaster::where('organization_id', $targetOrgId)->active()->get();
 
         $employees = $isSuperAdmin ?
             Employee::where('organization_id', $targetOrgId)->get() :
-            Employee::where('organization_id', $orgId)->get();
+            Employee::where('organization_id', $targetOrgId)->get();
 
         $organization = $isSuperAdmin ?
             Organization::find($targetOrgId) :
-            Organization::find($orgId);
+            Organization::find($targetOrgId);
 
         return view('admin.inventory.gtn.create', [
             'branches' => $branches,
@@ -175,16 +174,17 @@ class GoodsTransferNoteController extends Controller
 
     public function show($id)
     {
-        $admin = Auth::guard('admin')->user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin) {
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access GTN details.');
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->is_super_admin;
+        $isSuperAdmin = $user->is_super_admin;
 
-        if (!$isSuperAdmin && !$admin->organization_id) {
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
@@ -193,7 +193,7 @@ class GoodsTransferNoteController extends Controller
 
         // Apply organization filter for non-super admins
         if (!$isSuperAdmin) {
-            $query->where('organization_id', $admin->organization_id);
+            $query->where('organization_id', $user->organization_id);
         }
 
         $gtn = $query->findOrFail($id);
@@ -203,16 +203,17 @@ class GoodsTransferNoteController extends Controller
 
     public function edit($id)
     {
-        $admin = Auth::guard('admin')->user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin) {
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access GTN editing.');
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->is_super_admin;
+        $isSuperAdmin = $user->is_super_admin;
 
-        if (!$isSuperAdmin && !$admin->organization_id) {
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
@@ -221,7 +222,7 @@ class GoodsTransferNoteController extends Controller
 
         // Apply organization filter for non-super admins
         if (!$isSuperAdmin) {
-            $query->where('organization_id', $admin->organization_id);
+            $query->where('organization_id', $user->organization_id);
         }
 
         $gtn = $query->where('gtn_id', $id)->firstOrFail();
@@ -265,16 +266,30 @@ class GoodsTransferNoteController extends Controller
      */
     public function destroy($id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to delete GTN.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
         try {
-            DB::transaction(function () use ($id, $admin) {
-                $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
-                    ->findOrFail($id);
+            DB::transaction(function () use ($id, $user, $isSuperAdmin) {
+                $query = GoodsTransferNote::query();
+
+                // Apply organization filter for non-super admins
+                if (!$isSuperAdmin) {
+                    $query->where('organization_id', $user->organization_id);
+                }
+
+                $gtn = $query->findOrFail($id);
 
                 // Only allow deletion of pending GTNs
                 if ($gtn->status !== 'Pending') {
@@ -287,7 +302,7 @@ class GoodsTransferNoteController extends Controller
                 // Delete the GTN
                 $gtn->delete();
 
-                Log::info('GTN deleted', ['gtn_id' => $gtn->gtn_id, 'user_id' => $admin->id]);
+                Log::info('GTN deleted', ['gtn_id' => $gtn->gtn_id, 'user_id' => $user->id]);
             });
 
             return redirect()->route('admin.inventory.gtn.index')
@@ -307,10 +322,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function changeStatus(Request $request, $id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to change GTN status.');
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
         $request->validate([
@@ -319,10 +342,16 @@ class GoodsTransferNoteController extends Controller
         ]);
 
         try {
-            $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
-                                    ->findOrFail($id);
+            $query = GoodsTransferNote::query();
 
-            DB::transaction(function () use ($request, $gtn, $admin) {
+            // Apply organization filter for non-super admins
+            if (!$isSuperAdmin) {
+                $query->where('organization_id', $user->organization_id);
+            }
+
+            $gtn = $query->findOrFail($id);
+
+            DB::transaction(function () use ($request, $gtn, $user) {
                 $status = $request->input('status');
                 $notes = $request->input('notes');
 
@@ -330,7 +359,7 @@ class GoodsTransferNoteController extends Controller
                 switch ($status) {
                     case 'Confirmed':
                         if ($gtn->isDraft()) {
-                            $this->gtnService->confirmGTN($gtn->gtn_id, $admin->id);
+                            $this->gtnService->confirmGTN($gtn->gtn_id, $user->id);
                         } else {
                             throw new Exception('GTN can only be confirmed from draft status');
                         }
@@ -339,14 +368,14 @@ class GoodsTransferNoteController extends Controller
                     case 'Approved':
                         // For backward compatibility, treat as confirmed if draft
                         if ($gtn->isDraft()) {
-                            $this->gtnService->confirmGTN($gtn->gtn_id, $admin->id);
+                            $this->gtnService->confirmGTN($gtn->gtn_id, $user->id);
                         }
                         break;
 
                     case 'Verified':
                         // For backward compatibility, treat as confirmed if draft
                         if ($gtn->isDraft()) {
-                            $this->gtnService->confirmGTN($gtn->gtn_id, $admin->id);
+                            $this->gtnService->confirmGTN($gtn->gtn_id, $user->id);
                         }
                         break;
                 }
@@ -361,7 +390,7 @@ class GoodsTransferNoteController extends Controller
                     'gtn_id' => $gtn->gtn_id,
                     'old_status' => $gtn->status,
                     'new_status' => $status,
-                    'user_id' => $admin->id
+                    'user_id' => $user->id
                 ]);
             });
 
@@ -381,14 +410,22 @@ class GoodsTransferNoteController extends Controller
      */
     public function confirm($id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to confirm GTN.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         try {
-            $gtn = $this->gtnService->confirmGTN($id, $admin->id);
+            $gtn = $this->gtnService->confirmGTN($id, $user->id);
 
             return response()->json([
                 'success' => true,
@@ -412,10 +449,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function receive(Request $request, $id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to receive GTN.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         $request->validate([
@@ -423,7 +468,7 @@ class GoodsTransferNoteController extends Controller
         ]);
 
         try {
-            $gtn = $this->gtnService->receiveGTN($id, $admin->id, $request->input('notes'));
+            $gtn = $this->gtnService->receiveGTN($id, $user->id, $request->input('notes'));
 
             return response()->json([
                 'success' => true,
@@ -448,10 +493,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function verify(Request $request, $id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to verify GTN.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         $request->validate([
@@ -459,7 +512,7 @@ class GoodsTransferNoteController extends Controller
         ]);
 
         try {
-            $gtn = $this->gtnService->verifyGTN($id, $admin->id, $request->input('notes'));
+            $gtn = $this->gtnService->verifyGTN($id, $user->id, $request->input('notes'));
 
             return response()->json([
                 'success' => true,
@@ -484,10 +537,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function processAcceptance(Request $request, $id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to process GTN acceptance.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         $request->validate([
@@ -500,7 +561,7 @@ class GoodsTransferNoteController extends Controller
             $gtn = $this->gtnService->processGTNAcceptance(
                 $id,
                 $request->input('acceptance_data'),
-                $admin->id
+                $user->id
             );
 
             return response()->json([
@@ -526,10 +587,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function reject(Request $request, $id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to reject GTN.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         $request->validate([
@@ -540,7 +609,7 @@ class GoodsTransferNoteController extends Controller
             $gtn = $this->gtnService->rejectGTN(
                 $id,
                 $request->input('rejection_reason'),
-                $admin->id
+                $user->id
             );
 
             return response()->json([
@@ -566,10 +635,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function auditTrail($id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to view audit trail.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         try {
@@ -597,10 +674,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function getItemsWithStock(Request $request)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to access items.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         $branchId = $request->get('branch_id');
@@ -609,17 +694,21 @@ class GoodsTransferNoteController extends Controller
             return response()->json(['error' => 'Branch ID is required'], 400);
         }
 
-        // Verify branch belongs to user's organization
-        $branch = Branch::where('id', $branchId)
-            ->where('organization_id', $admin->organization_id)
-            ->first();
+        // Verify branch belongs to user's organization (for non-super admins)
+        $branchQuery = Branch::where('id', $branchId);
+        if (!$isSuperAdmin) {
+            $branchQuery->where('organization_id', $user->organization_id);
+        }
+
+        $branch = $branchQuery->first();
 
         if (!$branch) {
             return response()->json(['error' => 'Invalid branch'], 400);
         }
 
         try {
-            $items = $this->gtnService->getItemsWithStock($branchId, $admin->organization_id);
+            $orgId = $isSuperAdmin ? $branch->organization_id : $user->organization_id;
+            $items = $this->gtnService->getItemsWithStock($branchId, $orgId);
             return response()->json($items);
         } catch (Exception $e) {
             Log::error('Error fetching items with stock', [
@@ -636,10 +725,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function searchItems(Request $request)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to search items.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         $request->validate([
@@ -650,17 +747,21 @@ class GoodsTransferNoteController extends Controller
         $branchId = $request->get('branch_id');
         $search = $request->get('search', '');
 
-        // Verify branch belongs to user's organization
-        $branch = Branch::where('id', $branchId)
-            ->where('organization_id', $admin->organization_id)
-            ->first();
+        // Verify branch belongs to user's organization (for non-super admins)
+        $branchQuery = Branch::where('id', $branchId);
+        if (!$isSuperAdmin) {
+            $branchQuery->where('organization_id', $user->organization_id);
+        }
+
+        $branch = $branchQuery->first();
 
         if (!$branch) {
             return response()->json(['error' => 'Invalid branch'], 400);
         }
 
         try {
-            $items = $this->gtnService->searchItemsWithStock($branchId, $admin->organization_id, $search);
+            $orgId = $isSuperAdmin ? $branch->organization_id : $user->organization_id;
+            $items = $this->gtnService->searchItemsWithStock($branchId, $orgId, $search);
             return response()->json($items);
         } catch (Exception $e) {
             Log::error('Error searching items with stock', [
@@ -678,10 +779,18 @@ class GoodsTransferNoteController extends Controller
      */
     public function getItemStock(Request $request)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$user) {
+            return response()->json(['error' => 'Please log in to check item stock.'], 401);
+        }
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return response()->json(['error' => 'Account setup incomplete.'], 403);
         }
 
         $request->validate([
@@ -690,10 +799,15 @@ class GoodsTransferNoteController extends Controller
         ]);
 
         try {
+            // For super admin, determine organization from the branch
+            $orgId = $isSuperAdmin ?
+                Branch::find($request->get('branch_id'))->organization_id :
+                $user->organization_id;
+
             $stock = $this->gtnService->getItemStock(
                 $request->get('item_id'),
                 $request->get('branch_id'),
-                $admin->organization_id
+                $orgId
             );
 
             return response()->json([
@@ -716,13 +830,21 @@ class GoodsTransferNoteController extends Controller
      */
     public function print($id)
     {
-        $admin = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$admin || !$admin->organization_id) {
-            return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to print GTN.');
         }
 
-        $gtn = GoodsTransferNote::with([
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
+        }
+
+        $query = GoodsTransferNote::with([
             'fromBranch',
             'toBranch',
             'items',
@@ -730,9 +852,14 @@ class GoodsTransferNoteController extends Controller
             'receivedBy',
             'verifiedBy',
             'organization'
-        ])
-        ->where('organization_id', $admin->organization_id)
-        ->findOrFail($id);
+        ]);
+
+        // Apply organization filter for non-super admins
+        if (!$isSuperAdmin) {
+            $query->where('organization_id', $user->organization_id);
+        }
+
+        $gtn = $query->findOrFail($id);
 
         return view('admin.inventory.gtn.print', compact('gtn'));
     }
