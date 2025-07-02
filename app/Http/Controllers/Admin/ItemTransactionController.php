@@ -33,6 +33,25 @@ class ItemTransactionController extends Controller
         return $user->organization_id;
     }
 
+    /**
+     * Apply organization filter to query if user is not super admin
+     */
+    protected function applyOrganizationFilter($query, $orgId)
+    {
+        if ($orgId !== null) {
+            return $query->where('organization_id', $orgId);
+        }
+        return $query;
+    }
+
+    /**
+     * Check if user can access record from specific organization
+     */
+    protected function canAccessOrganization($recordOrgId, $userOrgId)
+    {
+        return $userOrgId === null || $recordOrgId === $userOrgId;
+    }
+
     protected function getStockStatistics()
     {
         $orgId = $this->getOrganizationId();
@@ -69,6 +88,12 @@ class ItemTransactionController extends Controller
 
     public function index()
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to access inventory stock.');
+        }
+
         $orgId = $this->getOrganizationId();
         $stats = $this->getStockStatistics();
         $search = request('search');
@@ -93,9 +118,17 @@ class ItemTransactionController extends Controller
         $stockData = [];
 
         foreach ($items as $item) {
-            $branchesQuery = Branch::where('organization_id', $orgId)
+            $branchesQuery = Branch::query()
                 ->when($branchId, fn($q) => $q->where('id', $branchId))
                 ->active();
+
+            // Apply organization filter for branches
+            if ($orgId !== null) {
+                $branchesQuery->where('organization_id', $orgId);
+            } else {
+                // For super admin, filter branches by item's organization
+                $branchesQuery->where('organization_id', $item->organization_id);
+            }
 
             foreach ($branchesQuery->get() as $branch) {
                 $currentStock = ItemTransaction::stockOnHand($item->id, $branch->id);
@@ -148,6 +181,12 @@ class ItemTransactionController extends Controller
 
     public function transactions()
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to access transactions.');
+        }
+
         $orgId = $this->getOrganizationId();
 
         $query = ItemTransaction::with(['item', 'branch'])
@@ -211,8 +250,48 @@ class ItemTransactionController extends Controller
         return ['transaction_type', 'quantity', 'reference_id'];
     }
 
+    /**
+     * Apply filters to query for exports and searches
+     */
+    protected function applyFiltersToQuery($query, $request)
+    {
+        // Apply search filter
+        if ($request->filled('search')) {
+            $query->whereHas('item', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('item_code', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Apply branch filter
+        if ($request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
+        }
+
+        // Apply transaction type filter
+        if ($request->filled('transaction_type')) {
+            $query->where('transaction_type', $request->transaction_type);
+        }
+
+        // Apply date range filters
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        return $query;
+    }
+
     public function stockSummary()
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
         $orgId = $this->getOrganizationId();
 
         $itemsQuery = ItemMaster::with('category');
@@ -237,6 +316,12 @@ class ItemTransactionController extends Controller
 
     public function create()
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to create transactions.');
+        }
+
         $orgId = $this->getOrganizationId();
 
         $itemsQuery = ItemMaster::query();
@@ -256,17 +341,39 @@ class ItemTransactionController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to create transactions.');
+        }
+
         $orgId = $this->getOrganizationId();
 
-        $validated = $request->validate([
-            'inventory_item_id' => 'required|exists:item_master,id,organization_id,' . $orgId,
-            'branch_id' => 'required|exists:branches,id,organization_id,' . $orgId,
+        $validationRules = [
             'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out,grn_stock_in,gtn_stock_in,gtn_stock_out',
             'quantity' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
-        ]);
+        ];
 
-        $validated['created_by_user_id'] = optional(Auth::user())->id;
+        // For non-super admin, validate organization ownership
+        if ($orgId !== null) {
+            $validationRules['inventory_item_id'] = 'required|exists:item_master,id,organization_id,' . $orgId;
+            $validationRules['branch_id'] = 'required|exists:branches,id,organization_id,' . $orgId;
+        } else {
+            // For super admin, just check existence
+            $validationRules['inventory_item_id'] = 'required|exists:item_master,id';
+            $validationRules['branch_id'] = 'required|exists:branches,id';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        // For super admin, determine organization from the selected item
+        if ($orgId === null) {
+            $item = ItemMaster::find($validated['inventory_item_id']);
+            $orgId = $item->organization_id;
+        }
+
+        $validated['created_by_user_id'] = Auth::guard('admin')->id();
         $validated['organization_id'] = $orgId;
         $validated['is_active'] = true;
 
@@ -282,7 +389,16 @@ class ItemTransactionController extends Controller
 
     public function show(ItemTransaction $transaction)
     {
-        if ($transaction->organization_id !== $this->getOrganizationId()) {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to view transactions.');
+        }
+
+        $orgId = $this->getOrganizationId();
+
+        // Super admin can view any transaction, others only their organization's
+        if ($orgId !== null && $transaction->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
@@ -292,23 +408,38 @@ class ItemTransactionController extends Controller
 
     public function edit($item_id, $branch_id)
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to edit transactions.');
+        }
+
         $orgId = $this->getOrganizationId();
 
-        // Validate the item belongs to organization
-        $item = ItemMaster::where('id', $item_id)
-            ->where('organization_id', $orgId)
-            ->firstOrFail();
+        // Validate the item exists and belongs to organization (for non-super admin)
+        $itemQuery = ItemMaster::where('id', $item_id);
+        if ($orgId !== null) {
+            $itemQuery->where('organization_id', $orgId);
+        }
+        $item = $itemQuery->firstOrFail();
 
-        // Validate the branch belongs to organization
-        $branch = Branch::where('id', $branch_id)
-            ->where('organization_id', $orgId)
-            ->active()
-            ->firstOrFail();
+        // Validate the branch exists and belongs to organization (for non-super admin)
+        $branchQuery = Branch::where('id', $branch_id)->active();
+        if ($orgId !== null) {
+            $branchQuery->where('organization_id', $orgId);
+        } else {
+            // For super admin, ensure branch belongs to same org as item
+            $branchQuery->where('organization_id', $item->organization_id);
+        }
+        $branch = $branchQuery->firstOrFail();
+
+        // Use the item's organization for the transaction search
+        $transactionOrgId = $orgId ?? $item->organization_id;
 
         // Get the latest transaction for this item+branch combination
         $transaction = ItemTransaction::where('inventory_item_id', $item_id)
             ->where('branch_id', $branch_id)
-            ->where('organization_id', $orgId)
+            ->where('organization_id', $transactionOrgId)
             ->latest()
             ->first();
 
@@ -317,14 +448,27 @@ class ItemTransactionController extends Controller
             $transaction = new ItemTransaction([
                 'inventory_item_id' => $item_id,
                 'branch_id' => $branch_id,
-                'organization_id' => $orgId,
-                'created_by_user_id' => optional(Auth::user())->id,
+                'organization_id' => $transactionOrgId,
+                'created_by_user_id' => Auth::guard('admin')->id(),
                 'is_active' => true
             ]);
         }
 
-        $items = ItemMaster::where('organization_id', $orgId)->get();
-        $branches = Branch::where('organization_id', $orgId)->active()->get();
+        // Get items and branches for dropdowns
+        $itemsQuery = ItemMaster::query();
+        $branchesQuery = Branch::active();
+
+        if ($orgId !== null) {
+            $itemsQuery->where('organization_id', $orgId);
+            $branchesQuery->where('organization_id', $orgId);
+        } else {
+            // For super admin, show items and branches from the same org as selected item
+            $itemsQuery->where('organization_id', $item->organization_id);
+            $branchesQuery->where('organization_id', $item->organization_id);
+        }
+
+        $items = $itemsQuery->get();
+        $branches = $branchesQuery->get();
 
         return view('admin.inventory.stock.edit', [
             'transaction' => $transaction,
@@ -338,17 +482,30 @@ class ItemTransactionController extends Controller
 
     public function update(Request $request, $item_id, $branch_id)
     {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to update transactions.');
+        }
+
         $orgId = $this->getOrganizationId();
 
-        // Validate organization ownership
-        ItemMaster::where('id', $item_id)
-            ->where('organization_id', $orgId)
-            ->firstOrFail();
+        // Validate item exists and organization ownership (for non-super admin)
+        $itemQuery = ItemMaster::where('id', $item_id);
+        if ($orgId !== null) {
+            $itemQuery->where('organization_id', $orgId);
+        }
+        $item = $itemQuery->firstOrFail();
 
-        Branch::where('id', $branch_id)
-            ->where('organization_id', $orgId)
-            ->active()
-            ->firstOrFail();
+        // Validate branch exists and organization ownership (for non-super admin)
+        $branchQuery = Branch::where('id', $branch_id)->active();
+        if ($orgId !== null) {
+            $branchQuery->where('organization_id', $orgId);
+        } else {
+            // For super admin, ensure branch belongs to same org as item
+            $branchQuery->where('organization_id', $item->organization_id);
+        }
+        $branchQuery->firstOrFail();
 
         $validated = $request->validate([
             'transaction_type' => 'required|in:purchase_order,return,adjustment,audit,transfer_in,sales_order,write_off,transfer,usage,transfer_out,grn_stock_added,gtn_stock_out',
@@ -356,10 +513,13 @@ class ItemTransactionController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        // Use the item's organization for the transaction
+        $transactionOrgId = $orgId ?? $item->organization_id;
+
         $validated['inventory_item_id'] = $item_id;
         $validated['branch_id'] = $branch_id;
-        $validated['created_by_user_id'] = optional(Auth::user())->id;
-        $validated['organization_id'] = $orgId;
+        $validated['created_by_user_id'] = Auth::guard('admin')->id();
+        $validated['organization_id'] = $transactionOrgId;
         $validated['is_active'] = true;
 
         if ($this->isStockOut($validated['transaction_type'])) {
@@ -375,7 +535,16 @@ class ItemTransactionController extends Controller
 
     public function destroy(ItemTransaction $transaction)
     {
-        if ($transaction->organization_id !== $this->getOrganizationId()) {
+        $user = Auth::guard('admin')->user();
+
+        if (!$user) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to delete transactions.');
+        }
+
+        $orgId = $this->getOrganizationId();
+
+        // Super admin can delete any transaction, others only their organization's
+        if ($orgId !== null && $transaction->organization_id !== $orgId) {
             abort(403, 'Unauthorized access');
         }
 
