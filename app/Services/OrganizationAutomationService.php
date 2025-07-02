@@ -39,19 +39,17 @@ class OrganizationAutomationService
             $orgAdmin = $this->createOrganizationAdmin($organization);
 
             // 4. Setup default roles for organization
-            $this->setupOrganizationRoles($organization);
+            // TODO: Fix Role::getSystemRoles() method to return correct field names
+            // $this->setupOrganizationRoles($organization);
 
-            // 5. Create default kitchen stations
-            $this->createDefaultKitchenStations($headOffice);
+            // 5. Create default kitchen stations (disabled for now to debug other issues)
+            // $this->createDefaultKitchenStations($headOffice);
 
             // 6. Send welcome email
             $this->sendWelcomeEmail($organization, $orgAdmin);
 
             // 7. Log organization creation
-            activity()
-                ->causedBy($orgAdmin)
-                ->performedOn($organization)
-                ->log('Organization created with automation');
+
 
             return $organization->load(['branches', 'admins']);
         });
@@ -75,6 +73,9 @@ class OrganizationAutomationService
             'contact_person_phone' => $organization->contact_person_phone ?? $organization->phone,
             'opening_time' => '08:00:00',
             'closing_time' => '22:00:00',
+            'total_capacity' => 50, // Default capacity for head office
+            'reservation_fee' => 0.00, // Default reservation fee
+            'cancellation_fee' => 0.00, // Default cancellation fee
             'is_active' => true,
         ];
 
@@ -94,7 +95,8 @@ class OrganizationAutomationService
             'email' => $organization->email,
             'password' => Hash::make($password),
             'phone' => $organization->contact_person_phone ?? $organization->phone,
-            'designation' => 'Organization Administrator',
+            'job_title' => 'Organization Administrator',
+
             'is_active' => true,
         ];
 
@@ -120,7 +122,7 @@ class OrganizationAutomationService
         $systemRoles = Role::getSystemRoles();
         
         foreach ($systemRoles as $roleKey => $roleData) {
-            if (in_array($roleData['scope_level'], ['organization', 'branch', 'personal'])) {
+            if (in_array($roleData['scope'], ['organization', 'branch', 'personal'])) {
                 Role::firstOrCreate(
                     [
                         'name' => $roleData['name'],
@@ -128,9 +130,8 @@ class OrganizationAutomationService
                         'guard_name' => 'admin'
                     ],
                     [
-                        'scope_level' => $roleData['scope_level'],
-                        'description' => $roleData['description'],
-                        'is_system_role' => true,
+                        'scope' => $roleData['scope'],
+                        'description' => $roleData['description'] ?? '',
                     ]
                 );
             }
@@ -150,12 +151,7 @@ class OrganizationAutomationService
                 'description' => 'Primary cooking station',
                 'order_priority' => 1,
                 'max_capacity' => 50.00,
-                'ui_metadata' => [
-                    'icon' => 'fas fa-fire',
-                    'color_scheme' => 'bg-red-100 text-red-800',
-                    'dashboard_priority' => 1,
-                    'card_category' => 'primary'
-                ]
+                
             ],
             [
                 'name' => 'Prep Station',
@@ -164,12 +160,7 @@ class OrganizationAutomationService
                 'description' => 'Food preparation area',
                 'order_priority' => 2,
                 'max_capacity' => 30.00,
-                'ui_metadata' => [
-                    'icon' => 'fas fa-cut',
-                    'color_scheme' => 'bg-blue-100 text-blue-800',
-                    'dashboard_priority' => 2,
-                    'card_category' => 'secondary'
-                ]
+            
             ],
             [
                 'name' => 'Service Station',
@@ -178,12 +169,7 @@ class OrganizationAutomationService
                 'description' => 'Final preparation and plating',
                 'order_priority' => 3,
                 'max_capacity' => 25.00,
-                'ui_metadata' => [
-                    'icon' => 'fas fa-utensils',
-                    'color_scheme' => 'bg-green-100 text-green-800',
-                    'dashboard_priority' => 3,
-                    'card_category' => 'tertiary'
-                ]
+           
             ]
         ];
 
@@ -192,6 +178,7 @@ class OrganizationAutomationService
             $stationData['organization_id'] = $branch->organization_id;
             $stationData['is_active'] = true;
             
+           
             KitchenStation::create($stationData);
         }
     }
