@@ -486,15 +486,6 @@ class AdminSidebar extends Component
                 ]
             ],
             [
-                'title' => 'Customers',
-                'route' => 'admin.customers.index',
-                'icon' => 'users',
-                'icon_type' => 'svg',
-                'permission' => 'customers.view',
-                'badge' => 0,
-                'sub_items' => []
-            ],
-            [
                 'title' => 'Suppliers',
                 'route' => 'admin.suppliers.index',
                 'icon' => 'truck',
@@ -692,6 +683,50 @@ class AdminSidebar extends Component
             ];
         }
 
+        // Organization Management (For Organization Admins to manage their own organization)
+        if ($admin->organization_id && !$admin->is_super_admin && $this->hasPermission($admin, 'organization.manage')) {
+            $menuItems[] = [
+                'title' => 'Organization Management',
+                'route' => 'admin.organization.show',
+                'route_params' => ['organization' => $admin->organization_id],
+                'icon' => 'building-office-2',
+                'icon_type' => 'svg',
+                'permission' => 'organization.manage',
+                'badge' => 0,
+                'badge_color' => 'blue',
+                'is_route_valid' => $this->validateRoute('admin.organization.show'),
+                'sub_items' => [
+                    [
+                        'title' => 'Organization Details',
+                        'route' => 'admin.organization.show',
+                        'route_params' => ['organization' => $admin->organization_id],
+                        'icon' => 'eye',
+                        'icon_type' => 'svg',
+                        'permission' => 'organization.view',
+                        'is_route_valid' => $this->validateRoute('admin.organization.show')
+                    ],
+                    [
+                        'title' => 'Edit Organization',
+                        'route' => 'admin.organization.edit',
+                        'route_params' => ['organization' => $admin->organization_id],
+                        'icon' => 'pencil',
+                        'icon_type' => 'svg',
+                        'permission' => 'organization.edit',
+                        'is_route_valid' => $this->validateRoute('admin.organization.edit')
+                    ],
+                    [
+                        'title' => 'Organization Settings',
+                        'route' => 'admin.organization.settings',
+                        'route_params' => ['organization' => $admin->organization_id],
+                        'icon' => 'cog',
+                        'icon_type' => 'svg',
+                        'permission' => 'organization.settings',
+                        'is_route_valid' => $this->validateRoute('admin.organization.settings')
+                    ]
+                ]
+            ];
+        }
+
         // Branches (Organization/Super Admin)
         if ($admin->organization_id || $admin->is_super_admin) {
             $branchRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
@@ -738,6 +773,80 @@ class AdminSidebar extends Component
                 'badge_color' => 'yellow',
                 'is_route_valid' => $this->validateRoute('admin.menus.index'),
                 'sub_items' => $this->getMenuSubItems()
+            ];
+        }
+
+        // Modules Management (Super Admin and Organization Admin)
+        if ($admin->is_super_admin || ($admin->organization_id && $this->hasPermission($admin, 'modules.view'))) {
+            $menuItems[] = [
+                'title' => 'Modules',
+                'route' => 'admin.modules.index',
+                'route_params' => [],
+                'icon' => 'puzzle-piece',
+                'icon_type' => 'svg',
+                'permission' => 'modules.view',
+                'badge' => 0,
+                'badge_color' => 'indigo',
+                'is_route_valid' => $this->validateRoute('admin.modules.index'),
+                'sub_items' => [
+                    [
+                        'title' => 'All Modules',
+                        'route' => 'admin.modules.index',
+                        'icon' => 'list',
+                        'icon_type' => 'svg',
+                        'permission' => 'modules.view',
+                        'is_route_valid' => $this->validateRoute('admin.modules.index')
+                    ],
+                    [
+                        'title' => 'Add Module',
+                        'route' => 'admin.modules.create',
+                        'icon' => 'plus',
+                        'icon_type' => 'svg',
+                        'permission' => 'modules.create',
+                        'is_route_valid' => $this->validateRoute('admin.modules.create')
+                    ]
+                ]
+            ];
+        }
+
+        // Roles & Permissions Management (Super Admin and Organization Admin)
+        if ($admin->is_super_admin || ($admin->organization_id && $this->hasPermission($admin, 'roles.view'))) {
+            $menuItems[] = [
+                'title' => 'Roles & Permissions',
+                'route' => 'admin.roles.index',
+                'route_params' => [],
+                'icon' => 'shield-check',
+                'icon_type' => 'svg',
+                'permission' => 'roles.view',
+                'badge' => 0,
+                'badge_color' => 'emerald',
+                'is_route_valid' => $this->validateRoute('admin.roles.index'),
+                'sub_items' => [
+                    [
+                        'title' => 'All Roles',
+                        'route' => 'admin.roles.index',
+                        'icon' => 'list',
+                        'icon_type' => 'svg',
+                        'permission' => 'roles.view',
+                        'is_route_valid' => $this->validateRoute('admin.roles.index')
+                    ],
+                    [
+                        'title' => 'Create Role',
+                        'route' => 'admin.roles.create',
+                        'icon' => 'plus',
+                        'icon_type' => 'svg',
+                        'permission' => 'roles.create',
+                        'is_route_valid' => $this->validateRoute('admin.roles.create')
+                    ],
+                    [
+                        'title' => 'Permissions',
+                        'route' => 'admin.permissions.index',
+                        'icon' => 'key',
+                        'icon_type' => 'svg',
+                        'permission' => 'permissions.view',
+                        'is_route_valid' => $this->validateRoute('admin.permissions.index')
+                    ]
+                ]
             ];
         }
 
@@ -805,10 +914,10 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Staff Management (Admin level and above)
+        // User Management (Admin level and above)
         if ($this->hasPermission($admin, 'users.view') && !$this->isStaffLevel($admin)) {
             $menuItems[] = [
-                'title' => 'Staff',
+                'title' => 'User Management',
                 'route' => 'admin.users.index',
                 'route_params' => [],
                 'icon' => 'users',
@@ -1085,12 +1194,28 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute('admin.menus.index')
             ],
             [
+                'title' => 'Create Menu',
+                'route' => 'admin.menus.create',
+                'icon' => 'plus',
+                'icon_type' => 'svg',
+                'permission' => 'menus.create',
+                'is_route_valid' => $this->validateRoute('admin.menus.create')
+            ],
+            [
                 'title' => 'Menu Items',
-                'route' => 'admin.menu-items.index',
+                'route' => 'admin.inventory.items.index',
                 'icon' => 'utensils',
                 'icon_type' => 'svg',
                 'permission' => 'menus.view',
-                'is_route_valid' => $this->validateRoute('admin.menu-items.index')
+                'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
+            ],
+            [
+                'title' => 'Create Items for Menu',
+                'route' => 'admin.inventory.items.create',
+                'icon' => 'plus-circle',
+                'icon_type' => 'svg',
+                'permission' => 'menus.create',
+                'is_route_valid' => $this->validateRoute('admin.inventory.items.create')
             ],
             [
                 'title' => 'Categories',
