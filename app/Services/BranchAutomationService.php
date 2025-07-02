@@ -10,6 +10,7 @@ use App\Models\InventoryItem;
 use App\Models\ItemMaster;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class BranchAutomationService
@@ -33,10 +34,14 @@ class BranchAutomationService
             $this->assignBranchPermissions($branchAdmin, $branch);
 
             // 5. Log branch creation
-            activity()
-                ->causedBy($branchAdmin)
-                ->performedOn($branch)
-                ->log('Branch created with automation');
+            try {
+                activity()
+                    ->causedBy($branchAdmin)
+                    ->performedOn($branch)
+                    ->log('Branch created with automation');
+            } catch (\Exception $e) {
+                // Activity logging not available - skip silently
+            }
         });
     }
 
@@ -56,7 +61,7 @@ class BranchAutomationService
             'email' => $adminEmail,
             'password' => Hash::make($password),
             'phone' => $branch->contact_person_phone ?? $branch->phone,
-            'designation' => 'Branch Manager',
+            'job_title' => 'Branch Manager',
             'is_active' => true,
         ];
 
@@ -79,7 +84,10 @@ class BranchAutomationService
      */
     protected function createCustomizedKitchenStations(Branch $branch): void
     {
+        Log::info("Creating kitchen stations for branch: {$branch->name} (ID: {$branch->id}, Type: {$branch->type})");
+        
         $stationTemplates = $this->getStationTemplatesByBranchType($branch->type);
+        Log::info("Found " . count($stationTemplates) . " station templates for type: {$branch->type}");
 
         foreach ($stationTemplates as $index => $template) {
             $stationData = [
@@ -88,26 +96,41 @@ class BranchAutomationService
                 'name' => $template['name'],
                 'code' => $this->generateStationCode($template['code_prefix'], $branch->id, $index + 1),
                 'type' => $template['type'],
+                'station_type' => 'standard',
                 'description' => $template['description'],
                 'order_priority' => $template['priority'],
+                'priority_level' => $template['priority'],
                 'max_capacity' => $template['capacity'],
+                'max_concurrent_orders' => 5,
+                'current_orders' => 0,
                 'is_active' => true,
-                'ui_metadata' => [
+                'ui_metadata' => json_encode([
                     'icon' => $template['icon'],
                     'color_scheme' => $template['color'],
                     'dashboard_priority' => $template['priority'],
                     'card_category' => $template['category']
-                ],
-                'printer_config' => [
+                ]),
+                'printer_config' => json_encode([
                     'paper_size' => '80mm',
                     'auto_print' => false,
                     'print_logo' => true,
                     'print_timestamp' => true
-                ]
+                ])
             ];
 
-            KitchenStation::create($stationData);
+            Log::info("Creating kitchen station with data: " . json_encode($stationData));
+            
+            try {
+                $station = KitchenStation::create($stationData);
+                Log::info("Successfully created kitchen station: {$station->name} (ID: {$station->id})");
+            } catch (\Exception $e) {
+                Log::error("Failed to create kitchen station: " . $e->getMessage());
+                Log::error("Station data: " . json_encode($stationData));
+            }
         }
+        
+        $stationCount = KitchenStation::where('branch_id', $branch->id)->count();
+        Log::info("Total kitchen stations for branch {$branch->id}: {$stationCount}");
     }
 
     /**
