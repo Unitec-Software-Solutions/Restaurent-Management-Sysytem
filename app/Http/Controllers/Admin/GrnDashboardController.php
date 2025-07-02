@@ -683,14 +683,7 @@ class GrnDashboardController extends Controller
 
     public function print(GrnMaster $grn)
     {
-        $user = Auth::guard('admin')->user();
-
-        if (!$user) {
-            return redirect()->route('admin.login')->with('error', 'Please log in to print GRNs.');
-        }
-
         $orgId = $this->getOrganizationId();
-
         if (!$this->canAccessOrganization($grn->organization_id, $orgId)) {
             abort(403);
         }
@@ -706,16 +699,12 @@ class GrnDashboardController extends Controller
             'createdByUser'
         ]);
 
-        // For super admin, use the GRN's organization; for others, use user's organization
-        $organizationForPrint = $user->is_super_admin ?
-            Organization::find($grn->organization_id) :
-            Organization::find($orgId);
-
+        $organization = Organization::find($orgId);
         $printedDate = now()->format('M d, Y h:i A');
 
         return view('admin.suppliers.grn.print', compact(
             'grn',
-            'organizationForPrint',
+            'organization',
             'printedDate'
         ));
     }
