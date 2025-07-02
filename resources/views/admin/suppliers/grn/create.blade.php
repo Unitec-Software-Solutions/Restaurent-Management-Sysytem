@@ -160,7 +160,17 @@
                 <!-- Items Table -->
                 <div class="mb-8">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-800">GRN Items</h3>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">GRN Items</h3>
+                            <p class="text-sm text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Available categories:
+                                @php
+                                    $allowedCategories = ['Buy & sell', 'Ingredients']; // Keep in sync with controller
+                                    echo implode(', ', $allowedCategories);
+                                @endphp
+                            </p>
+                        </div>
                         <button type="button" id="addItemBtn"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-plus mr-2"></i> Add Item
@@ -235,8 +245,10 @@
                                                     @foreach ($items as $itemOption)
                                                         <option value="{{ $itemOption->id }}"
                                                             {{ $item['item_id'] == $itemOption->id ? 'selected' : '' }}
-                                                            data-price="{{ $itemOption->buying_price }}">
+                                                            data-price="{{ $itemOption->buying_price }}"
+                                                            data-category="{{ $itemOption->category->name ?? 'N/A' }}">
                                                             {{ $itemOption->item_code }} - {{ $itemOption->name }}
+                                                            ({{ $itemOption->category->name ?? 'N/A' }})
                                                         </option>
                                                     @endforeach
                                                 </select>
@@ -434,7 +446,10 @@
             let itemsData = {
                 @foreach ($items as $item)
                     "{{ $item->id }}": {
-                        buying_price: {{ $item->buying_price }}
+                        buying_price: {{ $item->buying_price }},
+                        category: "{{ $item->category->name ?? 'N/A' }}",
+                        item_code: "{{ $item->item_code }}",
+                        name: "{{ $item->name }}"
                     },
                 @endforeach
             };
@@ -468,7 +483,7 @@
                                 // Fetch suppliers
                                 const suppliersResponse = await fetch(
                                     `/admin/api/grn/suppliers-by-organization?organization_id=${selectedOrgId}`
-                                    );
+                                );
                                 if (suppliersResponse.ok) {
                                     const suppliersData = await suppliersResponse.json();
                                     suppliersData.suppliers.forEach(supplier => {
@@ -483,7 +498,7 @@
                                 // Fetch branches
                                 const branchesResponse = await fetch(
                                     `/admin/api/grn/branches-by-organization?organization_id=${selectedOrgId}`
-                                    );
+                                );
                                 if (branchesResponse.ok) {
                                     const branchesData = await branchesResponse.json();
                                     branchesData.branches.forEach(branch => {
@@ -497,13 +512,16 @@
                                 // Fetch items and update itemsData
                                 const itemsResponse = await fetch(
                                     `/admin/api/grn/items-by-organization?organization_id=${selectedOrgId}`
-                                    );
+                                );
                                 if (itemsResponse.ok) {
                                     const itemsResponseData = await itemsResponse.json();
                                     itemsData = {};
                                     itemsResponseData.items.forEach(item => {
                                         itemsData[item.id] = {
-                                            buying_price: item.buying_price
+                                            buying_price: item.buying_price,
+                                            category: item.category || 'N/A',
+                                            item_code: item.item_code,
+                                            name: item.name
                                         };
                                     });
 
@@ -515,8 +533,10 @@
                                             option.value = item.id;
                                             option.setAttribute('data-price', item
                                                 .buying_price);
+                                            option.setAttribute('data-category', item
+                                                .category || 'N/A');
                                             option.textContent =
-                                                `${item.item_code} - ${item.name}`;
+                                                `${item.item_code} - ${item.name} (${item.category || 'N/A'})`;
                                             select.appendChild(option);
                                         });
                                     });
