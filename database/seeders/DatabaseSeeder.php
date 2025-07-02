@@ -104,6 +104,11 @@ class DatabaseSeeder extends Seeder
             // === COMPREHENSIVE TEST SCENARIOS ===
             ProductionScenarioSeeder::class,
             ReportingScenarioSeeder::class,
+            
+            // === AUTOMATED COMPREHENSIVE TEST DATA ===
+            // Note: ComprehensiveTestSeeder includes all advanced automation seeders
+            // Uncomment the line below to run the full comprehensive test suite
+            // ComprehensiveTestSeeder::class,
         ]);
     }
 }
