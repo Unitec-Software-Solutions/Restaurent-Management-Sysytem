@@ -17,15 +17,10 @@ class ItemMaster extends Model
 {
     use SoftDeletes, HasFactory;
 
-    /**
-     * The table associated with the model for Laravel + PostgreSQL + Tailwind CSS
-     * Using singular name to match existing migration
-     */
-    protected $table = 'item_masters'; // Changed to singular to match your existing migration
+
+    protected $table = 'item_masters'; 
     
-    /**
-     * The attributes that are mass assignable for Laravel + PostgreSQL + Tailwind CSS
-     */
+
     protected $fillable = [
         'name',
         'unicode_name',
@@ -69,9 +64,7 @@ class ItemMaster extends Model
         'updated_by'
     ];
 
-    /**
-     * The attributes that should be cast for PostgreSQL JSON handling
-     */
+
     protected $casts = [
         'supplier_ids' => 'array',
         'attributes' => 'array',
@@ -92,9 +85,6 @@ class ItemMaster extends Model
         'shelf_life_in_days' => 'integer'
     ];
 
-    /**
-     * Laravel + PostgreSQL + Tailwind CSS relationships
-     */
     public function organization()
     {
         return $this->belongsTo(Organization::class);
@@ -115,9 +105,6 @@ class ItemMaster extends Model
         return $this->belongsTo(Supplier::class, 'primary_supplier_id');
     }
 
-    /**
-     * Define the transactions relationship - matches the foreign key in item_transactions
-     */
     public function transactions()
     {
         return $this->hasMany(ItemTransaction::class, 'inventory_item_id');
@@ -128,9 +115,7 @@ class ItemMaster extends Model
         return $this->hasMany(MenuItem::class, 'item_masters_id');
     }
 
-    /**
-     * Scopes for PostgreSQL queries optimized for Tailwind CSS filtering
-     */
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -156,24 +141,18 @@ class ItemMaster extends Model
         return $query->where('is_perishable', true);
     }
 
-    /**
-     * Boot method for model events
-     */
     protected static function boot()
     {
         parent::boot();
 
         static::creating(function ($itemMaster) {
-            // Generate item code if not provided
+            
             if (empty($itemMaster->item_code)) {
                 $itemMaster->item_code = static::generateItemCode($itemMaster);
             }
         });
     }
 
-    /**
-     * Generate unique item code for PostgreSQL
-     */
     private static function generateItemCode($itemMaster)
     {
         $prefix = strtoupper(substr($itemMaster->category ?? 'ITM', 0, 3));
@@ -191,25 +170,18 @@ class ItemMaster extends Model
         return $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Check if item is low stock
-     */
+
     public function isLowStock()
     {
         return $this->current_stock <= $this->minimum_stock;
     }
 
-    /**
-     * Check if item needs reorder
-     */
+
     public function needsReorder()
     {
         return $this->current_stock <= $this->reorder_level;
     }
 
-    /**
-     * Get stock status for Tailwind CSS styling
-     */
     public function getStockStatusAttribute()
     {
         if ($this->current_stock <= 0) {
@@ -223,9 +195,6 @@ class ItemMaster extends Model
         }
     }
 
-    /**
-     * Get stock status color for Tailwind CSS
-     */
     public function getStockColorAttribute()
     {
         return match($this->stock_status) {
