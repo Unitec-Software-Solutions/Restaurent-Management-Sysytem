@@ -12,62 +12,98 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            AuditLogSeeder::class,
+            // === FOUNDATION SEEDERS (Core system setup) ===
+            SystemSettingSeeder::class,
+            PermissionSeeder::class,
+            RoleSeeder::class,
+            ModuleSeeder::class,
+            
+            // === ORGANIZATION STRUCTURE ===
+            OrganizationSeeder::class,
+            BranchSeeder::class,
+            
+            // === USER MANAGEMENT ===
+            UserSeeder::class,
+            AdminSeeder::class,
             EmployeeSeeder::class,
-            GrnItemSeeder::class,
-            InventoryItemSeeder::class,
+            StaffSeeder::class,
+            CustomRoleSeeder::class,
+            
+            // === INVENTORY & ITEMS ===
+            ItemCategorySeeder::class,
             ItemMasterSeeder::class,
-            KitchenStationSeeder::class,
-            KotItemSeeder::class,
+            InventoryItemSeeder::class,
+            SupplierSeeder::class,
+            
+            // === MENU MANAGEMENT ===
+            MenuCategorySeeder::class,
             MenuSeeder::class,
             MenuItemSeeder::class,
-            NotificationProviderSeeder::class,
+            
+            // === KITCHEN & PRODUCTION ===
+            KitchenStationSeeder::class,
+            RecipeSeeder::class,
+            ProductionRecipeSeeder::class,
+            ProductionRecipeDetailSeeder::class,
+            
+            // === CUSTOMER & RESERVATIONS ===
+            CustomerSeeder::class,
+            TableSeeder::class,
+            ReservationSeeder::class,
+            
+            // === ORDERS & PAYMENTS ===
             OrderSeeder::class,
+            OrderItemSeeder::class,
             OrderStatusStateMachineSeeder::class,
+            KotSeeder::class,
+            KotItemSeeder::class,
             PaymentSeeder::class,
             PaymentAllocationSeeder::class,
-            ProductionOrderSeeder::class,
-            ProductionOrderIngredientSeeder::class,
-            ProductionRecipeSeeder::class,
-            ProductionRequestItemSeeder::class,
-            ProductionSessionSeeder::class,
-            RecipeSeeder::class,
-            ReservationCancellationMailSeeder::class,
-            ShiftSeeder::class,
-            StockReservationSeeder::class,
-            SubscriptionPlanSeeder::class,
-            SupplierPaymentDetailSeeder::class,
-            UserSeeder::class,
-            TableSeeder::class,
-            SupplierPaymentMasterSeeder::class,
-            SupplierSeeder::class,
-            SubscriptionSeeder::class,
-            StaffSeeder::class,
-            ShiftAssignmentSeeder::class,
-            RoleSeeder::class,
-            RestaurantConfigSeeder::class,
-            ReservationSeeder::class,
-            PurchaseOrderItemSeeder::class,
+            BillSeeder::class,
+            
+            // === PURCHASING & INVENTORY TRANSACTIONS ===
             PurchaseOrderSeeder::class,
-            ProductionRequestMasterSeeder::class,
-            ProductionRecipeDetailSeeder::class,
-            ProductionOrderItemSeeder::class,
-            PermissionSeeder::class,
-            OrderItemSeeder::class,
-            OrganizationSeeder::class,
-            ModuleSeeder::class,
-            MenuCategorySeeder::class,
-            KotSeeder::class,
+            PurchaseOrderItemSeeder::class,
             GrnMasterSeeder::class,
+            GrnItemSeeder::class,
             ItemTransactionSeeder::class,
-            ItemCategorySeeder::class,
+            StockReservationSeeder::class,
+            
+            // === PRODUCTION MANAGEMENT ===
+            ProductionRequestMasterSeeder::class,
+            ProductionRequestItemSeeder::class,
+            ProductionOrderSeeder::class,
+            ProductionOrderItemSeeder::class,
+            ProductionOrderIngredientSeeder::class,
+            ProductionSessionSeeder::class,
+            
+            // === GOODS TRANSFER ===
             GoodsTransferNoteSeeder::class,
             GoodsTransferItemSeeder::class,
-            CustomRoleSeeder::class,
-            CustomerSeeder::class,
-            BranchSeeder::class,
-            BillSeeder::class,
-            AdminSeeder::class,
+            
+            // === SUPPLIER PAYMENTS ===
+            SupplierPaymentMasterSeeder::class,
+            SupplierPaymentDetailSeeder::class,
+            
+            // === STAFF MANAGEMENT ===
+            ShiftSeeder::class,
+            ShiftAssignmentSeeder::class,
+            
+            // === SUBSCRIPTION & BILLING ===
+            SubscriptionPlanSeeder::class,
+            SubscriptionSeeder::class,
+            
+            // === SYSTEM CONFIGURATIONS ===
+            RestaurantConfigSeeder::class,
+            NotificationProviderSeeder::class,
+            ReservationCancellationMailSeeder::class,
+            
+            // === AUDIT & LOGGING ===
+            AuditLogSeeder::class,
+            
+            // === COMPREHENSIVE TEST SCENARIOS ===
+            ProductionScenarioSeeder::class,
+            ReportingScenarioSeeder::class,
         ]);
     }
 }
