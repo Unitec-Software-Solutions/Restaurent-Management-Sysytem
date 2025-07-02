@@ -17,3 +17,22 @@
 - **organization admin:** has an org id, doesn't have a branch id  
 - **branch admin:** has an org id, has a branch id
 
+    ## Errors
+
+    Use `resources/views/errors/generic.blade.php` with customizables such as:
+
+    - `@extends('errors.generic')`
+
+    Examples of customizable variables:
+    - `errorTitle`: 'Page Not Found'
+    - `errorCode`: '404'
+    - `errorHeading`: 'Page Not Found'
+    - `errorMessage`: 'The page you are looking for could not be found.'
+    - `headerClass`: 'bg-gradient-warning'
+    - `errorIcon`: 'fas fa-map-marker-alt'
+    - `mainIcon`: 'fas fa-map-marker-alt'
+    - `iconBgClass`: 'bg-yellow-100'
+    - `iconColor`: 'text-yellow-500'
+    - `buttonClass`: 'bg-[#FF9800] hover:bg-[#e68a00]'
+
+    Use these for showing error pages or redirects if needed.
