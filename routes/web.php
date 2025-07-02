@@ -264,17 +264,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
 
-                // Show individual transaction
-                Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->name('show');
-                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->name('destroy');
-
-                // Edit and Update for specific item+branch combination
-                Route::get('/edit/{item_id}/{branch_id}', [ItemTransactionController::class, 'edit'])->name('edit');
-                Route::put('/update/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->name('update');
-
+                // Transactions routes (must come before {transaction} routes to avoid conflicts)
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
+
+                // Edit and Update for specific item+branch combination
+                Route::get('/edit/{item_id}/{branch_id}', [ItemTransactionController::class, 'edit'])->where(['item_id' => '[0-9]+', 'branch_id' => '[0-9]+'])->name('edit');
+                Route::put('/update/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->where(['item_id' => '[0-9]+', 'branch_id' => '[0-9]+'])->name('update');
+
+                // Show individual transaction (must come after specific routes to avoid conflicts)
+                Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->where('transaction', '[0-9]+')->name('show');
+                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->where('transaction', '[0-9]+')->name('destroy');
             });
 
             // API endpoints for inventory stock
