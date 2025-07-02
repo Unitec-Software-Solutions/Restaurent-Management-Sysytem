@@ -251,9 +251,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [ItemMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
                 Route::post('/', [ItemMasterController::class, 'store'])->name('store');
-                Route::get('/{item}', [ItemMasterController::class, 'show'])->whereNumber('item')->name('show');
-                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->whereNumber('item')->name('edit');
-                Route::put('/{item}', [ItemMasterController::class, 'update'])->whereNumber('item')->name('update');
+                Route::get('/added-items', [ItemMasterController::class, 'added'])->name('added-items');
+                Route::get('/create-template/{index}', [ItemMasterController::class, 'getItemFormPartial'])->name('create-template');
+                Route::get('/{item}', [ItemMasterController::class, 'show'])->name('show');
+                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->whereNumber('item')->name('destroy');
             });
 
@@ -351,7 +353,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
             Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
             Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
-            // AJAX routes for pending GRNs and POs
         });
 
         // Purchase Orders
@@ -443,8 +444,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 });
 
+// Add this route in the admin middleware group
+Route::middleware(['auth:admin'])->group(function () {
+    // API routes for super admin organization selection
+    Route::get('/admin/api/organizations/{organization}/categories', [
+        \App\Http\Controllers\Admin\ItemCategoryController::class,
+        'getByOrganization'
+    ])->name('admin.api.organizations.categories');
+});
 
-// Super Admin Routes
+/* Super Admin Routes */
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     // Organizations CRUD
     Route::resource('organizations', OrganizationController::class)->except(['show']);
