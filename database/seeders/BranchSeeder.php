@@ -23,15 +23,11 @@ class BranchSeeder extends Seeder
             'email' => 'main@testrestaurant.com',
             'manager_name' => 'John Manager',
             'is_active' => true,
-            'opening_hours' => json_encode([
-                'monday' => ['open' => '09:00', 'close' => '22:00'],
-                'tuesday' => ['open' => '09:00', 'close' => '22:00'],
-                'wednesday' => ['open' => '09:00', 'close' => '22:00'],
-                'thursday' => ['open' => '09:00', 'close' => '22:00'],
-                'friday' => ['open' => '09:00', 'close' => '23:00'],
-                'saturday' => ['open' => '09:00', 'close' => '23:00'],
-                'sunday' => ['open' => '10:00', 'close' => '21:00'],
-            ]),
+            'opening_time' => '09:00:00',
+            'closing_time' => '22:00:00',
+            'total_capacity' => 80,
+            'reservation_fee' => 5.00,
+            'cancellation_fee' => 2.50,
         ]);
 
         // Second branch for first organization
@@ -44,15 +40,11 @@ class BranchSeeder extends Seeder
             'email' => 'downtown@testrestaurant.com',
             'manager_name' => 'Sarah Manager',
             'is_active' => true,
-            'opening_hours' => json_encode([
-                'monday' => ['open' => '08:00', 'close' => '21:00'],
-                'tuesday' => ['open' => '08:00', 'close' => '21:00'],
-                'wednesday' => ['open' => '08:00', 'close' => '21:00'],
-                'thursday' => ['open' => '08:00', 'close' => '21:00'],
-                'friday' => ['open' => '08:00', 'close' => '22:00'],
-                'saturday' => ['open' => '08:00', 'close' => '22:00'],
-                'sunday' => ['open' => '09:00', 'close' => '20:00'],
-            ]),
+            'opening_time' => '08:00:00',
+            'closing_time' => '21:00:00',
+            'total_capacity' => 60,
+            'reservation_fee' => 5.00,
+            'cancellation_fee' => 2.50,
         ]);
 
         // Branch for second organization
@@ -65,15 +57,11 @@ class BranchSeeder extends Seeder
             'email' => 'main@demorestaurant.com',
             'manager_name' => 'Mike Demo',
             'is_active' => true,
-            'opening_hours' => json_encode([
-                'monday' => ['open' => '08:00', 'close' => '20:00'],
-                'tuesday' => ['open' => '08:00', 'close' => '20:00'],
-                'wednesday' => ['open' => '08:00', 'close' => '20:00'],
-                'thursday' => ['open' => '08:00', 'close' => '20:00'],
-                'friday' => ['open' => '08:00', 'close' => '21:00'],
-                'saturday' => ['open' => '08:00', 'close' => '21:00'],
-                'sunday' => ['closed' => true],
-            ]),
+            'opening_time' => '08:00:00',
+            'closing_time' => '20:00:00',
+            'total_capacity' => 40,
+            'reservation_fee' => 3.00,
+            'cancellation_fee' => 1.50,
         ]);
     }
 }
