@@ -37,7 +37,6 @@ class DatabaseSeeder extends Seeder
             StockReservationSeeder::class,
             SubscriptionPlanSeeder::class,
             SupplierPaymentDetailSeeder::class,
-            SystemSettingSeeder::class,
             UserSeeder::class,
             TableSeeder::class,
             SupplierPaymentMasterSeeder::class,
