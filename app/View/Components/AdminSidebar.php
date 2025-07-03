@@ -672,12 +672,12 @@ class AdminSidebar extends Component
                         'is_route_valid' => $this->validateRoute('admin.organizations.create')
                     ],
                     [
-                        'title' => 'Activate Organization',
-                        'route' => 'admin.organizations.activate.form',
+                        'title' => 'Organization Activation',
+                        'route' => 'admin.organizations.activation.index',
                         'icon' => 'key',
                         'icon_type' => 'svg',
                         'permission' => null,
-                        'is_route_valid' => $this->validateRoute('admin.organizations.activate.form')
+                        'is_route_valid' => $this->validateRoute('admin.organizations.activation.index')
                     ]
                 ]
             ];
@@ -722,6 +722,15 @@ class AdminSidebar extends Component
                         'icon_type' => 'svg',
                         'permission' => 'organization.settings',
                         'is_route_valid' => $this->validateRoute('admin.organization.settings')
+                    ],
+                    [
+                        'title' => 'Organization Activation',
+                        'route' => 'admin.organizations.activation.index',
+                        'route_params' => [],
+                        'icon' => 'key',
+                        'icon_type' => 'svg',
+                        'permission' => null, // All organization admins should be able to activate
+                        'is_route_valid' => $this->validateRoute('admin.organizations.activation.index')
                     ]
                 ]
             ];

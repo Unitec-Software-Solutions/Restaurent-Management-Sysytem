@@ -165,6 +165,13 @@ class PermissionModuleSubscriptionSeeder extends Seeder
         $systemPermissions = [
             'system.manage' => 'Full system administration',
             'organizations.manage' => 'Manage organizations',
+            'organizations.create' => 'Create organizations',
+            'organizations.view' => 'View organizations',
+            'organizations.edit' => 'Edit organizations',
+            'organizations.delete' => 'Delete organizations',
+            'organizations.activate' => 'Activate/Deactivate organizations',
+            'organizations.view_activation_key' => 'View organization activation keys',
+            'organizations.regenerate_key' => 'Regenerate organization activation keys',
             'subscriptions.manage' => 'Manage subscription plans',
             'system.reports' => 'View system-wide reports'
         ];

@@ -436,6 +436,13 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
     Route::resource('subscription-plans', SubscriptionPlanController::class);
 });
 
+// Organization Activation Routes - Accessible by both Super Admin and Organization Admin
+Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // General organization activation index (shows organizations based on user role)
+    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
+    Route::post('organizations/{organization}/activate-by-key', [OrganizationController::class, 'activateByKey'])->name('organizations.activate.by-key');
+});
+
 // Branch summary and regenerate key
 Route::middleware(['auth:admin'])->group(function () {
     Route::get('branches/{branch}/summary', [BranchController::class, 'summary'])->name('branches.summary');

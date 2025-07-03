@@ -58,7 +58,7 @@ class OrganizationController extends Controller
         DB::beginTransaction();
         
         try {
-            // Create organization
+            // Create organization - DEFAULT to INACTIVE
             $organization = Organization::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -66,7 +66,7 @@ class OrganizationController extends Controller
                 'address' => $request->address,
                 'subscription_plan_id' => $request->subscription_plan_id,
                 'activation_key' => Str::random(40),
-                'is_active' => true,
+                'is_active' => false, // Organizations must be activated by super admin
             ]);
 
             // Create admin user
@@ -299,26 +299,36 @@ class OrganizationController extends Controller
     }
 
     /**
-     * Regenerate API key
+     * Regenerate activation key
      */
     public function regenerateKey(Organization $organization)
     {
-        $oldKey = $organization->api_key;
-        $newKey = Str::random(32);
+        $admin = Auth::guard('admin')->user();
+        
+        // Only super admins can regenerate activation keys
+        if (!$admin || !$admin->isSuperAdmin()) {
+            return redirect()->back()
+                ->with('error', 'You do not have permission to regenerate activation keys.');
+        }
+
+        $oldKey = $organization->activation_key;
+        $newKey = Str::uuid();
         
         $organization->update([
-            'api_key' => $newKey
+            'activation_key' => $newKey
         ]);
 
-        Log::info('Organization API key regenerated', [
+        Log::info('Organization activation key regenerated', [
             'organization_id' => $organization->id,
+            'organization_name' => $organization->name,
             'old_key_preview' => substr($oldKey, 0, 8) . '...',
             'new_key_preview' => substr($newKey, 0, 8) . '...',
-            'regenerated_by' => Auth::id()
+            'regenerated_by' => $admin->id,
+            'regenerated_by_name' => $admin->name
         ]);
 
         return redirect()->back()
-            ->with('success', 'API key regenerated successfully.');
+            ->with('success', 'Activation key regenerated successfully.');
     }
 
     /**
@@ -363,6 +373,107 @@ class OrganizationController extends Controller
 
         return redirect()->route('admin.dashboard')
             ->with('success', 'Organization activated successfully.');
+    }
+
+    /**
+     * Show organization activation index - different view based on user role
+     */
+    public function activationIndex()
+    {
+        $admin = Auth::guard('admin')->user();
+        
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        if ($admin->isSuperAdmin()) {
+            // Super admin can see all organizations
+            $organizations = Organization::with(['branches', 'users', 'subscriptionPlan'])
+                ->orderBy('is_active', 'asc') // Show inactive first
+                ->orderBy('name', 'asc')
+                ->get();
+        } else {
+            // Organization admin can only see their own organization
+            if (!$admin->organization_id) {
+                abort(403, 'No organization assigned to this admin');
+            }
+            
+            $organizations = Organization::with(['branches', 'users', 'subscriptionPlan'])
+                ->where('id', $admin->organization_id)
+                ->get();
+        }
+
+        return view('admin.organizations.activation.index', compact('organizations'));
+    }
+
+    /**
+     * Activate organization by providing activation key
+     */
+    public function activateByKey(Request $request, Organization $organization)
+    {
+        $admin = Auth::guard('admin')->user();
+        
+        if (!$admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Check permissions: Super admin can activate any org, org admin can only activate their own
+        if (!$admin->isSuperAdmin() && $admin->organization_id !== $organization->id) {
+            abort(403, 'You can only activate your own organization');
+        }
+
+        $request->validate([
+            'activation_key' => 'required|string',
+        ]);
+
+        // Verify activation key
+        if ($request->activation_key !== $organization->activation_key) {
+            return redirect()->back()
+                ->with('error', 'Invalid activation key provided.');
+        }
+
+        // Check if already active
+        if ($organization->is_active) {
+            return redirect()->back()
+                ->with('info', 'Organization is already active.');
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            // Activate organization
+            $organization->update([
+                'is_active' => true,
+                'activated_at' => now(),
+            ]);
+
+            // Log the activation
+            Log::info('Organization activated by admin', [
+                'organization_id' => $organization->id,
+                'organization_name' => $organization->name,
+                'activated_by' => $admin->id,
+                'admin_name' => $admin->name,
+                'admin_type' => $admin->isSuperAdmin() ? 'super_admin' : 'organization_admin',
+                'activated_at' => now(),
+            ]);
+
+            DB::commit();
+            
+            return redirect()->route('admin.organizations.activation.index')
+                ->with('success', "Organization '{$organization->name}' activated successfully!");
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            Log::error('Failed to activate organization', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage(),
+                'admin_id' => $admin->id,
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Failed to activate organization: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -488,6 +599,22 @@ class OrganizationController extends Controller
      */
     public function activate(Request $request, Organization $organization)
     {
+        // Check permissions based on action
+        if ($request->action === 'deactivate') {
+            // Only super admins can deactivate organizations
+            if (!Auth::guard('admin')->user()->isSuperAdmin()) {
+                return redirect()->back()
+                    ->with('error', 'You do not have permission to deactivate organizations.');
+            }
+        } else {
+            // For activation, both super admins and organization admins can activate
+            if (!Auth::guard('admin')->user()->isSuperAdmin() && 
+                !Auth::guard('admin')->user()->canManageOrganization($organization)) {
+                return redirect()->back()
+                    ->with('error', 'You do not have permission to activate this organization.');
+            }
+        }
+
         $request->validate([
             'action' => 'required|in:activate,deactivate',
             'activation_key' => 'required_if:action,activate|string',
