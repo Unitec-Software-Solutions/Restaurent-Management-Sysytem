@@ -384,8 +384,8 @@ class GoodsTransferNote extends Model
                 'transaction_type' => self::TRANSACTION_TYPE_GTN_OUTGOING,
                 'quantity' => -abs($item->transfer_quantity), // Negative for stock deduction
                 'cost_price' => $item->transfer_price,
-                'source_id' => $this->gtn_id,
-                'source_type' => 'GTN',
+                'reference_id' => $this->gtn_id,
+                'reference_type' => 'GTN',
                 'gtn_id' => $this->gtn_id,
                 'created_by_user_id' => $userId,
                 'notes' => "Stock deducted for GTN: {$this->gtn_number}",
@@ -406,8 +406,8 @@ class GoodsTransferNote extends Model
                     'quantity' => $item->quantity_accepted, // Positive for stock addition
                     'received_quantity' => $item->quantity_accepted,
                     'cost_price' => $item->transfer_price,
-                    'source_id' => $this->gtn_id,
-                    'source_type' => 'GTN',
+                    'reference_id' => $this->gtn_id,
+                    'reference_type' => 'GTN',
                     'gtn_id' => $this->gtn_id,
                     'created_by_user_id' => $userId,
                     'verified_by' => $userId,
@@ -430,8 +430,8 @@ class GoodsTransferNote extends Model
                     'quantity' => $item->quantity_rejected, // Positive for stock return
                     'damaged_quantity' => 0,
                     'cost_price' => $item->transfer_price,
-                    'source_id' => $this->gtn_id,
-                    'source_type' => 'GTN',
+                    'reference_id' => $this->gtn_id,
+                    'reference_type' => 'GTN',
                     'gtn_id' => $this->gtn_id,
                     'created_by_user_id' => $userId,
                     'notes' => "Stock returned due to rejection - GTN: {$this->gtn_number}. Reason: {$item->item_rejection_reason}",
