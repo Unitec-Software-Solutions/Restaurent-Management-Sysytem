@@ -686,8 +686,7 @@
                                         name="acceptance_data[{{ $item->gtn_item_id }}][quantity_accepted]"
                                         value="{{ $item->transfer_quantity }}" max="{{ $item->transfer_quantity }}"
                                         min="0" step="0.01"
-                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                                        readonly disabled>
+                                        class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500">
                                 </div>
                                 {{-- <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Rejection Reason</label>
