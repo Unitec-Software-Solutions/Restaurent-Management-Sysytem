@@ -13,7 +13,7 @@
                     :text="$transaction->is_active ? 'Active' : 'Inactive'"
                 /> --}}
                     <span class="text-sm text-gray-500">
-                        {{ $transaction->created_at->format('M d, Y H:i') }}
+                        {{ $transaction->created_at ? $transaction->created_at->format('M d, Y H:i') : 'Not set' }}
                     </span>
                 </div>
             </div>
@@ -83,11 +83,11 @@
                     </h3>
 
                     <x-partials.detail-item label="Cost Price">
-                        Rs. {{ number_format($transaction->cost_price, 4) }}
+                        Rs. {{ number_format($transaction->cost_price ?? 0, 4) }}
                     </x-partials.detail-item>
 
                     <x-partials.detail-item label="Unit Price">
-                        Rs. {{ number_format($transaction->unit_price, 4) }}
+                        Rs. {{ number_format($transaction->unit_price ?? 0, 4) }}
                     </x-partials.detail-item>
                 </div>
 
@@ -100,29 +100,29 @@
 
                     <x-partials.detail-item label="Initial Quantity">
                         @php
-                            $qty = $transaction->quantity;
+                            $qty = $transaction->quantity ?? 0;
                             $sign = $qty > 0 ? '+' : ($qty < 0 ? '-' : '');
                         @endphp
                         {{ $sign }}{{ number_format(abs($qty), 2) }}
-                        {{ $transaction->item->unit_of_measurement }}
+                        {{ optional($transaction->item)->unit_of_measurement ?? 'units' }}
                     </x-partials.detail-item>
 
                     <x-partials.detail-item label="Received Quantity">
                         @php
-                            $recv = $transaction->received_quantity;
+                            $recv = $transaction->received_quantity ?? 0;
                             $recvSign = $recv > 0 ? '+' : ($recv < 0 ? '-' : '');
                         @endphp
                         {{ $recvSign }}{{ number_format(abs($recv), 2) }}
-                        {{ $transaction->item->unit_of_measurement }}
+                        {{ optional($transaction->item)->unit_of_measurement ?? 'units' }}
                     </x-partials.detail-item>
 
                     <x-partials.detail-item label="Damaged Quantity">
                         @php
-                            $dam = $transaction->damaged_quantity;
+                            $dam = $transaction->damaged_quantity ?? 0;
                             $damSign = $dam > 0 ? '+' : ($dam < 0 ? '-' : '');
                         @endphp
                         {{ $damSign }}{{ number_format(abs($dam), 2) }}
-                        {{ $transaction->item->unit_of_measurement }}
+                        {{ optional($transaction->item)->unit_of_measurement ?? 'units' }}
                     </x-partials.detail-item>
                 </div>
 
@@ -143,9 +143,9 @@
                 </x-partials.detail-item>
 
                 <x-partials.detail-item label="Source">
-                    {{ $transaction->source_type ? class_basename($transaction->source_type) : 'Manual Entry' }}
-                    @if ($transaction->source_id)
-                        <div class="text-sm text-gray-500">ID: {{ $transaction->source_id }}</div>
+                    {{ $transaction->reference_type ? class_basename($transaction->reference_type) : 'Manual Entry' }}
+                    @if ($transaction->reference_id)
+                        <div class="text-sm text-gray-500">ID: {{ $transaction->reference_id }}</div>
                     @endif
                 </x-partials.detail-item>
             </div> --}}

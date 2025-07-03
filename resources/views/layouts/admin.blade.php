@@ -8,6 +8,7 @@
     <meta name="description" content="Restaurant Management System">
 
     <!-- Styles -->
+    {{-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" /> --}}
     <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 
@@ -19,7 +20,7 @@
 
     <!-- Scripts -->
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
-    
+
     <!-- Enhanced Sidebar Assets -->
     @vite(['resources/css/sidebar.css', 'resources/js/sidebar.js'])
     <script>
@@ -93,10 +94,10 @@
 
     <!-- Main Content -->
     <main class="lg:ml-64 transition-all duration-300">
-        
+
         <!-- Mobile Header Spacer -->
         <div class="h-16 lg:hidden"></div>
-        
+
         <!-- Content Container -->
         <div class="p-4 lg:p-6 bg-[#F3F4FF] min-h-screen">
             <!-- Breadcrumbs -->
@@ -127,17 +128,17 @@
         document.addEventListener('alpine:init', () => {
             Alpine.store('sidebar', {
                 collapsed: localStorage.getItem('sidebar_collapsed') === 'true',
-                
+
                 toggle() {
                     this.collapsed = !this.collapsed;
                     localStorage.setItem('sidebar_collapsed', this.collapsed);
                 },
-                
+
                 collapse() {
                     this.collapsed = true;
                     localStorage.setItem('sidebar_collapsed', true);
                 },
-                
+
                 expand() {
                     this.collapsed = false;
                     localStorage.setItem('sidebar_collapsed', false);
@@ -153,6 +154,7 @@
         }
     </script>
     <!-- Scripts -->
+    {{-- <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> --}}
     <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

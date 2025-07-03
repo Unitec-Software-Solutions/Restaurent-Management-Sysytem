@@ -60,7 +60,7 @@ return new class extends Migration
         Schema::table('item_transactions', function (Blueprint $table) {
             // Add GTN reference if not exists
             if (!Schema::hasColumn('item_transactions', 'gtn_id')) {
-                $table->unsignedBigInteger('gtn_id')->nullable()->after('source_type');
+                $table->unsignedBigInteger('gtn_id')->nullable()->after('reference_type');
                 $table->foreign('gtn_id')->references('gtn_id')->on('gtn_master')->onDelete('set null');
             }
 

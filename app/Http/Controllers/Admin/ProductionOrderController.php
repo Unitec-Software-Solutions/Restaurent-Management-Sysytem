@@ -376,8 +376,8 @@ class ProductionOrderController extends Controller
                         'transaction_type' => 'production_issue',
                         'quantity' => -$issuedQuantity, // Negative for outgoing
                         'cost_price' => 0, // Will be calculated based on current stock
-                        'source_id' => $productionOrder->id,
-                        'source_type' => 'ProductionOrder',
+                        'reference_id' => $productionOrder->id,
+                        'reference_type' => 'ProductionOrder',
                         'notes' => 'Issued to production order: ' . $productionOrder->production_order_number,
                         'created_by_user_id' => Auth::id(),
                         'is_active' => true

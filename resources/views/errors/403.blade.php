@@ -1,0 +1,12 @@
+@extends('errors.generic')
+
+@section('errorTitle', 'Forbidden')
+@section('errorCode', '403')
+@section('errorHeading', 'Access Denied')
+@section('errorMessage', 'You don\'t have permission to access this resource.')
+@section('headerClass', 'bg-gradient-secondary')
+@section('errorIcon', 'fas fa-ban')
+@section('mainIcon', 'fas fa-ban')
+@section('iconBgClass', 'bg-gray-100')
+@section('iconColor', 'text-gray-500')
+@section('buttonClass', 'bg-gray-600 hover:bg-gray-700')

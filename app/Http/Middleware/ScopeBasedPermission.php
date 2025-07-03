@@ -185,7 +185,7 @@ class ScopeBasedPermission
             if (!$this->resourceBelongsToBranch($type, $id, $admin->branch_id)) {
                 Log::warning('Branch scope violation', [
                     'admin_id' => $admin->id,
-                    'resource_type' => $type,
+                    'rereference_type' => $type,
                     'resource_id' => $id,
                     'branch_id' => $admin->branch_id
                 ]);

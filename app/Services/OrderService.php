@@ -478,8 +478,8 @@ class OrderService
                 'quantity' => -$item['quantity'], // Negative for outgoing
                 'cost_price' => $menuItem->buying_price ?? 0,
                 'unit_price' => $menuItem->selling_price,
-                'source_id' => $order->id,
-                'source_type' => 'Order',
+                'reference_id' => $order->id,
+                'reference_type' => 'Order',
                 'created_by_user_id' => optional(auth())->id(),
                 'notes' => "Order #{$order->order_number} - {$menuItem->name}",
                 'is_active' => true,
@@ -501,8 +501,8 @@ class OrderService
                 'quantity' => $orderItem->quantity, // Positive to add back
                 'cost_price' => $orderItem->inventoryItem->buying_price ?? 0,
                 'unit_price' => $orderItem->unit_price,
-                'source_id' => $order->id,
-                'source_type' => 'Order',
+                'reference_id' => $order->id,
+                'reference_type' => 'Order',
                 'created_by_user_id' => optional(auth())->id(),
                 'notes' => "Stock reversal for Order #{$order->order_number}",
                 'is_active' => true,

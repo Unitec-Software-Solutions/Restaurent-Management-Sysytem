@@ -24,6 +24,11 @@
             <form action="{{ route('admin.inventory.gtn.store') }}" method="POST" class="p-6" id="gtnForm">
                 @csrf
 
+                @if (isset($organizations) && $organizations->count() > 0)
+                    <!-- Pass organization_id for super admin -->
+                    <input type="hidden" name="organization_id" value="{{ request('organization_id') }}">
+                @endif
+
                 @if ($errors->any())
                     <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
                         <h3 class="font-medium mb-2">Validation Errors</h3>
@@ -32,6 +37,19 @@
                                 <li>{{ $error }}</li>
                             @endforeach
                         </ul>
+                    </div>
+                @endif
+
+                <!-- Organization Info for Super Admin -->
+                @if (Auth::guard('admin')->user()->is_super_admin && isset($organization))
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div class="flex items-center">
+                            <i class="fas fa-building text-blue-600 mr-3"></i>
+                            <div>
+                                <h3 class="text-sm font-medium text-blue-800">Creating GTN for Organization</h3>
+                                <p class="text-sm text-blue-700 mt-1">{{ $organization->name }}</p>
+                            </div>
+                        </div>
                     </div>
                 @endif
 
@@ -392,12 +410,12 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                                                          data-code="${item.item_code}"
-                                                                          data-stock="${item.stock_on_hand}"
-                                                                          data-price="${item.buying_price}"
-                                                                          data-max="${item.max_transfer}">
-                                                                         ${item.item_code} - ${item.name}
-                                                                    </option>`
+                                                                              data-code="${item.item_code}"
+                                                                              data-stock="${item.stock_on_hand}"
+                                                                              data-price="${item.buying_price}"
+                                                                              data-max="${item.max_transfer}">
+                                                                             ${item.item_code} - ${item.name}
+                                                                        </option>`
                             ).join('')}
                         </select>
                         <!-- Hidden field for transfer_price, auto-populated from item buying_price -->
