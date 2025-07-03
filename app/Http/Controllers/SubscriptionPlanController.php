@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Module;
 
 class SubscriptionPlanController extends Controller
 {
@@ -18,7 +19,7 @@ class SubscriptionPlanController extends Controller
     {
         $plans = SubscriptionPlan::withCount('organizations')
             ->orderBy('price', 'asc')
-            ->get();
+            ->paginate(15);
 
         return view('admin.subscription-plans.index', compact('plans'));
     }
@@ -28,7 +29,10 @@ class SubscriptionPlanController extends Controller
      */
     public function create()
     {
-        return view('admin.subscription-plans.create');
+        // For create/edit forms - fetch available modules
+        $modules = Module::active()->get();
+
+        return view('admin.subscription-plans.create', compact('modules'));
     }
 
     /**
@@ -104,7 +108,10 @@ class SubscriptionPlanController extends Controller
      */
     public function edit(SubscriptionPlan $subscriptionPlan)
     {
-        return view('admin.subscription-plans.edit', compact('subscriptionPlan'));
+        // For create/edit forms - fetch available modules
+        $modules = Module::active()->get();
+
+        return view('admin.subscription-plans.edit', compact('subscriptionPlan', 'modules'));
     }
 
     /**
