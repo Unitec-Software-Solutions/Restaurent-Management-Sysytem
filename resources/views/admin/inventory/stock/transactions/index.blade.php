@@ -218,7 +218,7 @@
                                     @endphp
 
                                     <tr class="hover:bg-gray-50 cursor-pointer"
-                                        onclick="window.location='{{ route('admin.inventory.stock.show', $tx) }}'">>
+                                        onclick="window.location='{{ route('admin.inventory.stock.show', $tx) }}'">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm text-gray-900">{{ $tx->created_at->format('M d, Y') }}
                                             </div>
