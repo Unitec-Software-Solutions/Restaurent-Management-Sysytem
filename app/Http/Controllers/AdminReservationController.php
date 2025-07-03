@@ -107,19 +107,7 @@ class AdminReservationController extends Controller
         return ['name', 'phone', 'email'];
     }
 
-    public function pending()
-    {
-        $admin = auth('admin')->user();
-        $reservations = Reservation::with(['branch', 'user'])
-            ->where('status', 'pending')
-            ->where('branch_id', $admin->branch->id)
-            ->latest()
-            ->paginate(10);
-
-        return view('admin.reservations.pending', compact('reservations'));
-    }
-
-    public function show(Reservation $reservation)
+        public function show(Reservation $reservation)
     {
         $reservation->load(['branch', 'user']);
         return view('admin.reservations.show', compact('reservation'));
