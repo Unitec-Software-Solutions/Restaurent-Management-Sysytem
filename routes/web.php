@@ -438,7 +438,7 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
 
 // Organization Activation Routes - Accessible by both Super Admin and Organization Admin
 Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
-    // General organization activation index (shows organizations based on user role)
+    // Organization activation index - accessible to both super admins and organization admins
     Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
     Route::post('organizations/{organization}/activate-by-key', [OrganizationController::class, 'activateByKey'])->name('organizations.activate.by-key');
 });
