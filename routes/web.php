@@ -361,9 +361,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Additional Admin Routes
         Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
-        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
+        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.view');
         Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
-        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
+        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.view');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
 
     });
@@ -401,6 +401,8 @@ Route::get('/debug/branches', function() {
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     // Organizations CRUD
     Route::resource('organizations', OrganizationController::class);
+    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
+    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
     Route::get('organizations/{organization}/activate', [OrganizationController::class, 'showActivateForm'])->name('organizations.activate.form');
     Route::post('organizations/{organization}/activate', [OrganizationController::class, 'activate'])->name('organizations.activate');
     
@@ -641,10 +643,6 @@ Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationContr
 Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'checkOut'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
 Route::get('orders/orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.create');
 Route::get('roles/assign', [App\Http\Controllers\RoleController::class, 'assign'])->name('roles.assign');
-Route::put('grn/update', [App\Http\Controllers\Admin\GrnController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
-Route::get('grn/print', [App\Http\Controllers\Admin\GrnController::class, 'print'])->middleware(['auth:admin'])->name('admin.grn.print');
-Route::get('grn/edit', [App\Http\Controllers\Admin\GrnController::class, 'edit'])->middleware(['auth:admin'])->name('admin.grn.edit');
-Route::get('grn/verify', [App\Http\Controllers\Admin\GrnController::class, 'verify'])->middleware(['auth:admin'])->name('admin.grn.verify');
 Route::get('purchase-orders/show', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'show'])->middleware(['auth:admin'])->name('admin.purchase-orders.show');
 Route::get('purchase-orders/index', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'index'])->middleware(['auth:admin'])->name('admin.purchase-orders.index');
 Route::post('purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'store'])->middleware(['auth:admin'])->name('admin.purchase-orders.store');
