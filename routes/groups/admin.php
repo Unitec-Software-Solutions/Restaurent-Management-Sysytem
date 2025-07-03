@@ -42,7 +42,7 @@ use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\BillController;
 
 // admin routes - Updated to use modern    // Authentication routes
-    Route::get('auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
+    // Route::get('auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
     Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
@@ -50,7 +50,7 @@ use App\Http\Controllers\Admin\BillController;
     // Main admin routes
     Route::get('dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('profile', [AdminController::class, 'profile'])->name('profile.index');
-    Route::get('testpage', [AdminTestPageController::class, 'index'])->name('testpage');
+    // Route::get('testpage', [AdminTestPageController::class, 'index'])->name('testpage');
     
     // Reservations
     Route::get('reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
@@ -58,7 +58,7 @@ use App\Http\Controllers\Admin\BillController;
 
 Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Authentication routes
-    Route::get('auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
+    // Route::get('auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
     Route::get('admin/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('admin/login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('admin/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
@@ -66,7 +66,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     // Main admin routes
     Route::get('admin/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('admin/profile', [AdminController::class, 'profile'])->name('profile.index');
-    Route::get('admin/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
+    // Route::get('admin/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
     
     // Reservations
     Route::get('admin/reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
@@ -184,18 +184,6 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     // Realtime dashboard
     Route::get('admin/dashboard/realtime-inventory', [RealtimeDashboardController::class, 'index'])->name('dashboard.realtime-inventory');
     Route::get('menus/safety-dashboard', [MenuController::class, 'safetyDashboard'])->name('menus.safety-dashboard');
-    
-    // Database testing (admin only)
-    Route::post('admin/diagnose-table', [DatabaseTestController::class, 'diagnoseTable'])->name('admin.diagnose-table');
-    Route::post('admin/run-migrations', [DatabaseTestController::class, 'runMigrations'])->name('admin.run-migrations');
-    Route::post('admin/run-seeder', [DatabaseTestController::class, 'runSeeder'])->name('admin.run-seeder');
-    Route::post('admin/full-diagnose', [DatabaseTestController::class, 'fullDiagnose'])->name('admin.full-diagnose');
-    Route::post('admin/fresh-migrate', [DatabaseTestController::class, 'freshMigrate'])->name('admin.fresh-migrate');
-    Route::post('admin/test-orders', [DatabaseTestController::class, 'testOrderCreation'])->name('admin.test-orders');
-    Route::get('admin/system-stats', [DatabaseTestController::class, 'getSystemStats'])->name('admin.system-stats');
-    Route::get('admin/order-stats', [DatabaseTestController::class, 'getOrderStats'])->name('admin.order-stats');
-    Route::get('admin/recent-orders', [DatabaseTestController::class, 'getRecentOrders'])->name('admin.recent-orders');
-    Route::get('admin/orders-preview', [DatabaseTestController::class, 'getOrdersPreview'])->name('admin.orders-preview');
     
     // Enhanced admin modules
     Route::get('customers/index', [CustomerController::class, 'index'])->name('customers.index');
