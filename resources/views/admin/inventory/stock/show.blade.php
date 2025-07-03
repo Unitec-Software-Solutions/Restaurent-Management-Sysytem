@@ -143,9 +143,9 @@
                 </x-partials.detail-item>
 
                 <x-partials.detail-item label="Source">
-                    {{ $transaction->source_type ? class_basename($transaction->source_type) : 'Manual Entry' }}
-                    @if ($transaction->source_id)
-                        <div class="text-sm text-gray-500">ID: {{ $transaction->source_id }}</div>
+                    {{ $transaction->reference_type ? class_basename($transaction->reference_type) : 'Manual Entry' }}
+                    @if ($transaction->reference_id)
+                        <div class="text-sm text-gray-500">ID: {{ $transaction->reference_id }}</div>
                     @endif
                 </x-partials.detail-item>
             </div> --}}
