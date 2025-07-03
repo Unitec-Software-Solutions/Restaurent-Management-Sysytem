@@ -810,6 +810,9 @@ class GrnDashboardController extends Controller
                                 ]);
                             }
 
+                            // Fix: reference_id must be integer (grn_id), not string (grn_number or batch_no)
+                            $referenceId = $grn->grn_id;
+
                             // Create the item transaction with appropriate values
                             $transaction = ItemTransaction::create([
                                 'organization_id' => $grn->organization_id,
@@ -822,8 +825,8 @@ class GrnDashboardController extends Controller
                                 // Use appropriate cost calculations
                                 'cost_price' => $isFromGTN ? 0 : ($grnItem->buying_price * $grnItem->accepted_quantity),
                                 'unit_price' => $isFromGTN ? 0 : $grnItem->buying_price,
-                                'source_id' => $isFromGTN ? (string) $grn->delivery_note_number : (string) $grnItem->batch_no,
-                                'source_type' => $sourceType,
+                                'reference_id' => $referenceId, // Always integer
+                                'reference_type' => $sourceType,
                                 'created_by_user_id' => Auth::guard('admin')->id(),
                                 'notes' => $isFromGTN
                                     ? 'Stock received from GTN #' . $grn->delivery_note_number
