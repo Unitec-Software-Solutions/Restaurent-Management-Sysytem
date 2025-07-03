@@ -20,7 +20,7 @@ return new class extends Migration
             
             // Item reference - FIXED to use correct table name
             $table->unsignedBigInteger('inventory_item_id');
-            $table->unsignedBigInteger('item_masters_id')->nullable(); // Alternative reference
+            $table->unsignedBigInteger('item_master_id')->nullable(); // Alternative reference
             
             // Transaction details
             $table->string('transaction_type'); // in, out, adjustment, transfer
@@ -58,8 +58,8 @@ return new class extends Migration
             $table->foreign('branch_id')->references('id')->on('branches')->onDelete('set null');
             
             // FIXED: Use correct table name (plural)
-            $table->foreign('inventory_item_id')->references('id')->on('item_masters')->onDelete('cascade');
-            $table->foreign('item_masters_id')->references('id')->on('item_masters')->onDelete('set null');
+            $table->foreign('inventory_item_id')->references('id')->on('item_master')->onDelete('cascade');
+            $table->foreign('item_master_id')->references('id')->on('item_master')->onDelete('set null');
             
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
         });

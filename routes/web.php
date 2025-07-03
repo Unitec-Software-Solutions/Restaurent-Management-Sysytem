@@ -203,7 +203,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
                 Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
                 Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
-                Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('show');
+                Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('grn')->name('show');
             });
         });
 
@@ -703,3 +703,56 @@ Route::get('/test-branches/{organization}', function($organizationId) {
         ], 500);
     }
 })->name('test.branches');
+
+// Test route for debugging ItemMaster issue - Remove this after debugging
+Route::get('/test-item-master', function () {
+    try {
+        echo "Testing ItemMaster in web context...<br>";
+        echo "Database: " . config('database.default') . "<br>";
+        echo "Connection: " . \Illuminate\Support\Facades\DB::connection()->getName() . "<br>";
+        
+        // Test table existence
+        $exists = \Illuminate\Support\Facades\DB::select("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'item_master')");
+        echo "Table exists: " . ($exists[0]->exists ? 'YES' : 'NO') . "<br>";
+        
+        // Test direct query
+        $count = \Illuminate\Support\Facades\DB::table('item_master')->count();
+        echo "Direct count: $count<br>";
+        
+        // Test model count
+        $modelCount = \App\Models\ItemMaster::count();
+        echo "Model count: $modelCount<br>";
+        
+        // Test with relationship
+        $query = \App\Models\ItemMaster::with('itemCategory');
+        $relationCount = $query->count();
+        echo "With relation count: $relationCount<br>";
+        
+        // Test pagination - THIS IS WHERE THE ERROR MIGHT OCCUR
+        $pagination = $query->paginate(15);
+        echo "Pagination count: " . $pagination->count() . "<br>";
+        echo "Pagination total: " . $pagination->total() . "<br>";
+        
+        // Test the exact same query as in the controller with organization filter
+        echo "<hr>Testing with organization filter (mimicking controller):<br>";
+        $orgQuery = \App\Models\ItemMaster::with('itemCategory');
+        $orgQuery->where('organization_id', 2); // Use the test org we created
+        
+        echo "Org query count: " . $orgQuery->count() . "<br>";
+        $orgPagination = $orgQuery->paginate(15);
+        echo "Org pagination count: " . $orgPagination->count() . "<br>";
+        
+        echo "All tests passed!";
+        
+    } catch (Exception $e) {
+        echo "<h2>Error occurred:</h2>";
+        echo "Message: " . $e->getMessage() . "<br>";
+        echo "File: " . $e->getFile() . "<br>";
+        echo "Line: " . $e->getLine() . "<br>";
+        if ($e instanceof \Illuminate\Database\QueryException) {
+            echo "SQL: " . $e->getSql() . "<br>";
+            echo "Bindings: " . json_encode($e->getBindings()) . "<br>";
+        }
+        echo "<pre>" . $e->getTraceAsString() . "</pre>";
+    }
+});

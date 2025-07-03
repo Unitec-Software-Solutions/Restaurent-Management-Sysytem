@@ -16,14 +16,14 @@ return new class extends Migration
         try {
             // First, check what table actually exists
             $itemMasterTableExists = Schema::hasTable('item_master');
-            $itemMastersTableExists = Schema::hasTable('item_masters');
+            $itemMastersTableExists = Schema::hasTable('item_master');
             
             if (!$itemMasterTableExists && !$itemMastersTableExists) {
-                throw new \Exception('Neither item_master nor item_masters table exists. Please run item master migration first.');
+                throw new \Exception('Neither item_master nor item_master table exists. Please run item master migration first.');
             }
             
             // Determine which table name to use
-            $correctTableName = $itemMastersTableExists ? 'item_masters' : 'item_master';
+            $correctTableName = $itemMastersTableExists ? 'item_master' : 'item_master';
             Log::info("Using table name: {$correctTableName}");
             
             // Get existing foreign key constraints for item_transactions table

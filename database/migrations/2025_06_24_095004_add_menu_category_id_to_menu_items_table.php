@@ -40,12 +40,12 @@ return new class extends Migration
                       ->onDelete('cascade');
             }
             
-            // Add item_masters_id for inventory tracking
-            if (!in_array('item_masters_id', $existingColumns)) {
-                $table->foreignId('item_masters_id')
+            // Add item_master_id for inventory tracking
+            if (!in_array('item_master_id', $existingColumns)) {
+                $table->foreignId('item_master_id')
                       ->nullable()
                       ->after('branch_id')
-                      ->constrained('item_masters')
+                      ->constrained('item_master')
                       ->onDelete('set null');
             }
             
@@ -119,7 +119,7 @@ return new class extends Migration
                 $table->dropForeign(['menu_category_id']);
                 $table->dropForeign(['organization_id']);
                 $table->dropForeign(['branch_id']);
-                $table->dropForeign(['item_masters_id']);
+                $table->dropForeign(['item_master_id']);
             } catch (\Exception $e) {
                 // Continue if constraints don't exist
             }
@@ -129,7 +129,7 @@ return new class extends Migration
                 'menu_category_id',
                 'organization_id',
                 'branch_id',
-                'item_masters_id',
+                'item_master_id',
                 'display_order',
                 'is_featured',
                 'is_spicy',

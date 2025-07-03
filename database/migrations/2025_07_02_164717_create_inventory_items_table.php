@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('organization_id')->constrained()->onDelete('cascade');
             $table->foreignId('branch_id')->constrained()->onDelete('cascade');
-            $table->foreignId('item_master_id')->constrained()->onDelete('cascade');
+            $table->foreignId('item_master_id')->constrained('item_master')->onDelete('cascade');
             $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('set null');
             $table->string('batch_number')->nullable();
             $table->decimal('current_stock', 10, 2)->default(0);

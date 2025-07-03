@@ -284,7 +284,7 @@ class InventorySupplierSeeder extends Seeder
                 // $inventoryItem = InventoryItem::create([
                 //     'organization_id' => $organization->id,
                 //     'branch_id' => $branch->id,
-                //     'item_masters_id' => $itemMaster->id,
+                //     'item_master_id' => $itemMaster->id,
                 //     'current_stock' => $currentStock,
                 //     'minimum_stock' => $minStock,
                 //     'maximum_stock' => $maxStock,

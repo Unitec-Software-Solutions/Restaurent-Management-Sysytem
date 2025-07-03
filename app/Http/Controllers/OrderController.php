@@ -217,8 +217,8 @@ class OrderController extends Controller
                 if (!$menuItem) continue;
                 
                 // Only check stock for items linked to inventory (ItemMaster)
-                if ($menuItem->item_masters_id) {
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_masters_id, $reservation->branch_id);
+                if ($menuItem->item_master_id) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $reservation->branch_id);
                     if ($currentStock < $item['quantity']) {
                         $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
                     }
@@ -261,11 +261,11 @@ class OrderController extends Controller
                 ]);
 
                 // Deduct stock immediately upon order submission (only for inventory items)
-                if ($menuItem->item_masters_id && $menuItem->itemMaster) {
+                if ($menuItem->item_master_id && $menuItem->itemMaster) {
                     \App\Models\ItemTransaction::create([
                         'organization_id' => $reservation->organization_id ?? Auth::user()->organization_id,
                         'branch_id' => $reservation->branch_id,
-                        'inventory_item_id' => $menuItem->item_masters_id,
+                        'inventory_item_id' => $menuItem->item_master_id,
                         'transaction_type' => 'sales_order',
                         'quantity' => -$item['quantity'], // Negative for stock deduction
                         'cost_price' => $menuItem->itemMaster->buying_price,
@@ -504,7 +504,7 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
             'special_instructions' => 'nullable|string|max:1000',
             'order_type' => 'nullable|string|in:takeaway_walk_in_demand,takeaway_in_call_scheduled,takeaway_online_scheduled',
@@ -810,8 +810,8 @@ class OrderController extends Controller
                 $stockErrors = [];
                 foreach ($order->items as $orderItem) {
                     $menuItem = $orderItem->menuItem;
-                    if ($menuItem && $menuItem->item_masters_id && $menuItem->itemMaster) {
-                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_masters_id, $order->branch_id);
+                    if ($menuItem && $menuItem->item_master_id && $menuItem->itemMaster) {
+                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $order->branch_id);
                         if ($currentStock < $orderItem->quantity) {
                             $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$orderItem->quantity}";
                         }
@@ -826,11 +826,11 @@ class OrderController extends Controller
                 // Deduct stock for items linked to inventory
                 foreach ($order->items as $orderItem) {
                     $menuItem = $orderItem->menuItem;
-                    if ($menuItem && $menuItem->item_masters_id && $menuItem->itemMaster) {
+                    if ($menuItem && $menuItem->item_master_id && $menuItem->itemMaster) {
                         \App\Models\ItemTransaction::create([
                             'organization_id' => $order->branch->organization_id,
                             'branch_id' => $order->branch_id,
-                            'inventory_item_id' => $menuItem->item_masters_id,
+                            'inventory_item_id' => $menuItem->item_master_id,
                             'transaction_type' => 'takeaway_order',
                             'quantity' => -$orderItem->quantity,
                             'cost_price' => $menuItem->itemMaster->buying_price,

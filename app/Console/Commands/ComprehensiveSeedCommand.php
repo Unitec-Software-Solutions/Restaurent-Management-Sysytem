@@ -141,7 +141,7 @@ class ComprehensiveSeedCommand extends Command
                 'Inventory' => [
                     'suppliers' => 'Suppliers',
                     'item_categories' => 'Item Categories',
-                    'item_masters' => 'Item Masters',
+                    'item_master' => 'Item Masters',
                     'inventory_items' => 'Inventory Items',
                     'item_transactions' => 'Item Transactions',
                 ],
@@ -245,10 +245,10 @@ class ComprehensiveSeedCommand extends Command
 
     private function checkInventorySuppliers(): bool
     {
-        $itemsWithoutSuppliers = DB::table('item_masters')
-            ->leftJoin('suppliers', 'item_masters.supplier_id', '=', 'suppliers.id')
+        $itemsWithoutSuppliers = DB::table('item_master')
+            ->leftJoin('suppliers', 'item_master.supplier_id', '=', 'suppliers.id')
             ->whereNull('suppliers.id')
-            ->whereNotNull('item_masters.supplier_id')
+            ->whereNotNull('item_master.supplier_id')
             ->count();
         return $itemsWithoutSuppliers === 0;
     }

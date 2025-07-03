@@ -116,7 +116,7 @@ class PurchaseOrderController extends Controller
             'order_date' => 'required|date',
             'expected_delivery_date' => 'required|date|after_or_equal:order_date',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.buying_price' => 'required|numeric|min:0',
             'notes' => 'nullable|string|max:500'
@@ -229,7 +229,7 @@ class PurchaseOrderController extends Controller
             'supplier_id' => 'nullable|exists:suppliers,id',
             'expected_delivery_date' => 'nullable|date|after_or_equal:order_date',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id', // Changed to item_id
+            'items.*.item_id' => 'required|exists:item_master,id', // Changed to item_id
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.buying_price' => 'required|numeric|min:0',
             'notes' => 'nullable|string',

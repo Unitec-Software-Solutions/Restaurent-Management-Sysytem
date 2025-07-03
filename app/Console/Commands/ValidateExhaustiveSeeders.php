@@ -141,7 +141,7 @@ class ValidateExhaustiveSeeders extends Command
             'orders' => $this->getTableCount('orders'),
             'order_items' => $this->getTableCount('order_items'),
             'reservations' => $this->getTableCount('reservations'),
-            'inventory_items' => $this->getTableCount('item_masters'),
+            'inventory_items' => $this->getTableCount('item_master'),
         ];
         
         $expected = [

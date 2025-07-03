@@ -12,7 +12,7 @@ return new class extends Migration
      */
      public function up(): void
     {
-        Schema::create('item_masters', function (Blueprint $table) {
+        Schema::create('item_master', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('unicode_name')->nullable();
@@ -42,6 +42,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('item_masters');
+        Schema::dropIfExists('item_master');
     }
 };

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('recipes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('menu_item_id')->constrained('menu_items')->onDelete('cascade');
-            $table->foreignId('ingredient_item_id')->constrained('item_masters')->onDelete('cascade');
+            $table->foreignId('ingredient_item_id')->constrained('item_master')->onDelete('cascade');
             $table->decimal('quantity_needed', 10, 3)->default(0); // Amount of ingredient needed per portion
             $table->string('unit', 20)->default('g'); // Unit of measurement (g, ml, piece, etc.)
             $table->decimal('waste_percentage', 5, 2)->default(0); // Waste factor (5% = 5.00)

@@ -186,7 +186,7 @@ class AdminOrderController extends Controller
 
         $data = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
@@ -276,14 +276,14 @@ class AdminOrderController extends Controller
             })
             ->get()
             ->map(function($item) use ($admin) {
-                // Determine item type based on linked item_masters (if exists)
+                // Determine item type based on linked item_master (if exists)
                 $currentStock = 0;
                 $itemType = MenuItem::TYPE_KOT; // Default to KOT
                 
-                if ($item->item_masters_id && $item->itemMaster && $item->itemMaster->is_active) {
+                if ($item->item_master_id && $item->itemMaster && $item->itemMaster->is_active) {
                     $itemType = MenuItem::TYPE_BUY_SELL;
                     // Calculate current stock from item_transactions
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_masters_id, $admin->branch_id ?? null);
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $admin->branch_id ?? null);
                 }
                 
                 // Add type and availability information for frontend display
@@ -585,7 +585,7 @@ class AdminOrderController extends Controller
     {
         $data = $request->validate([
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
             'status' => 'required|in:submitted,preparing,ready,completed,cancelled',
             'order_type' => 'required|in:dine-in,takeaway,delivery'
@@ -631,7 +631,7 @@ class AdminOrderController extends Controller
             'customer_name' => 'nullable|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1'
         ]);
 
@@ -1089,7 +1089,7 @@ class AdminOrderController extends Controller
             'customer_phone' => 'required|string|max:20',
             'order_time' => 'required|date|after_or_equal:now',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
             'special_instructions' => 'nullable|string|max:1000',
         ]);
@@ -1330,9 +1330,9 @@ class AdminOrderController extends Controller
                 $currentStock = 0;
                 $itemType = MenuItem::TYPE_KOT;
                 
-                if ($item->item_masters_id && $item->itemMaster && $item->itemMaster->is_active) {
+                if ($item->item_master_id && $item->itemMaster && $item->itemMaster->is_active) {
                     $itemType = MenuItem::TYPE_BUY_SELL;
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_masters_id, $branchId);
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
                 }
                 
                 return [
