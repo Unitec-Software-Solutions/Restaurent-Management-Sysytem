@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\App;
 
 class DatabaseSeeder extends Seeder
 {
@@ -11,6 +12,63 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Check if we should run basic or comprehensive seeding
+        $runComprehensive = App::environment(['local', 'testing']) || 
+                           (isset($this->command) && $this->command->option('comprehensive')) ||
+                           config('app.debug', false);
+
+        if ($runComprehensive) {
+            $this->runComprehensiveSeeding();
+        } else {
+            $this->runBasicSeeding();
+        }
+    }
+
+    /**
+     * Run basic seeding for production-like environments
+     */
+    private function runBasicSeeding(): void
+    {
+        $this->command->info('🔧 Running basic database seeding...');
+        
+        $this->call([
+            // === FOUNDATION SEEDERS (Core system setup) ===
+            SystemSettingSeeder::class,
+            PermissionSeeder::class,
+            RoleSeeder::class,
+            ModuleSeeder::class,
+            
+            // === ORGANIZATION STRUCTURE ===
+            OrganizationSeeder::class,
+            BranchSeeder::class,
+            
+            // === BASIC USER MANAGEMENT ===
+            UserSeeder::class,
+            AdminSeeder::class,
+            CustomRoleSeeder::class,
+            
+            // === BASIC INVENTORY SETUP ===
+            ItemCategorySeeder::class,
+            SupplierSeeder::class,
+            
+            // === BASIC MENU SETUP ===
+            MenuCategorySeeder::class,
+            
+            // === SYSTEM CONFIGURATIONS ===
+            RestaurantConfigSeeder::class,
+            SubscriptionPlanSeeder::class,
+        ]);
+        
+        $this->command->info('✅ Basic seeding completed');
+    }
+
+    /**
+     * Run comprehensive seeding for development/testing environments
+     */
+    private function runComprehensiveSeeding(): void
+    {
+        $this->command->info('🚀 Running comprehensive database seeding...');
+        
         $this->call([
             // === FOUNDATION SEEDERS (Core system setup) ===
             SystemSettingSeeder::class,
@@ -107,8 +165,10 @@ class DatabaseSeeder extends Seeder
             
             // === AUTOMATED COMPREHENSIVE TEST DATA ===
             // Note: ComprehensiveTestSeeder includes all advanced automation seeders
-            // Uncomment the line below to run the full comprehensive test suite
-            // ComprehensiveTestSeeder::class,
+            // This provides comprehensive test data for development and testing
+            ComprehensiveTestSeeder::class,
         ]);
+        
+        $this->command->info('✅ Comprehensive seeding completed');
     }
 }
