@@ -455,6 +455,9 @@ Route::get('/debug/branches', function() {
 // Super Admin Routes
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     // Organizations CRUD
+    Route::resource('organizations', OrganizationController::class);
+    Route::get('organizations/{organization}/activate', [OrganizationController::class, 'showActivateForm'])->name('organizations.activate.form');
+    Route::post('organizations/{organization}/activate', [OrganizationController::class, 'activate'])->name('organizations.activate');
     
     // Branches: Organization-specific CRUD
     Route::prefix('organizations/{organization}')->group(function () {
