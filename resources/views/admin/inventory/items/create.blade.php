@@ -9,6 +9,15 @@
                 <div>
                     <h2 class="text-xl font-semibold text-gray-900">Add New Items</h2>
                     <p class="text-sm text-gray-500">Create multiple inventory items at once</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        @if (Auth::guard('admin')->user()->is_super_admin)
+                            Organization: All Organizations (Super Admin)
+                        @elseif(Auth::guard('admin')->user()->organization)
+                            Organization: {{ Auth::guard('admin')->user()->organization->name }}
+                        @else
+                            Organization: Not Assigned
+                        @endif
+                    </p>
                 </div>
 
                 <a href="{{ route('admin.inventory.items.index') }}"
@@ -20,6 +29,54 @@
             <!-- Form Container -->
             <form id="items-form" action="{{ route('admin.inventory.items.store') }}" method="POST" class="p-6">
                 @csrf
+
+                <!-- Organization Selection for Super Admin -->
+                @if (Auth::guard('admin')->user()->is_super_admin)
+                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-building text-blue-600 mr-2"></i>
+                            <h3 class="text-lg font-semibold text-blue-900">Organization Selection</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Target Organization <span class="text-red-500">*</span>
+                                </label>
+                                <select name="organization_id" id="organization_id" required
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select Organization</option>
+                                    @foreach ($organizations as $org)
+                                        <option value="{{ $org->id }}"
+                                            {{ old('organization_id') == $org->id ? 'selected' : '' }}>
+                                            {{ $org->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('organization_id')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex items-end">
+                                <div class="text-sm text-blue-700">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Items will be created for the selected organization
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <!-- Display current organization for non-super admins -->
+                    <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-building text-gray-600 mr-2"></i>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-700">Organization</h3>
+                                <p class="text-gray-900 font-semibold">
+                                    {{ Auth::guard('admin')->user()->organization->name }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <div id="items-container">
                     <!-- Initial item form -->
@@ -52,18 +109,149 @@
             let itemCount = 1;
             const itemsContainer = document.getElementById('items-container');
             const addItemBtn = document.getElementById('add-item');
+            const organizationSelect = document.getElementById('organization_id');
+            const isSuperAdmin = {{ Auth::guard('admin')->user()->is_super_admin ? 'true' : 'false' }};
+
+            // Super admin organization selection handler
+            if (isSuperAdmin && organizationSelect) {
+                organizationSelect.addEventListener('change', function() {
+                    const selectedOrgId = this.value;
+                    updateCategoriesForOrganization(selectedOrgId);
+                });
+            }
+
+            // Update categories based on organization selection
+            async function updateCategoriesForOrganization(orgId) {
+                if (!orgId) {
+                    // Clear all category dropdowns
+                    document.querySelectorAll('.item-category').forEach(select => {
+                        select.innerHTML = '<option value="">Select Category</option>';
+                        const helpText = select.parentNode.querySelector('.category-help-text');
+                        if (helpText) {
+                            helpText.textContent = 'Categories will load after selecting organization';
+                            helpText.className = 'text-xs text-gray-500 mt-1 category-help-text';
+                        }
+                    });
+                    return;
+                }
+
+                try {
+                    // Show loading state
+                    document.querySelectorAll('.item-category').forEach(select => {
+                        select.innerHTML = '<option value="">Loading categories...</option>';
+                        select.disabled = true;
+                        const helpText = select.parentNode.querySelector('.category-help-text');
+                        if (helpText) {
+                            helpText.textContent = 'Loading categories...';
+                            helpText.className = 'text-xs text-blue-600 mt-1 category-help-text';
+                        }
+                    });
+
+                    // Fetch categories for the selected organization
+                    const response = await fetch(`/admin/api/organizations/${orgId}/categories`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                ?.getAttribute('content') || ''
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const categories = await response.json();
+
+                    // Update all category dropdowns
+                    document.querySelectorAll('.item-category').forEach(select => {
+                        const currentValue = select.value;
+                        select.innerHTML = '<option value="">Select Category</option>';
+                        select.disabled = false;
+
+                        if (Array.isArray(categories) && categories.length > 0) {
+                            categories.forEach(category => {
+                                const option = new Option(category.name, category.id);
+                                if (category.id == currentValue) {
+                                    option.selected = true;
+                                }
+                                select.appendChild(option);
+                            });
+
+                            const helpText = select.parentNode.querySelector('.category-help-text');
+                            if (helpText) {
+                                helpText.textContent = `${categories.length} categories loaded`;
+                                helpText.className = 'text-xs text-green-600 mt-1 category-help-text';
+                            }
+                        } else {
+                            const option = new Option('No categories available', '');
+                            option.disabled = true;
+                            select.appendChild(option);
+
+                            const helpText = select.parentNode.querySelector('.category-help-text');
+                            if (helpText) {
+                                helpText.textContent = 'No categories found for this organization';
+                                helpText.className = 'text-xs text-yellow-600 mt-1 category-help-text';
+                            }
+                        }
+                    });
+
+                } catch (error) {
+                    console.error('Error fetching categories:', error);
+
+                    // Show error state
+                    document.querySelectorAll('.item-category').forEach(select => {
+                        select.innerHTML = '<option value="">Error loading categories</option>';
+                        select.disabled = true;
+                        const helpText = select.parentNode.querySelector('.category-help-text');
+                        if (helpText) {
+                            helpText.textContent = `Failed to load categories: ${error.message}`;
+                            helpText.className = 'text-xs text-red-600 mt-1 category-help-text';
+                        }
+                    });
+
+                    // Show user-friendly error message
+                    alert(
+                        `Failed to load categories for the selected organization.\n\nError: ${error.message}\n\nPlease try selecting the organization again or contact support if the problem persists.`);
+                }
+            }
 
             // Add new item form
             addItemBtn.addEventListener('click', async function() {
+                // For super admin, ensure organization is selected before adding items
+                if (isSuperAdmin && organizationSelect && !organizationSelect.value) {
+                    alert('Please select an organization first');
+                    organizationSelect.focus();
+                    return;
+                }
+
                 try {
-                    const response = await fetch(`/admin/inventory/items/create-template/${itemCount}`);
+                    const response = await fetch(
+                    `/admin/inventory/items/create-template/${itemCount}`, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'text/html',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                ?.getAttribute('content') || ''
+                        },
+                        credentials: 'same-origin'
+                    });
 
                     if (!response.ok) {
-                        throw new Error('Failed to fetch item form template');
+                        throw new Error(`Failed to fetch item form template: HTTP ${response.status}`);
                     }
 
                     const html = await response.text();
                     itemsContainer.insertAdjacentHTML('beforeend', html);
+
+                    // If super admin and organization is selected, update categories for new form
+                    if (isSuperAdmin && organizationSelect && organizationSelect.value) {
+                        await updateCategoriesForOrganization(organizationSelect.value);
+                    }
 
                     // Enable remove buttons if more than one item exists
                     const removeButtons = document.querySelectorAll('.remove-item');
@@ -74,7 +262,7 @@
                     itemCount++;
                 } catch (error) {
                     console.error('Error adding item form:', error);
-                    alert('Failed to add new item form. Please try again.');
+                    alert(`Failed to add new item form: ${error.message}\n\nPlease try again.`);
                 }
             });
 
@@ -99,8 +287,9 @@
             document.addEventListener('change', function(e) {
                 if (e.target.classList.contains('menu-item-checkbox')) {
                     const index = e.target.dataset.index;
-                    const menuAttributesSection = document.querySelector(`.menu-attributes[data-index="${index}"]`);
-                    
+                    const menuAttributesSection = document.querySelector(
+                        `.menu-attributes[data-index="${index}"]`);
+
                     if (e.target.checked) {
                         menuAttributesSection.classList.remove('hidden');
                         // Make menu attributes required
@@ -111,7 +300,7 @@
                         setMenuAttributesRequired(index, false);
                         clearMenuAttributes(index);
                     }
-                    
+
                     // Update the attributes field
                     updateMenuAttributesField(index);
                 }
@@ -148,7 +337,7 @@
                 if (!menuAttrSection || !attrField) return;
 
                 let attributes = {};
-                
+
                 // Get existing category attributes if any
                 try {
                     attributes = JSON.parse(attrField.value || '{}');
@@ -225,7 +414,8 @@
                             // Remove visual indicator
                             const label = field.closest('div').querySelector('label');
                             if (label && label.textContent.includes('*')) {
-                                label.innerHTML = label.innerHTML.replace(' <span class="text-red-500">*</span>', '');
+                                label.innerHTML = label.innerHTML.replace(
+                                    ' <span class="text-red-500">*</span>', '');
                             }
                         }
                     }
@@ -346,8 +536,16 @@
                 attrField.value = JSON.stringify(attributes);
             }
 
-            // Form submission handling with menu validation
+            // Form submission handling with organization validation for super admin
             document.getElementById('items-form').addEventListener('submit', function(e) {
+                // Super admin organization validation
+                if (isSuperAdmin && organizationSelect && !organizationSelect.value) {
+                    e.preventDefault();
+                    alert('Please select an organization for the items');
+                    organizationSelect.focus();
+                    return;
+                }
+
                 // Validate at least one item exists
                 const itemSections = document.querySelectorAll('.item-section');
                 if (itemSections.length === 0) {
@@ -362,13 +560,16 @@
 
                 itemSections.forEach((section, sectionIndex) => {
                     const isMenuItemChecked = section.querySelector('.menu-item-checkbox')?.checked;
-                    
+
                     if (isMenuItemChecked) {
                         const menuAttrSection = section.querySelector('.menu-attributes');
-                        const requiredFields = ['cuisine_type', 'prep_time_minutes', 'serving_size'];
-                        
+                        const requiredFields = ['cuisine_type', 'prep_time_minutes',
+                            'serving_size'
+                        ];
+
                         requiredFields.forEach(fieldName => {
-                            const field = menuAttrSection?.querySelector(`[data-menu-attr="${fieldName}"]`);
+                            const field = menuAttrSection?.querySelector(
+                                `[data-menu-attr="${fieldName}"]`);
                             if (!field || !field.value || field.value.trim() === '') {
                                 hasValidationErrors = true;
                                 const fieldLabel = {
@@ -376,7 +577,9 @@
                                     'prep_time_minutes': 'Preparation Time',
                                     'serving_size': 'Serving Size'
                                 };
-                                errorMessages.push(`Item #${sectionIndex + 1}: ${fieldLabel[fieldName]} is required for menu items`);
+                                errorMessages.push(
+                                    `Item #${sectionIndex + 1}: ${fieldLabel[fieldName]} is required for menu items`
+                                );
                             }
                         });
                     }
@@ -400,6 +603,8 @@
                     updateMenuAttributesField(index);
                 });
             });
+
+            // ...existing code...
         });
     </script>
 @endsection

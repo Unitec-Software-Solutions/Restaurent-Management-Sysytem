@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @php
     // Pass the controller instance to the view for helper methods
-    $controller = app(\App\Http\Controllers\ItemTransactionController::class);
+    $controller = app(\App\Http\Controllers\admin\ItemTransactionController::class);
 
     // Default date range: last 30 days
     $defaultDateFrom = now()->subDays(29)->format('Y-m-d');
@@ -144,7 +144,7 @@
                             @endif
                         </p>
                         <p class="text-sm text-gray-500 mt-1">
-                            @if(Auth::guard('admin')->user()->is_super_admin)
+                            @if (Auth::guard('admin')->user()->is_super_admin)
                                 Organization: All Organizations (Super Admin)
                             @elseif(Auth::guard('admin')->user()->organization)
                                 Organization: {{ Auth::guard('admin')->user()->organization->name }}
@@ -218,7 +218,7 @@
                                     @endphp
 
                                     <tr class="hover:bg-gray-50 cursor-pointer"
-                                        onclick="window.location='{{ route('admin.inventory.stock.show', $tx->id) }}'">
+                                        onclick="window.location='{{ route('admin.inventory.stock.show', $tx) }}'">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm text-gray-900">{{ $tx->created_at->format('M d, Y') }}
                                             </div>
@@ -271,7 +271,7 @@
 
                                         <td class="px-6 py-4 whitespace-nowrap text-right">
                                             <div class="flex justify-end space-x-3">
-                                                <a href="{{ route('admin.inventory.stock.show', $tx->id) }}"
+                                                <a href="{{ route('admin.inventory.stock.show', $tx) }}"
                                                     class="text-indigo-600 hover:text-indigo-800" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </a>

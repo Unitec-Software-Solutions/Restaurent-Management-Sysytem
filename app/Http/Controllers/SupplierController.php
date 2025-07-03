@@ -18,14 +18,14 @@ class SupplierController extends Controller
     public function index(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access the suppliers page.');
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->isSuperAdmin();
-        
+        $isSuperAdmin = $admin->is_super_admin;
+
         // Basic validation - only non-super admins need organization
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
@@ -33,7 +33,7 @@ class SupplierController extends Controller
 
         try {
             $query = Supplier::query();
-            
+
             // Apply organization filter only for non-super admins
             if (!$isSuperAdmin && $admin->organization_id) {
                 $query->where('organization_id', $admin->organization_id);
@@ -64,20 +64,20 @@ class SupplierController extends Controller
             $suppliers = $query->latest()->paginate(15);
 
             // Statistics - improved for super admin
-            $totalSuppliers = $isSuperAdmin ? 
-                Supplier::count() : 
+            $totalSuppliers = $isSuperAdmin ?
+                Supplier::count() :
                 Supplier::where('organization_id', $admin->organization_id)->count();
-            
-            $activeSuppliers = $isSuperAdmin ? 
-                Supplier::where('is_active', true)->count() : 
+
+            $activeSuppliers = $isSuperAdmin ?
+                Supplier::where('is_active', true)->count() :
                 Supplier::where('organization_id', $admin->organization_id)->where('is_active', true)->count();
-            
-            $inactiveSuppliers = $isSuperAdmin ? 
-                Supplier::where('is_active', false)->count() : 
+
+            $inactiveSuppliers = $isSuperAdmin ?
+                Supplier::where('is_active', false)->count() :
                 Supplier::where('organization_id', $admin->organization_id)->where('is_active', false)->count();
-            
-            $newSuppliersToday = $isSuperAdmin ? 
-                Supplier::whereDate('created_at', today())->count() : 
+
+            $newSuppliersToday = $isSuperAdmin ?
+                Supplier::whereDate('created_at', today())->count() :
                 Supplier::where('organization_id', $admin->organization_id)->whereDate('created_at', today())->count();
 
             return view('admin.suppliers.index', compact(
@@ -95,21 +95,24 @@ class SupplierController extends Controller
 
     public function create()
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
         if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Please log in to create suppliers.');
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $user->isSuperAdmin();
-        
+        $isSuperAdmin = $user->is_super_admin;
+
         // Basic validation - only non-super admins need organization
         if (!$isSuperAdmin && !$user->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
-        return view('admin.suppliers.create');
+        // Get organizations for super admin dropdown
+        $organizations = $isSuperAdmin ? \App\Models\Organization::active()->get() : collect();
+
+        return view('admin.suppliers.create', compact('organizations'));
     }
 
     public function store(Request $request)
@@ -121,14 +124,14 @@ class SupplierController extends Controller
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $user->isSuperAdmin();
-        
+        $isSuperAdmin = $user->is_super_admin;
+
         // Basic validation - only non-super admins need organization
         if (!$isSuperAdmin && !$user->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
         }
 
-        $validated = $request->validate([
+        $validationRules = [
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'required|string|max:20',
@@ -136,13 +139,26 @@ class SupplierController extends Controller
             'address' => 'nullable|string',
             'has_vat_registration' => 'boolean',
             'vat_registration_no' => 'nullable|required_if:has_vat_registration,true|string|max:50',
-        ]);
+        ];
+
+        // Super admin must select organization
+        if ($isSuperAdmin) {
+            $validationRules['organization_id'] = 'required|exists:organizations,id';
+        }
+
+        $validated = $request->validate($validationRules);
 
         $validated['supplier_id'] = 'SUP-' . Str::upper(Str::random(6));
         $validated['is_active'] = true;
-        // Super admins can create suppliers for any organization (will need organization selector in form)
-        // For now, super admins will create suppliers without organization (could be global suppliers)
-        $validated['organization_id'] = $isSuperAdmin ? $user->organization_id : $user->organization_id;
+
+        // Set organization_id based on user type
+        if ($isSuperAdmin) {
+            // Super admin selected organization from dropdown
+            $validated['organization_id'] = $request->organization_id;
+        } else {
+            // Regular admin uses their organization
+            $validated['organization_id'] = $user->organization_id;
+        }
 
         Supplier::create($validated);
 
@@ -152,13 +168,21 @@ class SupplierController extends Controller
 
 public function show(Supplier $supplier)
 {
-    $user = Auth::user();
+    $user = Auth::guard('admin')->user();
 
-    if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+    // Super admin check - bypass organization requirements
+    $isSuperAdmin = $user->is_super_admin;
+
+    if (!$user) {
         return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
     }
 
-    $orgId = $user->organization_id;
+    // Super admin can view any supplier, non-super admin only their organization's suppliers
+    if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+        return redirect()->route('admin.suppliers.index')->with('error', 'Unauthorized access.');
+    }
+
+    $orgId = $isSuperAdmin ? $supplier->organization_id : $user->organization_id;
 
     // Load relationships with organization scope
     $supplier->load([
@@ -168,14 +192,16 @@ public function show(Supplier $supplier)
                   ->with(['branch'])
                   ->latest()
                   ->take(5);
-        },
-        'transactions' => function ($query) use ($orgId, $supplier) {
-            $query->where('organization_id', $orgId)
-                  ->whereRaw('CAST(source_id AS TEXT) = ?', [(string) $supplier->getKey()]) // Explicit cast
-                  ->latest()
-                  ->take(5);
         }
     ]);
+
+    // Get recent GRN transactions for this supplier
+    $recentGrnTransactions = GrnMaster::where('organization_id', $orgId)
+        ->where('supplier_id', $supplier->id)
+        ->with(['purchaseOrder', 'receivedByUser', 'verifiedByUser'])
+        ->latest()
+        ->take(5)
+        ->get();
 
     // Calculate stats with organization scope
     $totalPurchases = $supplier->purchaseOrders()
@@ -195,30 +221,49 @@ public function show(Supplier $supplier)
         'pending_payment' => $pendingPayment
     ];
 
-    return view('admin.suppliers.show', compact('supplier', 'stats'));
+    return view('admin.suppliers.show', compact('supplier', 'stats', 'recentGrnTransactions'));
 }
-    
+
 
     public function edit(Supplier $supplier)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
 
-        return view('admin.suppliers.edit', compact('supplier'));
+        // Super admin can edit any supplier, non-super admin only their organization's suppliers
+        if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+            return redirect()->route('admin.suppliers.index')->with('error', 'Unauthorized access.');
+        }
+
+        // Get organizations for super admin dropdown
+        $organizations = $isSuperAdmin ? \App\Models\Organization::active()->get() : collect();
+
+        return view('admin.suppliers.edit', compact('supplier', 'organizations'));
     }
 
     public function update(Request $request, Supplier $supplier)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
 
-        $validated = $request->validate([
+        // Super admin can update any supplier, non-super admin only their organization's suppliers
+        if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+            return redirect()->route('admin.suppliers.index')->with('error', 'Unauthorized access.');
+        }
+
+        $validationRules = [
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'required|string|max:20',
@@ -227,7 +272,14 @@ public function show(Supplier $supplier)
             'has_vat_registration' => 'boolean',
             'vat_registration_no' => 'nullable|required_if:has_vat_registration,true|string|max:50',
             'is_active' => 'boolean'
-        ]);
+        ];
+
+        // Super admin can change organization
+        if ($isSuperAdmin) {
+            $validationRules['organization_id'] = 'required|exists:organizations,id';
+        }
+
+        $validated = $request->validate($validationRules);
 
         $supplier->update($validated);
 
@@ -237,14 +289,24 @@ public function show(Supplier $supplier)
 
     public function destroy(Supplier $supplier)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
 
+        // Super admin can delete any supplier, non-super admin only their organization's suppliers
+        if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+            return redirect()->route('admin.suppliers.index')->with('error', 'Unauthorized access.');
+        }
+
+        $orgId = $isSuperAdmin ? $supplier->organization_id : $user->organization_id;
+
         // Check if supplier has any associated orders within organization
-        if ($supplier->purchaseOrders()->where('organization_id', $user->organization_id)->exists()) {
+        if ($supplier->purchaseOrders()->where('organization_id', $orgId)->exists()) {
             return back()->with('error', 'Cannot delete supplier with associated purchase orders.');
         }
 
@@ -255,13 +317,23 @@ public function show(Supplier $supplier)
 
 public function purchaseOrders(Supplier $supplier)
 {
-    $user = Auth::user();
+    $user = Auth::guard('admin')->user();
 
-    if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+    // Super admin check - bypass organization requirements
+    $isSuperAdmin = $user->is_super_admin;
+
+    if (!$user) {
         return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
     }
 
-    $purchaseOrders = PurchaseOrder::where('organization_id', $user->organization_id)
+    // Super admin can view any supplier, non-super admin only their organization's suppliers
+    if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+        return redirect()->route('admin.suppliers.index')->with('error', 'Unauthorized access.');
+    }
+
+    $orgId = $isSuperAdmin ? $supplier->organization_id : $user->organization_id;
+
+    $purchaseOrders = PurchaseOrder::where('organization_id', $orgId)
         ->where('supplier_id', $supplier->id)
         ->with(['branch', 'user', 'grns']) // remove-002 later
         ->latest()
@@ -270,19 +342,29 @@ public function purchaseOrders(Supplier $supplier)
     return view('admin.suppliers.purchase-orders-supplier', [
         'supplier' => $supplier,
         'purchaseOrders' => $purchaseOrders,
-        'organization' => $supplier->organization 
+        'organization' => $supplier->organization
     ]);
 }
 
     public function pendingPos(Supplier $supplier)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        if (!$user) {
             return response()->json(['error' => 'Unauthorized access.'], 403);
         }
 
-        $pos = PurchaseOrder::where('organization_id', $user->organization_id)
+        // Super admin can access any supplier, non-super admin only their organization's suppliers
+        if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+            return response()->json(['error' => 'Unauthorized access.'], 403);
+        }
+
+        $orgId = $isSuperAdmin ? $supplier->organization_id : $user->organization_id;
+
+        $pos = PurchaseOrder::where('organization_id', $orgId)
             ->where('supplier_id', $supplier->id)
             ->where('status', '!=', 'Cancelled')
             ->get()
@@ -304,17 +386,27 @@ public function purchaseOrders(Supplier $supplier)
 
 public function goodsReceived(Supplier $supplier)
 {
-    $user = Auth::user();
+    $user = Auth::guard('admin')->user();
 
-    if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+    // Super admin check - bypass organization requirements
+    $isSuperAdmin = $user->is_super_admin;
+
+    if (!$user) {
         return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
     }
 
-    $grns = GrnMaster::where('organization_id', $user->organization_id)
+    // Super admin can access any supplier, non-super admin only their organization's suppliers
+    if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+        return redirect()->route('admin.suppliers.index')->with('error', 'Unauthorized access.');
+    }
+
+    $orgId = $isSuperAdmin ? $supplier->organization_id : $user->organization_id;
+
+    $grns = GrnMaster::where('organization_id', $orgId)
         ->where('supplier_id', $supplier->id)
         ->with([
-            'receivedByUser', 
-            'verifiedByUser', 
+            'receivedByUser',
+            'verifiedByUser',
             'purchaseOrder',
             'items' // Add this if you need to show GRN items
         ])
@@ -330,13 +422,23 @@ public function goodsReceived(Supplier $supplier)
 
     public function pendingGrns(Supplier $supplier)
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id || $supplier->organization_id !== $user->organization_id) {
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
+
+        if (!$user) {
             return response()->json(['error' => 'Unauthorized access.'], 403);
         }
 
-        $grns = GrnMaster::where('organization_id', $user->organization_id)
+        // Super admin can access any supplier, non-super admin only their organization's suppliers
+        if (!$isSuperAdmin && (!$user->organization_id || $supplier->organization_id !== $user->organization_id)) {
+            return response()->json(['error' => 'Unauthorized access.'], 403);
+        }
+
+        $orgId = $isSuperAdmin ? $supplier->organization_id : $user->organization_id;
+
+        $grns = GrnMaster::where('organization_id', $orgId)
             ->where('supplier_id', $supplier->id)
             ->where(function ($query) {
                 $query->where('status', GrnMaster::STATUS_VERIFIED)

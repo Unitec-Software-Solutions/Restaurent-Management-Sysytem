@@ -7,14 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\PurchaseOrder;
 use App\Models\ItemTransaction;
-use App\Models\GrnMaster; 
+use App\Models\GrnMaster;
 
 class Supplier extends Model
 {
     use HasFactory, SoftDeletes;
 
     protected $with = ['organization']; // Always load organization with supplier
-    
+
     protected $fillable = [
         'organization_id',
         'supplier_id',
@@ -34,9 +34,9 @@ class Supplier extends Model
         'created_at' => 'datetime:Y-m-d H:i:s', // Consistent datetime format
         'updated_at' => 'datetime:Y-m-d H:i:s',
     ];
-    
+
     protected $appends = ['status']; // If you want to add computed attributes
-    
+
     public function purchaseOrders()
     {
         return $this->hasMany(PurchaseOrder::class)
@@ -67,7 +67,7 @@ class Supplier extends Model
 
     public function organization()
     {
-        return $this->belongsTo(Organization::class); 
+        return $this->belongsTo(Organization::class);
     }
 
     // Scopes
@@ -101,8 +101,8 @@ class Supplier extends Model
 
     public function getVatStatusAttribute()
     {
-        return $this->has_vat_registration 
-            ? 'VAT Registered ('.$this->vat_registration_no.')' 
+        return $this->has_vat_registration
+            ? 'VAT Registered ('.$this->vat_registration_no.')'
             : 'Not VAT Registered';
     }
 

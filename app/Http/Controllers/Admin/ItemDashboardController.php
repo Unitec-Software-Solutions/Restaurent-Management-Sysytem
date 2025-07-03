@@ -1,6 +1,7 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
+use App\Http\Controllers\Controller;
 
 use App\Models\ItemCategory;
 use App\Models\ItemMaster;
@@ -20,8 +21,8 @@ class ItemDashboardController extends Controller
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->isSuperAdmin();
-        
+        $isSuperAdmin = $admin->is_super_admin;
+
         // Enhanced validation - only non-super admins need organization
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
@@ -31,13 +32,13 @@ class ItemDashboardController extends Controller
         $orgId = $isSuperAdmin ? null : $admin->organization_id;
 
         // Total Items with proper super admin handling
-        $totalItems = $isSuperAdmin ? 
-            ItemMaster::active()->count() : 
+        $totalItems = $isSuperAdmin ?
+            ItemMaster::active()->count() :
             ItemMaster::active()->where('organization_id', $orgId)->count();
 
         // New Items Today with proper super admin handling
-        $newItemsToday = $isSuperAdmin ? 
-            ItemMaster::active()->whereDate('created_at', now()->format('Y-m-d'))->count() : 
+        $newItemsToday = $isSuperAdmin ?
+            ItemMaster::active()->whereDate('created_at', now()->format('Y-m-d'))->count() :
             ItemMaster::active()->where('organization_id', $orgId)->whereDate('created_at', now()->format('Y-m-d'))->count();
 
 

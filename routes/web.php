@@ -9,30 +9,25 @@ use App\Http\Controllers\{
     AdminController,
     AdminAuthController,
     AdminAuthTestController,
-    GrnDashboardController,
-    ItemDashboardController,
-    ItemMasterController,
-    ItemTransactionController,
     OrderController,
     SupplierController,
     SupplierPaymentController,
     AdminOrderController,
-    GoodsTransferNoteController,
+    OrganizationController,
+    RoleController,
+    BranchController,
+    UserController,
     RealtimeDashboardController,
     AdminTestPageController,
     DatabaseTestController,
-    BranchController,
-    UserController,
-    RoleController,
     MenuController,
     SubscriptionController,
     ModuleController,
-    OrganizationController
+    
 };
 
 // Admin namespace controllers
 use App\Http\Controllers\Admin\{
-    PurchaseOrderController,
     ProductionOrderController,
     ProductionController,
     ProductionRequestsMasterController,
@@ -41,6 +36,30 @@ use App\Http\Controllers\Admin\{
     SubscriptionPlanController,
     PaymentController
 };
+// Purchase Order Controller
+use App\Http\Controllers\Admin\{
+    PurchaseOrderController
+};
+// GRN/GTN controllers
+use App\Http\Controllers\Admin\
+{
+    //GrnController,
+    GrnDashboardController,
+    GoodsTransferNoteController,
+    GoodsTransferItemController,
+    GrnItemController,
+};
+// inventory controllers
+use App\Http\Controllers\Admin\
+{
+    InventoryController,
+    ItemDashboardController,
+    ItemCategoryController,
+    ItemMasterController,
+    ItemTransactionController,
+    ItemStockController,
+};
+
 
 use App\Http\Controllers\PaymentController as MainPaymentController;
 use App\Http\Middleware\SuperAdmin;
@@ -233,9 +252,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [ItemMasterController::class, 'index'])->name('index');
                 Route::get('/create', [ItemMasterController::class, 'create'])->name('create');
                 Route::post('/', [ItemMasterController::class, 'store'])->name('store');
-                Route::get('/{item}', [ItemMasterController::class, 'show'])->whereNumber('item')->name('show');
-                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->whereNumber('item')->name('edit');
-                Route::put('/{item}', [ItemMasterController::class, 'update'])->whereNumber('item')->name('update');
+                Route::get('/added-items', [ItemMasterController::class, 'added'])->name('added-items');
+                Route::get('/create-template/{index}', [ItemMasterController::class, 'getItemFormPartial'])->name('create-template');
+                Route::get('/{item}', [ItemMasterController::class, 'show'])->name('show');
+                Route::get('/{item}/edit', [ItemMasterController::class, 'edit'])->name('edit');
+                Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->whereNumber('item')->name('destroy');
             });
 
@@ -245,9 +266,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/create', [ItemTransactionController::class, 'create'])->name('create');
                 Route::post('/', [ItemTransactionController::class, 'store'])->name('store');
 
+                // Transactions routes (must come before {transaction} routes to avoid conflicts)
                 Route::prefix('transactions')->name('transactions.')->group(function () {
                     Route::get('/', [ItemTransactionController::class, 'transactions'])->name('index');
                 });
+
+                // Edit and Update for specific item+branch combination
+                Route::get('/edit/{item_id}/{branch_id}', [ItemTransactionController::class, 'edit'])->where(['item_id' => '[0-9]+', 'branch_id' => '[0-9]+'])->name('edit');
+                Route::put('/update/{item_id}/{branch_id}', [ItemTransactionController::class, 'update'])->where(['item_id' => '[0-9]+', 'branch_id' => '[0-9]+'])->name('update');
+
+                // Show individual transaction (must come after specific routes to avoid conflicts)
+                Route::get('/{transaction}', [ItemTransactionController::class, 'show'])->where('transaction', '[0-9]+')->name('show');
+                Route::delete('/{transaction}', [ItemTransactionController::class, 'destroy'])->where('transaction', '[0-9]+')->name('destroy');
+            });
+
+            // API endpoints for inventory stock
+            Route::prefix('api/stock')->name('api.stock.')->group(function () {
+                Route::get('/summary', [ItemTransactionController::class, 'stockSummary'])->name('summary');
             });
 
             // GTN Management
@@ -258,6 +293,24 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
                 Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
                 Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('show');
+                Route::get('/{gtn}/edit', [GoodsTransferNoteController::class, 'edit'])->whereNumber('gtn')->name('edit');
+                Route::put('/{gtn}', [GoodsTransferNoteController::class, 'update'])->whereNumber('gtn')->name('update');
+                Route::delete('/{gtn}', [GoodsTransferNoteController::class, 'destroy'])->whereNumber('gtn')->name('destroy');
+                Route::get('/{gtn}/print', [GoodsTransferNoteController::class, 'print'])->whereNumber('gtn')->name('print');
+
+                // Workflow endpoints
+                Route::post('/{gtn}/confirm', [GoodsTransferNoteController::class, 'confirm'])->whereNumber('gtn')->name('confirm');
+                Route::post('/{gtn}/receive', [GoodsTransferNoteController::class, 'receive'])->whereNumber('gtn')->name('receive');
+                Route::post('/{gtn}/verify', [GoodsTransferNoteController::class, 'verify'])->whereNumber('gtn')->name('verify');
+                Route::post('/{gtn}/accept', [GoodsTransferNoteController::class, 'processAcceptance'])->whereNumber('gtn')->name('accept');
+                Route::post('/{gtn}/reject', [GoodsTransferNoteController::class, 'reject'])->whereNumber('gtn')->name('reject');
+                Route::get('/{gtn}/audit-trail', [GoodsTransferNoteController::class, 'auditTrail'])->whereNumber('gtn')->name('audit-trail');
+                Route::post('/{gtn}/change-status', [GoodsTransferNoteController::class, 'changeStatus'])->whereNumber('gtn')->name('change-status');
+
+                // AJAX endpoints
+                Route::get('/items-with-stock', [GoodsTransferNoteController::class, 'getItemsWithStock'])->name('items-with-stock');
+                Route::get('/search-items-ajax', [GoodsTransferNoteController::class, 'searchItems'])->name('search-items-ajax');
+                Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
         });
 
@@ -287,6 +340,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->whereNumber('grn')->name('verify');
             Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
+        });
+
+        // GRN API routes for super admin organization selection
+        Route::prefix('api/grn')->name('api.grn.')->group(function () {
+            Route::get('/suppliers-by-organization', [GrnDashboardController::class, 'getSuppliersByOrganization'])->name('suppliers-by-organization');
+            Route::get('/branches-by-organization', [GrnDashboardController::class, 'getBranchesByOrganization'])->name('branches-by-organization');
+            Route::get('/items-by-organization', [GrnDashboardController::class, 'getItemsByOrganization'])->name('items-by-organization');
         });
 
         // Orders Management
@@ -333,7 +393,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{payment}', [SupplierPaymentController::class, 'update'])->name('update');
             Route::delete('/{payment}', [SupplierPaymentController::class, 'destroy'])->name('destroy');
             Route::get('/{payment}/print', [SupplierPaymentController::class, 'print'])->name('print');
-            // AJAX routes for pending GRNs and POs
         });
 
         // Purchase Orders
@@ -428,6 +487,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 /*-------------------------------------------------------------------------
 | Debugging Route for Branches - Development Only
 |------------------------------------------------------------------------*/
+// Add this route in the admin middleware group
+Route::middleware(['auth:admin'])->group(function () {
+    // API routes for super admin organization selection
+    Route::get('/admin/api/organizations/{organization}/categories', [
+        \App\Http\Controllers\Admin\ItemCategoryController::class,
+        'getByOrganization'
+    ])->name('admin.api.organizations.categories');
+});
+
 Route::get('/debug/branches', function() {
     $user = auth('admin')->user();
     $branches = \App\Models\Branch::when($user && !$user->is_super_admin, function($query) use ($user) {
@@ -659,16 +727,10 @@ Route::put('employees/{employee}', [App\Http\Controllers\Admin\EmployeeControlle
 Route::delete('employees/{employee}', [App\Http\Controllers\Admin\EmployeeController::class, 'destroy'])->middleware(['auth:admin'])->name('admin.employees.destroy');
 Route::post('employees/{employee}/restore', [App\Http\Controllers\Admin\EmployeeController::class, 'restore'])->middleware(['auth:admin'])->name('admin.employees.restore');
 Route::patch('employees/{employee}/availability', [App\Http\Controllers\Admin\EmployeeController::class, 'updateAvailability'])->middleware(['auth:admin'])->name('admin.employees.update-availability');
-Route::get('grn/link-payment', [App\Http\Controllers\Admin\GrnController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
+// ::get('grn/link-payment', [GrnDashboardController::class, 'linkPayment'])->middleware(['auth:admin'])->name('admin.grn.link-payment');
 
-Route::get('inventory/gtn/items-with-stock', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.items-with-stock');
-Route::get('inventory/gtn/update', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.update');
-Route::get('inventory/gtn/print', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.print');
-Route::get('inventory/gtn/edit', [App\Http\Controllers\Admin\InventoryController::class, 'gtn'])->middleware(['auth:admin'])->name('admin.inventory.gtn.edit');
-Route::get('inventory/items/restore', [App\Http\Controllers\Admin\InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
-Route::get('inventory/stock/update', [App\Http\Controllers\Admin\InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.update');
-Route::get('inventory/stock/edit', [App\Http\Controllers\Admin\InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.edit');
-Route::get('inventory/stock/show', [App\Http\Controllers\Admin\InventoryController::class, 'stock'])->middleware(['auth:admin'])->name('admin.inventory.stock.show');
+
+Route::post('inventory/items/restore', [ItemMasterController::class, 'restore'])->middleware(['auth:admin'])->name('admin.inventory.items.restore');
 // Menu routes - properly ordered to avoid conflicts
 Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
 Route::get('menus/list', [App\Http\Controllers\Admin\MenuController::class, 'list'])->middleware(['auth:admin'])->name('admin.menus.list');
@@ -705,10 +767,10 @@ Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationContr
 Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'checkOut'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
 Route::get('orders/orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.create');
 Route::get('roles/assign', [App\Http\Controllers\RoleController::class, 'assign'])->name('roles.assign');
-Route::put('grn/update', [App\Http\Controllers\Admin\GrnController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
-Route::get('grn/print', [App\Http\Controllers\Admin\GrnController::class, 'print'])->middleware(['auth:admin'])->name('admin.grn.print');
-Route::get('grn/edit', [App\Http\Controllers\Admin\GrnController::class, 'edit'])->middleware(['auth:admin'])->name('admin.grn.edit');
-Route::get('grn/verify', [App\Http\Controllers\Admin\GrnController::class, 'verify'])->middleware(['auth:admin'])->name('admin.grn.verify');
+// Route::put('grn/update', [GrnDashboardController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
+// Route::get('grn/print', [GrnDashboardController::class, 'print'])->middleware(['auth:admin'])->name('admin.grn.print');
+// Route::get('grn/edit', [GrnDashboardController::class, 'edit'])->middleware(['auth:admin'])->name('admin.grn.edit');
+// Route::get('grn/verify', [GrnDashboardController::class, 'verify'])->middleware(['auth:admin'])->name('admin.grn.verify');
 Route::get('purchase-orders/show', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'show'])->middleware(['auth:admin'])->name('admin.purchase-orders.show');
 Route::get('purchase-orders/index', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'index'])->middleware(['auth:admin'])->name('admin.purchase-orders.index');
 Route::post('purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'store'])->middleware(['auth:admin'])->name('admin.purchase-orders.store');
@@ -727,7 +789,7 @@ Route::get('orders/reservations/summary', [App\Http\Controllers\Admin\OrderContr
 Route::get('orders/takeaway/summary', [App\Http\Controllers\Admin\OrderController::class, 'takeaway'])->middleware(['auth:admin'])->name('admin.orders.takeaway.summary');
 Route::get('orders/summary', [App\Http\Controllers\Admin\OrderController::class, 'summary'])->middleware(['auth:admin'])->name('admin.orders.summary');
 Route::get('bills/show', [App\Http\Controllers\Admin\BillController::class, 'show'])->middleware(['auth:admin'])->name('admin.bills.show');
-Route::get('inventory/items/added-items', [App\Http\Controllers\Admin\InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
+// Route::get('inventory/items/added-items', [InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
 Route::get('payments/create', [App\Http\Controllers\PaymentController::class, 'create'])->name('payments.create');
 Route::get('branch', [App\Http\Controllers\BranchController::class, 'index'])->name('branch');
 

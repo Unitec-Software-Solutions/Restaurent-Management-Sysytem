@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+use App\Http\Controllers\Controller;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use App\Models\ItemMaster;
 use App\Models\ItemTransaction;
 use App\Models\GoodsTransferNote;
@@ -25,19 +25,19 @@ class InventoryController extends Controller
         }
 
         // Super admin check - bypass organization requirements
-        $isSuperAdmin = $admin->isSuperAdmin();
-        
+        $isSuperAdmin = $admin->is_super_admin;
+
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support.');
         }
 
         // Get inventory summary data - Simplified to avoid non-existent columns
         $orgId = $isSuperAdmin ? null : $admin->organization_id;
-        
-        $totalItems = $isSuperAdmin ? 
-            ItemMaster::active()->count() : 
+
+        $totalItems = $isSuperAdmin ?
+            ItemMaster::active()->count() :
             ItemMaster::active()->where('organization_id', $orgId)->count();
-            
+
         // Low stock calculation would need to be done via ItemTransaction model
         // For now, set to 0 to avoid database errors
         $lowStockItems = 0;
@@ -57,16 +57,16 @@ class InventoryController extends Controller
             return redirect()->route('admin.login')->with('error', 'Please log in.');
         }
 
-        $isSuperAdmin = $admin->isSuperAdmin();
-        
+        $isSuperAdmin = $admin->is_super_admin;
+
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete.');
         }
 
         $orgId = $isSuperAdmin ? null : $admin->organization_id;
-        
-        $items = $isSuperAdmin ? 
-            ItemMaster::active()->paginate(15) : 
+
+        $items = $isSuperAdmin ?
+            ItemMaster::active()->paginate(15) :
             ItemMaster::active()->where('organization_id', $orgId)->paginate(15);
 
         return view('admin.inventory.items.index', compact('items'));
@@ -84,16 +84,16 @@ class InventoryController extends Controller
             return redirect()->route('admin.login')->with('error', 'Please log in.');
         }
 
-        $isSuperAdmin = $admin->isSuperAdmin();
-        
+        $isSuperAdmin = $admin->is_super_admin;
+
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete.');
         }
 
         $orgId = $isSuperAdmin ? null : $admin->organization_id;
-        
-        $transactions = $isSuperAdmin ? 
-            ItemTransaction::latest()->paginate(15) : 
+
+        $transactions = $isSuperAdmin ?
+            ItemTransaction::latest()->paginate(15) :
             ItemTransaction::where('organization_id', $orgId)->latest()->paginate(15);
 
         return view('admin.inventory.stock.index', compact('transactions'));
@@ -111,16 +111,16 @@ class InventoryController extends Controller
             return redirect()->route('admin.login')->with('error', 'Please log in.');
         }
 
-        $isSuperAdmin = $admin->isSuperAdmin();
-        
+        $isSuperAdmin = $admin->is_super_admin;
+
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete.');
         }
 
         $orgId = $isSuperAdmin ? null : $admin->organization_id;
-        
-        $gtns = $isSuperAdmin ? 
-            GoodsTransferNote::latest()->paginate(15) : 
+
+        $gtns = $isSuperAdmin ?
+            GoodsTransferNote::latest()->paginate(15) :
             GoodsTransferNote::where('organization_id', $orgId)->latest()->paginate(15);
 
         return view('admin.inventory.gtn.index', compact('gtns'));
