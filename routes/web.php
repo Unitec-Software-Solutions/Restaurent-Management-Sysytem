@@ -8,7 +8,6 @@ use App\Http\Controllers\{
     AdminReservationController,
     AdminController,
     AdminAuthController,
-    AdminAuthTestController,
     GrnDashboardController,
     ItemDashboardController,
     ItemMasterController,
@@ -19,8 +18,6 @@ use App\Http\Controllers\{
     AdminOrderController,
     GoodsTransferNoteController,
     RealtimeDashboardController,
-    AdminTestPageController,
-    DatabaseTestController,
     BranchController,
     UserController,
     RoleController,
@@ -156,54 +153,6 @@ Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login
 Route::post('/login', [AdminAuthController::class, 'login']);
 
 /*-------------------------------------------------------------------------
-| Debug Routes (Development Only)
-|------------------------------------------------------------------------*/
-if (config('app.debug')) {
-    Route::get('/admin/auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('admin.auth.check');
-    Route::get('/admin/auth/test', function() {
-        return [
-            'admin_authenticated' => \Illuminate\Support\Facades\Auth::guard('admin')->check(),
-            'admin_user' => \Illuminate\Support\Facades\Auth::guard('admin')->user(),
-            'session_id' => session()->getId(),
-            'session_data' => session()->all()
-        ];
-    })->middleware('auth:admin');
-
-    Route::get('/debug/session', function() {
-        return [
-            'session_driver' => config('session.driver'),
-            'session_table' => config('session.table'),
-            'session_connection' => config('session.connection'),
-            'session_id' => session()->getId(),
-            'session_name' => session()->getName(),
-            'session_exists' => session()->isStarted(),
-        ];
-    });
-
-    // Debug route to check permissions (temporary)
-    Route::get('/debug-permissions', function() {
-        if (!Auth::guard('admin')->check()) {
-            return 'Not logged in as admin';
-        }
-
-        $admin = Auth::guard('admin')->user();
-        $permissions = \App\Models\Permission::all()->pluck('name');
-
-        return [
-            'admin' => $admin->email,
-            'organization_id' => $admin->organization_id,
-            'all_permissions' => $permissions->toArray(),
-            'user_has_permissions' => [
-                'view_inventory' => $admin->can('view_inventory'),
-                'manage_inventory' => $admin->can('manage_inventory'),
-                'inventory.view' => $admin->can('inventory.view'),
-                'inventory.manage' => $admin->can('inventory.manage'),
-            ]
-        ];
-    })->middleware('auth:admin');
-}
-
-/*-------------------------------------------------------------------------
 | Admin Routes
 |------------------------------------------------------------------------*/
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -216,9 +165,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth:admin'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
-
-        // Test page route (development only)
-        Route::get('/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
 
         // Reservations Management
         Route::resource('reservations', AdminReservationController::class);
@@ -414,7 +360,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 
         // Additional Admin Routes
-        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
         Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
         Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
         Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
@@ -621,20 +566,8 @@ Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () 
 // Menu safety dashboard
 Route::get('menus/safety-dashboard', [MenuController::class, 'safetyDashboard'])->name('admin.menus.safety-dashboard');
 
-// Database test operations
+// Payment Management
 Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
-    Route::post('/diagnose-table', [DatabaseTestController::class, 'diagnoseTable']);
-    Route::post('/run-migrations', [DatabaseTestController::class, 'runMigrations']);
-    Route::post('/run-seeder', [DatabaseTestController::class, 'runSeeder']);
-    Route::post('/full-diagnose', [DatabaseTestController::class, 'fullDiagnose']);
-    Route::post('/fresh-migrate', [DatabaseTestController::class, 'freshMigrate']);
-    Route::post('/test-orders', [DatabaseTestController::class, 'testOrderCreation']);
-    Route::get('/system-stats', [DatabaseTestController::class, 'getSystemStats']);
-    Route::get('/order-stats', [DatabaseTestController::class, 'getOrderStats']);
-    Route::get('/recent-orders', [DatabaseTestController::class, 'getRecentOrders']);
-    Route::get('/orders-preview', [DatabaseTestController::class, 'getOrdersPreview']);
-
-    // Payment Management
     Route::get('payments', [App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
     Route::get('payments/create', [App\Http\Controllers\Admin\PaymentController::class, 'create'])->name('payments.create');
     Route::post('payments', [App\Http\Controllers\Admin\PaymentController::class, 'store'])->name('payments.store');
