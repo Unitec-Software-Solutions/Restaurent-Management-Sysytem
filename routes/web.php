@@ -14,9 +14,6 @@ use App\Http\Controllers\{
     SupplierPaymentController,
     AdminOrderController,
     OrganizationController,
-    RoleController,
-    BranchController,
-    UserController,
     RealtimeDashboardController,
     AdminTestPageController,
     DatabaseTestController,
@@ -26,12 +23,10 @@ use App\Http\Controllers\{
     MenuController,
     SubscriptionController,
     ModuleController,
-    OrganizationController
 };
 
 // Admin namespace controllers
 use App\Http\Controllers\Admin\{
-    PurchaseOrderController,
     ProductionOrderController,
     ProductionController,
     ProductionRequestsMasterController,
