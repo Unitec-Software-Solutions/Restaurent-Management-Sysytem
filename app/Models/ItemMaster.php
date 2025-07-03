@@ -115,6 +115,12 @@ class ItemMaster extends Model
         return $this->hasMany(MenuItem::class, 'item_masters_id');
     }
 
+    // Inventory items dashboard breaks without this 
+    public function category()
+    {
+        return $this->itemCategory();
+    }
+
 
     public function scopeActive($query)
     {
