@@ -36,7 +36,14 @@ class OrganizationController extends Controller
     {
         $subscriptionPlans = SubscriptionPlan::where('is_active', true)->get();
         
-        return view('admin.organizations.create', compact('subscriptionPlans'));
+        // Check if there are no active plans
+        $noPlans = $subscriptionPlans->isEmpty();
+        
+        return view('admin.organizations.create', [
+            'subscriptionPlans' => $subscriptionPlans,
+            'plans' => $subscriptionPlans, // Also pass as 'plans' for backward compatibility
+            'noPlans' => $noPlans
+        ]);
     }
 
     /**
@@ -48,36 +55,32 @@ class OrganizationController extends Controller
             'name' => 'required|string|max:255|unique:organizations',
             'email' => 'required|email|unique:organizations',
             'phone' => 'required|string|max:20',
-            'address' => 'nullable|string|max:500',
+            'address' => 'required|string|max:500',
+            'contact_person' => 'required|string|max:255',
+            'contact_person_designation' => 'required|string|max:255',
+            'contact_person_phone' => 'required|string|max:20',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
-            'admin_name' => 'required|string|max:255',
-            'admin_email' => 'required|email|unique:users,email',
-            'admin_password' => 'required|string|min:8|confirmed',
+            'discount_percentage' => 'required|numeric|min:0|max:100',
+            'password' => 'required|string|min:8|confirmed',
+            'is_active' => 'required|boolean',
         ]);
 
         DB::beginTransaction();
         
         try {
-            // Create organization - DEFAULT to INACTIVE
+            // Create organization - DEFAULT to INACTIVE but respect the form input
             $organization = Organization::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'address' => $request->address,
+                'contact_person' => $request->contact_person,
+                'contact_person_designation' => $request->contact_person_designation,
+                'contact_person_phone' => $request->contact_person_phone,
                 'subscription_plan_id' => $request->subscription_plan_id,
-                'activation_key' => Str::random(40),
-                'is_active' => false, // Organizations must be activated by super admin
-            ]);
-
-            // Create admin user
-            $admin = User::create([
-                'name' => $request->admin_name,
-                'email' => $request->admin_email,
-                'password' => Hash::make($request->admin_password),
-                'organization_id' => $organization->id,
-                'is_admin' => true,
-                'email_verified_at' => now(),
-                'is_active' => true,
+                'discount_percentage' => $request->discount_percentage,
+                'password' => Hash::make($request->password),
+                'is_active' => $request->boolean('is_active', false), // Default to false if not provided
             ]);
 
             // Create default head office branch
@@ -98,8 +101,8 @@ class OrganizationController extends Controller
 
             Log::info('Organization created successfully', [
                 'organization_id' => $organization->id,
-                'admin_user_id' => $admin->id,
-                'head_office_branch_id' => $headOfficeBranch->id
+                'head_office_branch_id' => $headOfficeBranch->id,
+                'created_by' => Auth::guard('admin')->id()
             ]);
 
             return redirect()->route('admin.organizations.index')
@@ -110,7 +113,7 @@ class OrganizationController extends Controller
             
             Log::error('Failed to create organization', [
                 'error' => $e->getMessage(),
-                'request_data' => $request->except(['admin_password', 'admin_password_confirmation'])
+                'request_data' => $request->except(['password', 'password_confirmation'])
             ]);
             
             return redirect()->back()
