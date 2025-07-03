@@ -162,7 +162,7 @@ class ScopeBasedPermission
             if (!$this->resourceBelongsToOrganization($type, $id, $admin->organization_id)) {
                 Log::warning('Organization scope violation', [
                     'admin_id' => $admin->id,
-                    'rereference_type' => $type,
+                    'resource_type' => $type,
                     'resource_id' => $id,
                     'organization_id' => $admin->organization_id
                 ]);
