@@ -79,21 +79,11 @@
                 <span>
                     @php
                         $plan = $organization->plan;
-                        $modulesList = $plan ? $plan->getModulesArray() : [];
+                        $modulesList = $plan ? $plan->getModulesWithNames() : [];
                     @endphp
                     @if(!empty($modulesList))
-                        @foreach($modulesList as $moduleData)
-                            @php
-                                $moduleName = is_array($moduleData) ? ($moduleData['name'] ?? $moduleData) : $moduleData;
-                                $moduleId = is_numeric($moduleName) ? $moduleName : null;
-                                if ($moduleId) {
-                                    $moduleRecord = \App\Models\Module::find($moduleId);
-                                    $displayName = $moduleRecord ? $moduleRecord->name : $moduleId;
-                                } else {
-                                    $displayName = ucfirst($moduleName);
-                                }
-                            @endphp
-                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">{{ $displayName }}</span>
+                        @foreach($modulesList as $module)
+                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">{{ $module['name'] }}</span>
                         @endforeach
                     @else
                         N/A
