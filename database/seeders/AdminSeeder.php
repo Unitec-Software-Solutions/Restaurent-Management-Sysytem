@@ -415,19 +415,19 @@ class AdminSeeder extends Seeder
             ]);
         }
 
-        // Create or update super admin
+        // Create or update super admin (NO organization - system level admin)
         $superAdmin = Admin::updateOrCreate(
             ['email' => 'superadmin@rms.com'],
             [
                 'name' => 'Super Administrator',
                 'password' => Hash::make('SuperAdmin123!'),
-                'organization_id' => $organization->id,
+                'organization_id' => null, // Super admin belongs to no organization
                 'is_super_admin' => true,
                 'is_active' => true,
                 'status' => 'active',
                 'role' => 'superadmin',
                 'job_title' => 'System Administrator',
-                'department' => 'Administration',
+                'department' => 'System Administration',
                 'email_verified_at' => now(),
                 'preferences' => [
                     'timezone' => 'UTC',
@@ -465,7 +465,7 @@ class AdminSeeder extends Seeder
         $this->command->info('  ✅ Super Admin created:');
         $this->command->info('     Email: superadmin@rms.com');
         $this->command->info('     Password: SuperAdmin123!');
-        $this->command->info('     Organization: ' . $organization->name);
+        $this->command->info('     Type: System Administrator (No Organization)');
         $this->command->info('     Permissions: ' . $allPermissions->count() . ' (All System Permissions)');
         $this->command->info('     isSuperAdmin(): ' . ($superAdmin->isSuperAdmin() ? 'YES' : 'NO'));
         

@@ -13,9 +13,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Check if we should run basic or comprehensive seeding
+        // For migrate:fresh --seed, always run comprehensive seeding in development
         $runComprehensive = App::environment(['local', 'testing']) || 
                            (isset($this->command) && $this->command->option('comprehensive')) ||
-                           config('app.debug', false);
+                           config('app.debug', false) ||
+                           true; // Always run comprehensive for now
 
         if ($runComprehensive) {
             $this->runComprehensiveSeeding();
@@ -58,6 +60,10 @@ class DatabaseSeeder extends Seeder
             RestaurantConfigSeeder::class,
             SubscriptionPlanSeeder::class,
         ]);
+        
+        // === STANDARDIZE SUPER ADMIN CREDENTIALS ===
+        // Ensure consistent super admin login after all seeders run
+        $this->standardizeSuperAdmin();
         
         $this->command->info('✅ Basic seeding completed');
     }
@@ -163,12 +169,65 @@ class DatabaseSeeder extends Seeder
             ProductionScenarioSeeder::class,
             ReportingScenarioSeeder::class,
             
+            // === SIMULATION SEEDERS (Development & Testing) ===
+            // These provide realistic data scenarios for testing
+            ReservationLifecycleSeeder::class,
+            OrderSimulationSeeder::class,
+            GuestActivitySeeder::class,
+            
             // === AUTOMATED COMPREHENSIVE TEST DATA ===
             // Note: ComprehensiveTestSeeder includes all advanced automation seeders
             // This provides comprehensive test data for development and testing
             ComprehensiveTestSeeder::class,
         ]);
         
+        // === STANDARDIZE SUPER ADMIN CREDENTIALS ===
+        // Ensure consistent super admin login after all seeders run
+        $this->standardizeSuperAdmin();
+        
         $this->command->info('✅ Comprehensive seeding completed');
+    }
+    
+    /**
+     * Standardize super admin credentials for consistent login
+     */
+    private function standardizeSuperAdmin(): void
+    {
+        $this->command->info('🔧 Standardizing Super Admin credentials...');
+        
+        // Ensure consistent super admin credentials
+        $email = 'superadmin@rms.com';
+        $password = 'SuperAdmin123!';
+        $name = 'Super Administrator';
+        
+        // Create or update super admin (NO organization - system level admin)
+        $admin = \App\Models\Admin::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => $name,
+                'password' => \Illuminate\Support\Facades\Hash::make($password),
+                'phone' => '+94 11 000 0000',
+                'job_title' => 'System Administrator',
+                'organization_id' => null, // Super admin belongs to no organization
+                'is_super_admin' => true,
+                'is_active' => true,
+                'status' => 'active',
+                'email_verified_at' => now(),
+            ]
+        );
+        
+        // Ensure Super Admin role exists and assign all permissions
+        $superAdminRole = \Spatie\Permission\Models\Role::firstOrCreate([
+            'name' => 'Super Admin',
+            'guard_name' => 'admin'
+        ]);
+        
+        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get();
+        $superAdminRole->syncPermissions($allPermissions);
+        
+        // Assign role to admin
+        $admin->syncRoles([$superAdminRole]);
+        
+        $this->command->info('✅ Super Admin standardized: ' . $email . ' / ' . $password . ' (System Level)');
     }
 }
