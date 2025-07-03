@@ -103,6 +103,12 @@ class ItemTransaction extends Model
         return $this->belongsTo(ItemMaster::class, 'inventory_item_id');
     }
 
+    // Dont Remove this Inventory Module items (stock, show ) dashboard breaks without this 
+    public function item(): BelongsTo
+    {
+        return $this->inventoryItem();
+    }
+
     public function itemMaster(): BelongsTo
     {
         return $this->belongsTo(ItemMaster::class, 'item_master_id');
