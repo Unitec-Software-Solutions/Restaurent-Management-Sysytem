@@ -36,8 +36,6 @@ class ItemTransaction extends Model
         'unit_price',
         'total_amount',
         'tax_amount',
-        'source_id',
-        'source_type',
         'reference_type',
         'reference_id',
         'reference_number',
@@ -231,15 +229,46 @@ class ItemTransaction extends Model
         if ($branchId) {
             $query->where('branch_id', $branchId);
         }
-        
-        // Calculate stock movements
-        $stockIn = $query->clone()
-            ->whereIn('transaction_type', ['stock_in', 'transfer_in', 'purchase', 'production_in', 'adjustment'])
+
+        $incomingTypes = [
+            'stock_in',
+            'transfer_in',
+            'purchase',
+            'production_in',
+            'grn_stock_in',
+            'gtn_stock_in',
+            'order_adjustment',
+            'production_return',
+            'gtn_incoming',
+        ];
+
+        $outgoingTypes = [
+            'stock_out',
+            'transfer_out',
+            'sale',
+            'production_out',
+            'sales_order',
+            'order_deduction',
+            'takeaway_order',
+            'production_issue',
+            'production',
+            'waste',
+            'consumption',
+            'write_off',
+            'transfer',
+            'usage',
+            'gtn_outgoing',
+            'production_waste',
+            'gtn_rejection',
+        ];
+
+        $stockIn = (clone $query)
+            ->whereIn('transaction_type', $incomingTypes)
             ->where('quantity', '>', 0)
             ->sum('quantity');
-            
-        $stockOut = $query->clone()
-            ->whereIn('transaction_type', ['stock_out', 'transfer_out', 'sale', 'production_out', 'adjustment'])
+
+        $stockOut = (clone $query)
+            ->whereIn('transaction_type', $outgoingTypes)
             ->where('quantity', '<', 0)
             ->sum(DB::raw('ABS(quantity)'));
         
