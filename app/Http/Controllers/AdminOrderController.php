@@ -1126,8 +1126,8 @@ class AdminOrderController extends Controller
                         'quantity' => $orderItem->quantity, // Positive to add back stock
                         'cost_price' => $orderItem->menuItem->buying_price ?? 0,
                         'unit_price' => $orderItem->unit_price,
-                        'source_id' => $order->id,
-                        'source_type' => 'Order',
+                        'reference_id' => $order->id,
+                        'reference_type' => 'Order',
                         'created_by_user_id' => $admin->id,
                         'notes' => "Stock reversed for Takeaway Order #{$order->takeaway_id} update by admin",
                         'is_active' => true,
@@ -1165,8 +1165,8 @@ class AdminOrderController extends Controller
                     'quantity' => -$item['quantity'], // Negative for stock deduction
                     'cost_price' => $inventoryItem->buying_price,
                     'unit_price' => $inventoryItem->selling_price,
-                    'source_id' => $order->id,
-                    'source_type' => 'Order',
+                    'reference_id' => $order->id,
+                    'reference_type' => 'Order',
                     'created_by_user_id' => $admin->id,
                     'notes' => "Stock deducted for updated Takeaway Order #{$order->takeaway_id} by admin",
                     'is_active' => true,
