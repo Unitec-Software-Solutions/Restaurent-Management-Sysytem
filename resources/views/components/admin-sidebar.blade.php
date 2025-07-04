@@ -23,30 +23,31 @@
                     @foreach ($menuItems as $item)
                         {{-- Regular menu items with enhanced badge and sub-item support --}}
                         <li>
-                            @if(\Illuminate\Support\Facades\Route::has($item['route']))
+                            @if (\Illuminate\Support\Facades\Route::has($item['route']))
                                 <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
                                     class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200
-                                    {{ request()->routeIs($item['route'] . '*') 
-                                        ? 'bg-white text-gray-700 border-white' 
+                                    {{ request()->routeIs($item['route'] . '*')
+                                        ? 'bg-white text-gray-700 border-white'
                                         : 'bg-transparent text-white border-white hover:bg-white/10' }}"
                                     data-route="{{ $item['route'] }}">
 
                                     @if ($item['icon_type'] === 'svg')
-                                        @if(view()->exists('partials.icons.' . $item['icon']))
+                                        @if (view()->exists('partials.icons.' . $item['icon']))
                                             @include('partials.icons.' . $item['icon'])
                                         @else
-                                            <i class="fas fa-circle w-5 text-center text-gray-400" title="Icon missing: {{ $item['icon'] }}"></i>
+                                            <i class="fas fa-circle w-5 text-center text-gray-400"
+                                                title="Icon missing: {{ $item['icon'] }}"></i>
                                         @endif
                                     @else
                                         <i class="fas fa-{{ $item['icon'] }} w-5 text-center"></i>
                                     @endif
-                                    
+
                                     <span class="font-medium">{{ $item['title'] }}</span>
-                                    
-                                    @if(isset($item['badge']) && $item['badge'] > 0)
+
+                                    @if (isset($item['badge']) && $item['badge'] > 0)
                                         @php
                                             $badgeColor = $item['badge_color'] ?? 'red';
-                                            $badgeClass = match($badgeColor) {
+                                            $badgeClass = match ($badgeColor) {
                                                 'red' => 'bg-red-500',
                                                 'green' => 'bg-green-500',
                                                 'blue' => 'bg-blue-500',
@@ -57,52 +58,58 @@
                                                 'emerald' => 'bg-emerald-500',
                                                 'cyan' => 'bg-cyan-500',
                                                 'gray' => 'bg-gray-500',
-                                                default => 'bg-red-500'
+                                                default => 'bg-red-500',
                                             };
                                         @endphp
-                                        <span class="{{ $badgeClass }} text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-auto">
+                                        <span
+                                            class="{{ $badgeClass }} text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-auto">
                                             {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
                                         </span>
                                     @endif
 
-                                    @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
-                                        <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200" 
-                                           data-submenu-toggle="{{ $item['route'] }}"></i>
+                                    @if (isset($item['sub_items']) && count($item['sub_items']) > 0)
+                                        <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200"
+                                            data-submenu-toggle="{{ $item['route'] }}"></i>
                                     @endif
                                 </a>
 
                                 {{-- Sub-menu items --}}
-                                @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
-                                    <ul class="ml-8 mt-1 space-y-1 {{ request()->routeIs($item['route'] . '*') ? 'block' : 'hidden' }}" 
+                                @if (isset($item['sub_items']) && count($item['sub_items']) > 0)
+                                    <ul class="ml-8 mt-1 space-y-1 {{ request()->routeIs($item['route'] . '*') ? 'block' : 'hidden' }}"
                                         data-submenu="{{ $item['route'] }}">
                                         @foreach ($item['sub_items'] as $subItem)
-                                            @if(isset($subItem['is_route_valid']) && $subItem['is_route_valid'] && \Illuminate\Support\Facades\Route::has($subItem['route']))
+                                            @if (isset($subItem['is_route_valid']) &&
+                                                    $subItem['is_route_valid'] &&
+                                                    \Illuminate\Support\Facades\Route::has($subItem['route']))
                                                 <li>
                                                     <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
                                                         class="flex items-center gap-2 px-3 py-1 rounded border transition-colors duration-200 text-sm
-                                                        {{ request()->routeIs($subItem['route']) 
-                                                            ? 'bg-white text-gray-700 border-white' 
+                                                        {{ request()->routeIs($subItem['route'])
+                                                            ? 'bg-white text-gray-700 border-white'
                                                             : 'bg-transparent text-white border-white hover:bg-white/10' }}"
                                                         data-route="{{ $subItem['route'] }}">
-                                                        
+
                                                         @if ($subItem['icon_type'] === 'svg')
-                                                            @if(view()->exists('partials.icons.' . $subItem['icon']))
+                                                            @if (view()->exists('partials.icons.' . $subItem['icon']))
                                                                 @include('partials.icons.' . $subItem['icon'])
                                                             @else
-                                                                <i class="fas fa-circle w-4 text-center text-gray-400"></i>
+                                                                <i
+                                                                    class="fas fa-circle w-4 text-center text-gray-400"></i>
                                                             @endif
                                                         @else
-                                                            <i class="fas fa-{{ $subItem['icon'] }} w-4 text-center"></i>
+                                                            <i
+                                                                class="fas fa-{{ $subItem['icon'] }} w-4 text-center"></i>
                                                         @endif
-                                                        
+
                                                         <span>{{ $subItem['title'] }}</span>
                                                     </a>
                                                 </li>
                                             @elseif(!isset($subItem['is_route_valid']) || !$subItem['is_route_valid'])
                                                 {{-- Show disabled sub-item for missing routes --}}
                                                 <li>
-                                                    <span class="flex items-center gap-2 px-3 py-1 rounded border text-gray-400 cursor-not-allowed text-sm"
-                                                          title="Route not available: {{ $subItem['route'] }}">
+                                                    <span
+                                                        class="flex items-center gap-2 px-3 py-1 rounded border text-gray-400 cursor-not-allowed text-sm"
+                                                        title="Route not available: {{ $subItem['route'] }}">
                                                         <i class="fas fa-exclamation-triangle w-4 text-center"></i>
                                                         <span>{{ $subItem['title'] }}</span>
                                                         <small class="ml-auto text-xs">(N/A)</small>
@@ -114,8 +121,9 @@
                                 @endif
                             @else
                                 {{-- Route doesn't exist - show disabled item --}}
-                                <span class="flex items-center gap-3 px-4 py-2 rounded-xl border text-gray-400 cursor-not-allowed"
-                                      title="Route not available: {{ $item['route'] }}">
+                                <span
+                                    class="flex items-center gap-3 px-4 py-2 rounded-xl border text-gray-400 cursor-not-allowed"
+                                    title="Route not available: {{ $item['route'] }}">
                                     <i class="fas fa-exclamation-triangle w-5 text-center"></i>
                                     <span class="font-medium">{{ $item['title'] }}</span>
                                     <small class="ml-auto text-xs">(N/A)</small>
@@ -126,7 +134,7 @@
                 </ul>
 
                 {{-- Debug Information (only in development) --}}
-                {{-- @if(config('app.debug'))
+                {{-- @if (config('app.debug'))
                     <div class="mt-6 p-3 bg-black/20 rounded-lg">
                         <h4 class="text-xs font-semibold mb-2 text-white/80">Debug Info</h4>
                         <div class="text-xs text-white/60 space-y-1">
@@ -146,7 +154,7 @@
                 <li>
                     <button onclick="toggleLogoutModal()"
                         class="w-full text-left flex items-center border gap-3 rounded-xl px-4 py-2 transition-colors hover:bg-[#6A71F0]">
-                        @if(view()->exists('partials.icons.log-out'))
+                        @if (view()->exists('partials.icons.log-out'))
                             @include('partials.icons.log-out')
                         @else
                             <i class="fas fa-sign-out-alt w-5 text-center"></i>
@@ -160,88 +168,125 @@
 </aside>
 
 {{-- Sidebar Enhancement Scripts --}}
-@if(config('app.debug'))
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Real-time authentication status monitor
-    function checkAuthStatus() {
-        fetch('/admin/auth/debug')
-            .then(response => response.json())
-            .then(data => {
-                const statusEl = document.getElementById('auth-status');
-                if (statusEl) {
-                    statusEl.textContent = data.auth_admin_check ? '✓ Authenticated' : '✗ Not authenticated';
-                    statusEl.className = data.auth_admin_check ? 'text-green-400' : 'text-red-400';
-                }
-            })
-            .catch(error => {
-                console.error('Auth check failed:', error);
-                const statusEl = document.getElementById('auth-status');
-                if (statusEl) {
-                    statusEl.textContent = '⚠ Check failed';
-                    statusEl.className = 'text-yellow-400';
+@if (config('app.debug'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Real-time authentication status monitor
+            function checkAuthStatus() {
+                fetch('/admin/auth/debug')
+                    .then(response => response.json())
+                    .then(data => {
+                        const statusEl = document.getElementById('auth-status');
+                        if (statusEl) {
+                            statusEl.textContent = data.auth_admin_check ? '✓ Authenticated' :
+                                '✗ Not authenticated';
+                            statusEl.className = data.auth_admin_check ? 'text-green-400' : 'text-red-400';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Auth check failed:', error);
+                        const statusEl = document.getElementById('auth-status');
+                        if (statusEl) {
+                            statusEl.textContent = '⚠ Check failed';
+                            statusEl.className = 'text-yellow-400';
+                        }
+                    });
+            }
+
+            // Enhanced submenu toggle functionality
+            document.querySelectorAll('[data-submenu-toggle]').forEach(toggle => {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const submenuId = this.getAttribute('data-submenu-toggle');
+                    const submenu = document.querySelector(`[data-submenu="${submenuId}"]`);
+
+                    if (submenu) {
+                        submenu.classList.toggle('hidden');
+                        this.classList.toggle('rotate-180');
+
+                        // Store submenu state in localStorage
+                        const isOpen = !submenu.classList.contains('hidden');
+                        localStorage.setItem(`submenu-${submenuId}`, isOpen ? 'open' : 'closed');
+                    }
+                });
+            });
+
+            // Restore submenu states from localStorage
+            document.querySelectorAll('[data-submenu]').forEach(submenu => {
+                const route = submenu.getAttribute('data-submenu');
+                const state = localStorage.getItem(`submenu-${route}`);
+                const toggle = document.querySelector(`[data-submenu-toggle="${route}"]`);
+
+                if (state === 'open') {
+                    submenu.classList.remove('hidden');
+                    if (toggle) toggle.classList.add('rotate-180');
                 }
             });
+
+            // Monitor sidebar link clicks for debugging
+            document.querySelectorAll('[data-route]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const route = this.getAttribute('data-route');
+                    console.log('Sidebar navigation:', {
+                        route: route,
+                        href: this.href,
+                        timestamp: new Date().toISOString()
+                    });
+
+                    // Check for potential redirect loops
+                    if (this.href.includes('/admin/login')) {
+                        e.preventDefault();
+                        console.error('🚨 Redirect loop detected!', {
+                            route: route,
+                            href: this.href,
+                            currentUrl: window.location.href
+                        });
+                        alert('Authentication error detected. Please check console for details.');
+                    }
+                });
+            });
+
+            // Initial auth check
+            checkAuthStatus();
+
+            // Periodic auth check (every 30 seconds)
+            setInterval(checkAuthStatus, 30000);
+        });
+    </script>
+@endif
+
+<style>
+    /* Custom scrollbar for the sidebar */
+    #sidebar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
     }
 
-    // Enhanced submenu toggle functionality
-    document.querySelectorAll('[data-submenu-toggle]').forEach(toggle => {
-        toggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            const submenuId = this.getAttribute('data-submenu-toggle');
-            const submenu = document.querySelector(`[data-submenu="${submenuId}"]`);
-            
-            if (submenu) {
-                submenu.classList.toggle('hidden');
-                this.classList.toggle('rotate-180');
-                
-                // Store submenu state in localStorage
-                const isOpen = !submenu.classList.contains('hidden');
-                localStorage.setItem(`submenu-${submenuId}`, isOpen ? 'open' : 'closed');
-            }
-        });
-    });
+    #sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-    // Restore submenu states from localStorage
-    document.querySelectorAll('[data-submenu]').forEach(submenu => {
-        const route = submenu.getAttribute('data-submenu');
-        const state = localStorage.getItem(`submenu-${route}`);
-        const toggle = document.querySelector(`[data-submenu-toggle="${route}"]`);
-        
-        if (state === 'open') {
-            submenu.classList.remove('hidden');
-            if (toggle) toggle.classList.add('rotate-180');
-        }
-    });
+    #sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+        transition: background 0.3s ease;
+    }
 
-    // Monitor sidebar link clicks for debugging
-    document.querySelectorAll('[data-route]').forEach(link => {
-        link.addEventListener('click', function(e) {
-            const route = this.getAttribute('data-route');
-            console.log('Sidebar navigation:', {
-                route: route,
-                href: this.href,
-                timestamp: new Date().toISOString()
-            });
+    #sidebar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.4);
+    }
 
-            // Check for potential redirect loops
-            if (this.href.includes('/admin/login')) {
-                e.preventDefault();
-                console.error('🚨 Redirect loop detected!', {
-                    route: route,
-                    href: this.href,
-                    currentUrl: window.location.href
-                });
-                alert('Authentication error detected. Please check console for details.');
-            }
-        });
-    });
+    #sidebar:hover::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+    }
 
-    // Initial auth check
-    checkAuthStatus();
-    
-    // Periodic auth check (every 30 seconds)
-    setInterval(checkAuthStatus, 30000);
-});
-</script>
-@endif
+    /* For Firefox */
+    #sidebar {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+    }
+
+    #sidebar:hover {
+        scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+    }
+</style>
