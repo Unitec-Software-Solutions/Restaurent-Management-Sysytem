@@ -46,12 +46,12 @@ use App\Http\Controllers\Admin\BillController;
     Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
-    
+
     // Main admin routes
     Route::get('dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('profile', [AdminController::class, 'profile'])->name('profile.index');
     // Route::get('testpage', [AdminTestPageController::class, 'index'])->name('testpage');
-    
+
     // Reservations
     Route::get('reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
 
@@ -62,12 +62,12 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('admin/login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('admin/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
-    
+
     // Main admin routes
     Route::get('admin/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('admin/profile', [AdminController::class, 'profile'])->name('profile.index');
     // Route::get('admin/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
-    
+
     // Reservations
     Route::get('admin/reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
     Route::get('admin/reservations/create', [AdminReservationController::class, 'create'])->name('reservations.create');
@@ -77,13 +77,13 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::put('admin/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('reservations.update');
     Route::delete('admin/reservations/{reservation}', [AdminReservationController::class, 'destroy'])->name('reservations.destroy');
 
-    
+
     // GRN (Goods Received Note)
     Route::get('admin/grn', [GrnDashboardController::class, 'index'])->name('grn.index');
     Route::get('admin/grn/create', [GrnDashboardController::class, 'create'])->name('grn.create');
     Route::post('admin/grn', [GrnDashboardController::class, 'store'])->name('grn.store');
     Route::get('admin/grn/{grn}', [GrnDashboardController::class, 'show'])->name('grn.show');
-    
+
     // Orders management
     Route::get('admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
     Route::get('admin/orders/create', [AdminOrderController::class, 'create'])->name('admin.orders.create');
@@ -92,7 +92,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/orders/{order}/edit', [AdminOrderController::class, 'edit'])->name('admin.orders.edit');
     Route::put('admin/orders/{order}', [AdminOrderController::class, 'update'])->name('admin.orders.update');
     Route::delete('admin/orders/{order}', [AdminOrderController::class, 'destroy'])->name('admin.orders.destroy');
-    
+
     // Takeaway orders
     Route::get('admin/orders/takeaway', [AdminOrderController::class, 'indexTakeaway'])->name('admin.orders.takeaway.index');
     Route::get('admin/orders/takeaway/create', [AdminOrderController::class, 'createTakeaway'])->name('admin.orders.takeaway.create');
@@ -101,11 +101,11 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/orders/takeaway/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->name('admin.orders.takeaway.edit');
     Route::put('admin/orders/takeaway/{order}', [AdminOrderController::class, 'updateTakeaway'])->name('admin.orders.takeaway.update');
     Route::delete('admin/orders/takeaway/{order}', [AdminOrderController::class, 'destroyTakeaway'])->name('admin.orders.takeaway.destroy');
-    
+
     // Admin order dashboard and type selector
     Route::get('admin/orders/dashboard', [AdminOrderController::class, 'dashboard'])->name('admin.orders.dashboard');
     Route::get('admin/orders/takeaway/type-selector', [AdminOrderController::class, 'takeawayTypeSelector'])->name('admin.orders.takeaway.type-selector');
-    
+
     // Organizations
     Route::get('admin/organizations', [OrganizationController::class, 'index'])->name('organizations.index');
     Route::get('admin/organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
@@ -115,7 +115,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::delete('admin/organizations/{organization}', [OrganizationController::class, 'destroy'])->name('organizations.destroy');
     Route::get('admin/organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
     Route::put('admin/organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
-    
+
     // Branches
     Route::get('admin/organizations/{organization}/branches', [BranchController::class, 'index'])->name('branches.index');
     Route::get('admin/organizations/{organization}/branches/create', [BranchController::class, 'create'])->name('branches.create');
@@ -126,11 +126,11 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/organizations/{organization}/users/create', [UserController::class, 'create'])->name('users.create');
     Route::get('admin/organizations/{organization}/branches/{branch}/users/create', [UserController::class, 'create'])->name('branch.users.create');
     Route::get('admin/branches', [BranchController::class, 'globalIndex'])->name('branches.global');
-    
+
     // Users and roles
     Route::get('admin/users', [UserController::class, 'index'])->name('users.index');
     Route::get('admin/roles', [RoleController::class, 'index'])->name('roles.index');
-    
+
     // Subscription plans
     Route::get('admin/subscription-plans', [SubscriptionPlanController::class, 'index'])->name('subscription-plans.index');
     Route::get('admin/subscription-plans/create', [SubscriptionPlanController::class, 'create'])->name('subscription-plans.create');
@@ -139,17 +139,17 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/subscription-plans/{subscription_plan}/edit', [SubscriptionPlanController::class, 'edit'])->name('subscription-plans.edit');
     Route::put('admin/subscription-plans/{subscription_plan}', [SubscriptionPlanController::class, 'update'])->name('subscription-plans.update');
     Route::delete('admin/subscription-plans/{subscription_plan}', [SubscriptionPlanController::class, 'destroy'])->name('subscription-plans.destroy');
-    
+
     // Organization and branch activation
     Route::get('admin/organizations/activate', [OrganizationController::class, 'showActivationForm'])->name('organizations.activate.form');
     Route::post('admin/organizations/activate', [OrganizationController::class, 'activateOrganization'])->name('organizations.activate.submit');
     Route::get('admin/branches/activate', [BranchController::class, 'showActivationForm'])->name('branches.activate.form');
     Route::post('admin/branches/activate', [BranchController::class, 'activateBranch'])->name('branches.activate.submit');
-    
+
     // Subscriptions
     Route::get('admin/subscriptions/{subscription}/edit', [SubscriptionController::class, 'edit'])->name('subscriptions.edit');
     Route::put('admin/subscriptions/{subscription}', [SubscriptionController::class, 'update'])->name('subscriptions.update');
-    
+
     // Enhanced roles and modules
     Route::get('admin/roles/create', [RoleController::class, 'create'])->name('roles.create');
     Route::post('admin/roles', [RoleController::class, 'store'])->name('roles.store');
@@ -164,7 +164,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::delete('admin/modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
     Route::get('admin/roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions');
     Route::post('admin/roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
-    
+
     // Enhanced user management
     Route::get('admin/users/create', [UserController::class, 'create'])->name('users.create');
     Route::post('admin/users', [UserController::class, 'store'])->name('users.store');
@@ -174,17 +174,17 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('admin/users/{user}/assign-role', [UserController::class, 'assignRoleForm'])->name('users.assign-role');
     Route::post('admin/users/{user}/assign-role', [UserController::class, 'assignRole'])->name('users.assign-role.store');
     Route::get('admin/users/{user}', [UserController::class, 'show'])->name('users.show');
-    
+
     // Enhanced orders
     Route::get('admin/orders/enhanced-create', [AdminOrderController::class, 'enhancedCreate'])->name('orders.enhanced-create');
     Route::post('admin/orders/enhanced-store', [AdminOrderController::class, 'enhancedStore'])->name('orders.enhanced-store');
     Route::post('admin/orders/{order}/confirm-stock', [AdminOrderController::class, 'confirmOrderStock'])->name('orders.confirm-stock');
     Route::delete('admin/orders/{order}/cancel-with-stock', [AdminOrderController::class, 'cancelOrderWithStock'])->name('orders.cancel-with-stock');
-    
+
     // Realtime dashboard
     Route::get('admin/dashboard/realtime-inventory', [RealtimeDashboardController::class, 'index'])->name('dashboard.realtime-inventory');
     Route::get('menus/safety-dashboard', [MenuController::class, 'safetyDashboard'])->name('menus.safety-dashboard');
-    
+
     // Enhanced admin modules
     Route::get('customers/index', [CustomerController::class, 'index'])->name('customers.index');
     // Route::get('digital-menu/index', [DigitalMenuController::class, 'index'])->name('digital-menu.index');
@@ -194,7 +194,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('debug/routes/test', [DebugController::class, 'routes'])->name('debug.routes.test');
     Route::get('debug/routes/generate', [DebugController::class, 'routes'])->name('debug.routes.generate');
     Route::get('debug/routes/export', [DebugController::class, 'routes'])->name('debug.routes.export');
-    
+
     // Employee management
     Route::get('employees/index', [EmployeeController::class, 'index'])->name('employees.index');
     Route::post('employees/store', [EmployeeController::class, 'store'])->name('employees.store');
@@ -204,7 +204,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('employees/restore', [EmployeeController::class, 'restore'])->name('employees.restore');
     Route::get('employees/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
     Route::delete('employees/destroy', [EmployeeController::class, 'destroy'])->name('employees.destroy');
-    
+
     // Additional admin modules with proper route names
     Route::get('grn/link-payment', [GrnController::class, 'linkPayment'])->name('grn.link-payment');
     Route::get('payments/show', [PaymentController::class, 'show'])->name('payments.show');
@@ -216,7 +216,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('inventory/stock/update', [InventoryController::class, 'stockUpdate'])->name('inventory.stock.update');
     Route::get('inventory/stock/edit', [InventoryController::class, 'stockEdit'])->name('inventory.stock.edit');
     Route::get('inventory/stock/show', [InventoryController::class, 'stockShow'])->name('inventory.stock.show');
-    
+
     // Menu management
     Route::get('menus/index', [MenuController::class, 'index'])->name('menus.index');
     Route::get('menus/bulk/store', [MenuController::class, 'bulkStore'])->name('menus.bulk-store');
@@ -229,7 +229,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('menus/list', [MenuController::class, 'list'])->name('menus.list');
     Route::get('menus/bulk/create', [MenuController::class, 'bulkCreate'])->name('menus.bulk.create');
     Route::get('menus/preview', [MenuController::class, 'preview'])->name('menus.preview');
-    
+
     // Enhanced order management
     Route::get('orders/archive-old-menus', [OrderController::class, 'archiveOldMenus'])->name('orders.archive-old-menus');
     Route::get('orders/menu-safety-status', [OrderController::class, 'menuSafetyStatus'])->name('orders.menu-safety-status');
@@ -246,13 +246,13 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('reservations/check-in', [ReservationController::class, 'checkIn'])->name('reservations.check-in');
     Route::get('reservations/check-out', [ReservationController::class, 'checkOut'])->name('reservations.check-out');
     Route::get('orders/orders/reservations/create', [OrderController::class, 'ordersReservationsCreate'])->name('orders.orders.reservations.create');
-    
+
     // GRN additional routes
     Route::put('grn/update', [GrnController::class, 'update'])->name('grn.update');
     Route::get('grn/print', [GrnController::class, 'print'])->name('grn.print');
     Route::get('grn/edit', [GrnController::class, 'edit'])->name('grn.edit');
     Route::get('grn/verify', [GrnController::class, 'verify'])->name('grn.verify');
-    
+
     // Purchase orders
     Route::get('purchase-orders/show', [PurchaseOrderController::class, 'show'])->name('purchase-orders.show');
     Route::get('purchase-orders/index', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
@@ -262,7 +262,7 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('purchase-orders/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
     Route::get('purchase-orders/approve', [PurchaseOrderController::class, 'approve'])->name('purchase-orders.approve');
     Route::get('purchase-orders/edit', [PurchaseOrderController::class, 'edit'])->name('purchase-orders.edit');
-    
+
     // Payment management
     Route::get('payments/index', [PaymentController::class, 'index'])->name('payments.index');
     Route::post('payments/store', [PaymentController::class, 'store'])->name('payments.store');
@@ -271,19 +271,19 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     Route::get('payments/edit', [PaymentController::class, 'edit'])->name('payments.edit');
     Route::get('payments/print', [PaymentController::class, 'print'])->name('payments.print');
     Route::delete('payments/destroy', [PaymentController::class, 'destroy'])->name('payments.destroy');
-    
+
     // Additional supplier routes
     Route::get('suppliers/purchase-orders', [AdminSupplierController::class, 'purchaseOrders'])->name('suppliers.purchase-orders');
-    
+
     // Order summaries
     Route::get('orders/reservations/summary', [OrderController::class, 'reservationsSummary'])->name('orders.reservations.summary');
     Route::get('orders/takeaway/summary', [OrderController::class, 'takeawaySummary'])->name('orders.takeaway.summary');
     Route::get('orders/summary', [OrderController::class, 'summary'])->name('orders.summary');
-    
+
     // Bills
     Route::get('bills/show', [BillController::class, 'show'])->name('bills.show');
     Route::get('inventory/items/added-items', [InventoryController::class, 'itemsAddedItems'])->name('inventory.items.added-items');
-    
+
     // Enhanced order routes for reservation and takeaway flows
     Route::get('admin/orders/reservations/summary', [AdminOrderController::class, 'reservationOrderSummary'])->name('orders.reservations.summary');
     Route::get('admin/orders/takeaway/type-selector', [AdminOrderController::class, 'takeawayTypeSelector'])->name('orders.takeaway.type-selector');

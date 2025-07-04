@@ -35,10 +35,10 @@ class OrganizationController extends Controller
     public function create()
     {
         $subscriptionPlans = SubscriptionPlan::where('is_active', true)->get();
-        
+
         // Check if there are no active plans
         $noPlans = $subscriptionPlans->isEmpty();
-        
+
         return view('admin.organizations.create', [
             'subscriptionPlans' => $subscriptionPlans,
             'plans' => $subscriptionPlans, // Also pass as 'plans' for backward compatibility
@@ -66,7 +66,7 @@ class OrganizationController extends Controller
         ]);
 
         DB::beginTransaction();
-        
+
         try {
             // Create organization - DEFAULT to INACTIVE but respect the form input
             $organization = Organization::create([
@@ -95,6 +95,11 @@ class OrganizationController extends Controller
                 'activation_key' => Str::random(40),
                 'type' => 'restaurant',
                 'status' => 'inactive',
+                'opening_time' => '09:00:00', // Ensure opening_time is set
+                'closing_time' => '22:00:00', // Ensure closing_time is set
+                'total_capacity' => 50,
+                'reservation_fee' => 0,
+                'cancellation_fee' => 0,
             ]);
 
             DB::commit();
@@ -110,12 +115,12 @@ class OrganizationController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             Log::error('Failed to create organization', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->except(['password', 'password_confirmation'])
             ]);
-            
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Failed to create organization: ' . $e->getMessage());
@@ -138,7 +143,7 @@ class OrganizationController extends Controller
             'active_branches' => $organization->branches()->where('is_active', true)->count(),
             'total_users' => $organization->users()->count(),
             'registered_users' => $organization->users()->where('is_registered', true)->count(),
-            'subscription_days_left' => $organization->subscription_end_date ? 
+            'subscription_days_left' => $organization->subscription_end_date ?
                 now()->diffInDays($organization->subscription_end_date, false) : 0,
         ];
 
@@ -151,12 +156,12 @@ class OrganizationController extends Controller
     public function edit(Organization $organization)
     {
         $subscriptionPlans = SubscriptionPlan::where('is_active', true)->get();
-        
+
         // Debug: Check if subscriptionPlans is loaded
         if ($subscriptionPlans->isEmpty()) {
             Log::warning('No active subscription plans found for organization edit');
         }
-        
+
         return view('admin.organizations.edit', compact('organization', 'subscriptionPlans'));
     }
 
@@ -183,7 +188,7 @@ class OrganizationController extends Controller
         $willBeActive = $request->boolean('is_active');
 
         DB::beginTransaction();
-        
+
         try {
             $updateData = [
                 'name' => $request->name,
@@ -197,12 +202,12 @@ class OrganizationController extends Controller
                 'contact_person_phone' => $request->contact_person_phone,
                 'discount_percentage' => $request->discount_percentage,
             ];
-            
+
             // Only update password if provided
             if ($request->filled('password')) {
                 $updateData['password'] = Hash::make($request->password);
             }
-            
+
             $organization->update($updateData);
 
             // If organization is being deactivated, deactivate all branches
@@ -222,12 +227,12 @@ class OrganizationController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             Log::error('Failed to update organization', [
                 'organization_id' => $organization->id,
                 'error' => $e->getMessage()
             ]);
-            
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Failed to update organization: ' . $e->getMessage());
@@ -243,7 +248,7 @@ class OrganizationController extends Controller
             // Check if organization has active branches or users
             $branchCount = $organization->branches()->count();
             $userCount = $organization->users()->count();
-            
+
             if ($branchCount > 0 || $userCount > 0) {
                 return redirect()->back()
                     ->with('error', "Cannot delete organization with {$branchCount} branches and {$userCount} users. Please remove them first.");
@@ -265,7 +270,7 @@ class OrganizationController extends Controller
                 'organization_id' => $organization->id,
                 'error' => $e->getMessage()
             ]);
-            
+
             return redirect()->back()
                 ->with('error', 'Failed to delete organization: ' . $e->getMessage());
         }
@@ -287,7 +292,7 @@ class OrganizationController extends Controller
             'active_branches' => $organization->branches()->where('is_active', true)->count(),
             'total_users' => $organization->users()->count(),
             'registered_users' => $organization->users()->where('is_registered', true)->count(),
-            'subscription_days_left' => $organization->subscription_end_date ? 
+            'subscription_days_left' => $organization->subscription_end_date ?
                 now()->diffInDays($organization->subscription_end_date, false) : 0,
         ];
 
@@ -307,7 +312,7 @@ class OrganizationController extends Controller
     public function regenerateKey(Organization $organization)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Only super admins can regenerate activation keys
         if (!$admin || !$admin->isSuperAdmin()) {
             return redirect()->back()
@@ -316,7 +321,7 @@ class OrganizationController extends Controller
 
         $oldKey = $organization->activation_key;
         $newKey = Str::uuid();
-        
+
         $organization->update([
             'activation_key' => $newKey
         ]);
@@ -384,7 +389,7 @@ class OrganizationController extends Controller
     public function activationIndex()
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized');
         }
@@ -400,7 +405,7 @@ class OrganizationController extends Controller
             if (!$admin->organization_id) {
                 abort(403, 'No organization assigned to this admin');
             }
-            
+
             $organizations = Organization::with(['branches', 'users', 'subscriptionPlan'])
                 ->where('id', $admin->organization_id)
                 ->get();
@@ -415,7 +420,7 @@ class OrganizationController extends Controller
     public function activateByKey(Request $request, Organization $organization)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized');
         }
@@ -442,7 +447,7 @@ class OrganizationController extends Controller
         }
 
         DB::beginTransaction();
-        
+
         try {
             // Activate organization
             $organization->update([
@@ -461,13 +466,13 @@ class OrganizationController extends Controller
             ]);
 
             DB::commit();
-            
+
             return redirect()->route('admin.organizations.activation.index')
                 ->with('success', "Organization '{$organization->name}' activated successfully!");
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             Log::error('Failed to activate organization', [
                 'organization_id' => $organization->id,
                 'error' => $e->getMessage(),
@@ -542,7 +547,7 @@ class OrganizationController extends Controller
             'subscription' => [
                 'plan' => $organization->subscriptionPlan->name ?? 'No Plan',
                 'status' => $organization->subscription_end_date > now() ? 'Active' : 'Expired',
-                'days_left' => $organization->subscription_end_date ? 
+                'days_left' => $organization->subscription_end_date ?
                     now()->diffInDays($organization->subscription_end_date, false) : 0,
             ]
         ];
@@ -611,7 +616,7 @@ class OrganizationController extends Controller
             }
         } else {
             // For activation, both super admins and organization admins can activate
-            if (!Auth::guard('admin')->user()->isSuperAdmin() && 
+            if (!Auth::guard('admin')->user()->isSuperAdmin() &&
                 !Auth::guard('admin')->user()->canManageOrganization($organization)) {
                 return redirect()->back()
                     ->with('error', 'You do not have permission to activate this organization.');
@@ -624,7 +629,7 @@ class OrganizationController extends Controller
         ]);
 
         DB::beginTransaction();
-        
+
         try {
             if ($request->action === 'activate') {
                 // Verify activation key if provided
@@ -639,7 +644,7 @@ class OrganizationController extends Controller
                 ]);
 
                 $message = 'Organization activated successfully.';
-                
+
                 // Log the activation
                 Log::info('Organization activated by super admin', [
                     'organization_id' => $organization->id,
@@ -658,7 +663,7 @@ class OrganizationController extends Controller
                 $organization->branches()->update(['is_active' => false]);
 
                 $message = 'Organization deactivated successfully.';
-                
+
                 // Log the deactivation
                 Log::info('Organization deactivated by super admin', [
                     'organization_id' => $organization->id,
@@ -669,13 +674,13 @@ class OrganizationController extends Controller
             }
 
             DB::commit();
-            
+
             return redirect()->route('admin.organizations.index')
                 ->with('success', $message);
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             Log::error('Failed to change organization status', [
                 'organization_id' => $organization->id,
                 'action' => $request->action,
@@ -703,7 +708,7 @@ class OrganizationController extends Controller
 
         // Load organizations with relationships for sidebar display
         $organizations = Organization::with([
-            'branches.kitchenStations', 
+            'branches.kitchenStations',
             'admins' => function($query) {
                 $query->where('is_active', true);
             },
@@ -715,9 +720,9 @@ class OrganizationController extends Controller
         $subscriptionPlans = SubscriptionPlan::where('is_active', true)->get();
 
         return view('admin.organization-workflow.dashboard', compact(
-            'stats', 
-            'organizations', 
-            'modules', 
+            'stats',
+            'organizations',
+            'modules',
             'subscriptionPlans'
         ));
     }
@@ -739,7 +744,7 @@ class OrganizationController extends Controller
             'branches' => $organization->branches()->count(),
             'active_branches' => $organization->branches()->where('is_active', true)->count(),
             'admins' => $organization->admins()->where('is_active', true)->count(),
-            'subscription_days_left' => $organization->subscription_end_date ? 
+            'subscription_days_left' => $organization->subscription_end_date ?
                 now()->diffInDays($organization->subscription_end_date, false) : 0,
         ];
 
@@ -800,7 +805,7 @@ class OrganizationController extends Controller
     public function orgDashboard()
     {
         $admin = auth('admin')->user();
-        
+
         if ($admin->isSuperAdmin()) {
             // If super admin, redirect to main dashboard
             return redirect()->route('admin.organizations.dashboard');
@@ -813,7 +818,7 @@ class OrganizationController extends Controller
 
         // Load organization with relationships
         $organization->load([
-            'branches.kitchenStations', 
+            'branches.kitchenStations',
             'admins' => function($query) {
                 $query->where('is_active', true);
             },
@@ -837,7 +842,7 @@ class OrganizationController extends Controller
     public function switchBackToSuperAdmin()
     {
         $originalAdminId = session('original_super_admin_id');
-        
+
         if ($originalAdminId) {
             $superAdmin = \App\Models\Admin::find($originalAdminId);
             if ($superAdmin && $superAdmin->isSuperAdmin()) {

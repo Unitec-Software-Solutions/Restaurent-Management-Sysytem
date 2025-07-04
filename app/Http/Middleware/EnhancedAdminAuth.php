@@ -41,12 +41,12 @@ class EnhancedAdminAuth
 
         /** @var Authenticatable $admin */
         $admin = Auth::guard('admin')->user();
-        
+
         // Validate admin account
         if (!$admin instanceof \App\Models\Admin) {
             Auth::guard('admin')->logout();
             Log::error('Invalid admin type detected');
-            
+
             return redirect()->route('admin.login')
                 ->with('error', 'Invalid authentication. Please log in again.');
         }
@@ -55,7 +55,7 @@ class EnhancedAdminAuth
         if (!$admin->is_active) {
             Auth::guard('admin')->logout();
             Log::warning('Inactive admin attempted access', ['admin_id' => $admin->id]);
-            
+
             return redirect()->route('admin.login')
                 ->with('error', 'Your account has been deactivated. Please contact support.');
         }        // Check organization assignment (but allow super admins without organization)
@@ -63,7 +63,7 @@ class EnhancedAdminAuth
         if (!$admin->organization_id && !$isSuperAdmin) {
             Auth::guard('admin')->logout();
             Log::warning('Admin without organization attempted access', ['admin_id' => $admin->id]);
-            
+
             return redirect()->route('admin.login')
                 ->with('error', 'Account setup incomplete. Please contact support.');
         }

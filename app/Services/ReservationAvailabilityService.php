@@ -29,7 +29,7 @@ class ReservationAvailabilityService
     ): array {
         try {
             $branch = Branch::with('organization')->findOrFail($branchId);
-            
+
             // Validate branch is active and organization is active
             if (!$branch->is_active || !$branch->organization->is_active) {
                 return [
@@ -288,7 +288,7 @@ class ReservationAvailabilityService
 
         // Find single table that can accommodate all people
         $singleTable = $tables->first(function ($table) use ($numberOfPeople, $requestStart, $requestEnd, $excludeReservationId) {
-            return $table->capacity >= $numberOfPeople && 
+            return $table->capacity >= $numberOfPeople &&
                    $this->isTableAvailable($table->id, $requestStart, $requestEnd, $excludeReservationId);
         });
 
@@ -473,23 +473,23 @@ class ReservationAvailabilityService
     ): array {
         $branch = Branch::find($branchId);
         $suggestions = [];
-        
+
         $openTime = $branch->opening_time ? $branch->opening_time->format('H:i') : '08:00';
         $closeTime = $branch->closing_time ? $branch->closing_time->format('H:i') : '22:00';
-        
+
         // Calculate duration of requested reservation
         $requestStart = Carbon::parse($startTime);
         $requestEnd = Carbon::parse($endTime);
         $duration = $requestEnd->diffInMinutes($requestStart);
-        
+
         // Generate time slots every 30 minutes
         $currentTime = Carbon::parse($openTime);
         $endOfDay = Carbon::parse($closeTime);
-        
+
         while ($currentTime->addMinutes(30)->addMinutes($duration)->lte($endOfDay)) {
             $slotStart = $currentTime->format('H:i');
             $slotEnd = $currentTime->copy()->addMinutes($duration)->format('H:i');
-            
+
             $availability = $this->checkTimeSlotAvailability(
                 $branchId,
                 $date,
@@ -497,20 +497,20 @@ class ReservationAvailabilityService
                 $slotEnd,
                 $numberOfPeople
             );
-            
+
             if ($availability['available']) {
                 $suggestions[] = [
                     'start_time' => $slotStart,
                     'end_time' => $slotEnd,
                     'available_capacity' => $availability['capacity_info']['available_capacity'] ?? 0
                 ];
-                
+
                 if (count($suggestions) >= 5) {
                     break;
                 }
             }
         }
-        
+
         return $suggestions;
     }
 }
