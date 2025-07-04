@@ -155,7 +155,7 @@ class OrderManagementController extends Controller
             ]),
             'steward_id' => 'nullable|exists:employees,id',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string'
         ]);        // Validate branch belongs to organization (skip for super admin)
@@ -237,7 +237,7 @@ class OrderManagementController extends Controller
                 Order::STATUS_CANCELLED
             ]),
             'items' => 'sometimes|array|min:1',
-            'items.*.item_id' => 'required_with:items|exists:item_masters,id',
+            'items.*.item_id' => 'required_with:items|exists:item_master,id',
             'items.*.quantity' => 'required_with:items|integer|min:1',
             'notes' => 'nullable|string'
         ]);

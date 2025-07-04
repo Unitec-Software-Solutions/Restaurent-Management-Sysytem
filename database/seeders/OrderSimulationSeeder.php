@@ -165,31 +165,47 @@ class OrderSimulationSeeder extends Seeder
     private function createDineInOrders(Branch $branch): void
     {
         $reservations = Reservation::where('branch_id', $branch->id)
-            ->whereIn('status', ['confirmed', 'checked_in', 'completed'])
+            ->whereIn('status', ['confirmed', 'completed'])
             ->get();
         
         $tables = Table::where('branch_id', $branch->id)->get();
         $menuItems = MenuItem::where('branch_id', $branch->id)->where('is_available', true)->get();
         
-        if ($menuItems->isEmpty()) {
+        if ($menuItems->isEmpty() || $tables->isEmpty()) {
+            $this->command->info("    ⏭️ No menu items or tables available for {$branch->name}");
             return;
         }
 
-        $orderCount = min($reservations->count() + rand(10, 20), 30);
-        $this->command->info("    🍽️ Creating {$orderCount} dine-in orders for {$branch->name}");
-        
-        for ($i = 0; $i < $orderCount; $i++) {
-            $reservation = $reservations->random();
-            $table = $reservation->table ?? $tables->random();
+        // Create orders even if there are no reservations
+        if ($reservations->count() > 0) {
+            $orderCount = min($reservations->count() + rand(10, 20), 30);
+            $this->command->info("    🍽️ Creating {$orderCount} dine-in orders for {$branch->name}");
             
-            $this->createDineInOrder($branch, $reservation, $table, $menuItems);
+            for ($i = 0; $i < $orderCount; $i++) {
+                $reservation = $reservations->random();
+                $table = $tables->random();
+                
+                $this->createDineInOrder($branch, $reservation, $table, $menuItems);
+            }
+        } else {
+            $this->command->info("    ⏭️ No reservations available for dine-in orders for {$branch->name}");
         }
     }
 
     private function createDineInOrder(Branch $branch, Reservation $reservation, Table $table, $menuItems): void
     {
-        $orderDateTime = Carbon::parse($reservation->reservation_date . ' ' . $reservation->reservation_time)
-            ->addMinutes(rand(5, 30)); // Order placed 5-30 minutes after arrival
+        // Safely parse the reservation date and time
+        try {
+            // Handle different formats of date and start_time
+            $reservationDate = Carbon::parse($reservation->date)->format('Y-m-d');
+            $startTime = is_string($reservation->start_time) ? $reservation->start_time : Carbon::parse($reservation->start_time)->format('H:i:s');
+            
+            $orderDateTime = Carbon::createFromFormat('Y-m-d H:i:s', $reservationDate . ' ' . $startTime)
+                ->addMinutes(rand(5, 30)); // Order placed 5-30 minutes after arrival
+        } catch (\Exception $e) {
+            // Fallback to a reasonable time if parsing fails
+            $orderDateTime = now()->subHours(rand(1, 12));
+        }
         
         $status = $this->determineOrderStatus($orderDateTime);
         
@@ -199,10 +215,11 @@ class OrderSimulationSeeder extends Seeder
             'reservation_id' => $reservation->id,
             'table_id' => $table->id,
             'user_id' => $reservation->user_id,
-            'customer_name' => $reservation->customer_name,
-            'customer_phone' => $reservation->customer_phone,
+            'customer_name' => $reservation->name,
+            'customer_phone' => $reservation->phone,
             'order_number' => $this->generateOrderNumber($branch, $orderDateTime),
-            'order_type' => 'dine_in',
+            'order_type' => OrderType::DINE_IN_WALK_IN_DEMAND,
+            'order_date' => $orderDateTime->toDateString(),
             'status' => $status,
             'payment_status' => $this->determinePaymentStatus($status),
             'subtotal' => 0, // Will be calculated after adding items
@@ -210,27 +227,25 @@ class OrderSimulationSeeder extends Seeder
             'service_charge' => 0,
             'discount_amount' => 0,
             'total_amount' => 0,
-            'payment_method' => ['cash', 'card', 'digital'][rand(0, 2)],
+            'payment_method' => ['cash', 'card', 'mobile'][rand(0, 2)],
             'special_instructions' => $this->getRandomOrderInstructions(),
-            'estimated_completion_time' => $orderDateTime->copy()->addMinutes(rand(20, 60)),
+            'estimated_delivery_time' => $orderDateTime->copy()->addMinutes(rand(20, 60)),
             'created_at' => $orderDateTime,
             'confirmed_at' => $status !== 'pending' ? $orderDateTime->copy()->addMinutes(2) : null,
-            'prepared_at' => in_array($status, ['ready', 'served', 'completed']) ? 
+            'prepared_at' => in_array($status, ['ready', 'completed']) ? 
                            $orderDateTime->copy()->addMinutes(rand(15, 45)) : null,
-            'served_at' => in_array($status, ['served', 'completed']) ? 
-                         $orderDateTime->copy()->addMinutes(rand(20, 50)) : null,
             'completed_at' => $status === 'completed' ? 
                             $orderDateTime->copy()->addMinutes(rand(60, 120)) : null
         ]);
 
         // Add order items
-        $this->addOrderItems($order, $menuItems, $reservation->party_size);
+        $this->addOrderItems($order, $menuItems, $reservation->number_of_people);
         
         // Update order totals
         $this->calculateOrderTotals($order);
         
         // Create KOT (Kitchen Order Ticket) entries
-        $this->createKOTEntries($order);
+        // $this->createKOTEntries($order);
     }
 
     private function createTakeawayOrders(Branch $branch): void
@@ -261,6 +276,7 @@ class OrderSimulationSeeder extends Seeder
             'customer_phone' => $this->generatePhoneNumber(),
             'order_number' => $this->generateOrderNumber($branch, $orderDateTime),
             'order_type' => OrderType::TAKEAWAY_WALK_IN_DEMAND,
+            'order_date' => $orderDateTime->toDateString(),
             'status' => $status,
             'payment_status' => $this->determinePaymentStatus($status),
             'subtotal' => 0,
@@ -268,9 +284,9 @@ class OrderSimulationSeeder extends Seeder
             'service_charge' => 0,
             'discount_amount' => rand(0, 1) ? rand(50, 200) : 0,
             'total_amount' => 0,
-            'payment_method' => ['cash', 'card', 'digital'][rand(0, 2)],
+            'payment_method' => ['cash', 'card', 'mobile'][rand(0, 2)],
             'special_instructions' => $this->getRandomOrderInstructions(),
-            'estimated_completion_time' => $orderDateTime->copy()->addMinutes(rand(15, 45)),
+            'estimated_delivery_time' => $orderDateTime->copy()->addMinutes(rand(15, 45)),
             'created_at' => $orderDateTime,
             'confirmed_at' => $status !== 'pending' ? $orderDateTime->copy()->addMinutes(1) : null,
             'prepared_at' => in_array($status, ['ready', 'completed']) ? 
@@ -284,9 +300,6 @@ class OrderSimulationSeeder extends Seeder
         
         // Update order totals
         $this->calculateOrderTotals($order);
-        
-        // Create KOT entries
-        $this->createKOTEntries($order);
         
         // Simulate inventory deduction for completed orders
         if ($status === 'completed') {
@@ -322,7 +335,8 @@ class OrderSimulationSeeder extends Seeder
             'customer_phone' => $this->generatePhoneNumber(),
             'delivery_address' => $this->generateDeliveryAddress(),
             'order_number' => $this->generateOrderNumber($branch, $orderDateTime),
-            'order_type' => 'delivery',
+            'order_type' => OrderType::TAKEAWAY_ONLINE_SCHEDULED,
+            'order_date' => $orderDateTime->toDateString(),
             'status' => $status,
             'payment_status' => $this->determinePaymentStatus($status),
             'subtotal' => 0,
@@ -331,17 +345,13 @@ class OrderSimulationSeeder extends Seeder
             'delivery_fee' => rand(150, 300),
             'discount_amount' => rand(0, 1) ? rand(100, 500) : 0,
             'total_amount' => 0,
-            'payment_method' => ['cash', 'card', 'digital'][rand(0, 2)],
+            'payment_method' => ['cash', 'card', 'mobile'][rand(0, 2)],
             'special_instructions' => $this->getRandomOrderInstructions(),
-            'estimated_completion_time' => $orderDateTime->copy()->addMinutes(rand(30, 90)),
+            'estimated_delivery_time' => $orderDateTime->copy()->addMinutes(rand(30, 90)),
             'created_at' => $orderDateTime,
             'confirmed_at' => $status !== 'pending' ? $orderDateTime->copy()->addMinutes(2) : null,
-            'prepared_at' => in_array($status, ['ready', 'out_for_delivery', 'delivered', 'completed']) ? 
+            'prepared_at' => in_array($status, ['ready', 'completed']) ? 
                            $orderDateTime->copy()->addMinutes(rand(15, 45)) : null,
-            'out_for_delivery_at' => in_array($status, ['out_for_delivery', 'delivered', 'completed']) ? 
-                                   $orderDateTime->copy()->addMinutes(rand(20, 50)) : null,
-            'delivered_at' => in_array($status, ['delivered', 'completed']) ? 
-                            $orderDateTime->copy()->addMinutes(rand(30, 90)) : null,
             'completed_at' => $status === 'completed' ? 
                             $orderDateTime->copy()->addMinutes(rand(35, 95)) : null
         ]);
@@ -351,9 +361,6 @@ class OrderSimulationSeeder extends Seeder
         
         // Update order totals
         $this->calculateOrderTotals($order);
-        
-        // Create KOT entries
-        $this->createKOTEntries($order);
         
         // Simulate inventory deduction for completed orders
         if ($status === 'completed') {
@@ -377,9 +384,9 @@ class OrderSimulationSeeder extends Seeder
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'total_price' => $unitPrice * $quantity,
+                'subtotal' => $unitPrice * $quantity,
                 'special_instructions' => rand(0, 1) ? $this->getRandomItemInstructions() : null,
-                'kitchen_station_id' => $this->getKitchenStationForItem($order->branch_id, $menuItem),
-                'status' => $order->status === 'completed' ? 'completed' : 'pending'
+                'status' => $order->status === 'completed' ? 'served' : 'pending'
             ]);
         }
     }
@@ -387,7 +394,7 @@ class OrderSimulationSeeder extends Seeder
     private function calculateOrderTotals(Order $order): void
     {
         $subtotal = $order->orderItems()->sum('total_price');
-        $serviceCharge = $order->order_type === 'dine_in' ? $subtotal * 0.10 : 0; // 10% service charge for dine-in
+        $serviceCharge = $order->order_type->isDineIn() ? $subtotal * 0.10 : 0; // 10% service charge for dine-in
         $taxAmount = ($subtotal + $serviceCharge) * 0.12; // 12% tax
         $deliveryFee = $order->delivery_fee ?? 0;
         $discountAmount = $order->discount_amount ?? 0;
@@ -406,7 +413,6 @@ class OrderSimulationSeeder extends Seeder
     {
         // Group order items by kitchen station
         $itemsByStation = $order->orderItems()
-            ->with('kitchenStation')
             ->get()
             ->groupBy('kitchen_station_id');
 
@@ -450,7 +456,7 @@ class OrderSimulationSeeder extends Seeder
         } elseif ($orderDateTime->diffInHours(now()) < 2) {
             return ['preparing', 'ready'][rand(0, 1)];
         } else {
-            return ['completed', 'cancelled'][rand(0, 9)] ? 'completed' : 'cancelled'; // 90% completed
+            return rand(0, 9) < 9 ? 'completed' : 'cancelled'; // 90% completed
         }
     }
 
@@ -466,7 +472,8 @@ class OrderSimulationSeeder extends Seeder
 
     private function generateOrderNumber(Branch $branch, Carbon $dateTime): string
     {
-        return 'ORD-' . $branch->id . '-' . $dateTime->format('Ymd') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+        // Add microseconds and a larger random number to ensure uniqueness
+        return 'ORD-' . $branch->id . '-' . $dateTime->format('Ymd') . '-' . str_pad(rand(10000, 99999), 5, '0', STR_PAD_LEFT) . substr(microtime(), 2, 3);
     }
 
     private function generateCustomerName(): string

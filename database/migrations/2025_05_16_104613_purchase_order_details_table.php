@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('po_details', function (Blueprint $table) {
             $table->id('po_detail_id');
             $table->foreignId('po_id')->constrained('po_master', 'po_id')->onDelete('cascade');
-            $table->foreignId('item_id')->constrained('item_masters'); // Changed from item_code to item_id
+            $table->foreignId('item_id')->constrained('item_master'); // Changed from item_code to item_id
             $table->string('batch_no')->nullable();
             $table->decimal('buying_price', 12, 4); // Current buying price at time of PO
             $table->decimal('previous_buying_price', 10, 2)->nullable()->default(0); // <-- Added line

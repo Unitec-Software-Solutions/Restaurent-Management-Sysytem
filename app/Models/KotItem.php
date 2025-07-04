@@ -21,7 +21,8 @@ class KotItem extends Model
         'estimated_prep_time',
         'actual_prep_time',
         'started_at',
-        'completed_at'
+        'completed_at',
+        'updated_by'
     ];
 
     protected $casts = [
@@ -45,6 +46,16 @@ class KotItem extends Model
     public function item()
     {
         return $this->belongsTo(ItemMaster::class, 'item_id');
+    }
+
+    public function menuItem()
+    {
+        return $this->belongsTo(MenuItem::class);
+    }
+
+    public function updatedBy()
+    {
+        return $this->belongsTo(Admin::class, 'updated_by');
     }
 
     // Status management

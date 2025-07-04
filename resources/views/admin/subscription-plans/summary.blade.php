@@ -11,18 +11,12 @@
             </li>            <li>
                 <span class="block text-xs text-gray-500 uppercase font-semibold">Modules</span>
                 @php
-                    $allModules = \App\Models\Module::pluck('name', 'id')->toArray();
-                    $modules = $subscriptionPlan->getModulesArray();
+                    $modules = $subscriptionPlan->getModulesWithNames();
                 @endphp
                 <div class="flex flex-wrap gap-2 mt-1">
-                    @forelse($modules as $moduleData)
-                        @php
-                            $moduleName = is_array($moduleData) ? ($moduleData['name'] ?? $moduleData) : $moduleData;
-                            $moduleId = is_numeric($moduleName) ? $moduleName : null;
-                            $displayName = $moduleId ? ($allModules[$moduleId] ?? $moduleId) : $moduleName;
-                        @endphp
+                    @forelse($modules as $module)
                         <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                            {{ $displayName }}
+                            {{ $module['name'] }}
                         </span>
                     @empty
                         <span class="text-gray-500 text-sm">No modules assigned</span>
@@ -49,10 +43,31 @@
             </li>
         </ul>
         <div class="flex justify-end gap-3">
-            <a href="{{ route('admin.subscription-plans.edit', $subscriptionPlan->id) }}"
-               class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
-                Edit
-            </a>
+            @if(auth('admin')->user()->isSuperAdmin())
+                <a href="{{ route('admin.subscription-plans.edit', $subscriptionPlan->id) }}"
+                   class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+                    Edit
+                </a>
+                @if(($subscriptionPlan->organizations_count ?? 0) == 0)
+                    <form action="{{ route('admin.subscription-plans.destroy', $subscriptionPlan) }}" method="POST" 
+                          onsubmit="return confirm('Are you sure you want to delete this subscription plan? This action cannot be undone.')"
+                          class="inline-block">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" 
+                                class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition font-semibold">
+                            Delete
+                        </button>
+                    </form>
+                @else
+                    <button type="button" 
+                            disabled
+                            title="Cannot delete plan with {{ $subscriptionPlan->organizations_count }} organizations"
+                            class="bg-gray-400 text-gray-600 px-6 py-2 rounded-lg cursor-not-allowed transition font-semibold">
+                        Delete
+                    </button>
+                @endif
+            @endif
             <a href="{{ route('admin.subscription-plans.index') }}"
                class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition font-semibold">
                 Back

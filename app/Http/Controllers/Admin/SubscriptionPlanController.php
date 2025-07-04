@@ -9,16 +9,28 @@ use Illuminate\Http\Request;
 
 class SubscriptionPlanController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:admin');
+        $this->middleware(\App\Http\Middleware\SuperAdmin::class);
+    }
+
     public function index()
     {
         $plans = SubscriptionPlan::withCount(['organizations', 'activeSubscriptions'])
             ->orderBy('price')
-            ->get();
+            ->paginate(15);
         return view('admin.subscription-plans.index', compact('plans'));
     }
 
     public function create()
     {
+        // Only super admins can create subscription plans
+        if (!auth('admin')->user()->isSuperAdmin()) {
+            return redirect()->route('admin.subscription-plans.index')
+                ->with('error', 'Only super administrators can create subscription plans.');
+        }
+
         $modules = Module::active()->get();
         return view('admin.subscription-plans.create', compact('modules'));
     }
@@ -58,7 +70,8 @@ class SubscriptionPlanController extends Controller
 
     public function show($id)
     {
-        $subscriptionPlan = SubscriptionPlan::findOrFail($id);
+        $subscriptionPlan = SubscriptionPlan::withCount(['organizations', 'activeSubscriptions'])
+            ->findOrFail($id);
         return view('admin.subscription-plans.show', compact('subscriptionPlan'));
     }
 
@@ -105,10 +118,32 @@ class SubscriptionPlanController extends Controller
 
     public function destroy($id)
     {
-        $subscriptionPlan = SubscriptionPlan::findOrFail($id);
-        $subscriptionPlan->delete();
-        
-        return redirect()->route('admin.subscription-plans.index')
-            ->with('success', 'Subscription plan deleted successfully');
+        try {
+            $subscriptionPlan = SubscriptionPlan::findOrFail($id);
+            
+            // Only super admins can delete subscription plans
+            if (!auth('admin')->user()->isSuperAdmin()) {
+                return redirect()->back()
+                    ->with('error', 'Only super administrators can delete subscription plans.');
+            }
+            
+            // Check if plan has organizations
+            $organizationCount = $subscriptionPlan->organizations()->count();
+            
+            if ($organizationCount > 0) {
+                return redirect()->back()
+                    ->with('error', "Cannot delete subscription plan with {$organizationCount} organizations. Please reassign them first.");
+            }
+
+            $planName = $subscriptionPlan->name;
+            $subscriptionPlan->delete();
+
+            return redirect()->route('admin.subscription-plans.index')
+                ->with('success', "Subscription plan '{$planName}' deleted successfully");
+                
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Failed to delete subscription plan: ' . $e->getMessage());
+        }
     }
 }

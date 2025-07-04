@@ -173,11 +173,11 @@ class ProductionController extends Controller
             return collect();
         }
 
-        return ItemMaster::select('item_masters.*')
-            ->join('item_categories', 'item_masters.item_category_id', '=', 'item_categories.id')
-            ->where('item_masters.organization_id', $user->organization_id)
+        return ItemMaster::select('item_master.*')
+            ->join('item_categories', 'item_master.item_category_id', '=', 'item_categories.id')
+            ->where('item_master.organization_id', $user->organization_id)
             ->where('item_categories.name', 'Production Items')
-            ->whereNotNull('item_masters.reorder_level')
+            ->whereNotNull('item_master.reorder_level')
             ->with(['category'])
             ->get()
             ->filter(function ($item) use ($hqBranch) {

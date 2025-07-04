@@ -21,151 +21,107 @@
             <div class="px-4 pb-4">
                 <ul class="space-y-2">
                     @foreach ($menuItems as $item)
-                        {{-- Special handling for Orders menu --}}
-                        @if($item['title'] === 'Orders')
-                            <li>
-                                @if(\Illuminate\Support\Facades\Route::has($item['route']))
-                                    <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
-                                        class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200
-                                        {{ request()->routeIs('admin.orders.*') 
-                                            ? 'bg-white text-gray-700 border-white' 
-                                            : 'bg-transparent text-white border-white hover:bg-white/10' }}"
-                                        data-route="{{ $item['route'] }}">
+                        {{-- Regular menu items with enhanced badge and sub-item support --}}
+                        <li>
+                            @if(\Illuminate\Support\Facades\Route::has($item['route']))
+                                <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
+                                    class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200
+                                    {{ request()->routeIs($item['route'] . '*') 
+                                        ? 'bg-white text-gray-700 border-white' 
+                                        : 'bg-transparent text-white border-white hover:bg-white/10' }}"
+                                    data-route="{{ $item['route'] }}">
 
-                                        @if ($item['icon_type'] === 'svg')
-                                            @if(view()->exists('partials.icons.' . $item['icon']))
-                                                @include('partials.icons.' . $item['icon'])
-                                            @else
-                                                <i class="fas fa-shopping-cart w-5 text-center"></i>
-                                            @endif
+                                    @if ($item['icon_type'] === 'svg')
+                                        @if(view()->exists('partials.icons.' . $item['icon']))
+                                            @include('partials.icons.' . $item['icon'])
                                         @else
-                                            <i class="fas fa-{{ $item['icon'] }} w-5 text-center"></i>
+                                            <i class="fas fa-circle w-5 text-center text-gray-400" title="Icon missing: {{ $item['icon'] }}"></i>
                                         @endif
-                                        
-                                        <span class="font-medium">{{ $item['title'] }}</span>
-                                        
-                                        @if(isset($item['badge']) && $item['badge'] > 0)
-                                            <span class="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-auto">
-                                                {{ $item['badge'] }}
-                                            </span>
-                                        @endif
-
-                                        @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
-                                            <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200" 
-                                               data-submenu-toggle="{{ $item['route'] }}"></i>
-                                        @endif
-                                    </a>
-
-                                    {{-- Orders sub-menu --}}
-                                    @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
-                                        <ul class="ml-8 mt-1 space-y-1 {{ request()->routeIs('admin.orders.*') ? 'block' : 'hidden' }}" 
-                                            data-submenu="{{ $item['route'] }}">
-                                            @foreach ($item['sub_items'] as $subItem)
-                                                @if(\Illuminate\Support\Facades\Route::has($subItem['route']))
-                                                    <li>
-                                                        <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
-                                                            class="flex items-center gap-2 px-3 py-1 rounded border transition-colors duration-200 text-sm
-                                                            {{ request()->routeIs($subItem['route']) 
-                                                                ? 'bg-white text-gray-700 border-white' 
-                                                                : 'bg-transparent text-white border-white hover:bg-white/10' }}"
-                                                            data-route="{{ $subItem['route'] }}">
-                                                            
-                                                            @if ($subItem['icon_type'] === 'svg')
-                                                                @if(view()->exists('partials.icons.' . $subItem['icon']))
-                                                                    @include('partials.icons.' . $subItem['icon'])
-                                                                @else
-                                                                    <i class="fas fa-circle w-4 text-center text-gray-400"></i>
-                                                                @endif
-                                                            @else
-                                                                <i class="fas fa-{{ $subItem['icon'] }} w-4 text-center"></i>
-                                                            @endif
-                                                            
-                                                            <span>{{ $subItem['title'] }}</span>
-                                                        </a>
-                                                    </li>
-                                                @endif
-                                            @endforeach
-                                        </ul>
+                                    @else
+                                        <i class="fas fa-{{ $item['icon'] }} w-5 text-center"></i>
                                     @endif
-                                @endif
-                            </li>
-                        @else
-                            {{-- Regular menu items --}}
-                            <li>
-                                @if(\Illuminate\Support\Facades\Route::has($item['route']))
-                                    <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
-                                        class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200
-                                        {{ request()->routeIs($item['route'] . '*') 
-                                            ? 'bg-white text-gray-700 border-white' 
-                                            : 'bg-transparent text-white border-white hover:bg-white/10' }}"
-                                        data-route="{{ $item['route'] }}">
+                                    
+                                    <span class="font-medium">{{ $item['title'] }}</span>
+                                    
+                                    @if(isset($item['badge']) && $item['badge'] > 0)
+                                        @php
+                                            $badgeColor = $item['badge_color'] ?? 'red';
+                                            $badgeClass = match($badgeColor) {
+                                                'red' => 'bg-red-500',
+                                                'green' => 'bg-green-500',
+                                                'blue' => 'bg-blue-500',
+                                                'yellow' => 'bg-yellow-500',
+                                                'purple' => 'bg-purple-500',
+                                                'indigo' => 'bg-indigo-500',
+                                                'orange' => 'bg-orange-500',
+                                                'emerald' => 'bg-emerald-500',
+                                                'cyan' => 'bg-cyan-500',
+                                                'gray' => 'bg-gray-500',
+                                                default => 'bg-red-500'
+                                            };
+                                        @endphp
+                                        <span class="{{ $badgeClass }} text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-auto">
+                                            {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                                        </span>
+                                    @endif
 
-                                        @if ($item['icon_type'] === 'svg')
-                                            @if(view()->exists('partials.icons.' . $item['icon']))
-                                                @include('partials.icons.' . $item['icon'])
-                                            @else
-                                                <i class="fas fa-circle w-5 text-center text-gray-400" title="Icon missing: {{ $item['icon'] }}"></i>
+                                    @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
+                                        <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200" 
+                                           data-submenu-toggle="{{ $item['route'] }}"></i>
+                                    @endif
+                                </a>
+
+                                {{-- Sub-menu items --}}
+                                @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
+                                    <ul class="ml-8 mt-1 space-y-1 {{ request()->routeIs($item['route'] . '*') ? 'block' : 'hidden' }}" 
+                                        data-submenu="{{ $item['route'] }}">
+                                        @foreach ($item['sub_items'] as $subItem)
+                                            @if(isset($subItem['is_route_valid']) && $subItem['is_route_valid'] && \Illuminate\Support\Facades\Route::has($subItem['route']))
+                                                <li>
+                                                    <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
+                                                        class="flex items-center gap-2 px-3 py-1 rounded border transition-colors duration-200 text-sm
+                                                        {{ request()->routeIs($subItem['route']) 
+                                                            ? 'bg-white text-gray-700 border-white' 
+                                                            : 'bg-transparent text-white border-white hover:bg-white/10' }}"
+                                                        data-route="{{ $subItem['route'] }}">
+                                                        
+                                                        @if ($subItem['icon_type'] === 'svg')
+                                                            @if(view()->exists('partials.icons.' . $subItem['icon']))
+                                                                @include('partials.icons.' . $subItem['icon'])
+                                                            @else
+                                                                <i class="fas fa-circle w-4 text-center text-gray-400"></i>
+                                                            @endif
+                                                        @else
+                                                            <i class="fas fa-{{ $subItem['icon'] }} w-4 text-center"></i>
+                                                        @endif
+                                                        
+                                                        <span>{{ $subItem['title'] }}</span>
+                                                    </a>
+                                                </li>
+                                            @elseif(!isset($subItem['is_route_valid']) || !$subItem['is_route_valid'])
+                                                {{-- Show disabled sub-item for missing routes --}}
+                                                <li>
+                                                    <span class="flex items-center gap-2 px-3 py-1 rounded border text-gray-400 cursor-not-allowed text-sm"
+                                                          title="Route not available: {{ $subItem['route'] }}">
+                                                        <i class="fas fa-exclamation-triangle w-4 text-center"></i>
+                                                        <span>{{ $subItem['title'] }}</span>
+                                                        <small class="ml-auto text-xs">(N/A)</small>
+                                                    </span>
+                                                </li>
                                             @endif
-                                        @else
-                                            <i class="fas fa-{{ $item['icon'] }} w-5 text-center"></i>
-                                        @endif
-                                        
-                                        <span class="font-medium">{{ $item['title'] }}</span>
-                                        
-                                        @if(isset($item['badge']) && $item['badge'] > 0)
-                                            <span class="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-auto">
-                                                {{ $item['badge'] }}
-                                            </span>
-                                        @endif
-
-                                        @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
-                                            <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200" 
-                                               data-submenu-toggle="{{ $item['route'] }}"></i>
-                                        @endif
-                                    </a>
-
-                                    {{-- Sub-menu items --}}
-                                    @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
-                                        <ul class="ml-8 mt-1 space-y-1 {{ request()->routeIs($item['route'] . '*') ? 'block' : 'hidden' }}" 
-                                            data-submenu="{{ $item['route'] }}">
-                                            @foreach ($item['sub_items'] as $subItem)
-                                                @if(\Illuminate\Support\Facades\Route::has($subItem['route']))
-                                                    <li>
-                                                        <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
-                                                            class="flex items-center gap-2 px-3 py-1 rounded border transition-colors duration-200 text-sm
-                                                            {{ request()->routeIs($subItem['route']) 
-                                                                ? 'bg-white text-gray-700 border-white' 
-                                                                : 'bg-transparent text-white border-white hover:bg-white/10' }}"
-                                                            data-route="{{ $subItem['route'] }}">
-                                                            
-                                                            @if ($subItem['icon_type'] === 'svg')
-                                                                @if(view()->exists('partials.icons.' . $subItem['icon']))
-                                                                    @include('partials.icons.' . $subItem['icon'])
-                                                                @else
-                                                                    <i class="fas fa-circle w-4 text-center text-gray-400"></i>
-                                                                @endif
-                                                            @else
-                                                                <i class="fas fa-{{ $subItem['icon'] }} w-4 text-center"></i>
-                                                            @endif
-                                                            
-                                                            <span>{{ $subItem['title'] }}</span>
-                                                        </a>
-                                                    </li>
-                                                @endif
-                                            @endforeach
-                                        </ul>
-                                    @endif
-                                @else
-                                    {{-- Route doesn't exist - show disabled item --}}
-                                    <span class="flex items-center gap-3 px-4 py-2 rounded-xl border text-gray-400 cursor-not-allowed"
-                                          title="Route not available: {{ $item['route'] }}">
-                                        <i class="fas fa-exclamation-triangle w-5 text-center"></i>
-                                        <span class="font-medium">{{ $item['title'] }}</span>
-                                        <small class="ml-auto text-xs">(N/A)</small>
-                                    </span>
+                                        @endforeach
+                                    </ul>
                                 @endif
-                            </li>
-                        @endif
+                            @else
+                                {{-- Route doesn't exist - show disabled item --}}
+                                <span class="flex items-center gap-3 px-4 py-2 rounded-xl border text-gray-400 cursor-not-allowed"
+                                      title="Route not available: {{ $item['route'] }}">
+                                    <i class="fas fa-exclamation-triangle w-5 text-center"></i>
+                                    <span class="font-medium">{{ $item['title'] }}</span>
+                                    <small class="ml-auto text-xs">(N/A)</small>
+                                </span>
+                            @endif
+                        </li>
                     @endforeach
                 </ul>
 

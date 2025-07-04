@@ -88,7 +88,7 @@ class InventoryItemObserver
     {
         if ($inventoryItem->current_stock < $quantity) {
             Log::warning("Insufficient stock for deduction", [
-                'item_id' => $inventoryItem->item_masters_id,
+                'item_id' => $inventoryItem->item_master_id,
                 'requested' => $quantity,
                 'available' => $inventoryItem->current_stock
             ]);
@@ -100,7 +100,7 @@ class InventoryItemObserver
         $inventoryItem->save();
 
         Log::info("Stock deducted", [
-            'item_id' => $inventoryItem->item_masters_id,
+            'item_id' => $inventoryItem->item_master_id,
             'quantity_deducted' => $quantity,
             'remaining_stock' => $inventoryItem->current_stock
         ]);
@@ -118,7 +118,7 @@ class InventoryItemObserver
         $inventoryItem->save();
 
         Log::info("Stock added", [
-            'item_id' => $inventoryItem->item_masters_id,
+            'item_id' => $inventoryItem->item_master_id,
             'quantity_added' => $quantity,
             'new_stock' => $inventoryItem->current_stock
         ]);

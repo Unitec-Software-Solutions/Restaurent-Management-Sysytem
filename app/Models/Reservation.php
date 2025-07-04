@@ -33,6 +33,8 @@ class Reservation extends Model
         'check_in_time',
         'check_out_time',
         'send_notification',
+        'created_by_admin_id', // Track which admin created the reservation
+        'assigned_table_ids', // Store assigned table IDs as JSON
     ];
 
     protected $casts = [
@@ -44,6 +46,7 @@ class Reservation extends Model
         'check_in_time' => 'datetime',
         'check_out_time' => 'datetime',
         'type' => \App\Enums\ReservationType::class,
+        'assigned_table_ids' => 'array', // Cast JSON to array
     ];
 
     /**
@@ -202,6 +205,14 @@ class Reservation extends Model
     public function employee()
     {
         return $this->belongsTo(\App\Models\Employee::class, 'employee_id');
+    }
+
+    /**
+     * Relationship to the admin who created this reservation
+     */
+    public function createdByAdmin()
+    {
+        return $this->belongsTo(Admin::class, 'created_by_admin_id');
     }
     
     public function payments()

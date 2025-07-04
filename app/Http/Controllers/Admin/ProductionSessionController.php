@@ -144,7 +144,7 @@ class ProductionSessionController extends Controller
 
         $request->validate([
             'items' => 'required|array',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity_produced' => 'required|numeric|min:0',
             'items.*.quantity_wasted' => 'nullable|numeric|min:0',
             'items.*.waste_reason' => 'nullable|string|max:255',
@@ -299,7 +299,7 @@ class ProductionSessionController extends Controller
     {
         $request->validate([
             'production_items' => 'required|array',
-            'production_items.*.item_id' => 'required|exists:item_masters,id',
+            'production_items.*.item_id' => 'required|exists:item_master,id',
             'production_items.*.quantity_produced' => 'required|numeric|min:0',
             'production_items.*.quantity_wasted' => 'nullable|numeric|min:0',
             'production_items.*.waste_reason' => 'nullable|string|max:255',

@@ -9,6 +9,8 @@ use App\Traits\Exportable;
 use Illuminate\Http\Request;
 use App\Models\Branch;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ItemMasterController extends Controller
 {
@@ -33,7 +35,7 @@ class ItemMasterController extends Controller
             return redirect()->route('admin.login')->with('error', 'No organization assigned.');
         }
 
-        // For super admin, allow access to all organizations, for others use their org
+// For super admin, allow access to all organizations, for others use their org
         $orgId = $isSuperAdmin ? null : $user->organization_id;
 
         $query = ItemMaster::with(['category', 'organization']);
@@ -112,7 +114,25 @@ class ItemMasterController extends Controller
             ]);
         }
 
-        $items = $query->paginate(15);
+        try {
+            // Test database connection first
+            DB::connection()->getPdo();
+
+            // Add debugging information and error handling for pagination
+            Log::info('ItemMaster index query SQL: ' . $query->toSql());
+            Log::info('ItemMaster index query bindings: ' . json_encode($query->getBindings()));
+
+            $items = $query->paginate(15);
+        } catch (\PDOException $e) {
+            Log::error('Database connection error in ItemMaster: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Database connection error. Please try again later.');
+        } catch (\Exception $e) {
+            Log::error('ItemMaster pagination error: ' . $e->getMessage());
+            Log::error('SQL: ' . ($e instanceof \Illuminate\Database\QueryException ? $e->getSql() : 'N/A'));
+
+            // Fallback to simple query without pagination in case of error
+            return redirect()->back()->with('error', 'Database error occurred. Please contact administrator. Error: ' . $e->getMessage());
+        }
 
         $categories = ItemCategory::active();
         if (!$isSuperAdmin && $orgId) {
@@ -178,7 +198,7 @@ class ItemMasterController extends Controller
             'items.*.name' => 'required|string|max:255',
             'items.*.unicode_name' => 'nullable|string|max:255',
             'items.*.item_category_id' => 'required|exists:item_categories,id' . ($orgId ? ',organization_id,' . $orgId : ''),
-            'items.*.item_code' => 'required|string|unique:item_masters,item_code',
+            'items.*.item_code' => 'required|string|unique:item_master,item_code',
             'items.*.unit_of_measurement' => 'required|string|max:50',
             'items.*.reorder_level' => 'nullable|numeric|min:0',
             'items.*.is_perishable' => 'nullable|boolean',

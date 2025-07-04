@@ -190,4 +190,31 @@ public function destroy(Organization $organization, Branch $branch)
         ->route('admin.branches.index', ['organization' => $organization->id])
         ->with('success', 'Branch deleted successfully.');
 }
+
+/**
+     * Get branch details for modal (AJAX)
+     */
+    public function getBranchDetails(Branch $branch)
+    {
+        $branch->load([
+            'organization',
+            'kitchenStations',
+            'users' => function($query) {
+                $query->where('is_active', true);
+            }
+        ]);
+
+        $stats = [
+            'kitchen_stations' => $branch->kitchenStations()->count(),
+            'active_users' => $branch->users()->where('is_active', true)->count(),
+            'todays_orders' => $branch->orders()->whereDate('created_at', today())->count(),
+            'todays_reservations' => $branch->reservations()->whereDate('created_at', today())->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'branch' => $branch,
+            'stats' => $stats
+        ]);
+    }
 }

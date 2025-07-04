@@ -210,9 +210,9 @@ return new class extends Migration
             if (!in_array('item_transactions_inventory_item_id_foreign', $existingConstraints) && 
                 Schema::hasColumn('item_transactions', 'inventory_item_id')) {
                 try {
-                    if (Schema::hasTable('item_masters')) {
-                        $table->foreign('inventory_item_id')->references('id')->on('item_masters')->onDelete('cascade');
-                        Log::info('Added foreign key for inventory_item_id -> item_masters');
+                    if (Schema::hasTable('item_master')) {
+                        $table->foreign('inventory_item_id')->references('id')->on('item_master')->onDelete('cascade');
+                        Log::info('Added foreign key for inventory_item_id -> item_master');
                     } elseif (Schema::hasTable('item_master')) {
                         $table->foreign('inventory_item_id')->references('id')->on('item_master')->onDelete('cascade');
                         Log::info('Added foreign key for inventory_item_id -> item_master');

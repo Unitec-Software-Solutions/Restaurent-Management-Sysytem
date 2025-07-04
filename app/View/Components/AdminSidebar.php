@@ -5,6 +5,7 @@ namespace App\View\Components;
 use Illuminate\View\Component;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AdminSidebar extends Component
 {
@@ -342,282 +343,6 @@ class AdminSidebar extends Component
         return array_merge($defaultState, $uiSettings['sidebar'] ?? []);
     }
 
-    private function getMenuItems()
-    {
-        $admin = Auth::guard('admin')->user();
-
-        if (!$admin) {
-            return [];
-        }
-
-        $menuItems = [
-            [
-                'title' => 'Dashboard',
-                'route' => 'admin.dashboard',
-                'icon' => 'layout-dashboard',
-                'icon_type' => 'svg',
-                'permission' => null,
-                'badge' => 0,
-                'sub_items' => []
-            ],
-            [
-                'title' => 'Inventory',
-                'route' => 'admin.inventory.index',
-                'icon' => 'package',
-                'icon_type' => 'svg',
-                'permission' => 'inventory.view',
-                'badge' => 0,
-                'sub_items' => [
-                    [
-                        'title' => 'Dashboard',
-                        'route' => 'admin.inventory.dashboard',
-                        'icon' => 'layout-dashboard',
-                        'icon_type' => 'svg',
-                        'permission' => 'inventory.view'
-                    ],
-                    [
-                        'title' => 'Items',
-                        'route' => 'admin.inventory.items.index',
-                        'icon' => 'box',
-                        'icon_type' => 'svg',
-                        'permission' => 'inventory.view'
-                    ],
-                    [
-                        'title' => 'Categories',
-                        'route' => 'admin.inventory.categories.index',
-                        'icon' => 'tag',
-                        'icon_type' => 'svg',
-                        'permission' => 'inventory.view'
-                    ],
-                    [
-                        'title' => 'Stock',
-                        'route' => 'admin.inventory.stock.index',
-                        'icon' => 'bar-chart',
-                        'icon_type' => 'svg',
-                        'permission' => 'inventory.view'
-                    ]
-                ]
-            ],
-            [
-                'title' => 'Orders',
-                'route' => 'admin.orders.index',
-                'icon' => 'shopping-cart',
-                'icon_type' => 'svg',
-                'permission' => 'orders.view',
-                'badge' => $this->getPendingOrdersCount(),
-                'sub_items' => [
-                    [
-                        'title' => 'All Orders',
-                        'route' => 'admin.orders.index',
-                        'icon' => 'list',
-                        'icon_type' => 'svg',
-                        'permission' => 'orders.view'
-                    ],
-                    [
-                        'title' => 'Create Order',
-                        'route' => 'admin.orders.create',
-                        'icon' => 'plus-circle',
-                        'icon_type' => 'svg',
-                        'permission' => 'orders.create'
-                    ],
-                    [
-                        'title' => 'Dine-In Orders',
-                        'route' => 'admin.orders.index',
-                        'route_params' => ['type' => 'in_house'],
-                        'icon' => 'utensils',
-                        'icon_type' => 'svg',
-                        'permission' => 'orders.view'
-                    ],
-                    [
-                        'title' => 'Takeaway Orders',
-                        'route' => 'admin.orders.index',
-                        'route_params' => ['type' => 'takeaway'],
-                        'icon' => 'shopping-bag',
-                        'icon_type' => 'svg',
-                        'permission' => 'orders.view'
-                    ]
-                ]
-            ],
-            [
-                'title' => 'Reservations',
-                'route' => 'admin.reservations.index',
-                'icon' => 'calendar-clock',
-                'icon_type' => 'svg',
-                'permission' => 'reservations.view',
-                'badge' => 0,
-                'sub_items' => []
-            ],
-            [
-                'title' => 'Menu Management',
-                'route' => 'admin.menus.index',
-                'icon' => 'utensils',
-                'icon_type' => 'svg',
-                'permission' => 'menus.view',
-                'badge' => 0,
-                'sub_items' => [
-                    [
-                        'title' => 'All Menus',
-                        'route' => 'admin.menus.list',
-                        'icon' => 'list',
-                        'icon_type' => 'svg',
-                        'permission' => 'menus.view'
-                    ],
-                    [
-                        'title' => 'Calendar View',
-                        'route' => 'admin.menus.calendar',
-                        'icon' => 'calendar',
-                        'icon_type' => 'svg',
-                        'permission' => 'menus.view'
-                    ],
-                    [
-                        'title' => 'Create Menu',
-                        'route' => 'admin.menus.create',
-                        'icon' => 'plus',
-                        'icon_type' => 'svg',
-                        'permission' => 'menus.create'
-                    ],
-                    [
-                        'title' => 'Safety Dashboard',
-                        'route' => 'admin.menus.safety-dashboard',
-                        'icon' => 'shield-alt',
-                        'icon_type' => 'svg',
-                        'permission' => 'menus.view'
-                    ]
-                ]
-            ],
-            [
-                'title' => 'Suppliers',
-                'route' => 'admin.suppliers.index',
-                'icon' => 'truck',
-                'icon_type' => 'svg',
-                'permission' => 'suppliers.view',
-                'badge' => 0,
-                'sub_items' => []
-            ],
-            [
-                'title' => 'Reports',
-                'route' => 'admin.reports.index',
-                'icon' => 'bar-chart-3',
-                'icon_type' => 'svg',
-                'permission' => 'reports.view',
-                'badge' => 0,
-                'sub_items' => []
-            ]
-        ];
-
-        // Add organization management for super admins
-        if ($admin->is_super_admin) {
-            $menuItems[] = [
-                'title' => 'Organizations',
-                'route' => 'admin.organizations.index',
-                'icon' => 'building',
-                'icon_type' => 'svg',
-                'permission' => null,
-                'badge' => 0,
-                'sub_items' => [
-                    [
-                        'title' => 'All Organizations',
-                        'route' => 'admin.organizations.index',
-                        'icon' => 'list',
-                        'icon_type' => 'svg',
-                        'permission' => null
-                    ],
-                    [
-                        'title' => 'Create Organization',
-                        'route' => 'admin.organizations.create',
-                        'icon' => 'plus',
-                        'icon_type' => 'svg',
-                        'permission' => null
-                    ],
-                    [
-                        'title' => 'Activate Organization',
-                        'route' => 'admin.organizations.activate.form',
-                        'icon' => 'key',
-                        'icon_type' => 'svg',
-                        'permission' => null
-                    ]
-                ]
-            ];
-
-            $menuItems[] = [
-                'title' => 'Subscription Plans',
-                'route' => 'admin.subscription-plans.index',
-                'icon' => 'credit-card',
-                'icon_type' => 'svg',
-                'permission' => null,
-                'badge' => 0,
-                'sub_items' => []
-            ];
-
-            $menuItems[] = [
-                'title' => 'Roles & Permissions',
-                'route' => 'admin.roles.index',
-                'icon' => 'lock',
-                'icon_type' => 'svg',
-                'permission' => null,
-                'badge' => 0,
-                'sub_items' => []
-            ];
-
-            $menuItems[] = [
-                'title' => 'Modules Management',
-                'route' => 'admin.modules.index',
-                'icon' => 'cogs',
-                'icon_type' => 'svg',
-                'permission' => null,
-                'badge' => 0,
-                'sub_items' => []
-            ];
-        }
-
-        // Add branch management
-        $branchRoute = $admin->is_super_admin ? 'admin.branches.global' : 'admin.branches.index';
-        $branchParams = $admin->is_super_admin ? [] : ['organization' => $admin->organization_id];
-
-        if ($admin->organization_id || $admin->is_super_admin) {
-            $menuItems[] = [
-                'title' => 'Branches',
-                'route' => $branchRoute,
-                'route_params' => $branchParams,
-                'icon' => 'store',
-                'icon_type' => 'svg',
-                'permission' => 'branches.view',
-                'badge' => 0,
-                'sub_items' => [
-                    [
-                        'title' => 'All Branches',
-                        'route' => $branchRoute,
-                        'route_params' => $branchParams,
-                        'icon' => 'list',
-                        'icon_type' => 'svg',
-                        'permission' => 'branches.view'
-                    ],
-                    [
-                        'title' => 'Activate Branch',
-                        'route' => 'admin.branches.activate.form',
-                        'icon' => 'key',
-                        'icon_type' => 'svg',
-                        'permission' => 'branches.activate'
-                    ]
-                ]
-            ];
-        }
-
-        // Add user management
-        $menuItems[] = [
-            'title' => 'Users',
-            'route' => 'admin.users.index',
-            'icon' => 'user-friends',
-            'icon_type' => 'svg',
-            'permission' => 'users.view',
-            'badge' => 0,
-            'sub_items' => []
-        ];
-
-        return $menuItems;
-    }
-
-
     private function getMenuItemsEnhanced()
     {
         $admin = Auth::guard('admin')->user();
@@ -650,7 +375,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'building-office',
                 'icon_type' => 'svg',
-                'permission' => 'organizations.view',
+                'permission' => null, // Super admin doesn't need permission checks
                 'badge' => $this->getPendingOrganizationsCount(),
                 'badge_color' => 'blue',
                 'is_route_valid' => $this->validateRoute('admin.organizations.index'),
@@ -660,7 +385,7 @@ class AdminSidebar extends Component
                         'route' => 'admin.organizations.index',
                         'icon' => 'list',
                         'icon_type' => 'svg',
-                        'permission' => 'organizations.view',
+                        'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.index')
                     ],
                     [
@@ -668,7 +393,7 @@ class AdminSidebar extends Component
                         'route' => 'admin.organizations.create',
                         'icon' => 'plus',
                         'icon_type' => 'svg',
-                        'permission' => 'organizations.create',
+                        'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.create')
                     ],
                     [
@@ -676,7 +401,7 @@ class AdminSidebar extends Component
                         'route' => 'admin.organizations.activate.form',
                         'icon' => 'key',
                         'icon_type' => 'svg',
-                        'permission' => 'organizations.activate',
+                        'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.activate.form')
                     ]
                 ]
@@ -738,7 +463,7 @@ class AdminSidebar extends Component
                 'route_params' => $branchParams,
                 'icon' => 'store',
                 'icon_type' => 'svg',
-                'permission' => 'branches.view',
+                'permission' => $admin->is_super_admin ? null : 'branches.view',
                 'badge' => $this->getActiveBranchesCount(),
                 'badge_color' => 'green',
                 'is_route_valid' => $this->validateRoute($branchRoute, $branchParams),
@@ -753,7 +478,7 @@ class AdminSidebar extends Component
             'route_params' => [],
             'icon' => 'shopping-cart',
             'icon_type' => 'svg',
-            'permission' => 'orders.view',
+            'permission' => $admin->is_super_admin ? null : 'orders.view',
             'badge' => $this->getPendingOrdersCount(),
             'badge_color' => 'red',
             'is_route_valid' => $this->validateRoute('admin.orders.index'),
@@ -768,7 +493,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'book-open',
                 'icon_type' => 'svg',
-                'permission' => 'menus.view',
+                'permission' => $admin->is_super_admin ? null : 'menus.view',
                 'badge' => $this->getActiveMenusCount(),
                 'badge_color' => 'yellow',
                 'is_route_valid' => $this->validateRoute('admin.menus.index'),
@@ -784,7 +509,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'puzzle-piece',
                 'icon_type' => 'svg',
-                'permission' => 'modules.view',
+                'permission' => $admin->is_super_admin ? null : 'modules.view',
                 'badge' => $this->getActiveModulesCount(),
                 'badge_color' => 'indigo',
                 'is_route_valid' => $this->validateRoute('admin.modules.index'),
@@ -800,7 +525,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'credit-card',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.view',
+                'permission' => null, // Super admin doesn't need permission checks
                 'badge' => $this->getActiveSubscriptionsCount(),
                 'badge_color' => 'green',
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.index'),
@@ -832,7 +557,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'shield-check',
                 'icon_type' => 'svg',
-                'permission' => 'roles.view',
+                'permission' => $admin->is_super_admin ? null : 'roles.view',
                 'badge' => $this->getActiveRolesCount(),
                 'badge_color' => 'emerald',
                 'is_route_valid' => $this->validateRoute('admin.roles.index'),
@@ -848,7 +573,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'package',
                 'icon_type' => 'svg',
-                'permission' => 'inventory.view',
+                'permission' => $admin->is_super_admin ? null : 'inventory.view',
                 'badge' => $this->getLowStockItemsCount(),
                 'badge_color' => 'orange',
                 'is_route_valid' => $this->validateRoute('admin.inventory.index'),
@@ -864,7 +589,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'cog',
                 'icon_type' => 'svg',
-                'permission' => 'production.view',
+                'permission' => $admin->is_super_admin ? null : 'production.view',
                 'badge' => $this->getPendingProductionRequestsCount(),
                 'badge_color' => 'blue',
                 'is_route_valid' => $this->validateRoute('admin.production.index'),
@@ -880,7 +605,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'truck',
                 'icon_type' => 'svg',
-                'permission' => 'suppliers.view',
+                'permission' => $admin->is_super_admin ? null : 'suppliers.view',
                 'badge' => 0,
                 'badge_color' => 'blue',
                 'is_route_valid' => $this->validateRoute('admin.suppliers.index'),
@@ -896,7 +621,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'calendar',
                 'icon_type' => 'svg',
-                'permission' => 'reservations.view',
+                'permission' => $admin->is_super_admin ? null : 'reservations.view',
                 'badge' => $this->getTodayReservationsCount(),
                 'badge_color' => 'purple',
                 'is_route_valid' => $this->validateRoute('admin.reservations.index'),
@@ -912,7 +637,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'users',
                 'icon_type' => 'svg',
-                'permission' => 'users.view',
+                'permission' => $admin->is_super_admin ? null : 'users.view',
                 'badge' => $this->getActiveStaffCount(),
                 'badge_color' => 'cyan',
                 'is_route_valid' => $this->validateRoute('admin.users.index'),
@@ -928,7 +653,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'chart-bar',
                 'icon_type' => 'svg',
-                'permission' => 'reports.view',
+                'permission' => $admin->is_super_admin ? null : 'reports.view',
                 'badge' => 0,
                 'badge_color' => 'gray',
                 'is_route_valid' => $this->validateRoute('admin.reports.index'),
@@ -944,7 +669,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'chef-hat',
                 'icon_type' => 'svg',
-                'permission' => 'kitchen.view',
+                'permission' => $admin->is_super_admin ? null : 'kitchen.view',
                 'badge' => $this->getActiveKOTsCount(),
                 'badge_color' => 'red',
                 'is_route_valid' => $this->validateRoute('admin.kitchen.index'),
@@ -960,7 +685,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'cog',
                 'icon_type' => 'svg',
-                'permission' => 'settings.view',
+                'permission' => $admin->is_super_admin ? null : 'settings.view',
                 'badge' => 0,
                 'badge_color' => 'gray',
                 'is_route_valid' => $this->validateRoute('admin.settings.index'),
@@ -993,7 +718,7 @@ class AdminSidebar extends Component
     }
 
     /**
-     * Check if admin has specific permission
+     * FIXED: Check if admin has specific permission - Super Admin bypass
      */
     private function hasPermission($admin, string $permission): bool
     {
@@ -1001,29 +726,16 @@ class AdminSidebar extends Component
             return false;
         }
 
-        // Super admins have all permissions
+        // CRITICAL FIX: Super admins have ALL permissions - no need to check further
         if ($admin->is_super_admin) {
             return true;
         }
 
-        // For now, allow all authenticated admin users to access these permissions
-        // TODO: Implement proper permission checking later
-        $allowedPermissions = [
-            'inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage', 
-            'production.view', 'production.manage', 'organizations.view', 'branches.view',
-            'branches.create', 'branches.activate', 'modules.view', 'roles.view',
-            'subscription.view', 'menus.view', 'orders.view', 'reservations.view',
-            'users.view', 'reports.view', 'kitchen.view', 'settings.view'
-        ];
-        
-        if (in_array($permission, $allowedPermissions)) {
-            return true;
-        }
-
+        // For regular admins, check specific permissions
         try {
-            // Check using Spatie permissions if admin has hasPermissionTo method
+            // First check using Spatie permissions if available
             if (method_exists($admin, 'hasPermissionTo')) {
-                return $admin->hasPermissionTo($permission);
+                return $admin->hasPermissionTo($permission, 'admin');
             }
 
             // Fallback to basic permission check
@@ -1031,9 +743,23 @@ class AdminSidebar extends Component
                 return $admin->hasPermission($permission);
             }
 
-            return false;
+            // If no permission system is available, allow basic permissions for authenticated admins
+            $basicPermissions = [
+                'inventory.view', 'inventory.manage', 'suppliers.view', 'suppliers.manage', 
+                'production.view', 'production.manage', 'organizations.view', 'branches.view',
+                'branches.create', 'branches.activate', 'modules.view', 'roles.view',
+                'subscription.view', 'menus.view', 'orders.view', 'reservations.view',
+                'users.view', 'reports.view', 'kitchen.view', 'settings.view'
+            ];
+            
+            return in_array($permission, $basicPermissions);
+
         } catch (\Exception $e) {
-            // If permission doesn't exist, return false gracefully
+            Log::warning('Permission check failed', [
+                'permission' => $permission,
+                'admin_id' => $admin->id,
+                'error' => $e->getMessage()
+            ]);
             return false;
         }
     }
@@ -1047,20 +773,26 @@ class AdminSidebar extends Component
             return true;
         }
 
+        // Super admins are never staff level
         if ($admin->is_super_admin) {
             return false;
         }
 
-        // Check if admin has organization or branch admin roles
-        if ($admin->hasRole(['Admin', 'Organization Admin', 'Branch Admin', 'Branch Manager'])) {
-            return false;
-        }
+        // Check if admin has management roles
+        try {
+            if (method_exists($admin, 'hasRole')) {
+                return !$admin->hasRole(['Admin', 'Organization Admin', 'Branch Admin', 'Branch Manager'], 'admin');
+            }
 
-        return true;
+            // Fallback: if has organization_id, they're likely not staff level
+            return !$admin->organization_id;
+        } catch (\Exception $e) {
+            return true;
+        }
     }
 
     /**
-     * Check if menu item is accessible by admin
+     * FIXED: Check if menu item is accessible by admin
      */
     private function isMenuItemAccessible(array $item, $admin): bool
     {
@@ -1069,7 +801,12 @@ class AdminSidebar extends Component
             return false;
         }
 
-        // Check permission
+        // CRITICAL FIX: Super admins can access everything
+        if ($admin->is_super_admin) {
+            return true;
+        }
+
+        // Check permission for regular admins
         if ($item['permission'] && !$this->hasPermission($admin, $item['permission'])) {
             return false;
         }
@@ -1094,22 +831,19 @@ class AdminSidebar extends Component
                 'route_params' => $listParams,
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'branches.view',
+                'permission' => $admin->is_super_admin ? null : 'branches.view',
                 'is_route_valid' => $this->validateRoute($listRoute, $listParams)
             ];
         }
 
         if ($this->hasPermission($admin, 'branches.create')) {
-            // All admins need organization parameter for branch creation
-            // Super admins can choose which organization, regular admins use their own
             $createRoute = 'admin.branches.create';
             $organizationId = $admin->is_super_admin
-                ? ($admin->organization_id ?? null) // Use current org or null for super admin
-                : $admin->organization_id; // Regular admin must use their org
+                ? ($admin->organization_id ?? null)
+                : $admin->organization_id;
 
-            // Only show the link if we have an organization context
-            if ($organizationId) {
-                $createParams = ['organization' => $organizationId];
+            if ($organizationId || $admin->is_super_admin) {
+                $createParams = $organizationId ? ['organization' => $organizationId] : [];
 
                 $subItems[] = [
                     'title' => 'Add Branch',
@@ -1117,13 +851,12 @@ class AdminSidebar extends Component
                     'route_params' => $createParams,
                     'icon' => 'plus',
                     'icon_type' => 'svg',
-                    'permission' => 'branches.create',
+                    'permission' => $admin->is_super_admin ? null : 'branches.create',
                     'is_route_valid' => $this->validateRoute($createRoute, $createParams)
                 ];
             }
         }
 
-        // Add branch activation option
         if ($this->hasPermission($admin, 'branches.activate')) {
             $subItems[] = [
                 'title' => 'Activate Branch',
@@ -1131,7 +864,7 @@ class AdminSidebar extends Component
                 'route_params' => [],
                 'icon' => 'key',
                 'icon_type' => 'svg',
-                'permission' => 'branches.activate',
+                'permission' => $admin->is_super_admin ? null : 'branches.activate',
                 'is_route_valid' => $this->validateRoute('admin.branches.activate.form')
             ];
         }
@@ -1144,13 +877,14 @@ class AdminSidebar extends Component
      */
     private function getOrderSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'All Orders',
                 'route' => 'admin.orders.index',
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'orders.view',
+                'permission' => $admin->is_super_admin ? null : 'orders.view',
                 'is_route_valid' => $this->validateRoute('admin.orders.index')
             ],
             [
@@ -1158,7 +892,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.orders.create',
                 'icon' => 'plus-circle',
                 'icon_type' => 'svg',
-                'permission' => 'orders.create',
+                'permission' => $admin->is_super_admin ? null : 'orders.create',
                 'is_route_valid' => $this->validateRoute('admin.orders.create')
             ],
             [
@@ -1167,8 +901,7 @@ class AdminSidebar extends Component
                 'route_params' => ['type' => 'in_house'],
                 'icon' => 'utensils',
                 'icon_type' => 'svg',
-                'permission' => 'orders.view',
-                'is_route_valid' => $this->validateRoute('admin.orders.index')
+                'permission' => $admin->is_super_admin ? null : 'orders.view'
             ],
             [
                 'title' => 'Takeaway Orders',
@@ -1176,8 +909,7 @@ class AdminSidebar extends Component
                 'route_params' => ['type' => 'takeaway'],
                 'icon' => 'shopping-bag',
                 'icon_type' => 'svg',
-                'permission' => 'orders.view',
-                'is_route_valid' => $this->validateRoute('admin.orders.index')
+                'permission' => $admin->is_super_admin ? null : 'orders.view'
             ]
         ];
     }
@@ -1187,13 +919,14 @@ class AdminSidebar extends Component
      */
     private function getMenuSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'All Menus',
                 'route' => 'admin.menus.index',
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'menus.view',
+                'permission' => $admin->is_super_admin ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.menus.index')
             ],
             [
@@ -1201,7 +934,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.menus.create',
                 'icon' => 'plus',
                 'icon_type' => 'svg',
-                'permission' => 'menus.create',
+                'permission' => $admin->is_super_admin ? null : 'menus.create',
                 'is_route_valid' => $this->validateRoute('admin.menus.create')
             ],
             [
@@ -1209,7 +942,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.inventory.items.index',
                 'icon' => 'utensils',
                 'icon_type' => 'svg',
-                'permission' => 'menus.view',
+                'permission' => $admin->is_super_admin ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
             ],
             [
@@ -1217,7 +950,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.inventory.items.create',
                 'icon' => 'plus-circle',
                 'icon_type' => 'svg',
-                'permission' => 'menus.create',
+                'permission' => $admin->is_super_admin ? null : 'menus.create',
                 'is_route_valid' => $this->validateRoute('admin.inventory.items.create')
             ],
             [
@@ -1225,7 +958,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.menu-categories.index',
                 'icon' => 'tag',
                 'icon_type' => 'svg',
-                'permission' => 'menus.view',
+                'permission' => $admin->is_super_admin ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.menu-categories.index')
             ]
         ];
@@ -1236,13 +969,14 @@ class AdminSidebar extends Component
      */
     private function getInventorySubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'Stock Levels',
                 'route' => 'admin.inventory.index',
                 'icon' => 'box',
                 'icon_type' => 'svg',
-                'permission' => 'inventory.view',
+                'permission' => $admin->is_super_admin ? null : 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.inventory.index')
             ],
             [
@@ -1250,7 +984,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.inventory.items.index',
                 'icon' => 'package',
                 'icon_type' => 'svg',
-                'permission' => 'inventory.view',
+                'permission' => $admin->is_super_admin ? null : 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
             ],
             [
@@ -1258,7 +992,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.suppliers.index',
                 'icon' => 'truck',
                 'icon_type' => 'svg',
-                'permission' => 'suppliers.view',
+                'permission' => $admin->is_super_admin ? null : 'suppliers.view',
                 'is_route_valid' => $this->validateRoute('admin.suppliers.index')
             ],
             [
@@ -1266,7 +1000,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.grn.index',
                 'icon' => 'receipt',
                 'icon_type' => 'svg',
-                'permission' => 'inventory.view',
+                'permission' => $admin->is_super_admin ? null : 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.grn.index')
             ]
         ];
@@ -1277,13 +1011,14 @@ class AdminSidebar extends Component
      */
     private function getProductionSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'Production Dashboard',
                 'route' => 'admin.production.index',
                 'icon' => 'dashboard',
                 'icon_type' => 'svg',
-                'permission' => 'production.view',
+                'permission' => $admin->is_super_admin ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.index')
             ],
             [
@@ -1291,7 +1026,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.production.requests.index',
                 'icon' => 'clipboard-list',
                 'icon_type' => 'svg',
-                'permission' => 'production.view',
+                'permission' => $admin->is_super_admin ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.requests.index')
             ],
             [
@@ -1299,7 +1034,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.production.orders.index',
                 'icon' => 'cog',
                 'icon_type' => 'svg',
-                'permission' => 'production.view',
+                'permission' => $admin->is_super_admin ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.orders.index')
             ],
             [
@@ -1307,7 +1042,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.production.sessions.index',
                 'icon' => 'play',
                 'icon_type' => 'svg',
-                'permission' => 'production.view',
+                'permission' => $admin->is_super_admin ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.sessions.index')
             ],
             [
@@ -1315,7 +1050,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.production.recipes.index',
                 'icon' => 'book',
                 'icon_type' => 'svg',
-                'permission' => 'production.view',
+                'permission' => $admin->is_super_admin ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.recipes.index')
             ]
         ];
@@ -1326,13 +1061,14 @@ class AdminSidebar extends Component
      */
     private function getSupplierSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'All Suppliers',
                 'route' => 'admin.suppliers.index',
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'suppliers.view',
+                'permission' => $admin->is_super_admin ? null : 'suppliers.view',
                 'is_route_valid' => $this->validateRoute('admin.suppliers.index')
             ],
             [
@@ -1340,7 +1076,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.suppliers.create',
                 'icon' => 'plus',
                 'icon_type' => 'svg',
-                'permission' => 'suppliers.create',
+                'permission' => $admin->is_super_admin ? null : 'suppliers.create',
                 'is_route_valid' => $this->validateRoute('admin.suppliers.create')
             ]
         ];
@@ -1351,13 +1087,14 @@ class AdminSidebar extends Component
      */
     private function getReservationSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'All Reservations',
                 'route' => 'admin.reservations.index',
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'reservations.view',
+                'permission' => $admin->is_super_admin ? null : 'reservations.view',
                 'is_route_valid' => $this->validateRoute('admin.reservations.index')
             ],
             [
@@ -1365,7 +1102,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.reservations.today',
                 'icon' => 'calendar-day',
                 'icon_type' => 'svg',
-                'permission' => 'reservations.view',
+                'permission' => $admin->is_super_admin ? null : 'reservations.view',
                 'is_route_valid' => $this->validateRoute('admin.reservations.today')
             ]
         ];
@@ -1376,13 +1113,14 @@ class AdminSidebar extends Component
      */
     private function getStaffSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'All Staff',
                 'route' => 'admin.users.index',
                 'icon' => 'users',
                 'icon_type' => 'svg',
-                'permission' => 'users.view',
+                'permission' => $admin->is_super_admin ? null : 'users.view',
                 'is_route_valid' => $this->validateRoute('admin.users.index')
             ],
             [
@@ -1390,7 +1128,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.users.create',
                 'icon' => 'user-plus',
                 'icon_type' => 'svg',
-                'permission' => 'users.create',
+                'permission' => $admin->is_super_admin ? null : 'users.create',
                 'is_route_valid' => $this->validateRoute('admin.users.create')
             ],
             [
@@ -1398,7 +1136,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.roles.index',
                 'icon' => 'shield',
                 'icon_type' => 'svg',
-                'permission' => 'roles.view',
+                'permission' => $admin->is_super_admin ? null : 'roles.view',
                 'is_route_valid' => $this->validateRoute('admin.roles.index')
             ]
         ];
@@ -1409,13 +1147,14 @@ class AdminSidebar extends Component
      */
     private function getKitchenSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'Active KOTs',
                 'route' => 'admin.kitchen.kots',
                 'icon' => 'receipt',
                 'icon_type' => 'svg',
-                'permission' => 'kitchen.view',
+                'permission' => $admin->is_super_admin ? null : 'kitchen.view',
                 'is_route_valid' => $this->validateRoute('admin.kitchen.kots')
             ],
             [
@@ -1423,7 +1162,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.kitchen.stations',
                 'icon' => 'grid',
                 'icon_type' => 'svg',
-                'permission' => 'kitchen.manage',
+                'permission' => $admin->is_super_admin ? null : 'kitchen.manage',
                 'is_route_valid' => $this->validateRoute('admin.kitchen.stations')
             ]
         ];
@@ -1434,13 +1173,14 @@ class AdminSidebar extends Component
      */
     private function getReportSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'Sales Reports',
                 'route' => 'admin.reports.sales',
                 'icon' => 'trending-up',
                 'icon_type' => 'svg',
-                'permission' => 'reports.view',
+                'permission' => $admin->is_super_admin ? null : 'reports.view',
                 'is_route_valid' => $this->validateRoute('admin.reports.sales')
             ],
             [
@@ -1448,7 +1188,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.reports.inventory',
                 'icon' => 'package',
                 'icon_type' => 'svg',
-                'permission' => 'reports.view',
+                'permission' => $admin->is_super_admin ? null : 'reports.view',
                 'is_route_valid' => $this->validateRoute('admin.reports.inventory')
             ]
         ];
@@ -1459,13 +1199,14 @@ class AdminSidebar extends Component
      */
     private function getSettingsSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'General Settings',
                 'route' => 'admin.settings.general',
                 'icon' => 'cog',
                 'icon_type' => 'svg',
-                'permission' => 'settings.view',
+                'permission' => $admin->is_super_admin ? null : 'settings.view',
                 'is_route_valid' => $this->validateRoute('admin.settings.general')
             ],
             [
@@ -1473,7 +1214,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.settings.payments',
                 'icon' => 'credit-card',
                 'icon_type' => 'svg',
-                'permission' => 'settings.payments',
+                'permission' => $admin->is_super_admin ? null : 'settings.payments',
                 'is_route_valid' => $this->validateRoute('admin.settings.payments')
             ]
         ];
@@ -1512,18 +1253,6 @@ class AdminSidebar extends Component
         }
     }
 
-    private function getPendingSubscriptionRequestsCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin || !$admin->is_super_admin) return 0;
-
-        try {
-            return \App\Models\Organization::where('status', 'subscription_pending')->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
     /**
      * Get module access and usage statistics
      */
@@ -1546,131 +1275,6 @@ class AdminSidebar extends Component
             }
 
             return 0;
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    private function getInactiveModulesCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin || !$admin->is_super_admin) return 0;
-
-        try {
-            return \App\Models\Module::where('is_active', false)->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Get organization-specific metrics
-     */
-    private function getInactiveOrganizationsCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin || !$admin->is_super_admin) return 0;
-
-        try {
-            return \App\Models\Organization::where('is_active', false)->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    private function getOrganizationsNeedingAttentionCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin || !$admin->is_super_admin) return 0;
-
-        try {
-            return \App\Models\Organization::where(function ($query) {
-                $query->whereNull('activated_at')
-                      ->orWhere('is_active', false)
-                      ->orWhereHas('currentSubscription', function ($q) {
-                          $q->where('ends_at', '<=', now()->addDays(7));
-                      });
-            })->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Get branch-related metrics  
-     */
-    private function getInactiveBranchesCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin) return 0;
-
-        try {
-            $query = \App\Models\Branch::where('is_active', false);
-
-            if (!$admin->is_super_admin && $admin->organization_id) {
-                $query->where('organization_id', $admin->organization_id);
-            }
-
-            return $query->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    private function getBranchesNeedingActivationCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin) return 0;
-
-        try {
-            $query = \App\Models\Branch::whereNotNull('activation_key')
-                                     ->where('is_active', false);
-
-            if (!$admin->is_super_admin && $admin->organization_id) {
-                $query->where('organization_id', $admin->organization_id);
-            }
-
-            return $query->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Get user management metrics
-     */
-    private function getPendingUsersCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin) return 0;
-
-        try {
-            $query = \App\Models\Admin::where('is_active', false)
-                                    ->whereNotNull('email_verified_at');
-
-            if (!$admin->is_super_admin && $admin->organization_id) {
-                $query->where('organization_id', $admin->organization_id);
-            }
-
-            return $query->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
-    private function getUnverifiedUsersCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin) return 0;
-
-        try {
-            $query = \App\Models\Admin::whereNull('email_verified_at');
-
-            if (!$admin->is_super_admin && $admin->organization_id) {
-                $query->where('organization_id', $admin->organization_id);
-            }
-
-            return $query->count();
         } catch (\Exception $e) {
             return 0;
         }
@@ -1700,18 +1304,6 @@ class AdminSidebar extends Component
         }
     }
 
-    private function getCustomPermissionsCount(): int
-    {
-        $admin = Auth::guard('admin')->user();
-        if (!$admin) return 0;
-
-        try {
-            return \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->count();
-        } catch (\Exception $e) {
-            return 0;
-        }
-    }
-
     /**
      * Get subscription plans sub-items (Super Admin only)
      */
@@ -1723,7 +1315,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.subscription-plans.index',
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.view',
+                'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.index')
             ],
             [
@@ -1731,7 +1323,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.subscription-plans.create',
                 'icon' => 'plus',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.create',
+                'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.create')
             ],
             [
@@ -1739,7 +1331,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.subscription-plans.analytics',
                 'icon' => 'chart-bar',
                 'icon_type' => 'svg',
-                'permission' => 'subscription-plans.analytics',
+                'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.analytics')
             ]
         ];
@@ -1750,13 +1342,14 @@ class AdminSidebar extends Component
      */
     private function getModulesSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'All Modules',
                 'route' => 'admin.modules.index',
                 'icon' => 'list',
                 'icon_type' => 'svg',
-                'permission' => 'modules.view',
+                'permission' => $admin->is_super_admin ? null : 'modules.view',
                 'is_route_valid' => $this->validateRoute('admin.modules.index')
             ],
             [
@@ -1764,7 +1357,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.modules.create',
                 'icon' => 'plus',
                 'icon_type' => 'svg',
-                'permission' => 'modules.create',
+                'permission' => $admin->is_super_admin ? null : 'modules.create',
                 'is_route_valid' => $this->validateRoute('admin.modules.create')
             ],
             [
@@ -1772,7 +1365,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.modules.config',
                 'icon' => 'cog',
                 'icon_type' => 'svg',
-                'permission' => 'modules.configure',
+                'permission' => $admin->is_super_admin ? null : 'modules.configure',
                 'is_route_valid' => $this->validateRoute('admin.modules.config')
             ],
             [
@@ -1780,7 +1373,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.modules.stats',
                 'icon' => 'chart-bar',
                 'icon_type' => 'svg',
-                'permission' => 'modules.analytics',
+                'permission' => $admin->is_super_admin ? null : 'modules.analytics',
                 'is_route_valid' => $this->validateRoute('admin.modules.stats')
             ]
         ];
@@ -1791,13 +1384,14 @@ class AdminSidebar extends Component
      */
     private function getRolesPermissionsSubItems(): array
     {
+        $admin = Auth::guard('admin')->user();
         return [
             [
                 'title' => 'All Roles',
                 'route' => 'admin.roles.index',
                 'icon' => 'users',
                 'icon_type' => 'svg',
-                'permission' => 'roles.view',
+                'permission' => $admin->is_super_admin ? null : 'roles.view',
                 'is_route_valid' => $this->validateRoute('admin.roles.index')
             ],
             [
@@ -1805,7 +1399,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.roles.create',
                 'icon' => 'plus',
                 'icon_type' => 'svg',
-                'permission' => 'roles.create',
+                'permission' => $admin->is_super_admin ? null : 'roles.create',
                 'is_route_valid' => $this->validateRoute('admin.roles.create')
             ],
             [
@@ -1813,7 +1407,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.permissions.index',
                 'icon' => 'shield-check',
                 'icon_type' => 'svg',
-                'permission' => 'permissions.view',
+                'permission' => $admin->is_super_admin ? null : 'permissions.view',
                 'is_route_valid' => $this->validateRoute('admin.permissions.index')
             ],
             [
@@ -1821,7 +1415,7 @@ class AdminSidebar extends Component
                 'route' => 'admin.roles.templates',
                 'icon' => 'document-duplicate',
                 'icon_type' => 'svg',
-                'permission' => 'roles.templates',
+                'permission' => $admin->is_super_admin ? null : 'roles.templates',
                 'is_route_valid' => $this->validateRoute('admin.roles.templates')
             ]
         ];

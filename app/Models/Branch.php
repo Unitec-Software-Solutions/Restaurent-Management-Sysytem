@@ -312,6 +312,21 @@ class Branch extends Model
             if (empty($branch->slug)) {
                 $branch->slug = \Illuminate\Support\Str::slug($branch->name);
             }
+
+            // Ensure branch is inactive by default
+            if (!isset($branch->is_active)) {
+                $branch->is_active = false;
+            }
+        });
+
+        static::updating(function ($branch) {
+            // Prevent branch activation if organization is inactive
+            if ($branch->isDirty('is_active') && $branch->is_active) {
+                $organization = $branch->organization;
+                if ($organization && !$organization->is_active) {
+                    throw new \Exception('Cannot activate branch: Organization is inactive. Please activate the organization first.');
+                }
+            }
         });
 
         static::created(function ($branch) {

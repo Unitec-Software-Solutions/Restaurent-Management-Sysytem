@@ -59,6 +59,22 @@ class Organization extends Model
             // If organization becomes inactive, deactivate all branches
             if (!$organization->is_active && $organization->isDirty('is_active')) {
                 $organization->branches()->update(['is_active' => false]);
+                
+                Log::info('Organization deactivated - all branches deactivated', [
+                    'organization_id' => $organization->id,
+                    'organization_name' => $organization->name,
+                    'branches_count' => $organization->branches()->count()
+                ]);
+            }
+            
+            // When organization becomes active, log but don't auto-activate branches
+            // Branches should be activated individually for better control
+            if ($organization->is_active && $organization->isDirty('is_active')) {
+                Log::info('Organization activated - branches can now be activated individually', [
+                    'organization_id' => $organization->id,
+                    'organization_name' => $organization->name,
+                    'inactive_branches_count' => $organization->branches()->where('is_active', false)->count()
+                ]);
             }
         });
 
@@ -168,6 +184,21 @@ class Organization extends Model
     public function menuCategories()
     {
         return $this->hasMany(MenuCategory::class);
+    }
+
+    public function inventoryItems()
+    {
+        return $this->hasMany(InventoryItem::class);
+    }
+
+    public function menus()
+    {
+        return $this->hasMany(Menu::class);
+    }
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
     }
 
     /**

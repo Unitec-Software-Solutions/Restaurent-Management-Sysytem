@@ -6,6 +6,7 @@ use App\Models\Reservation;
 use App\Models\Payment;
 use App\Models\Table;
 use App\Traits\Exportable;
+use App\Enums\ReservationType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ReservationConfirmed;
@@ -106,19 +107,7 @@ class AdminReservationController extends Controller
         return ['name', 'phone', 'email'];
     }
 
-    public function pending()
-    {
-        $admin = auth('admin')->user();
-        $reservations = Reservation::with(['branch', 'user'])
-            ->where('status', 'pending')
-            ->where('branch_id', $admin->branch->id)
-            ->latest()
-            ->paginate(10);
-
-        return view('admin.reservations.pending', compact('reservations'));
-    }
-
-    public function show(Reservation $reservation)
+        public function show(Reservation $reservation)
     {
         $reservation->load(['branch', 'user']);
         return view('admin.reservations.show', compact('reservation'));
@@ -432,8 +421,8 @@ public function update(Request $request, Reservation $reservation)
         }
 
         $reservation = Reservation::create([
-            'name' => $validated['name'],
-            'phone' => $validated['phone'],
+            'name' => $validated['name'] ?: 'Reservation #' . ((DB::table('reservations')->max('id') ?? 0) + 1),
+            'phone' => $validated['phone'] ?: $branch?->phone,
             'email' => $validated['email'],
             'date' => $validated['date'],
             'start_time' => $validated['start_time'],
@@ -444,6 +433,8 @@ public function update(Request $request, Reservation $reservation)
             'reservation_fee' => $reservationFee,
             'cancellation_fee' => $cancellationFee,
             'steward_id' => $validated['steward_id'],
+            'created_by_admin_id' => $admin->id, // Track which admin created this reservation
+            'type' => ReservationType::IN_CALL, // Admin-created reservations are typically phone-based
         ]);
 
         if (!empty($validated['assigned_table_ids'])) {
@@ -493,7 +484,8 @@ public function update(Request $request, Reservation $reservation)
 
         // Get next ID safely
         $nextId = (DB::table('reservations')->max('id') ?? 0) + 1;
-        $defaultName = 'customer ' . $nextId;
+        $defaultName = 'Reservation #' . $nextId;
+        $defaultPhone = $branch?->phone ?? '';
 
         // Get stewards for the branch with null-safe operations
         $stewards = Employee::where('branch_id', $branchId)

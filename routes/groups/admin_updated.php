@@ -7,10 +7,10 @@
 use Illuminate\Support\Facades\Route;
 
 // Controller imports for modern syntax
-use App\Http\Controllers\AdminAuthTestController;
+// use App\Http\Controllers\AdminAuthTestController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AdminTestPageController;
+// use App\Http\Controllers\AdminTestPageController;
 use App\Http\Controllers\AdminReservationController;
 use App\Http\Controllers\ItemDashboardController;
 use App\Http\Controllers\ItemMasterController;
@@ -47,7 +47,7 @@ use App\Http\Controllers\Admin\BillController;
 
 Route::adminGroup(function () {
     // Authentication routes
-    Route::get('admin/auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
+    // Route::get('admin/auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('auth.check');
     Route::get('admin/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('admin/login', [AdminAuthController::class, 'login'])->name('login.submit');
     Route::post('admin/logout', [AdminAuthController::class, 'adminLogout'])->name('logout.action');
@@ -55,16 +55,16 @@ Route::adminGroup(function () {
     // Main admin routes
     Route::get('admin/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('admin/profile', [AdminController::class, 'profile'])->name('profile.index');
-    Route::get('admin/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
+    // Route::get('admin/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
     
     // Reservations
-    Route::get('admin/reservations', [AdminReservationController::class, 'index'])->name('reservations.index');
-    Route::get('admin/reservations/create', [AdminReservationController::class, 'create'])->name('reservations.create');
-    Route::post('admin/reservations', [AdminReservationController::class, 'store'])->name('reservations.store');
-    Route::get('admin/reservations/{reservation}', [AdminReservationController::class, 'show'])->name('reservations.show');
-    Route::get('admin/reservations/{reservation}/edit', [AdminReservationController::class, 'edit'])->name('reservations.edit');
-    Route::put('admin/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('reservations.update');
-    Route::delete('admin/reservations/{reservation}', [AdminReservationController::class, 'destroy'])->name('reservations.destroy');
+    Route::get('admin/reservations', [AdminReservationController::class, 'index'])->name('admin.reservations.index');
+    Route::get('admin/reservations/create', [AdminReservationController::class, 'create'])->name('admin.reservations.create');
+    Route::post('admin/reservations', [AdminReservationController::class, 'store'])->name('admin.reservations.store');
+    Route::get('admin/reservations/{reservation}', [AdminReservationController::class, 'show'])->name('admin.reservations.show');
+    Route::get('admin/reservations/{reservation}/edit', [AdminReservationController::class, 'edit'])->name('admin.reservations.edit');
+    Route::put('admin/reservations/{reservation}', [AdminReservationController::class, 'update'])->name('admin.reservations.update');
+    Route::delete('admin/reservations/{reservation}', [AdminReservationController::class, 'destroy'])->name('admin.reservations.destroy');
     
     // Inventory management
     Route::get('admin/inventory', [ItemDashboardController::class, 'index'])->name('inventory.index');
@@ -202,17 +202,6 @@ Route::adminGroup(function () {
     Route::get('admin/dashboard/realtime-inventory', [RealtimeDashboardController::class, 'index'])->name('dashboard.realtime-inventory');
     Route::get('menus/safety-dashboard', [MenuController::class, 'safetyDashboard'])->name('menus.safety-dashboard');
     
-    // Database testing (admin only)
-    Route::post('admin/diagnose-table', [DatabaseTestController::class, 'diagnoseTable'])->name('admin.diagnose-table');
-    Route::post('admin/run-migrations', [DatabaseTestController::class, 'runMigrations'])->name('admin.run-migrations');
-    Route::post('admin/run-seeder', [DatabaseTestController::class, 'runSeeder'])->name('admin.run-seeder');
-    Route::post('admin/full-diagnose', [DatabaseTestController::class, 'fullDiagnose'])->name('admin.full-diagnose');
-    Route::post('admin/fresh-migrate', [DatabaseTestController::class, 'freshMigrate'])->name('admin.fresh-migrate');
-    Route::post('admin/test-orders', [DatabaseTestController::class, 'testOrderCreation'])->name('admin.test-orders');
-    Route::get('admin/system-stats', [DatabaseTestController::class, 'getSystemStats'])->name('admin.system-stats');
-    Route::get('admin/order-stats', [DatabaseTestController::class, 'getOrderStats'])->name('admin.order-stats');
-    Route::get('admin/recent-orders', [DatabaseTestController::class, 'getRecentOrders'])->name('admin.recent-orders');
-    Route::get('admin/orders-preview', [DatabaseTestController::class, 'getOrdersPreview'])->name('admin.orders-preview');
     
     // Enhanced admin modules
     Route::get('customers/index', [CustomerController::class, 'index'])->name('customers.index');

@@ -31,7 +31,7 @@ class GTNUpdateRequest extends FormRequest
             'transfer_date' => 'required|date',
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.transfer_quantity' => 'required|numeric|min:0.01',
             'items.*.transfer_price' => 'nullable|numeric|min:0', // Changed from required to nullable
             'items.*.batch_no' => 'nullable|string|max:100',

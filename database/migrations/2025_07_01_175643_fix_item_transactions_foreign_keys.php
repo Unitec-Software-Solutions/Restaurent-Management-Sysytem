@@ -14,15 +14,15 @@ return new class extends Migration
     public function up(): void
     {
         // First, check what table actually exists
-        $itemMasterTableExists = Schema::hasTable('item_masters');
-        $itemMastersTableExists = Schema::hasTable('item_masters');
+        $itemMasterTableExists = Schema::hasTable('item_master');
+        $itemMastersTableExists = Schema::hasTable('item_master');
         
         if (!$itemMasterTableExists && !$itemMastersTableExists) {
-            throw new \Exception('Neither item_masters nor item_masters table exists. Please run item master migration first.');
+            throw new \Exception('Neither item_master nor item_master table exists. Please run item master migration first.');
         }
         
         // Determine which table name to use
-        $correctTableName = $itemMastersTableExists ? 'item_masters' : 'item_masters';
+        $correctTableName = $itemMastersTableExists ? 'item_master' : 'item_master';
         
         // Drop existing foreign key constraints if they exist
         Schema::table('item_transactions', function (Blueprint $table) {
@@ -33,7 +33,7 @@ return new class extends Migration
             }
             
             try {
-                $table->dropForeign(['item_masters_id']);
+                $table->dropForeign(['item_master_id']);
             } catch (Exception $e) {
                 // Foreign key might not exist yet
             }
@@ -41,20 +41,20 @@ return new class extends Migration
         
         // Add corrected foreign key constraints
         Schema::table('item_transactions', function (Blueprint $table) use ($correctTableName) {
-            // Add item_masters_id column if it doesn't exist
-            if (!Schema::hasColumn('item_transactions', 'item_masters_id')) {
-                $table->unsignedBigInteger('item_masters_id')->nullable()->after('inventory_item_id');
+            // Add item_master_id column if it doesn't exist
+            if (!Schema::hasColumn('item_transactions', 'item_master_id')) {
+                $table->unsignedBigInteger('item_master_id')->nullable()->after('inventory_item_id');
             }
             
             // Add foreign key constraints with correct table name
             $table->foreign('inventory_item_id')->references('id')->on($correctTableName)->onDelete('cascade');
-            $table->foreign('item_masters_id')->references('id')->on($correctTableName)->onDelete('set null');
+            $table->foreign('item_master_id')->references('id')->on($correctTableName)->onDelete('set null');
         });
         
         // Update ItemMaster model table reference if needed
-        if ($correctTableName === 'item_masters') {
+        if ($correctTableName === 'item_master') {
             // Log that we're using singular table name
-            Log::info("Using singular table name 'item_masters' for foreign key references");
+            Log::info("Using singular table name 'item_master' for foreign key references");
         }
     }
 
@@ -65,7 +65,7 @@ return new class extends Migration
     {
         Schema::table('item_transactions', function (Blueprint $table) {
             $table->dropForeign(['inventory_item_id']);
-            $table->dropForeign(['item_masters_id']);
+            $table->dropForeign(['item_master_id']);
         });
     }
 };

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<section class="hero-bg pt-24 pb-16 md:pt-32 md:pb-20 relative overflow-hidden">
+<section class="hero-bg pt-24 pb-16 md:pt-32 md:pb-20 relative overflow-hidden" style="padding-top: 0%; padding-bottom: 0%;">
     <div class="container mx-auto px-4">
         <div class="flex flex-col-reverse lg:flex-row items-center gap-12 md:pt-24 md:pb-24">
             <!-- Left: Text & Actions -->
@@ -23,7 +23,7 @@
                 </div>
             </div>
             <!-- Right: Image -->
-            <div class="w-full lg:w-1/2 relative flex justify-center items-center">
+            <div class="w-full lg:w-1/2 relative flex justify-center items-center" style="max-height: 400px;">
                 <div class="relative z-10 rounded-2xl overflow-hidden shadow-2xl floating">
                     <img src="{{ asset('images/welcome_image.jpeg') }}"
                         alt="Chef preparing a gourmet dish in a modern restaurant kitchen with smiling staff in the background, warm lighting, and a welcoming atmosphere. The environment feels lively and inviting. Text on the image reads Unitec Restaurant Management System."
