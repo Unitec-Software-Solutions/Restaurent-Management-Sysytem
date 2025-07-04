@@ -515,9 +515,7 @@ class ItemMasterController extends Controller
     public function create()
     {
         $user = Auth::guard('admin')->user();
-        $user = Auth::guard('admin')->user();
 
-        if (!$user) {
         if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
@@ -661,5 +659,69 @@ class ItemMasterController extends Controller
     protected function getSearchableColumns(): array
     {
         return ['name', 'item_code', 'description'];
+    }
+
+    /**
+     * Get items eligible for menu creation
+     */
+    public function getMenuEligibleItems(Request $request)
+    {
+        $admin = Auth::guard('admin')->user();
+        
+        $query = ItemMaster::with(['category'])
+                          ->where('is_menu_item', true)
+                          ->where('is_active', true);
+
+        // Apply organization/branch filtering based on admin type
+        if (!$admin->is_super_admin) {
+            $query->where('organization_id', $admin->organization_id);
+            
+            if ($admin->branch_id) {
+                $query->where(function($q) use ($admin) {
+                    $q->where('branch_id', $admin->branch_id)
+                      ->orWhereNull('branch_id');
+                });
+            }
+        }
+
+        // Exclude items that already have menu items
+        $query->whereDoesntHave('menuItems');
+
+        $items = $query->orderBy('name')->get();
+
+        return response()->json([
+            'success' => true,
+            'items' => $items->map(function($item) {
+                // Determine menu item type based on item_type and inventory status
+                $menuItemType = 'Buy & Sell'; // Default
+                $requiresPreparation = false;
+                
+                if ($item->item_type === 'ingredient' || $item->item_type === 'prepared') {
+                    // Check if item has inventory
+                    $hasInventory = $item->current_quantity > 0;
+                    if (!$hasInventory) {
+                        $menuItemType = 'KOT';
+                        $requiresPreparation = true;
+                    }
+                }
+                
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'item_code' => $item->item_code,
+                    'item_type' => $item->item_type,
+                    'buying_price' => $item->buying_price,
+                    'selling_price' => $item->selling_price,
+                    'current_quantity' => $item->current_quantity,
+                    'menu_item_type' => $menuItemType,
+                    'requires_preparation' => $requiresPreparation,
+                    'category' => [
+                        'id' => $item->category->id ?? null,
+                        'name' => $item->category->name ?? 'Uncategorized'
+                    ]
+                ];
+            })
+        ]);
     }
 }

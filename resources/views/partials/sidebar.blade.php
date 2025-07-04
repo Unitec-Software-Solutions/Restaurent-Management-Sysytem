@@ -157,6 +157,25 @@
                 </li>
                 @endcanany
 
+                {{-- Menu Items --}}
+                @auth('admin')
+                <li class="sidebar-item {{ request()->routeIs('admin.menu-items*') ? 'active' : '' }}" 
+                    x-data="{ open: {{ request()->routeIs('admin.menu-items*') ? 'true' : 'false' }} }">
+                    <a href="#" @click="open = !open" class="sidebar-link group has-submenu">
+                        <i class="fas fa-utensils sidebar-icon"></i>
+                        <span class="sidebar-text" x-show="!collapsed" x-transition>Menu Items</span>
+                        <i class="fas fa-chevron-down submenu-arrow" x-show="!collapsed" 
+                           :class="{ 'rotate-180': open }" x-transition></i>
+                        <div class="tooltip" x-show="collapsed" x-cloak>Menu Items</div>
+                    </a>
+                    <ul class="submenu" x-show="open && !collapsed" x-transition>
+                        <li><a href="{{ route('admin.menu-items.index') }}" class="submenu-link">All Menu Items</a></li>
+                        <li><a href="{{ route('admin.menu-items.create') }}" class="submenu-link">Add Menu Item</a></li>
+                        <li><a href="{{ route('admin.menu-items.create-kot') }}" class="submenu-link">Create KOT Items</a></li>
+                    </ul>
+                </li>
+                @endauth
+
                 {{-- Inventory --}}
                 @auth('admin')
                 <li class="sidebar-item {{ request()->routeIs('admin.inventory*') ? 'active' : '' }}" 

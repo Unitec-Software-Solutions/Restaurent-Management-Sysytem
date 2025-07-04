@@ -37,7 +37,11 @@ class MenuSafetyService
         }
         
         // Check if menu is valid for current day of week
-        if ($menu->days_of_week && !$this->isValidForCurrentDay($menu->days_of_week)) {
+        $daysOfWeek = $menu->days_of_week;
+        if (is_array($daysOfWeek)) {
+            $daysOfWeek = json_encode($daysOfWeek);
+        }
+        if ($daysOfWeek && !$this->isValidForCurrentDay($daysOfWeek)) {
             $errors[] = 'Selected menu is not available today (' . $now->format('l') . ').';
         }
         
