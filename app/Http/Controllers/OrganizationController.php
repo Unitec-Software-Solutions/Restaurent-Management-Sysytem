@@ -687,4 +687,167 @@ class OrganizationController extends Controller
                 ->with('error', 'Failed to change organization status: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Organization Management Dashboard - Super Admin Dashboard for complete workflow
+     */
+    public function dashboard()
+    {
+        // Statistics
+        $stats = [
+            'organizations' => Organization::count(),
+            'branches' => Branch::count(),
+            'kitchen_stations' => \App\Models\KitchenStation::count(),
+            'orders' => \App\Models\Order::count(),
+        ];
+
+        // Load organizations with relationships for sidebar display
+        $organizations = Organization::with([
+            'branches.kitchenStations', 
+            'admins' => function($query) {
+                $query->where('is_active', true);
+            },
+            'subscriptionPlan'
+        ])->get();
+
+        // Load modules and subscription plans
+        $modules = \App\Models\Module::where('is_active', true)->get();
+        $subscriptionPlans = SubscriptionPlan::where('is_active', true)->get();
+
+        return view('admin.organization-workflow.dashboard', compact(
+            'stats', 
+            'organizations', 
+            'modules', 
+            'subscriptionPlans'
+        ));
+    }
+
+    /**
+     * Get organization details for modal (AJAX)
+     */
+    public function getOrganizationDetails(Organization $organization)
+    {
+        $organization->load([
+            'branches.kitchenStations',
+            'admins' => function($query) {
+                $query->where('is_active', true);
+            },
+            'subscriptionPlan'
+        ]);
+
+        $stats = [
+            'branches' => $organization->branches()->count(),
+            'active_branches' => $organization->branches()->where('is_active', true)->count(),
+            'admins' => $organization->admins()->where('is_active', true)->count(),
+            'subscription_days_left' => $organization->subscription_end_date ? 
+                now()->diffInDays($organization->subscription_end_date, false) : 0,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'organization' => $organization,
+            'stats' => $stats
+        ]);
+    }
+
+
+
+    /**
+     * Login as organization admin (Super Admin feature)
+     */
+    public function loginAsOrgAdmin($organizationId)
+    {
+        if (!auth('admin')->user()->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only super administrators can use this feature'
+            ]);
+        }
+
+        try {
+            $organization = Organization::findOrFail($organizationId);
+            $orgAdmin = $organization->admins()->where('is_active', true)->first();
+
+            if (!$orgAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active admin found for this organization'
+                ]);
+            }
+
+            // Store original admin info in session for switching back
+            session(['original_super_admin_id' => auth('admin')->id()]);
+
+            // Login as organization admin
+            Auth::guard('admin')->login($orgAdmin);
+
+            return response()->json([
+                'success' => true,
+                'redirect_url' => route('admin.org-dashboard'),
+                'message' => 'Successfully logged in as organization admin'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to login as organization admin'
+            ]);
+        }
+    }
+
+    /**
+     * Organization Admin Dashboard - For organization admins to manage their restaurant
+     */
+    public function orgDashboard()
+    {
+        $admin = auth('admin')->user();
+        
+        if ($admin->isSuperAdmin()) {
+            // If super admin, redirect to main dashboard
+            return redirect()->route('admin.organizations.dashboard');
+        }
+
+        $organization = $admin->organization;
+        if (!$organization) {
+            return redirect()->route('admin.login')->with('error', 'No organization found for your account');
+        }
+
+        // Load organization with relationships
+        $organization->load([
+            'branches.kitchenStations', 
+            'admins' => function($query) {
+                $query->where('is_active', true);
+            },
+            'subscriptionPlan'
+        ]);
+
+        // Calculate statistics
+        $stats = [
+            'branches' => $organization->branches()->count(),
+            'inventory_items' => $organization->inventoryItems()->count(),
+            'menu_items' => $organization->menuItems()->count(),
+            'todays_orders' => $organization->orders()->whereDate('created_at', today())->count(),
+        ];
+
+        return view('admin.organization-workflow.org-dashboard', compact('organization', 'stats'));
+    }
+
+    /**
+     * Switch back to super admin (when logged in as org admin)
+     */
+    public function switchBackToSuperAdmin()
+    {
+        $originalAdminId = session('original_super_admin_id');
+        
+        if ($originalAdminId) {
+            $superAdmin = \App\Models\Admin::find($originalAdminId);
+            if ($superAdmin && $superAdmin->isSuperAdmin()) {
+                Auth::guard('admin')->login($superAdmin);
+                session()->forget('original_super_admin_id');
+                return redirect()->route('admin.organizations.dashboard')
+                    ->with('success', 'Switched back to Super Admin successfully');
+            }
+        }
+
+        return redirect()->route('admin.login')->with('error', 'Unable to switch back to Super Admin');
+    }
 }

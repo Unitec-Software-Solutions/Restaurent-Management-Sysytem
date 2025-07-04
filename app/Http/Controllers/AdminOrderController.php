@@ -1206,6 +1206,35 @@ class AdminOrderController extends Controller
     }
 
     /**
+     * Update order status via AJAX
+     */
+    public function updateStatus(Request $request, Order $order)
+    {
+        $request->validate([
+            'status' => 'required|string|in:pending,confirmed,preparing,ready,completed,cancelled'
+        ]);
+
+        try {
+            $order->update([
+                'status' => $request->status,
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order status updated successfully',
+                'order' => $order->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update order status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Validate stock availability for order items
      */
     private function validateStockForItems(array $items)

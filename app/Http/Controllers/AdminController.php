@@ -75,4 +75,32 @@ class AdminController extends Controller
 
         return view('admin.profile.index', compact('admin'));
     }
+
+    /**
+     * Get admin details for modal (AJAX)
+     */
+    public function getAdminDetails($adminId)
+    {
+        try {
+            $admin = \App\Models\Admin::with(['organization', 'roles'])->findOrFail($adminId);
+            
+            $stats = [
+                'last_login' => $admin->last_login_at ? $admin->last_login_at->diffForHumans() : 'Never',
+                'is_super_admin' => $admin->isSuperAdmin(),
+                'role_count' => $admin->roles()->count(),
+                'created_ago' => $admin->created_at->diffForHumans(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'admin' => $admin,
+                'stats' => $stats
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Admin not found'
+            ]);
+        }
+    }
 }
