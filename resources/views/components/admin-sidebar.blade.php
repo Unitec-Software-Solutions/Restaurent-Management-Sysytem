@@ -21,15 +21,40 @@
             <div class="px-4 pb-4">
                 <ul class="space-y-2">
                     @foreach ($menuItems as $item)
-                        {{-- Regular menu items with enhanced badge and sub-item support --}}
+                        {{-- Regular menu items with enhanced badge and permission-based styling --}}
                         <li>
+                            @php
+                                $isPermitted = $item['is_permitted'] ?? true;
+                                $accessLevel = $item['access_level'] ?? 'super_admin';
+                                
+                                // Determine base classes based on permission
+                                $baseClasses = $isPermitted 
+                                    ? 'flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200'
+                                    : 'flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200 opacity-50 cursor-not-allowed';
+                                
+                                // Style based on current route and permission
+                                $activeClasses = request()->routeIs($item['route'] . '*') 
+                                    ? 'bg-white text-gray-700 border-white' 
+                                    : ($isPermitted 
+                                        ? 'bg-transparent text-white border-white hover:bg-white/10' 
+                                        : 'bg-transparent text-white/50 border-white/30');
+                            @endphp
+
                             @if(\Illuminate\Support\Facades\Route::has($item['route']))
-                                <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
-                                    class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200
-                                    {{ request()->routeIs($item['route'] . '*') 
-                                        ? 'bg-white text-gray-700 border-white' 
-                                        : 'bg-transparent text-white border-white hover:bg-white/10' }}"
-                                    data-route="{{ $item['route'] }}">
+                                @if($isPermitted)
+                                    {{-- Permitted item - normal link --}}
+                                    <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
+                                        class="{{ $baseClasses }} {{ $activeClasses }}"
+                                        data-route="{{ $item['route'] }}"
+                                        title="{{ $item['title'] }}">
+                                @else
+                                    {{-- Restricted item - disabled link with permission notice --}}
+                                    <a href="#"
+                                        class="{{ $baseClasses }} {{ $activeClasses }}"
+                                        data-route="{{ $item['route'] }}"
+                                        onclick="showPermissionNotice('{{ $item['title'] }}', '{{ $accessLevel }}'); return false;"
+                                        title="Restricted: {{ $item['title'] }} - Contact administrator for access">
+                                @endif
 
                                     @if ($item['icon_type'] === 'svg')
                                         @if(view()->exists('partials.icons.' . $item['icon']))
@@ -43,7 +68,12 @@
                                     
                                     <span class="font-medium">{{ $item['title'] }}</span>
                                     
-                                    @if(isset($item['badge']) && $item['badge'] > 0)
+                                    {{-- Permission indicator --}}
+                                    @if(!$isPermitted)
+                                        <i class="fas fa-lock w-4 text-center text-white/40 ml-auto" title="Access Restricted"></i>
+                                    @endif
+                                    
+                                    @if(isset($item['badge']) && $item['badge'] > 0 && $isPermitted)
                                         @php
                                             $badgeColor = $item['badge_color'] ?? 'red';
                                             $badgeClass = match($badgeColor) {
@@ -65,7 +95,7 @@
                                         </span>
                                     @endif
 
-                                    @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
+                                    @if(isset($item['sub_items']) && count($item['sub_items']) > 0 && $isPermitted)
                                         <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200" 
                                            data-submenu-toggle="{{ $item['route'] }}"></i>
                                     @endif
@@ -73,17 +103,35 @@
 
                                 {{-- Sub-menu items --}}
                                 @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
-                                    <ul class="ml-8 mt-1 space-y-1 {{ request()->routeIs($item['route'] . '*') ? 'block' : 'hidden' }}" 
+                                    <ul class="ml-8 mt-1 space-y-1 {{ request()->routeIs($item['route'] . '*') && $isPermitted ? 'block' : 'hidden' }}" 
                                         data-submenu="{{ $item['route'] }}">
                                         @foreach ($item['sub_items'] as $subItem)
                                             @if(isset($subItem['is_route_valid']) && $subItem['is_route_valid'] && \Illuminate\Support\Facades\Route::has($subItem['route']))
+                                                @php
+                                                    $subIsPermitted = $subItem['is_permitted'] ?? true;
+                                                    $subBaseClasses = $subIsPermitted 
+                                                        ? 'flex items-center gap-2 px-3 py-1 rounded border transition-colors duration-200 text-sm'
+                                                        : 'flex items-center gap-2 px-3 py-1 rounded border transition-colors duration-200 text-sm opacity-50 cursor-not-allowed';
+                                                    
+                                                    $subActiveClasses = request()->routeIs($subItem['route']) 
+                                                        ? 'bg-white text-gray-700 border-white' 
+                                                        : ($subIsPermitted 
+                                                            ? 'bg-transparent text-white border-white hover:bg-white/10' 
+                                                            : 'bg-transparent text-white/50 border-white/30');
+                                                @endphp
                                                 <li>
-                                                    <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
-                                                        class="flex items-center gap-2 px-3 py-1 rounded border transition-colors duration-200 text-sm
-                                                        {{ request()->routeIs($subItem['route']) 
-                                                            ? 'bg-white text-gray-700 border-white' 
-                                                            : 'bg-transparent text-white border-white hover:bg-white/10' }}"
-                                                        data-route="{{ $subItem['route'] }}">
+                                                    @if($subIsPermitted)
+                                                        <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
+                                                            class="{{ $subBaseClasses }} {{ $subActiveClasses }}"
+                                                            data-route="{{ $subItem['route'] }}"
+                                                            title="{{ $subItem['title'] }}">
+                                                    @else
+                                                        <a href="#"
+                                                            class="{{ $subBaseClasses }} {{ $subActiveClasses }}"
+                                                            data-route="{{ $subItem['route'] }}"
+                                                            onclick="showPermissionNotice('{{ $subItem['title'] }}', '{{ $accessLevel }}'); return false;"
+                                                            title="Restricted: {{ $subItem['title'] }} - Contact administrator for access">
+                                                    @endif
                                                         
                                                         @if ($subItem['icon_type'] === 'svg')
                                                             @if(view()->exists('partials.icons.' . $subItem['icon']))
@@ -96,6 +144,11 @@
                                                         @endif
                                                         
                                                         <span>{{ $subItem['title'] }}</span>
+                                                        
+                                                        {{-- Sub-item permission indicator --}}
+                                                        @if(!$subIsPermitted)
+                                                            <i class="fas fa-lock w-3 text-center text-white/40 ml-auto" title="Access Restricted"></i>
+                                                        @endif
                                                     </a>
                                                 </li>
                                             @elseif(!isset($subItem['is_route_valid']) || !$subItem['is_route_valid'])
@@ -236,6 +289,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Permission notice handler
+    function showPermissionNotice(functionName, accessLevel) {
+        const levelText = {
+            'super_admin': 'Super Administrator',
+            'org_admin': 'Organization Administrator', 
+            'branch_admin': 'Branch Administrator',
+            'staff': 'Staff'
+        };
+        
+        const currentLevel = levelText[accessLevel] || 'Unknown';
+        
+        // Create and show custom modal or use alert
+        const message = `Access Restricted\n\n` +
+                       `Function: ${functionName}\n` +
+                       `Your Level: ${currentLevel}\n\n` +
+                       `This function is visible for awareness but requires additional permissions.\n` +
+                       `Contact your system administrator to request access.`;
+        
+        // You can replace this with a custom modal if needed
+        alert(message);
+        
+        // Log the permission request for administrators
+        console.log('Permission request:', {
+            function: functionName,
+            user_level: accessLevel,
+            timestamp: new Date().toISOString(),
+            url: window.location.href
+        });
+    }
+
+    // Make function globally available
+    window.showPermissionNotice = showPermissionNotice;
 
     // Initial auth check
     checkAuthStatus();

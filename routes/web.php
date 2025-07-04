@@ -604,7 +604,8 @@ Route::middleware(['auth:admin', SuperAdmin::class])
         Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
     });
 
-Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
+// User Management Routes - Accessible by Superadmin, Org Admin, and Branch Admin with permissions
+Route::middleware(['auth:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

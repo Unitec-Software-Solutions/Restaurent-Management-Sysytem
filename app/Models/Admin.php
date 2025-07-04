@@ -476,4 +476,20 @@ class Admin extends Authenticatable
             'job_title' => $this->job_title,
         ];
     }
+
+    /**
+     * Check if admin is an organization admin (has org but no branch)
+     */
+    public function isOrganizationAdmin(): bool
+    {
+        return !$this->is_super_admin && $this->organization_id && !$this->branch_id;
+    }
+
+    /**
+     * Check if admin is a branch admin (has both org and branch)
+     */
+    public function isBranchAdmin(): bool
+    {
+        return !$this->is_super_admin && $this->organization_id && $this->branch_id;
+    }
 }

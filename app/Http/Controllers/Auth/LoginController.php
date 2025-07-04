@@ -29,6 +29,7 @@ class LoginController extends Controller
 
     /**
      * Handle a login request to the application.
+     * This supports both regular users and organizational admins.
      */
     public function login(Request $request)
     {
@@ -40,10 +41,11 @@ class LoginController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
 
-        if (Auth::attempt($credentials, $remember)) {
+        // First, try logging in as a regular user
+        if (Auth::guard('web')->attempt($credentials, $remember)) {
             $request->session()->regenerate();
             
-            $user = Auth::user();
+            $user = Auth::guard('web')->user();
             
             // Log successful login
             \Illuminate\Support\Facades\Log::info('User logged in', [
@@ -56,6 +58,25 @@ class LoginController extends Controller
 
             // Redirect based on user role/type
             return $this->redirectUser($user);
+        }
+
+        // If user login fails, try admin login (for organizational admins)
+        if (Auth::guard('admin')->attempt($credentials, $remember)) {
+            $request->session()->regenerate();
+            
+            $admin = Auth::guard('admin')->user();
+            
+            // Log successful admin login
+            \Illuminate\Support\Facades\Log::info('Admin logged in through user portal', [
+                'admin_id' => $admin->id,
+                'email' => $admin->email,
+                'organization_id' => $admin->organization_id,
+                'branch_id' => $admin->branch_id ?? null,
+                'is_super_admin' => $admin->is_super_admin
+            ]);
+
+            // Redirect admin to appropriate dashboard
+            return $this->redirectAdmin($admin);
         }
 
         throw ValidationException::withMessages([
@@ -97,21 +118,55 @@ class LoginController extends Controller
     }
 
     /**
+     * Redirect admin based on their type and permissions
+     */
+    protected function redirectAdmin($admin)
+    {
+        // Super admins always go to admin dashboard
+        if ($admin->is_super_admin) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        // Organizational admins go to admin dashboard
+        if ($admin->organization_id && !$admin->branch_id) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        // Branch admins go to admin dashboard
+        if ($admin->branch_id) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        // Default to admin dashboard for any admin
+        return redirect()->intended(route('admin.dashboard'));
+    }
+
+    /**
      * Log the user out of the application.
+     * This handles both regular users and admins.
      */
     public function logout(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('web')->user();
+        $admin = Auth::guard('admin')->user();
         
-        // Log logout
+        // Log logout for user
         if ($user) {
             \Illuminate\Support\Facades\Log::info('User logged out', [
                 'user_id' => $user->id,
                 'email' => $user->email
             ]);
+            Auth::guard('web')->logout();
         }
 
-        Auth::logout();
+        // Log logout for admin
+        if ($admin) {
+            \Illuminate\Support\Facades\Log::info('Admin logged out through user portal', [
+                'admin_id' => $admin->id,
+                'email' => $admin->email
+            ]);
+            Auth::guard('admin')->logout();
+        }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

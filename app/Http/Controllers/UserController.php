@@ -27,7 +27,7 @@ class UserController extends Controller
         if ($admin->is_super_admin) {
             // Super admin: see all users
             $users = User::with(['userRole', 'branch', 'creator', 'organization'])->paginate(20);
-        } elseif ($admin->is_Admin) {
+        } elseif ($admin->isOrganizationAdmin()) {
             // Org admin: see all users in their organization
             $users = User::where('organization_id', $admin->organization_id)
                 ->with(['userRole', 'branch', 'creator', 'organization'])
@@ -65,7 +65,7 @@ class UserController extends Controller
                 'branch_admin' => 'Branch Admin'
             ];
 
-        } elseif ($admin->is_Admin) {
+        } elseif ($admin->isOrganizationAdmin()) {
             $organizations = Organization::where('id', $admin->organization_id)->get();
             $branches = Branch::where('organization_id', $admin->organization_id)->get();
             $roles = Role::where('organization_id', $admin->organization_id)->get();
@@ -150,7 +150,7 @@ class UserController extends Controller
             $allBranches = \App\Models\Branch::with('organization')->get();
             $branches = $allBranches;
             $roles = \App\Models\Role::all();
-        } elseif ($admin->isAdmin()) {
+        } elseif ($admin->isOrganizationAdmin()) {
             $organizations = \App\Models\Organization::where('id', $admin->organization_id)->get();
             $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
             $allBranches = $branches;

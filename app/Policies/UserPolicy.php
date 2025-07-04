@@ -12,13 +12,13 @@ class UserPolicy
      */
     public function viewAny(User|Admin $user): bool
     {
-        
+        // Super admin can view all users
         if ($user->is_super_admin) {
             return true;
         }
 
-        
-        return $user->is_Admin || $user->is_BranchAdmin;
+        // Organization and branch admins can view users in their scope
+        return $user->isOrganizationAdmin() || $user->isBranchAdmin();
     }
 
     /**
@@ -34,7 +34,13 @@ class UserPolicy
      */
     public function create(User|Admin $user): bool
     {
-        return $user->is_super_admin || $user->is_admin;
+        // Super admin can create users anywhere
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        // Organization and branch admins can create users
+        return $user->isOrganizationAdmin() || $user->isBranchAdmin();
     }
 
     /**
@@ -74,7 +80,21 @@ class UserPolicy
      */
     public function assignRole(User|Admin $user, User $model): bool
     {
-        // Only org admin (created by super admin) can assign roles in their org
-        return $user->is_admin && $user->organization_id === $model->organization_id;
+        // Super admin can assign any role
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        // Organization admin can assign roles within their organization
+        if ($user->isOrganizationAdmin() && $user->organization_id === $model->organization_id) {
+            return true;
+        }
+
+        // Branch admin can assign roles within their branch
+        if ($user->isBranchAdmin() && $user->branch_id === $model->branch_id) {
+            return true;
+        }
+
+        return false;
     }
 }
