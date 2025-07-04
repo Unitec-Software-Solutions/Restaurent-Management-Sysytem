@@ -22,14 +22,14 @@ class MenuItemController extends Controller
     public function index(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $query = MenuItem::with(['menuCategory', 'itemMaster', 'organization', 'branch'])
                         ->active();
 
         // Apply organization/branch filtering based on admin type
         if (!$admin->is_super_admin) {
             $query->where('organization_id', $admin->organization_id);
-            
+
             if ($admin->branch_id) {
                 $query->where('branch_id', $admin->branch_id);
             }
@@ -89,7 +89,7 @@ class MenuItemController extends Controller
     public function create(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $categories = MenuCategory::active()
                                  ->when(!$admin->is_super_admin, function($q) use ($admin) {
                                      $q->where('organization_id', $admin->organization_id);
@@ -122,7 +122,7 @@ class MenuItemController extends Controller
     public function store(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'unicode_name' => 'nullable|string|max:255',
@@ -155,11 +155,16 @@ class MenuItemController extends Controller
             'requires_preparation' => 'boolean',
         ]);
 
+        // Ensure item_master_id is always set (even if not present in request)
+        if (!array_key_exists('item_master_id', $validated)) {
+            $validated['item_master_id'] = null;
+        }
+
         // Set organization and branch
-        $validated['organization_id'] = $admin->is_super_admin ? 
-                                      $request->organization_id : 
+        $validated['organization_id'] = $admin->is_super_admin ?
+                                      $request->organization_id :
                                       $admin->organization_id;
-        
+
         if (!$admin->is_super_admin && $admin->branch_id) {
             $validated['branch_id'] = $admin->branch_id;
         } else {
@@ -178,7 +183,7 @@ class MenuItemController extends Controller
         }
 
         // If created from item master, copy relevant data
-        if ($validated['item_master_id']) {
+        if (!empty($validated['item_master_id'])) {
             $itemMaster = ItemMaster::find($validated['item_master_id']);
             if ($itemMaster) {
                 $validated['name'] = $validated['name'] ?: $itemMaster->name;
@@ -202,7 +207,7 @@ class MenuItemController extends Controller
     public function show(MenuItem $menuItem)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$admin->is_super_admin && $menuItem->organization_id !== $admin->organization_id) {
             abort(403);
@@ -219,7 +224,7 @@ class MenuItemController extends Controller
     public function edit(MenuItem $menuItem)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$admin->is_super_admin && $menuItem->organization_id !== $admin->organization_id) {
             abort(403);
@@ -240,7 +245,7 @@ class MenuItemController extends Controller
                                         ->get();
 
         $organizations = $admin->is_super_admin ? Organization::active()->get() : collect([$admin->organization]);
-        
+
         $branches = Branch::active()
                          ->where('organization_id', $menuItem->organization_id)
                          ->orderBy('name')
@@ -255,7 +260,7 @@ class MenuItemController extends Controller
     public function update(Request $request, MenuItem $menuItem)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$admin->is_super_admin && $menuItem->organization_id !== $admin->organization_id) {
             abort(403);
@@ -297,7 +302,7 @@ class MenuItemController extends Controller
             if ($menuItem->image_path) {
                 Storage::disk('public')->delete($menuItem->image_path);
             }
-            
+
             $imagePath = $request->file('image')->store('menu-items', 'public');
             $validated['image_path'] = $imagePath;
         }
@@ -315,7 +320,7 @@ class MenuItemController extends Controller
     public function destroy(MenuItem $menuItem)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$admin->is_super_admin && $menuItem->organization_id !== $admin->organization_id) {
             abort(403);
@@ -346,7 +351,7 @@ class MenuItemController extends Controller
     public function getItems(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $query = MenuItem::with(['menuCategory'])
                         ->active()
                         ->available();
@@ -354,7 +359,7 @@ class MenuItemController extends Controller
         // Apply organization/branch filtering
         if (!$admin->is_super_admin) {
             $query->where('organization_id', $admin->organization_id);
-            
+
             if ($admin->branch_id) {
                 $query->where('branch_id', $admin->branch_id);
             }
@@ -407,7 +412,7 @@ class MenuItemController extends Controller
     public function createFromItemMaster(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $validated = $request->validate([
             'item_master_ids' => 'required|array',
             'item_master_ids.*' => 'exists:item_master,id',
@@ -416,7 +421,7 @@ class MenuItemController extends Controller
 
         $itemMasterIds = $validated['item_master_ids'];
         $categoryId = $validated['menu_category_id'];
-        
+
         $itemMasters = ItemMaster::whereIn('id', $itemMasterIds)
                                 ->where('is_menu_item', true)
                                 ->when(!$admin->is_super_admin, function($q) use ($admin) {
@@ -441,7 +446,7 @@ class MenuItemController extends Controller
             // Determine menu item type based on item master type or is_menu_item flag
             $menuItemType = MenuItem::TYPE_KOT; // Default to KOT for menu items
             $requiresPreparation = true;
-            
+
             // If it's linked to inventory and has stock tracking, make it Buy & Sell
             if ($itemMaster->is_inventory_item && $itemMaster->current_stock !== null) {
                 $menuItemType = MenuItem::TYPE_BUY_SELL;
@@ -490,7 +495,7 @@ class MenuItemController extends Controller
     public function createKotItems(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $validated = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.name' => 'required|string|max:255',
@@ -505,14 +510,14 @@ class MenuItemController extends Controller
 
         foreach ($validated['items'] as $itemData) {
             MenuItem::create([
-                'organization_id' => $admin->is_super_admin ? 
-                                  $request->organization_id : 
+                'organization_id' => $admin->is_super_admin ?
+                                  $request->organization_id :
                                   $admin->organization_id,
-                'branch_id' => $admin->is_super_admin ? 
-                             $request->branch_id : 
+                'branch_id' => $admin->is_super_admin ?
+                             $request->branch_id :
                              $admin->branch_id,
                 'menu_category_id' => $validated['menu_category_id'],
-                'item_master_id' => null, 
+                'item_master_id' => null,
                 'name' => $itemData['name'],
                 'description' => $itemData['description'] ?? null,
                 'price' => $itemData['price'],
@@ -538,7 +543,7 @@ class MenuItemController extends Controller
     public function createKotForm()
     {
         $admin = Auth::guard('admin')->user();
-        
+
         $categories = MenuCategory::active()
                                  ->when(!$admin->is_super_admin, function($q) use ($admin) {
                                      $q->where('organization_id', $admin->organization_id);

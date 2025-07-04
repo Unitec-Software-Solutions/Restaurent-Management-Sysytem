@@ -17,19 +17,19 @@ return new class extends Migration
             // First, check what table actually exists
             $itemMasterTableExists = Schema::hasTable('item_master');
             $itemMastersTableExists = Schema::hasTable('item_master');
-            
+
             if (!$itemMasterTableExists && !$itemMastersTableExists) {
                 throw new \Exception('Neither item_master nor item_master table exists. Please run item master migration first.');
             }
-            
+
             // Determine which table name to use
             $correctTableName = $itemMastersTableExists ? 'item_master' : 'item_master';
             Log::info("Using table name: {$correctTableName}");
-            
+
             // Get existing foreign key constraints for item_transactions table
             $existingConstraints = $this->getExistingForeignKeys('item_transactions');
             Log::info('Existing foreign key constraints:', $existingConstraints);
-            
+
             // Only drop existing foreign key constraints
             Schema::table('item_transactions', function (Blueprint $table) use ($existingConstraints) {
                 // Drop inventory_item_id foreign key if it exists
@@ -41,7 +41,7 @@ return new class extends Migration
                         Log::warning('Could not drop inventory_item_id foreign key: ' . $e->getMessage());
                     }
                 }
-                
+
                 // Drop item_master_id foreign key if it exists (this constraint doesn't actually exist)
                 if (in_array('item_transactions_item_master_id_foreign', $existingConstraints)) {
                     try {
@@ -54,7 +54,7 @@ return new class extends Migration
                     Log::info('item_master_id foreign key does not exist, skipping drop');
                 }
             });
-            
+
             // Add item_master_id column if it doesn't exist
             $existingColumns = Schema::getColumnListing('item_transactions');
             if (!in_array('item_master_id', $existingColumns)) {
@@ -63,7 +63,7 @@ return new class extends Migration
                     Log::info('Added item_master_id column');
                 });
             }
-            
+
             // Add corrected foreign key constraints
             Schema::table('item_transactions', function (Blueprint $table) use ($correctTableName, $existingConstraints) {
                 // Add inventory_item_id foreign key with correct table reference
@@ -75,7 +75,7 @@ return new class extends Migration
                         Log::warning('Could not add inventory_item_id foreign key: ' . $e->getMessage());
                     }
                 }
-                
+
                 // Add item_master_id foreign key with correct table reference
                 if (!in_array('item_transactions_item_master_id_foreign', $existingConstraints)) {
                     try {
@@ -86,18 +86,18 @@ return new class extends Migration
                     }
                 }
             });
-            
+
             // Add performance indexes for PostgreSQL + Tailwind CSS UI
             $this->addPerformanceIndexes();
-            
+
             Log::info('Successfully fixed item_transactions foreign key references');
-            
+
         } catch (\Exception $e) {
             Log::error('Error fixing item_transactions foreign keys: ' . $e->getMessage());
             throw $e;
         }
     }
-    
+
     /**
      * Get existing foreign key constraints for a table in PostgreSQL
      */
@@ -106,17 +106,17 @@ return new class extends Migration
         try {
             $constraints = DB::select("
                 SELECT constraint_name
-                FROM information_schema.table_constraints 
+                FROM information_schema.table_constraints
                 WHERE table_name = ? AND constraint_type = 'FOREIGN KEY'
             ", [$tableName]);
-            
+
             return array_column($constraints, 'constraint_name');
         } catch (\Exception $e) {
             Log::warning('Could not fetch existing foreign keys: ' . $e->getMessage());
             return [];
         }
     }
-    
+
     /**
      * Add PostgreSQL performance indexes for Tailwind CSS UI queries
      */
@@ -149,7 +149,7 @@ return new class extends Migration
             $this->addIndexIfNotExists('item_transactions', $indexData['columns'], $indexData['index']);
         }
     }
-    
+
     /**
      * Add index if it doesn't exist in PostgreSQL
      */
@@ -159,7 +159,7 @@ return new class extends Migration
             // Check if all columns exist before creating index
             $existingColumns = Schema::getColumnListing($tableName);
             $missingColumns = array_diff($columns, $existingColumns);
-            
+
             if (!empty($missingColumns)) {
                 Log::warning("Skipping index {$indexName} - missing columns: " . implode(', ', $missingColumns));
                 return;
@@ -167,11 +167,11 @@ return new class extends Migration
 
             // Check if index exists in PostgreSQL
             $indexExists = DB::selectOne("
-                SELECT indexname 
-                FROM pg_indexes 
+                SELECT indexname
+                FROM pg_indexes
                 WHERE tablename = ? AND indexname = ?
             ", [$tableName, $indexName]);
-            
+
             if (!$indexExists) {
                 Schema::table($tableName, function (Blueprint $table) use ($columns, $indexName) {
                     $table->index($columns, $indexName);
@@ -193,7 +193,7 @@ return new class extends Migration
         Schema::table('item_transactions', function (Blueprint $table) {
             // Get existing constraints before attempting to drop
             $existingConstraints = $this->getExistingForeignKeys('item_transactions');
-            
+
             // Drop foreign keys only if they exist
             if (in_array('item_transactions_inventory_item_id_foreign', $existingConstraints)) {
                 try {
@@ -202,7 +202,7 @@ return new class extends Migration
                     Log::warning('Could not drop inventory_item_id foreign key in rollback: ' . $e->getMessage());
                 }
             }
-            
+
             if (in_array('item_transactions_item_master_id_foreign', $existingConstraints)) {
                 try {
                     $table->dropForeign(['item_master_id']);
@@ -210,7 +210,7 @@ return new class extends Migration
                     Log::warning('Could not drop item_master_id foreign key in rollback: ' . $e->getMessage());
                 }
             }
-            
+
             // Drop indexes
             $indexesToDrop = [
                 'idx_item_transactions_inventory_item',
@@ -219,7 +219,7 @@ return new class extends Migration
                 'idx_item_transactions_branch_type',
                 'idx_item_transactions_created_at'
             ];
-            
+
             foreach ($indexesToDrop as $indexName) {
                 try {
                     $table->dropIndex($indexName);
@@ -227,7 +227,7 @@ return new class extends Migration
                     // Index might not exist
                 }
             }
-            
+
             // Drop item_master_id column if it was added
             $existingColumns = Schema::getColumnListing('item_transactions');
             if (in_array('item_master_id', $existingColumns)) {

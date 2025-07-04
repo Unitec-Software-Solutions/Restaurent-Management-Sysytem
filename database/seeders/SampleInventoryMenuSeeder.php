@@ -133,7 +133,7 @@ class SampleInventoryMenuSeeder extends Seeder
     private function seedMenus($organization)
     {
         $branch = $organization->branches()->first();
-        
+
         // Create sample menu categories
         $menuCategories = [
             ['name' => 'Appetizers', 'description' => 'Starters and small plates'],
@@ -201,7 +201,7 @@ class SampleInventoryMenuSeeder extends Seeder
                 'is_available' => true,
                 'preparation_time' => rand(10, 30), // Random prep time between 10-30 minutes
             ]));
-            
+
             // Create the menu-item relationship in the pivot table
             DB::table('menu_menu_items')->insert([
                 'menu_id' => $mainMenu->id,

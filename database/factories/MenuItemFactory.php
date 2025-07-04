@@ -25,12 +25,12 @@ class MenuItemFactory extends Factory
     {
         $spiceLevels = ['mild', 'medium', 'hot', 'very_hot'];
         $stations = ['grill', 'fryer', 'salad', 'dessert', 'beverage', 'hot_kitchen', 'cold_kitchen'];
-        
+
         return [
             'organization_id' => Organization::factory(),
             'branch_id' => Branch::factory(),
             'menu_category_id' => MenuCategory::factory(),
-            'item_master_id' => null, // Can be null for manually created items
+            'item_master_id' => $this->faker->optional()->randomElement([null]), // Always set, even if null
             'name' => $this->faker->words(2, true),
             'unicode_name' => $this->faker->optional()->words(2, true),
             'description' => $this->faker->sentence(),

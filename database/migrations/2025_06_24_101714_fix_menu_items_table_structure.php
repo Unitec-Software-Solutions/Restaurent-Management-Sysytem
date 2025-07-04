@@ -41,7 +41,7 @@ return new class extends Migration
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
                 $table->softDeletes();
-                
+
                 // Add indexes for performance
                 $table->index(['organization_id', 'is_available']);
                 $table->index(['branch_id', 'is_available']);
@@ -52,7 +52,7 @@ return new class extends Migration
             // Add missing columns to existing table
             Schema::table('menu_items', function (Blueprint $table) {
                 $existingColumns = Schema::getColumnListing('menu_items');
-                
+
                 // Add missing columns
                 $columnsToAdd = [
                     'menu_category_id' => function($table) {
@@ -121,19 +121,19 @@ return new class extends Migration
                         $table->text('ingredients')->nullable()->after('calories');
                     },
                 ];
-                
+
                 foreach ($columnsToAdd as $columnName => $columnDefinition) {
                     if (!in_array($columnName, $existingColumns)) {
                         $columnDefinition($table);
                     }
                 }
-                
+
                 // Add soft deletes if not exists
                 if (!in_array('deleted_at', $existingColumns)) {
                     $table->softDeletes();
                 }
             });
-            
+
             // Add indexes for performance
             try {
                 Schema::table('menu_items', function (Blueprint $table) {
