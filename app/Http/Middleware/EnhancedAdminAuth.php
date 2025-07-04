@@ -1,5 +1,4 @@
 <?php
-// filepath: d:\unitec\Restaurent-Management-Sysytem\app\Http\Middleware\EnhancedAdminAuth.php
 
 namespace App\Http\Middleware;
 

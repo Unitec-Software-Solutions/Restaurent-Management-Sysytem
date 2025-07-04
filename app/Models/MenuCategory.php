@@ -46,9 +46,7 @@ class MenuCategory extends Model
         'sort_order' => 1
     ];
 
-    /**
-     * Boot the model for Laravel + PostgreSQL + Tailwind CSS
-     */
+
     protected static function boot()
     {
         parent::boot();
@@ -105,5 +103,24 @@ class MenuCategory extends Model
     public function scopeForBranch($query, $branchId)
     {
         return $query->where('branch_id', $branchId);
+    }
+
+    // Helper methods
+    public function getItemsCountAttribute()
+    {
+        return $this->menuItems()->count();
+    }
+
+    public static function getUncategorizedItemsCount($branchId = null, $organizationId = null)
+    {
+        $query = \App\Models\MenuItem::whereNull('menu_category_id');
+        
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        } elseif ($organizationId) {
+            $query->where('organization_id', $organizationId);
+        }
+        
+        return $query->count();
     }
 }
