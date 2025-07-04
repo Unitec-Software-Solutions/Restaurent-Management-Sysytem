@@ -151,6 +151,8 @@ class GoodsTransferNoteController extends Controller
             'employees' => $employees,
             'organization' => $organization,
             'nextGtnNumber' => $nextGtnNumber,
+            'targetOrgId' => $targetOrgId,
+            'isSuperAdmin' => $isSuperAdmin,
         ]);
     }
 
