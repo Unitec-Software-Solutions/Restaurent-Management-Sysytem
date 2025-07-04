@@ -377,29 +377,53 @@ class ItemMasterController extends Controller
 
     public function create()
     {
-        $user = Auth::user();
+        $user = Auth::guard('admin')->user();
 
-        if (!$user || !$user->organization_id) {
+        if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
 
-        $orgId = $user->organization_id;
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $user->is_super_admin;
 
-        // Get stats for KPI cards
-        $totalItems = ItemMaster::where('organization_id', $orgId)->count();
-        $activeItems = ItemMaster::where('organization_id', $orgId)->count();
-        $inactiveItems = ItemMaster::onlyTrashed()->where('organization_id', $orgId)->count();
-        $newItemsToday = ItemMaster::where('organization_id', $orgId)
-            ->whereDate('created_at', today())
-            ->count();
+        // Basic validation - only non-super admins need organization
+        if (!$isSuperAdmin && !$user->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
+        }
 
-        $categories = ItemCategory::active()
-            ->where('organization_id', $orgId)
-            ->get();
+        $orgId = $isSuperAdmin ? null : $user->organization_id;
 
-        $branches = Branch::where('is_active', true)
-            ->where('organization_id', $orgId)
-            ->get();
+        // Get stats for KPI cards with proper super admin handling
+        $totalItemsQuery = ItemMaster::query();
+        $activeItemsQuery = ItemMaster::query();
+        $inactiveItemsQuery = ItemMaster::onlyTrashed();
+        $newItemsTodayQuery = ItemMaster::query()->whereDate('created_at', today());
+
+        // Apply organization filter only for non-super admins
+        if (!$isSuperAdmin && $orgId) {
+            $totalItemsQuery->where('organization_id', $orgId);
+            $activeItemsQuery->where('organization_id', $orgId);
+            $inactiveItemsQuery->where('organization_id', $orgId);
+            $newItemsTodayQuery->where('organization_id', $orgId);
+        }
+
+        $totalItems = $totalItemsQuery->count();
+        $activeItems = $activeItemsQuery->count();
+        $inactiveItems = $inactiveItemsQuery->count();
+        $newItemsToday = $newItemsTodayQuery->count();
+
+        // Handle categories and branches with super admin logic
+        $categoriesQuery = ItemCategory::active();
+        $branchesQuery = Branch::where('is_active', true);
+
+        // Super admin gets all categories and branches, non-super admin only their organization's
+        if (!$isSuperAdmin && $orgId) {
+            $categoriesQuery->where('organization_id', $orgId);
+            $branchesQuery->where('organization_id', $orgId);
+        }
+
+        $categories = $categoriesQuery->get();
+        $branches = $branchesQuery->get();
 
         return view('admin.inventory.items.create', compact(
             'categories',
