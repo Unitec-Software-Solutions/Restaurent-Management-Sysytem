@@ -515,9 +515,7 @@ class ItemMasterController extends Controller
     public function create()
     {
         $user = Auth::guard('admin')->user();
-        $user = Auth::guard('admin')->user();
 
-        if (!$user) {
         if (!$user) {
             return redirect()->route('admin.login')->with('error', 'Unauthorized access.');
         }
