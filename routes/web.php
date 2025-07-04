@@ -24,10 +24,12 @@ use App\Http\Controllers\{
     MenuController,
     SubscriptionController,
     ModuleController,
-    OrganizationController
+    OrganizationController,
+    InventoryController,
+    KotController,
+    KitchenController
 };
-
-// Admin namespace controllers
+ // Admin namespace controllers
 use App\Http\Controllers\Admin\{
     PurchaseOrderController,
     ProductionOrderController,
@@ -36,7 +38,8 @@ use App\Http\Controllers\Admin\{
     ProductionRecipeController,
     ProductionSessionController,
     SubscriptionPlanController,
-    PaymentController
+    PaymentController,
+    KitchenStationController
 };
 
 use App\Http\Controllers\PaymentController as MainPaymentController;
@@ -399,12 +402,19 @@ Route::get('/debug/branches', function() {
 
 // Super Admin Routes
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
+    // Organization Dashboard
+    Route::get('dashboard/organizations', [OrganizationController::class, 'dashboard'])->name('organizations.dashboard');
+    
     // Organizations CRUD
     Route::resource('organizations', OrganizationController::class);
     Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
     Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
     Route::get('organizations/{organization}/activate', [OrganizationController::class, 'showActivateForm'])->name('organizations.activate.form');
     Route::post('organizations/{organization}/activate', [OrganizationController::class, 'activate'])->name('organizations.activate');
+    
+    // Organization Details & Admin Login
+    Route::get('organizations/{organization}/details', [OrganizationController::class, 'getOrganizationDetails'])->name('organizations.details');
+    Route::post('organizations/{organization}/login-as-admin', [OrganizationController::class, 'loginAsOrgAdmin'])->name('organizations.login-as-admin');
     
     // Branches: Organization-specific CRUD
     Route::prefix('organizations/{organization}')->group(function () {
@@ -755,4 +765,119 @@ Route::get('/test-item-master', function () {
         }
         echo "<pre>" . $e->getTraceAsString() . "</pre>";
     }
+});
+
+// Organization Admin Routes - For organization admins to manage their restaurant
+Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Organization Admin Dashboard
+    Route::get('org-dashboard', [OrganizationController::class, 'orgDashboard'])->name('org-dashboard');
+    
+    // Switch back to super admin
+    Route::get('switch-back-to-super-admin', [OrganizationController::class, 'switchBackToSuperAdmin'])->name('switch-back-to-super-admin');
+    
+    // Organization activation index - accessible to both super admins and organization admins
+    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
+    Route::post('organizations/{organization}/activate-by-key', [OrganizationController::class, 'activateByKey'])->name('organizations.activate.by-key');
+    
+    // Branch summary and regenerate key
+    Route::get('branches/{branch}/summary', [BranchController::class, 'summary'])->name('branches.summary');
+    Route::put('branches/{branch}/regenerate-key', [BranchController::class, 'regenerateKey'])->name('branches.regenerate-key');
+    
+    // Show activation form for all admins
+    Route::get('branches/activate', [BranchController::class, 'showActivationForm'])->name('branches.activate.form');
+    Route::post('branches/activate', [BranchController::class, 'activateBranch'])->name('branches.activate.submit');
+});
+
+/*-------------------------------------------------------------------------
+| AJAX Routes
+|------------------------------------------------------------------------*/
+Route::middleware(['auth:admin'])->group(function () {
+    // Branches
+    Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+    Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+    Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+    Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+    Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+    Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+
+    // Admins
+    Route::get('admins', [AdminController::class, 'index'])->name('admins.index');
+    Route::get('admins/create', [AdminController::class, 'create'])->name('admins.create');
+    Route::post('admins', [AdminController::class, 'store'])->name('admins.store');
+    Route::get('admins/{admin}/edit', [AdminController::class, 'edit'])->name('admins.edit');
+    Route::put('admins/{admin}', [AdminController::class, 'update'])->name('admins.update');
+    Route::delete('admins/{admin}', [AdminController::class, 'destroy'])->name('admins.destroy');
+
+    // AJAX Modal Details Routes
+    Route::get('branches/{branch}/details', [BranchController::class, 'getBranchDetails'])->name('branches.details');
+    Route::get('admins/{admin}/details', [AdminController::class, 'getAdminDetails'])->name('admins.details');
+});
+
+// Organization Management AJAX Routes
+Route::prefix('inventory')->name('inventory.')->group(function () {
+    Route::get('/', [InventoryController::class, 'index'])->name('index');
+    Route::post('/', [InventoryController::class, 'store'])->name('store');
+    Route::put('/{inventoryItem}/stock', [InventoryController::class, 'updateStock'])->name('update-stock');
+});
+
+Route::prefix('menus')->name('menus.')->group(function () {
+    Route::get('/', [MenuController::class, 'getMenus'])->name('index');
+    Route::post('/', [MenuController::class, 'storeMenu'])->name('store');
+    Route::post('/items', [MenuController::class, 'storeMenuItem'])->name('items.store');
+});
+
+Route::prefix('orders')->name('orders.')->group(function () {
+    Route::post('/takeaway', [OrderController::class, 'createTakeawayOrder'])->name('takeaway.store');
+});
+
+Route::prefix('reservations')->name('reservations.')->group(function () {
+    Route::post('/admin-create', [ReservationController::class, 'createReservationFromAdmin'])->name('admin-create');
+});
+
+// Kitchen Management Routes
+Route::prefix('admin/kitchen')->name('admin.kitchen.')->group(function () {
+    Route::get('/', [KitchenController::class, 'index'])->name('index');
+    Route::get('/status', [KitchenController::class, 'getStatus'])->name('status');
+    Route::get('/queue', [KitchenController::class, 'queue'])->name('queue.index');
+    
+    // KOT Management
+    Route::prefix('kots')->name('kots.')->group(function () {
+        Route::get('/', [KotController::class, 'index'])->name('index');
+        Route::get('/print-all', [KotController::class, 'printAll'])->name('print-all');
+        Route::get('/{kot}/print', [KotController::class, 'print'])->name('print');
+        Route::patch('/{kot}/status', [KotController::class, 'updateStatus'])->name('update-status');
+    });
+    
+    // Kitchen Stations
+    Route::prefix('stations')->name('stations.')->group(function () {
+        Route::get('/', [KitchenStationController::class, 'index'])->name('index');
+        Route::get('/create', [KitchenStationController::class, 'create'])->name('create');
+        Route::post('/', [KitchenStationController::class, 'store'])->name('store');
+        Route::get('/{station}/edit', [KitchenStationController::class, 'edit'])->name('edit');
+        Route::put('/{station}', [KitchenStationController::class, 'update'])->name('update');
+        Route::patch('/{station}/toggle', [KitchenStationController::class, 'toggleStatus'])->name('toggle');
+    });
+});
+
+/*-------------------------------------------------------------------------
+| Enhanced Menu Management Routes
+|------------------------------------------------------------------------*/
+Route::prefix('admin/menus')->name('admin.menus.')->group(function () {
+    // ...existing routes...
+    
+    // Menu validation and assignment
+    Route::get('/validate', [MenuController::class, 'validatePage'])->name('validate');
+    Route::post('/assign-item', [MenuController::class, 'assignSingleItem'])->name('assign-item');
+    Route::post('/assign-multiple', [MenuController::class, 'assignMultipleItems'])->name('assign-multiple');
+});
+
+/*-------------------------------------------------------------------------
+| Enhanced Inventory Routes with Menu Item Integration
+|------------------------------------------------------------------------*/
+Route::prefix('admin/inventory')->name('admin.inventory.')->group(function () {
+    // ...existing routes...
+    
+    // Menu items specific routes
+    Route::get('/menu-items', [InventoryController::class, 'menuItems'])->name('menu-items');
+    Route::get('/alerts', [InventoryController::class, 'stockAlerts'])->name('alerts');
 });
