@@ -49,20 +49,20 @@ class ReservationController extends Controller
 
             return view('reservations.create', compact(
                 'organizations',
-                'organization_id', 
+                'organization_id',
                 'branch_id'
             ));
 
         } catch (\Exception $e) {
             Log::error('Error in reservation create: ' . $e->getMessage());
-            
+
             return redirect()->back()
                 ->with('error', 'Unable to load reservation form. Please try again.');
         }
     }
 
-    
-    
+
+
     public function store(Request $request)
     {
         DB::beginTransaction();
@@ -174,7 +174,7 @@ class ReservationController extends Controller
                 'error' => $e->getMessage(),
                 'data' => $validated ?? []
             ]);
-            
+
             return back()->withErrors(['error' => 'Failed to create reservation. Please try again.'])
                        ->withInput();
         }
@@ -189,7 +189,7 @@ class ReservationController extends Controller
             $request->validate([
                 'payment_method' => 'required|in:cash,cheque,bank_transfer,online_portal,qr_code,card,mobile_app'
             ]);
-            
+
             $payment = Payment::create([
                 'payable_type' => Reservation::class,
                 'payable_id' => $reservation->id,
@@ -238,7 +238,7 @@ class ReservationController extends Controller
                     'status' => 'cancelled',
                     'cancellation_fee' => $cancellationFee
                 ]);
-                
+
                 // Create payment record for cancellation fee if applicable
                 if ($cancellationFee > 0) {
                     Payment::create([
@@ -274,7 +274,7 @@ class ReservationController extends Controller
                 'reservation_id' => $reservation->id,
                 'error' => $e->getMessage()
             ]);
-            
+
             return back()->with('error', 'Failed to cancel reservation. Please try again.');
         }
     }
@@ -354,9 +354,9 @@ class ReservationController extends Controller
 
         // Load the branch relationship
         $reservation->load('branch');
-        
-        
-        
+
+
+
         $branches = Branch::where('is_active', true)->get();
         return view('reservations.edit', compact('reservation', 'branches'));
     }
@@ -441,7 +441,7 @@ class ReservationController extends Controller
         try {
             // Validate organization exists
             $organization = Organization::find($organizationId);
-            
+
             if (!$organization) {
                 return response()->json([
                     'success' => false,
@@ -521,11 +521,11 @@ class ReservationController extends Controller
 
             // Check if branch is open on this date
             $dayOfWeek = $date->dayOfWeek;
-            
+
             // Get available time slots (simplified logic)
             $openingTime = $branch->opening_time ?: '09:00';
             $closingTime = $branch->closing_time ?: '22:00';
-            
+
             $timeSlots = $this->generateTimeSlots($openingTime, $closingTime, $date, $branch->id, $partySize);
 
             return response()->json([
@@ -567,10 +567,10 @@ class ReservationController extends Controller
     {
         $slots = [];
         $interval = 30; // 30 minutes interval
-        
+
         $start = Carbon::createFromFormat('H:i', $openingTime);
         $end = Carbon::createFromFormat('H:i', $closingTime);
-        
+
         // If requesting for today, start from current time + 1 hour
         if ($date->isToday()) {
             $minTime = now()->addHour();
@@ -581,24 +581,24 @@ class ReservationController extends Controller
                 }
             }
         }
-        
+
         while ($start->lt($end->subHours(2))) { // Stop 2 hours before closing
             $timeString = $start->format('H:i');
             $displayTime = $start->format('g:i A');
-            
+
             // Check availability (simplified - you can add more complex logic)
             $isAvailable = $this->isTimeSlotAvailable($branchId, $date->format('Y-m-d'), $timeString, $partySize);
-            
+
             $slots[] = [
                 'time' => $timeString,
                 'display_time' => $displayTime,
                 'available' => $isAvailable,
                 'party_size' => $partySize
             ];
-            
+
             $start->addMinutes($interval);
         }
-        
+
         return $slots;
     }
 
@@ -619,7 +619,7 @@ class ReservationController extends Controller
             ->where('start_time', $time)
             ->where('status', '!=', 'cancelled')
             ->count();
-        
+
         // Assume max 5 reservations per time slot (you can make this configurable)
         return $existingReservations < 5;
     }
@@ -690,7 +690,7 @@ class ReservationController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             Log::error('Failed to create reservation', [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all()
@@ -711,7 +711,7 @@ class ReservationController extends Controller
         $prefix = 'RSV';
         $timestamp = now()->format('YmdHis');
         $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
-        
+
         return $prefix . $timestamp . $random;
     }
 }

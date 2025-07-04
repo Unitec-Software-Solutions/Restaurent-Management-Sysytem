@@ -71,8 +71,8 @@ class OrganizationAutomationService
             'contact_person' => $organization->contact_person,
             'contact_person_designation' => $organization->contact_person_designation ?? 'Manager',
             'contact_person_phone' => $organization->contact_person_phone ?? $organization->phone,
-            'opening_time' => '08:00:00',
-            'closing_time' => '22:00:00',
+            'opening_time' => '09:00:00', // Set default opening time if not provided
+            'closing_time' => '22:00:00', // Ensure closing_time is set
             'total_capacity' => 50, // Default capacity for head office
             'reservation_fee' => 0.00, // Default reservation fee
             'cancellation_fee' => 0.00, // Default cancellation fee
@@ -88,7 +88,7 @@ class OrganizationAutomationService
     protected function createOrganizationAdmin(Organization $organization): Admin
     {
         $password = Str::random(12);
-        
+
         $adminData = [
             'organization_id' => $organization->id,
             'name' => $organization->contact_person ?? 'Administrator',
@@ -120,7 +120,7 @@ class OrganizationAutomationService
     protected function setupOrganizationRoles(Organization $organization): void
     {
         $systemRoles = Role::getSystemRoles();
-        
+
         foreach ($systemRoles as $roleKey => $roleData) {
             if (in_array($roleData['scope'], ['organization', 'branch', 'personal'])) {
                 Role::firstOrCreate(
@@ -151,7 +151,7 @@ class OrganizationAutomationService
                 'description' => 'Primary cooking station',
                 'order_priority' => 1,
                 'max_capacity' => 50.00,
-                
+
             ],
             [
                 'name' => 'Prep Station',
@@ -160,7 +160,7 @@ class OrganizationAutomationService
                 'description' => 'Food preparation area',
                 'order_priority' => 2,
                 'max_capacity' => 30.00,
-            
+
             ],
             [
                 'name' => 'Service Station',
@@ -169,7 +169,7 @@ class OrganizationAutomationService
                 'description' => 'Final preparation and plating',
                 'order_priority' => 3,
                 'max_capacity' => 25.00,
-           
+
             ]
         ];
 
@@ -177,8 +177,8 @@ class OrganizationAutomationService
             $stationData['branch_id'] = $branch->id;
             $stationData['organization_id'] = $branch->organization_id;
             $stationData['is_active'] = true;
-            
-           
+
+
             KitchenStation::create($stationData);
         }
     }
@@ -190,7 +190,7 @@ class OrganizationAutomationService
     {
         $branchCode = str_pad($branchId, 2, '0', STR_PAD_LEFT);
         $sequenceCode = str_pad($sequence, 3, '0', STR_PAD_LEFT);
-        
+
         return $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
     }
 

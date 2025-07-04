@@ -78,11 +78,11 @@ class GuestController extends Controller
         $isOpen = $this->isBranchOpen($branch);
 
         return view('guest.menu.view', compact(
-            'menu', 
-            'menuItems', 
-            'branch', 
-            'branches', 
-            'date', 
+            'menu',
+            'menuItems',
+            'branch',
+            'branches',
+            'date',
             'isOpen'
         ));
     }
@@ -101,7 +101,7 @@ class GuestController extends Controller
     public function viewSpecialMenu(Request $request, $branchId)
     {
         $branch = Branch::active()->findOrFail($branchId);
-        
+
         // Get special menus for today
         $specialMenus = Menu::where('branch_id', $branchId)
             ->where('is_active', true)
@@ -189,7 +189,7 @@ class GuestController extends Controller
             $this->guestSessionService->removeFromCart($validated['menu_item_id']);
         } else {
             $this->guestSessionService->updateCartQuantity(
-                $validated['menu_item_id'], 
+                $validated['menu_item_id'],
                 $validated['quantity']
             );
         }
@@ -229,7 +229,7 @@ class GuestController extends Controller
     {
         // Validate the item exists
         $menuItem = MenuItem::findOrFail($itemId);
-        
+
         $this->guestSessionService->removeFromCart($itemId);
 
         return response()->json([
@@ -354,7 +354,7 @@ class GuestController extends Controller
     public function orderConfirmation($orderId, $token)
     {
         $sessionToken = Session::get("order_token_{$orderId}");
-        
+
         if (!$sessionToken || $sessionToken !== $token) {
             abort(404, 'Order not found');
         }
@@ -418,7 +418,7 @@ class GuestController extends Controller
     public function reservationConfirmationById($reservationId, $token)
     {
         $sessionToken = Session::get("reservation_token_{$reservationId}");
-        
+
         if (!$sessionToken || $sessionToken !== $token) {
             abort(404, 'Reservation not found');
         }
@@ -433,23 +433,23 @@ class GuestController extends Controller
      */
     public function showReservationForm(Request $request, $branchId = null)
     {
-        $branches = $branchId 
+        $branches = $branchId
             ? Branch::where('id', $branchId)->where('is_active', true)->get()
             : Branch::where('is_active', true)->get();
-            
+
         if ($branches->isEmpty()) {
             return redirect()->back()->with('error', 'No branches available for reservations');
         }
-        
+
         $selectedBranch = $branches->first();
-        
+
         // Get available time slots for the next 30 days
         $availableSlots = $this->getAvailableTimeSlots($selectedBranch->id);
-        
+
         // Get guest session for pre-filling form
         $guestId = $this->guestSessionService->getOrCreateGuestId();
         $guestData = Session::get("guest_data_{$guestId}", []);
-        
+
         return view('guest.reservations.create', [
             'branches' => $branches,
             'selectedBranch' => $selectedBranch,
@@ -476,24 +476,24 @@ class GuestController extends Controller
             'special_requests' => 'nullable|string|max:500',
             'dietary_requirements' => 'nullable|string|max:300'
         ]);
-        
+
         try {
             // Check branch availability
             $branch = Branch::findOrFail($validated['branch_id']);
             if (!$branch->is_active || !$branch->accepts_reservations) {
                 return back()->withErrors(['branch_id' => 'This branch is not accepting reservations']);
             }
-            
+
             // Validate time slot availability
             $reservationDateTime = Carbon::parse($validated['reservation_date'] . ' ' . $validated['reservation_time']);
-            
+
             if (!$this->isTimeSlotAvailable($branch->id, $reservationDateTime, $validated['party_size'])) {
                 return back()->withErrors(['reservation_time' => 'This time slot is not available']);
             }
-            
+
             // Get guest session ID
             $guestId = $this->guestSessionService->getOrCreateGuestId();
-            
+
             // Create reservation
             $reservation = Reservation::create([
                 'branch_id' => $validated['branch_id'],
@@ -511,7 +511,7 @@ class GuestController extends Controller
                 'confirmation_number' => $this->generateConfirmationNumber(),
                 'created_at' => now()
             ]);
-            
+
             // Store guest data for future use
             $guestData = [
                 'name' => $validated['customer_name'],
@@ -519,23 +519,23 @@ class GuestController extends Controller
                 'email' => $validated['customer_email']
             ];
             Session::put("guest_data_{$guestId}", $guestData);
-            
+
             // Send confirmation (would integrate with notification service)
             Log::info('Guest reservation created', [
                 'reservation_id' => $reservation->id,
                 'confirmation_number' => $reservation->confirmation_number,
                 'guest_id' => $guestId
             ]);
-            
+
             return redirect()->route('guest.reservation.confirmation', $reservation->confirmation_number)
                 ->with('success', 'Your reservation has been submitted successfully!');
-                
+
         } catch (\Exception $e) {
             Log::error('Guest reservation creation failed', [
                 'error' => $e->getMessage(),
                 'request_data' => $validated
             ]);
-            
+
             return back()->withErrors(['general' => 'Unable to create reservation. Please try again.'])
                 ->withInput();
         }
@@ -547,7 +547,7 @@ class GuestController extends Controller
     public function reservationConfirmation($confirmationNumber)
     {
         $reservation = Reservation::where('confirmation_number', $confirmationNumber)->firstOrFail();
-        
+
         return view('guest.reservations.confirmation', [
             'reservation' => $reservation,
             'branch' => $reservation->branch
@@ -561,7 +561,7 @@ class GuestController extends Controller
     {
         // Check cache first
         $cacheKey = "guest_menu_{$branchId}_{$date->format('Y-m-d')}";
-        
+
         return Cache::remember($cacheKey, 300, function() use ($date, $branchId) {
             return Menu::where('branch_id', $branchId)
                 ->where('valid_from', '<=', $date)
@@ -593,7 +593,7 @@ class GuestController extends Controller
     {
         $now = now();
         $currentTime = $now->format('H:i');
-        
+
         return $currentTime >= $branch->opening_time && $currentTime <= $branch->closing_time;
     }
 
@@ -604,7 +604,7 @@ class GuestController extends Controller
     {
         foreach ($cart as $item) {
             $menuItem = MenuItem::find($item['menu_item_id']);
-            
+
             if (!$menuItem || !$menuItem->is_available) {
                 return [
                     'valid' => false,
@@ -630,7 +630,7 @@ class GuestController extends Controller
     {
         // Handle both Branch object and branch ID
         $branch = $branchInput instanceof Branch ? $branchInput : Branch::findOrFail($branchInput);
-        
+
         // Get existing reservations for that time slot (±30 minutes)
         $startWindow = $dateTime->copy()->subMinutes(30);
         $endWindow = $dateTime->copy()->addMinutes(30);
@@ -656,47 +656,47 @@ class GuestController extends Controller
     {
         $branch = Branch::findOrFail($branchId);
         $slots = [];
-        
+
         // Get branch operating hours (default if not set)
         $openTime = $branch->open_time ?? '09:00';
         $closeTime = $branch->close_time ?? '22:00';
-        
+
         // Generate 30-minute slots
         $currentDate = now()->startOfDay();
-        
+
         for ($day = 0; $day < 30; $day++) {
             $date = $currentDate->copy()->addDays($day);
             $dateString = $date->format('Y-m-d');
-            
+
             // Skip if date is in the past
             if ($date->lt(now()->startOfDay())) {
                 continue;
             }
-            
+
             $dailySlots = [];
             $currentSlot = $date->copy()->setTimeFromTimeString($openTime);
             $endTime = $date->copy()->setTimeFromTimeString($closeTime);
-            
+
             while ($currentSlot->lt($endTime)) {
                 // Skip slots that are in the past for today
                 if ($date->isToday() && $currentSlot->lt(now()->addHour())) {
                     $currentSlot->addMinutes(30);
                     continue;
                 }
-                
+
                 $slotTime = $currentSlot->format('H:i');
                 $isAvailable = $this->isTimeSlotAvailable($branchId, $currentSlot, 2); // Check for 2 people as default
-                
+
                 $dailySlots[] = [
                     'time' => $slotTime,
                     'display_time' => $currentSlot->format('g:i A'),
                     'is_available' => $isAvailable,
                     'capacity_remaining' => $this->getSlotCapacityRemaining($branchId, $currentSlot)
                 ];
-                
+
                 $currentSlot->addMinutes(30);
             }
-            
+
             $slots[$dateString] = [
                 'date' => $dateString,
                 'display_date' => $date->format('l, M j, Y'),
@@ -704,7 +704,7 @@ class GuestController extends Controller
                 'slots' => $dailySlots
             ];
         }
-        
+
         return $slots;
     }
 
@@ -715,13 +715,13 @@ class GuestController extends Controller
     {
         $branch = Branch::findOrFail($branchId);
         $maxCapacity = $branch->max_reservation_capacity ?? 100;
-        
+
         $existingReservations = Reservation::where('branch_id', $branchId)
             ->where('reservation_date', $dateTime->format('Y-m-d'))
             ->where('reservation_time', $dateTime->format('H:i:s'))
             ->whereIn('status', ['confirmed', 'pending'])
             ->sum('party_size');
-            
+
         return max(0, $maxCapacity - $existingReservations);
     }
 
@@ -733,7 +733,7 @@ class GuestController extends Controller
         do {
             $number = 'RSV-' . strtoupper(Str::random(6)) . '-' . now()->format('ymd');
         } while (Reservation::where('confirmation_number', $number)->exists());
-        
+
         return $number;
     }
 

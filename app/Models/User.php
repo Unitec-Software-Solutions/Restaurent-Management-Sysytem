@@ -25,10 +25,10 @@ class User extends Authenticatable
         'phone_number',
         'password',
         'is_registered',
-        'organization_id', 
-        'branch_id', 
-        'role_id', 
-        'is_admin', 
+        'organization_id',
+        'branch_id',
+        'role_id',
+        'is_admin',
         'is_super_admin',
         'created_by'
     ];
@@ -93,7 +93,7 @@ class User extends Authenticatable
 
     public function isSuperAdmin()
     {
-        return $this->hasRole('superadmin'); 
+        return $this->hasRole('superadmin');
     }
 
     public function is_org_admin()
@@ -129,7 +129,7 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Role::class, 'role_id');
     }
-    
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

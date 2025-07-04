@@ -13,7 +13,7 @@ class BranchController extends Controller
 {
     public function index(Organization $organization)
 {
-    
+
     return view('admin.branches.index', compact('organization'));
 }
 
@@ -40,6 +40,10 @@ public function store(Request $request, Organization $organization)
         $validated['contact_person_designation'] = $organization->contact_person_designation;
         $validated['contact_person_phone'] = $organization->contact_person_phone;
     }
+
+    // Ensure opening_time and closing_time are always set
+    $validated['opening_time'] = $validated['opening_time'] ?? '09:00:00';
+    $validated['closing_time'] = $validated['closing_time'] ?? '22:00:00';
 
     $branch = $organization->branches()->create(array_merge($validated, [
         'activation_key' => Str::random(40),

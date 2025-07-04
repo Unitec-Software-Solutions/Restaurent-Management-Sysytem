@@ -11,7 +11,7 @@ use App\Services\AdminAuthService;
 class AdminAuthController extends Controller
 {
     protected $authService;
-    
+
     public function __construct(AdminAuthService $authService)
     {
         $this->authService = $authService;
@@ -29,8 +29,8 @@ class AdminAuthController extends Controller
         ]);
 
         $result = $this->authService->login(
-            $credentials['email'], 
-            $credentials['password'], 
+            $credentials['email'],
+            $credentials['password'],
             $request->boolean('remember')
         );
 
