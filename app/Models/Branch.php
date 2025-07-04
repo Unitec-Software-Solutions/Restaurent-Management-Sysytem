@@ -143,8 +143,8 @@ class Branch extends Model
      */
     public function canBeActivated(): bool
     {
-        return $this->organization && 
-               $this->organization->is_active && 
+        return $this->organization &&
+               $this->organization->is_active &&
                !empty($this->activation_key);
     }
 

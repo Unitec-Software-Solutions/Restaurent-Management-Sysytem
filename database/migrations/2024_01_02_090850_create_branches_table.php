@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('address');
             $table->string('phone');
             $table->string('email')->nullable();
-            $table->time('opening_time');
-            $table->time('closing_time');
+            $table->time('opening_time')->nullable()->default('09:00:00');
+            $table->time('closing_time')->nullable()->default('22:00:00');
             $table->integer('total_capacity');
             $table->decimal('reservation_fee', 10, 2);
             $table->decimal('cancellation_fee', 10, 2);
@@ -33,4 +33,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('branches');
     }
-}; 
+};
