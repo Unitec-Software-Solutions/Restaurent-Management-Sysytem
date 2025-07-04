@@ -203,7 +203,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/', [GoodsTransferNoteController::class, 'index'])->name('index');
                 Route::get('/create', [GoodsTransferNoteController::class, 'create'])->name('create');
                 Route::post('/', [GoodsTransferNoteController::class, 'store'])->name('store');
-                Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('grn')->name('show');
+                Route::get('/{gtn}', [GoodsTransferNoteController::class, 'show'])->whereNumber('gtn')->name('show');
             });
         });
 
