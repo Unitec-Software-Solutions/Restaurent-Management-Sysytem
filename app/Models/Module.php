@@ -37,9 +37,10 @@ class Module extends Model
         return $this->belongsToMany(SubscriptionPlan::class, 'subscription_plan_modules');
     }
 
-    public function permissions(): BelongsToMany
+    // Note: Permissions are stored as JSON in the permissions column
+    public function getPermissionsList(): array
     {
-        return $this->belongsToMany(Permission::class, 'module_permissions');
+        return $this->permissions ?? [];
     }
 
     public function scopeActive($query)

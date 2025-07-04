@@ -186,6 +186,21 @@ class Organization extends Model
         return $this->hasMany(MenuCategory::class);
     }
 
+    public function inventoryItems()
+    {
+        return $this->hasMany(InventoryItem::class);
+    }
+
+    public function menus()
+    {
+        return $this->hasMany(Menu::class);
+    }
+
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
     /**
      * Scopes for common queries
      */
