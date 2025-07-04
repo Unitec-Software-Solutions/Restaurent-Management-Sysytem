@@ -8,7 +8,6 @@ use App\Http\Controllers\{
     AdminReservationController,
     AdminController,
     AdminAuthController,
-    AdminAuthTestController,
     OrderController,
     SupplierController,
     SupplierPaymentController,
@@ -18,12 +17,9 @@ use App\Http\Controllers\{
     BranchController,
     UserController,
     RealtimeDashboardController,
-    AdminTestPageController,
-    DatabaseTestController,
     MenuController,
-    SubscriptionController,
-    ModuleController,
-
+    KitchenController,
+    KotController
 };
  // Admin namespace controllers
 use App\Http\Controllers\Admin\{
@@ -46,8 +42,8 @@ use App\Http\Controllers\Admin\
     //GrnController,
     GrnDashboardController,
     GoodsTransferNoteController,
-    GoodsTransferItemController,
-    GrnItemController,
+    // GoodsTransferItemController,
+    // GrnItemController,
 };
 // inventory controllers
 use App\Http\Controllers\Admin\
