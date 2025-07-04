@@ -966,3 +966,17 @@ Route::prefix('admin/menu-categories')->name('admin.menu-categories.')->middlewa
     Route::get('/api/branches/{branch}/categories', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'getCategoriesForBranch'])->name('api.branch-categories');
     Route::post('/api/sort-order', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'updateSortOrder'])->name('api.sort-order');
 });
+
+// User Authentication Routes (for regular users)
+Route::middleware('guest')->group(function () {
+    Route::get('/user/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('user.login');
+    Route::post('/user/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('user.login.submit');
+});
+
+// User Dashboard Routes (for authenticated regular users)
+Route::middleware('auth')->group(function () {
+    Route::post('/user/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('user.logout');
+    Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/staff', [App\Http\Controllers\DashboardController::class, 'staff'])->name('dashboard.staff');
+    Route::get('/dashboard/management', [App\Http\Controllers\DashboardController::class, 'management'])->name('dashboard.management');
+});
