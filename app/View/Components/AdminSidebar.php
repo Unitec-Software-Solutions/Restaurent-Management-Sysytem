@@ -502,6 +502,171 @@ class AdminSidebar extends Component
                 'permission' => 'reports.view',
                 'badge' => 0,
                 'sub_items' => []
+            ],
+            // Kitchen Management Section
+            [
+                'title' => 'Kitchen Operations',
+                'route' => 'admin.kitchen.index',
+                'route_params' => [],
+                'icon' => 'chef-hat',
+                'icon_type' => 'svg',
+                'permission' => 'kitchen.view',
+                'badge' => $this->getActiveKOTsCount(),
+                'badge_color' => 'red',
+                'is_route_valid' => $this->validateRoute('admin.kitchen.index'),
+                'sub_items' => [
+                    [
+                        'title' => 'Kitchen Dashboard',
+                        'route' => 'admin.kitchen.index',
+                        'icon' => 'monitor',
+                        'icon_type' => 'svg',
+                        'permission' => 'kitchen.view',
+                        'is_route_valid' => $this->validateRoute('admin.kitchen.index')
+                    ],
+                    [
+                        'title' => 'Active KOTs',
+                        'route' => 'admin.kitchen.kots.index',
+                        'icon' => 'receipt',
+                        'icon_type' => 'svg',
+                        'permission' => 'kitchen.view',
+                        'is_route_valid' => $this->validateRoute('admin.kitchen.kots.index')
+                    ],
+                    [
+                        'title' => 'Kitchen Stations',
+                        'route' => 'admin.kitchen.stations.index',
+                        'icon' => 'industry',
+                        'icon_type' => 'svg',
+                        'permission' => 'kitchen.manage',
+                        'is_route_valid' => $this->validateRoute('admin.kitchen.stations.index')
+                    ],
+                    [
+                        'title' => 'Order Queue',
+                        'route' => 'admin.kitchen.queue.index',
+                        'icon' => 'list',
+                        'icon_type' => 'svg',
+                        'permission' => 'kitchen.view',
+                        'is_route_valid' => $this->validateRoute('admin.kitchen.queue.index')
+                    ]
+                ]
+            ],
+
+            // Enhanced Menu Management
+            [
+                'title' => 'Menu Management',
+                'route' => 'admin.menus.index',
+                'route_params' => [],
+                'icon' => 'book-open',
+                'icon_type' => 'svg',
+                'permission' => 'menus.view',
+                'badge' => $this->getActiveMenusCount(),
+                'badge_color' => 'yellow',
+                'is_route_valid' => $this->validateRoute('admin.menus.index'),
+                'sub_items' => [
+                    [
+                        'title' => 'All Menus',
+                        'route' => 'admin.menus.index',
+                        'icon' => 'list',
+                        'icon_type' => 'svg',
+                        'permission' => 'menus.view',
+                        'is_route_valid' => $this->validateRoute('admin.menus.index')
+                    ],
+                    [
+                        'title' => 'Create Menu',
+                        'route' => 'admin.menus.create',
+                        'icon' => 'plus',
+                        'icon_type' => 'svg',
+                        'permission' => 'menus.create',
+                        'is_route_valid' => $this->validateRoute('admin.menus.create')
+                    ],
+                    [
+                        'title' => 'Menu Items Manager',
+                        'route' => 'admin.menus.manager',
+                        'icon' => 'utensils',
+                        'icon_type' => 'svg',
+                        'permission' => 'menus.manage',
+                        'is_route_valid' => $this->validateRoute('admin.menus.manager')
+                    ],
+                    [
+                        'title' => 'Menu Calendar',
+                        'route' => 'admin.menus.calendar',
+                        'icon' => 'calendar',
+                        'icon_type' => 'svg',
+                        'permission' => 'menus.view',
+                        'is_route_valid' => $this->validateRoute('admin.menus.calendar')
+                    ],
+                    [
+                        'title' => 'Menu Validation',
+                        'route' => 'admin.menus.validate',
+                        'icon' => 'check-circle',
+                        'icon_type' => 'svg',
+                        'permission' => 'menus.view',
+                        'is_route_valid' => $this->validateRoute('admin.menus.validate')
+                    ]
+                ]
+            ],
+
+            // Enhanced Inventory with Menu Item Integration
+            [
+                'title' => 'Inventory & Items',
+                'route' => 'admin.inventory.index',
+                'route_params' => [],
+                'icon' => 'package',
+                'icon_type' => 'svg',
+                'permission' => 'inventory.view',
+                'badge' => $this->getLowStockItemsCount(),
+                'badge_color' => 'orange',
+                'is_route_valid' => $this->validateRoute('admin.inventory.index'),
+                'sub_items' => [
+                    [
+                        'title' => 'Inventory Dashboard',
+                        'route' => 'admin.inventory.index',
+                        'icon' => 'monitor',
+                        'icon_type' => 'svg',
+                        'permission' => 'inventory.view',
+                        'is_route_valid' => $this->validateRoute('admin.inventory.index')
+                    ],
+                    [
+                        'title' => 'All Items',
+                        'route' => 'admin.inventory.items.index',
+                        'icon' => 'box',
+                        'icon_type' => 'svg',
+                        'permission' => 'inventory.view',
+                        'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
+                    ],
+                    [
+                        'title' => 'Add New Item',
+                        'route' => 'admin.inventory.items.create',
+                        'icon' => 'plus-circle',
+                        'icon_type' => 'svg',
+                        'permission' => 'inventory.create',
+                        'is_route_valid' => $this->validateRoute('admin.inventory.items.create')
+                    ],
+                    [
+                        'title' => 'Menu Items Only',
+                        'route' => 'admin.inventory.menu-items',
+                        'icon' => 'utensils',
+                        'icon_type' => 'svg',
+                        'permission' => 'inventory.view',
+                        'is_route_valid' => $this->validateRoute('admin.inventory.menu-items')
+                    ],
+                    [
+                        'title' => 'Stock Alerts',
+                        'route' => 'admin.inventory.alerts',
+                        'icon' => 'exclamation-triangle',
+                        'icon_type' => 'svg',
+                        'permission' => 'inventory.view',
+                        'is_route_valid' => $this->validateRoute('admin.inventory.alerts')
+                    ]
+                ]
+            ],
+            [
+                'title' => 'Users',
+                'route' => 'admin.users.index',
+                'icon' => 'user-friends',
+                'icon_type' => 'svg',
+                'permission' => 'users.view',
+                'badge' => 0,
+                'sub_items' => []
             ]
         ];
 
@@ -602,17 +767,6 @@ class AdminSidebar extends Component
                 ]
             ];
         }
-
-        // Add user management
-        $menuItems[] = [
-            'title' => 'Users',
-            'route' => 'admin.users.index',
-            'icon' => 'user-friends',
-            'icon_type' => 'svg',
-            'permission' => 'users.view',
-            'badge' => 0,
-            'sub_items' => []
-        ];
 
         return $menuItems;
     }
@@ -1193,8 +1347,7 @@ class AdminSidebar extends Component
                 'route_params' => ['type' => 'in_house'],
                 'icon' => 'utensils',
                 'icon_type' => 'svg',
-                'permission' => 'orders.view',
-                'is_route_valid' => $this->validateRoute('admin.orders.index')
+                'permission' => 'orders.view'
             ],
             [
                 'title' => 'Takeaway Orders',
@@ -1202,8 +1355,7 @@ class AdminSidebar extends Component
                 'route_params' => ['type' => 'takeaway'],
                 'icon' => 'shopping-bag',
                 'icon_type' => 'svg',
-                'permission' => 'orders.view',
-                'is_route_valid' => $this->validateRoute('admin.orders.index')
+                'permission' => 'orders.view'
             ]
         ];
     }
