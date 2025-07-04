@@ -26,25 +26,11 @@ class ItemCategorySeeder extends Seeder
 
         $baseCategories = [
             [
-                'name' => 'Main Course',
-                'code' => 'MC',
-                'description' => 'Entrees and primary dishes',
-            ],
-            [
-                'name' => 'Beverages',
-                'code' => 'BV',
-                'description' => 'Soft drinks, juices, etc.',
-            ],
-            [
                 'name' => 'Production Items',
                 'code' => 'PI',
                 'description' => 'Buns and etc.',
             ],
-            [
-                'name' => 'Desserts',
-                'code' => 'DS',
-                'description' => 'Cakes, pastries, and sweets',
-            ],
+
             [
                 'name' => 'Buy & sell',
                 'code' => 'BS',
@@ -54,11 +40,6 @@ class ItemCategorySeeder extends Seeder
                 'name' => 'Ingredients',
                 'code' => 'IG',
                 'description' => 'Raw cooking ingredients',
-            ],
-            [
-                'name' => 'Utensils & Packaging',
-                'code' => 'UP',
-                'description' => 'Cutlery, napkins, takeaway boxes',
             ],
         ];
 
