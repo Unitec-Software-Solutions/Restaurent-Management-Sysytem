@@ -30,7 +30,8 @@ use App\Http\Controllers\Admin\{
     ProductionSessionController,
     SubscriptionPlanController,
     PaymentController,
-    KitchenStationController
+    KitchenStationController,
+    MenuItemController
 };
 // Purchase Order Controller
 use App\Http\Controllers\Admin\{
@@ -204,6 +205,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/{item}', [ItemMasterController::class, 'update'])->name('update');
                 Route::delete('/{item}', [ItemMasterController::class, 'destroy'])->whereNumber('item')->name('destroy');
             });
+
+            // Menu eligible items (for creating menu items from item master)
+            Route::get('/menu-eligible', [ItemMasterController::class, 'getMenuEligibleItems'])->name('menu-eligible');
 
             // Stock Management
             Route::prefix('stock')->name('stock.')->group(function () {
@@ -922,24 +926,43 @@ Route::prefix('admin/kitchen')->name('admin.kitchen.')->group(function () {
 });
 
 /*-------------------------------------------------------------------------
-| Enhanced Menu Management Routes
+| Menu Items Management Routes
 |------------------------------------------------------------------------*/
-Route::prefix('admin/menus')->name('admin.menus.')->group(function () {
-    // ...existing routes...
-
-    // Menu validation and assignment
-    Route::get('/validate', [MenuController::class, 'validatePage'])->name('validate');
-    Route::post('/assign-item', [MenuController::class, 'assignSingleItem'])->name('assign-item');
-    Route::post('/assign-multiple', [MenuController::class, 'assignMultipleItems'])->name('assign-multiple');
+Route::prefix('admin/menu-items')->name('admin.menu-items.')->middleware(['auth:admin'])->group(function () {
+    // Standard CRUD routes
+    Route::get('/', [MenuItemController::class, 'index'])->name('index');
+    Route::get('/create', [MenuItemController::class, 'create'])->name('create');
+    Route::post('/', [MenuItemController::class, 'store'])->name('store');
+    Route::get('/{menuItem}', [MenuItemController::class, 'show'])->name('show');
+    Route::get('/{menuItem}/edit', [MenuItemController::class, 'edit'])->name('edit');
+    Route::patch('/{menuItem}', [MenuItemController::class, 'update'])->name('update');
+    Route::delete('/{menuItem}', [MenuItemController::class, 'destroy'])->name('destroy');
+    
+    // AJAX routes
+    Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
+    
+    // Bulk operations
+    Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');
+    
+    // KOT specific routes
+    Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
+    Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('create-kot.store');
 });
 
 /*-------------------------------------------------------------------------
-| Enhanced Inventory Routes with Menu Item Integration
+| Menu Categories Management Routes
 |------------------------------------------------------------------------*/
-Route::prefix('admin/inventory')->name('admin.inventory.')->group(function () {
-    // ...existing routes...
-
-    // Menu items specific routes
-    Route::get('/menu-items', [InventoryController::class, 'menuItems'])->name('menu-items');
-    Route::get('/alerts', [InventoryController::class, 'stockAlerts'])->name('alerts');
+Route::prefix('admin/menu-categories')->name('admin.menu-categories.')->middleware(['auth:admin'])->group(function () {
+    // Standard CRUD routes
+    Route::get('/', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'index'])->name('index');
+    Route::get('/create', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'create'])->name('create');
+    Route::post('/', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'store'])->name('store');
+    Route::get('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'show'])->name('show');
+    Route::get('/{menuCategory}/edit', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'edit'])->name('edit');
+    Route::put('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'update'])->name('update');
+    Route::delete('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'destroy'])->name('destroy');
+    
+    // AJAX routes
+    Route::get('/api/branches/{branch}/categories', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'getCategoriesForBranch'])->name('api.branch-categories');
+    Route::post('/api/sort-order', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'updateSortOrder'])->name('api.sort-order');
 });

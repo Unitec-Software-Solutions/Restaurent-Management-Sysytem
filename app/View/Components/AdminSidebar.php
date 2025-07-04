@@ -942,7 +942,7 @@ class AdminSidebar extends Component
     }
 
     /**
-     * Get menu sub-items - FIXED
+     * Get menu sub-items - FIXED with correct menu items routes
      */
     private function getMenuSubItems(): array
     {
@@ -966,22 +966,30 @@ class AdminSidebar extends Component
             ],
             [
                 'title' => 'Menu Items',
-                'route' => 'admin.inventory.items.index',
+                'route' => 'admin.menu-items.index',
                 'icon' => 'utensils',
                 'icon_type' => 'svg',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.view',
-                'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
+                'is_route_valid' => $this->validateRoute('admin.menu-items.index')
             ],
             [
-                'title' => 'Create Items for Menu',
-                'route' => 'admin.inventory.items.create',
+                'title' => 'Add Menu Item',
+                'route' => 'admin.menu-items.create',
                 'icon' => 'plus-circle',
                 'icon_type' => 'svg',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
-                'is_route_valid' => $this->validateRoute('admin.inventory.items.create')
+                'is_route_valid' => $this->validateRoute('admin.menu-items.create')
             ],
             [
-                'title' => 'Categories',
+                'title' => 'Create KOT Items',
+                'route' => 'admin.menu-items.create-kot',
+                'icon' => 'fire',
+                'icon_type' => 'svg',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
+                'is_route_valid' => $this->validateRoute('admin.menu-items.create-kot')
+            ],
+            [
+                'title' => 'Menu Categories',
                 'route' => 'admin.menu-categories.index',
                 'icon' => 'tag',
                 'icon_type' => 'svg',
