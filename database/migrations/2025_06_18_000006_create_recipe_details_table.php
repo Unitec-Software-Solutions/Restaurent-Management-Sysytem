@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('recipe_id')->references('id')->on('production_recipes');
-            $table->foreign('raw_material_item_id')->references('id')->on('item_masters');
+            $table->foreign('raw_material_item_id')->references('id')->on('item_master');
 
             $table->index(['recipe_id', 'raw_material_item_id']);
         });

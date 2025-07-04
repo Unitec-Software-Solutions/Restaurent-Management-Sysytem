@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('production_request_master_id')->references('id')->on('production_requests_master');
-            $table->foreign('item_id')->references('id')->on('item_masters');
+            $table->foreign('item_id')->references('id')->on('item_master');
             $table->index(['production_request_master_id', 'item_id']);
         });
     }

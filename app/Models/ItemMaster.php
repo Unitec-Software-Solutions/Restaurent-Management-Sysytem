@@ -18,7 +18,7 @@ class ItemMaster extends Model
     use SoftDeletes, HasFactory;
 
 
-    protected $table = 'item_masters'; 
+    protected $table = 'item_master'; 
     
 
     protected $fillable = [
@@ -97,7 +97,7 @@ class ItemMaster extends Model
 
     public function itemCategory()
     {
-        return $this->belongsTo(ItemCategory::class);
+        return $this->belongsTo(ItemCategory::class, 'item_category_id');
     }
 
     public function primarySupplier()
@@ -112,7 +112,7 @@ class ItemMaster extends Model
 
     public function menuItems()
     {
-        return $this->hasMany(MenuItem::class, 'item_masters_id');
+        return $this->hasMany(MenuItem::class, 'item_master_id');
     }
 
     // Dont Remove this Inventory items dashboard breaks without this 

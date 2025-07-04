@@ -4,11 +4,60 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-extrabold mb-8 text-gray-900 tracking-tight">Organization Summary</h1>
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organization Summary</h1>
+        
+        <!-- Actions for Super Admin -->
+        @if(auth('admin')->user()->isSuperAdmin())
+            <div class="flex gap-3">
+                <a href="{{ route('admin.organizations.activate.form', $organization) }}"
+                   class="inline-block {{ $organization->is_active ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700' }} text-white px-4 py-2 rounded-lg transition font-semibold">
+                    <i class="fas {{ $organization->is_active ? 'fa-cog' : 'fa-play' }} mr-2"></i>
+                    {{ $organization->is_active ? 'Manage Status' : 'Activate' }}
+                </a>
+                <a href="{{ route('admin.organizations.edit', $organization) }}"
+                   class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+                    <i class="fas fa-edit mr-2"></i>Edit
+                </a>
+            </div>
+        @endif
+    </div>
+    
     <a href="{{ route('admin.organizations.index') }}"
        class="inline-block mb-6 bg-gray-200 text-gray-800 px-5 py-2 rounded hover:bg-gray-300 transition font-semibold">
         ← Back to Organizations
     </a>
+
+    <!-- Status Alert -->
+    @if(!$organization->is_active)
+        <div class="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
+                <div>
+                    <p class="text-red-700 font-medium">This organization is currently inactive.</p>
+                    @if(auth('admin')->user()->isSuperAdmin())
+                        <p class="text-red-600 text-sm mt-1">
+                            As a super admin, you can <a href="{{ route('admin.organizations.activate.form', $organization) }}" class="underline font-medium">activate this organization</a>.
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                <div>
+                    <p class="text-green-700 font-medium">This organization is active and operational.</p>
+                    @if($organization->activated_at)
+                        <p class="text-green-600 text-sm mt-1">
+                            Activated on {{ $organization->activated_at->format('M d, Y \a\t H:i') }}
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
         <!-- Organization Info -->
@@ -39,6 +88,8 @@
                 <li><span class="font-semibold">Designation:</span> {{ $organization->contact_person_designation ?? '-' }}</li>
                 <li><span class="font-semibold">Phone:</span> {{ $organization->contact_person_phone ?? '-' }}</li>
             </ul>
+            
+            @if(auth('admin')->user()->isSuperAdmin())
             <div class="mt-6">
                 <label class="block font-medium mb-1">Activation Key</label>
                 <div class="flex items-center gap-2">
@@ -47,10 +98,14 @@
                     <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline">
                         @csrf
                         @method('PUT')
-                        <button type="submit" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">Regenerate</button>
+                        <button type="submit" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2"
+                                onclick="return confirm('Are you sure you want to regenerate the activation key? This will invalidate the current key.')">
+                            Regenerate
+                        </button>
                     </form>
                 </div>
             </div>
+            @endif
         </div>
     </div>
     <script>
@@ -79,21 +134,11 @@
                 <span>
                     @php
                         $plan = $organization->plan;
-                        $modulesList = $plan ? $plan->getModulesArray() : [];
+                        $modulesList = $plan ? $plan->getModulesWithNames() : [];
                     @endphp
                     @if(!empty($modulesList))
-                        @foreach($modulesList as $moduleData)
-                            @php
-                                $moduleName = is_array($moduleData) ? ($moduleData['name'] ?? $moduleData) : $moduleData;
-                                $moduleId = is_numeric($moduleName) ? $moduleName : null;
-                                if ($moduleId) {
-                                    $moduleRecord = \App\Models\Module::find($moduleId);
-                                    $displayName = $moduleRecord ? $moduleRecord->name : $moduleId;
-                                } else {
-                                    $displayName = ucfirst($moduleName);
-                                }
-                            @endphp
-                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">{{ $displayName }}</span>
+                        @foreach($modulesList as $module)
+                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold mr-1 mb-1">{{ $module['name'] }}</span>
                         @endforeach
                     @else
                         N/A

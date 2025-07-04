@@ -23,9 +23,9 @@ return new class extends Migration
             DB::statement('UPDATE kitchen_stations SET organization_id = (SELECT organization_id FROM branches WHERE branches.id = kitchen_stations.branch_id) WHERE organization_id IS NULL');
         }
 
-        // Add supplier_id to item_masters table
-        if (Schema::hasTable('item_masters') && !Schema::hasColumn('item_masters', 'supplier_id')) {
-            Schema::table('item_masters', function (Blueprint $table) {
+        // Add supplier_id to item_master table
+        if (Schema::hasTable('item_master') && !Schema::hasColumn('item_master', 'supplier_id')) {
+            Schema::table('item_master', function (Blueprint $table) {
                 $table->unsignedBigInteger('supplier_id')->nullable()->after('organization_id');
                 $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('set null');
             });
@@ -168,8 +168,8 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('item_masters') && Schema::hasColumn('item_masters', 'supplier_id')) {
-            Schema::table('item_masters', function (Blueprint $table) {
+        if (Schema::hasTable('item_master') && Schema::hasColumn('item_master', 'supplier_id')) {
+            Schema::table('item_master', function (Blueprint $table) {
                 $table->dropForeign(['supplier_id']);
                 $table->dropColumn('supplier_id');
             });

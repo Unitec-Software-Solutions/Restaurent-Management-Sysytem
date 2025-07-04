@@ -5,6 +5,25 @@
 
 @section('content')
 <div class="container-fluid py-6">
+    <!-- Flash Messages -->
+    @if(session('success'))
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle mr-3"></i>
+                {{ session('success') }}
+            </div>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-circle mr-3"></i>
+                {{ session('error') }}
+            </div>
+        </div>
+    @endif
+
     <!-- Header Section -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div class="flex justify-between items-center">
@@ -12,11 +31,13 @@
                 <h1 class="text-2xl font-bold text-gray-900">Subscription Plans</h1>
                 <p class="text-gray-600 mt-1">Manage subscription tiers and module access</p>
             </div>
-            <a href="{{ route('admin.subscription-plans.create') }}" 
-               class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
-                <i class="fas fa-plus mr-2"></i>
-                Create Plan
-            </a>
+            @if(auth('admin')->user()->isSuperAdmin())
+                <a href="{{ route('admin.subscription-plans.create') }}" 
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Plan
+                </a>
+            @endif
         </div>
     </div>
 
@@ -35,7 +56,7 @@
                     </div>
                     
                     <div class="text-3xl font-bold text-gray-900 mb-1">
-                        {{ $plan->currency }} {{ number_format($plan->price) }}
+                        {{ $plan->currency ?? 'USD' }} {{ number_format($plan->price) }}
                         <span class="text-sm font-normal text-gray-500">/month</span>
                     </div>
                     
@@ -62,22 +83,15 @@
                 <div class="p-6">
                     <h4 class="text-sm font-medium text-gray-900 mb-3">Included Modules</h4>
                     <div class="space-y-2">
-                        @forelse($plan->getModulesArray() as $module)
+                        @forelse($plan->getModulesWithNames() as $module)
                             <div class="flex items-center justify-between">
-                                @if(is_array($module))
-                                    <span class="text-sm text-gray-700">{{ ucfirst($module['name'] ?? 'Unknown') }}</span>
-                                    <span class="px-2 py-1 text-xs rounded-full
-                                        {{ ($module['tier'] ?? 'basic') === 'enterprise' ? 'bg-purple-100 text-purple-800' : '' }}
-                                        {{ ($module['tier'] ?? 'basic') === 'premium' ? 'bg-blue-100 text-blue-800' : '' }}
-                                        {{ ($module['tier'] ?? 'basic') === 'basic' ? 'bg-gray-100 text-gray-800' : '' }}">
-                                        {{ ucfirst($module['tier'] ?? 'basic') }}
-                                    </span>
-                                @else
-                                    <span class="text-sm text-gray-700">{{ ucfirst($module) }}</span>
-                                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
-                                        Basic
-                                    </span>
-                                @endif
+                                <span class="text-sm text-gray-700">{{ $module['name'] }}</span>
+                                <span class="px-2 py-1 text-xs rounded-full
+                                    {{ ($module['tier'] ?? 'basic') === 'enterprise' ? 'bg-purple-100 text-purple-800' : '' }}
+                                    {{ ($module['tier'] ?? 'basic') === 'premium' ? 'bg-blue-100 text-blue-800' : '' }}
+                                    {{ ($module['tier'] ?? 'basic') === 'basic' ? 'bg-gray-100 text-gray-800' : '' }}">
+                                    {{ ucfirst($module['tier'] ?? 'basic') }}
+                                </span>
                             </div>
                         @empty
                             <div class="text-sm text-gray-500">No modules selected</div>
@@ -92,10 +106,30 @@
                            class="flex-1 text-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-sm">
                             View
                         </a>
-                        <a href="{{ route('admin.subscription-plans.edit', $plan) }}" 
-                           class="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-sm">
-                            Edit
-                        </a>
+                        @if(auth('admin')->user()->isSuperAdmin())
+                            <a href="{{ route('admin.subscription-plans.edit', $plan) }}" 
+                               class="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-sm">
+                                Edit
+                            </a>
+                            @if(($plan->organizations_count ?? 0) == 0)
+                                <form action="{{ route('admin.subscription-plans.destroy', $plan) }}" method="POST" 
+                                      class="flex-1" onsubmit="return confirm('Are you sure you want to delete this plan?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" 
+                                            class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm">
+                                        Delete
+                                    </button>
+                                </form>
+                            @else
+                                <button type="button" 
+                                        disabled
+                                        title="Cannot delete plan with {{ $plan->organizations_count }} organizations"
+                                        class="flex-1 bg-gray-400 text-gray-600 px-3 py-2 rounded text-sm cursor-not-allowed">
+                                    Delete
+                                </button>
+                            @endif
+                        @endif
                     </div>
                 </div>
             </div>
@@ -110,10 +144,12 @@
                         Get started by creating your first subscription plan.
                     </p>
                     <div class="mt-6">
-                        <a href="{{ route('admin.subscription-plans.create') }}" 
-                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-plus mr-2"></i> Create Plan
-                        </a>
+                        @if(auth('admin')->user()->isSuperAdmin())
+                            <a href="{{ route('admin.subscription-plans.create') }}" 
+                               class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-plus mr-2"></i> Create Plan
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>

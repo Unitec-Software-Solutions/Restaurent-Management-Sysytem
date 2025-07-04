@@ -216,7 +216,8 @@ class GuestActivitySeeder extends Seeder
             'customer_phone' => $guest->phone_number,
             'customer_email' => $guest->email,
             'order_number' => $this->generateGuestOrderNumber($branch, $orderDateTime),
-            'order_type' => [OrderType::TAKEAWAY_WALK_IN_DEMAND, OrderType::DINE_IN_WALK_IN_DEMAND][rand(0, 1)],
+            'order_type' => OrderType::TAKEAWAY_WALK_IN_DEMAND, // Only use takeaway for guest orders
+            'order_date' => $orderDateTime->toDateString(),
             'status' => $this->determineGuestOrderStatus($orderDateTime),
             'payment_status' => 'pending',
             'subtotal' => 0,
@@ -224,7 +225,7 @@ class GuestActivitySeeder extends Seeder
             'delivery_fee' => rand(0, 1) ? rand(150, 300) : 0,
             'discount_amount' => 0,
             'total_amount' => 0,
-            'payment_method' => ['card', 'digital', 'cash_on_delivery'][rand(0, 2)],
+            'payment_method' => ['card', 'mobile', 'cash'][rand(0, 2)],
             'special_instructions' => $this->getRandomGuestInstructions(),
             'delivery_address' => $this->generateDeliveryAddress(),
             'guest_order' => true,
@@ -234,7 +235,7 @@ class GuestActivitySeeder extends Seeder
                 'platform' => ['android', 'ios', 'windows', 'macos'][rand(0, 3)]
             ]),
             'created_at' => $orderDateTime,
-            'estimated_completion_time' => $orderDateTime->copy()->addMinutes(rand(30, 90))
+            'estimated_delivery_time' => $orderDateTime->copy()->addMinutes(rand(30, 90))
         ]);
 
         // Add order items
@@ -262,6 +263,7 @@ class GuestActivitySeeder extends Seeder
                 'quantity' => $quantity,
                 'unit_price' => $menuItem->price,
                 'total_price' => $menuItem->price * $quantity,
+                'subtotal' => $menuItem->price * $quantity,
                 'special_instructions' => rand(0, 1) ? $this->getRandomItemSpecialRequest() : null,
                 'status' => 'pending'
             ]);
@@ -307,29 +309,25 @@ class GuestActivitySeeder extends Seeder
         $reservationDateTime = now()->addDays(rand(1, 30))->setHour(rand(11, 21))->setMinute([0, 15, 30, 45][rand(0, 3)]);
         
         $reservation = Reservation::create([
-            'organization_id' => $branch->organization_id,
             'branch_id' => $branch->id,
             'user_id' => $guest->id,
-            'customer_name' => $guest->name,
-            'customer_phone' => $guest->phone_number,
-            'customer_email' => $guest->email,
-            'party_size' => rand(2, 6),
-            'reservation_date' => $reservationDateTime->toDateString(),
-            'reservation_time' => $reservationDateTime->toTimeString(),
-            'duration_minutes' => rand(90, 180),
+            'name' => $guest->name,
+            'phone' => $guest->phone_number,
+            'email' => $guest->email,
+            'number_of_people' => rand(2, 6),
+            'date' => $reservationDateTime->toDateString(),
+            'start_time' => $reservationDateTime,
+            'end_time' => $reservationDateTime->copy()->addMinutes(rand(90, 180)),
             'status' => 'pending',
-            'reservation_type' => 'regular',
-            'special_requests' => $this->getRandomReservationRequest(),
-            'guest_reservation' => true,
-            'booking_source' => ['website', 'mobile_app', 'phone'][rand(0, 2)],
-            'created_at' => now()->subMinutes(rand(1, 120))
+            'type' => 'online',
+            'comments' => $this->getRandomReservationRequest(),
+            'reservation_fee' => rand(0, 1) ? rand(5, 25) : 0
         ]);
         
         // Create confirmation workflow
         if (rand(0, 1)) {
             $reservation->update([
-                'status' => 'confirmed',
-                'confirmed_at' => now()->subMinutes(rand(1, 60))
+                'status' => 'confirmed'
             ]);
         }
     }
@@ -403,7 +401,7 @@ class GuestActivitySeeder extends Seeder
     private function generateGuestEmail(): string
     {
         $domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'protonmail.com'];
-        $username = 'guest' . rand(1000, 9999);
+        $username = 'guest' . rand(100000, 999999) . uniqid();
         
         return $username . '@' . $domains[rand(0, count($domains) - 1)];
     }
@@ -426,7 +424,8 @@ class GuestActivitySeeder extends Seeder
 
     private function generateGuestOrderNumber(Branch $branch, Carbon $dateTime): string
     {
-        return 'GUEST-' . $branch->id . '-' . $dateTime->format('Ymd') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+        // Add microseconds and a larger random number to ensure uniqueness
+        return 'GUEST-' . $branch->id . '-' . $dateTime->format('Ymd') . '-' . str_pad(rand(10000, 99999), 5, '0', STR_PAD_LEFT) . substr(microtime(), 2, 3);
     }
 
     private function determineGuestOrderStatus(Carbon $orderDateTime): string

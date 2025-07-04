@@ -19,7 +19,11 @@ class Kot extends Model
         'prepared_at',
         'served_at',
         'notes',
-        'prepared_by'
+        'prepared_by',
+        'created_by',
+        'updated_by',
+        'organization_id',
+        'branch_id'
     ];
 
     protected $casts = [
@@ -46,6 +50,21 @@ class Kot extends Model
     public function preparedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'prepared_by');
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'created_by');
     }
 
     // Scopes

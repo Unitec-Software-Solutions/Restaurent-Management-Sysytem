@@ -1,162 +1,320 @@
 @extends('layouts.admin')
 
+@section('title', 'Orders Management')
+
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-        <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
-            <h1 class="text-2xl font-bold">
-                @if(request('type') === 'takeaway' || request('order_type') === 'takeaway')
-                    Takeaway Orders
-                @elseif(request('type') === 'in_house' || request('order_type') === 'in_house')
-                    Dine-In Orders
-                @else
-                    All Orders
-                @endif
-                @php $admin = auth('admin')->user(); @endphp
-                @if($admin->isSuperAdmin())
-                    <span class="text-sm text-gray-500">(All Organizations)</span>
-                @elseif($admin->organization)
-                    <span class="text-sm text-gray-500">({{ $admin->organization->name }})</span>
-                @elseif($admin->branch)
-                    <span class="text-sm text-gray-500">({{ $admin->branch->name }})</span>
-                @endif
-            </h1>
-            <div class="flex gap-2">
-                @routeexists('admin.orders.takeaway.create')
-                    <a href="{{ route('admin.orders.takeaway.create') }}"
-                       class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors duration-200">
-                        <i class="fas fa-plus mr-2"></i>
-                        Create Takeaway
-                    </a>
-                @else
-                    <span class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
-                        Create Takeaway (Unavailable)
-                    </span>
-                @endrouteexists
-
-                @if(!$admin->isSuperAdmin())
-                    @routeexists('admin.reservations.create')
-                        <a href="{{ route('admin.reservations.create') }}" 
-                           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center transition-colors duration-200">
-                            <i class="fas fa-calendar-plus mr-2"></i>
-                            Create Reservation
-                        </a>
-                    @else
-                        <span class="bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed">
-                            Create Reservation (Unavailable)
-                        </span>
-                    @endrouteexists
-                @endif
-
-                @routeexists('admin.dashboard')
-                    <a href="{{ route('admin.dashboard') }}" class="text-blue-500 hover:text-blue-700 flex items-center">
-                        ← Back to Dashboard
-                    </a>
-                @else
-                    <a href="#" class="text-blue-500 hover:text-blue-700 flex items-center">
-                        ← Back to Dashboard
-                    </a>
-                @endrouteexists
+<div class="p-6">
+    <!-- Header Section -->
+    <div class="mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Orders Management</h1>
+                <p class="text-gray-600">Manage and track all orders across your organization</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{{ route('admin.orders.create') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i> New Order
+                </a>
+                <button onclick="exportOrders()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-download mr-2"></i> Export
+                </button>
             </div>
         </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <form method="GET" action="{{ route('admin.orders.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div>
+                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input type="text" name="search" id="search" value="{{ request('search') }}" 
+                       placeholder="Customer name, phone, or order ID"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            </div>
+
+            <!-- Branch Filter -->
+            <div>
+                <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <select name="branch_id" id="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Branches</option>
+                    @foreach($branches ?? [] as $branch)
+                        <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                            {{ $branch->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
+                    <option value="preparing" {{ request('status') == 'preparing' ? 'selected' : '' }}>Preparing</option>
+                    <option value="ready" {{ request('status') == 'ready' ? 'selected' : '' }}>Ready</option>
+                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                </select>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex items-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg w-full">
+                    <i class="fas fa-search mr-2"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-2 text-left">Order #</th>
-                        <th class="px-4 py-2 text-left">Type</th>
-                        <th class="px-4 py-2 text-left">Reference</th>
-                        <th class="px-4 py-2 text-left">Customer</th>
-                        <th class="px-4 py-2 text-right">Total</th>
-                        <th class="px-4 py-2 text-left">Created</th>
-                        <th class="px-4 py-2 text-center">Status</th>
-                        <th class="px-4 py-2 text-center">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Details</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @forelse($orders as $order)
-                    <tr class="border-t hover:bg-gray-50">
-                        <td class="px-4 py-3">#{{ $order->id }}</td>
-                        <td class="px-4 py-3">
-                            @if(Str::contains($order->order_type, 'dine_in'))
-                                Dine-in
-                            @else
-                                Takeaway
-                            @endif
-                        </td>
-                        <td class="px-4 py-3">
-                            @if($order->reservation_id)
-                                @if(Route::has('admin.reservations.show'))
-                                    <a href="{{ route('admin.reservations.show', $order->reservation_id) }}" class="text-blue-500">
-                                        Reservation #{{ $order->reservation_id }}
-                                    </a>
-                                @else
-                                    <span class="text-gray-600">Reservation #{{ $order->reservation_id }}</span>
+                <tbody class="divide-y divide-gray-200">
+                    @forelse($orders ?? [] as $order)
+                        <tr class="hover:bg-gray-50">
+                            <!-- Order Details -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 w-10 h-10">
+                                        @php
+                                            // Fix: Convert enum to string value for comparison
+                                            $orderTypeValue = $order->order_type instanceof \App\Enums\OrderType 
+                                                ? $order->order_type->value 
+                                                : (string) $order->order_type;
+                                        @endphp
+                                        
+                                        @if(str_contains($orderTypeValue, 'takeaway'))
+                                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-shopping-bag text-blue-600"></i>
+                                            </div>
+                                        @elseif(str_contains($orderTypeValue, 'dine_in'))
+                                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-utensils text-green-600"></i>
+                                            </div>
+                                        @else
+                                            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-receipt text-gray-600"></i>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            Order #{{ $order->id }}
+                                        </div>
+                                        @if($order->reservation)
+                                            <div class="text-sm text-gray-500">
+                                                Reservation #{{ $order->reservation->id }}
+                                            </div>
+                                        @endif
+                                        @if($order->order_number)
+                                            <div class="text-sm text-gray-500">
+                                                {{ $order->order_number }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Customer -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ $order->customer_name ?? 'Guest Customer' }}
+                                </div>
+                                @if($order->customer_phone)
+                                    <div class="text-sm text-gray-500">
+                                        {{ $order->customer_phone }}
+                                    </div>
                                 @endif
-                            @else
-                                Takeaway Order
-                            @endif
-                        </td>
-                        <td class="px-4 py-3">{{ $order->customer_name }}</td>
-                        <td class="px-4 py-3 text-right">LKR {{ number_format($order->total, 2) }}</td>
-                        <td class="px-4 py-3">{{ $order->created_at->format('M d, Y H:i') }}</td>
-                        <td class="px-4 py-3 text-center">
-                            <span class="px-2 py-1 rounded
-                                @if($order->status === 'completed') bg-green-100 text-green-800
-                                @elseif($order->status === 'cancelled') bg-red-100 text-red-800
-                                @else bg-yellow-100 text-yellow-800 @endif">
-                                {{ ucfirst($order->status) }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-center">
-                            @if($order->reservation)
-                                @routeexists('admin.reservations.edit')
-                                    <a href="{{ route('admin.reservations.edit', ['reservation' => $order->reservation_id]) }}"
-                                       class="text-blue-500 hover:text-blue-700 mr-2">
-                                        Edit Reservation
-                                    </a>
-                                @endrouteexists
+                            </td>
 
-                                @routeexists('admin.orders.show')
-                                    <a href="{{ route('admin.orders.show', $order->id) }}"
-                                       class="text-green-500 hover:text-green-700">
-                                        View Order
-                                    </a>
-                                @endrouteexists
-                            @else
-                                @routeexists('admin.orders.takeaway.edit')
-                                    <a href="{{ route('admin.orders.takeaway.edit', ['order' => $order->id]) }}"
-                                       class="text-blue-500 hover:text-blue-700 mr-2">
-                                        Edit Takeaway
-                                    </a>
-                                @endrouteexists
+                            <!-- Branch -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">
+                                    {{ $order->branch->name ?? 'N/A' }}
+                                </div>
+                            </td>
 
-                                @routeexists('admin.orders.show')
-                                    <a href="{{ route('admin.orders.show', $order->id) }}"
-                                       class="text-green-500 hover:text-green-700">
-                                        View
-                                    </a>
-                                @endrouteexists
-                            @endif
+                            <!-- Type -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                    @if(str_contains($orderTypeValue, 'takeaway'))
+                                        bg-blue-100 text-blue-800
+                                    @elseif(str_contains($orderTypeValue, 'dine_in'))
+                                        bg-green-100 text-green-800
+                                    @else
+                                        bg-gray-100 text-gray-800
+                                    @endif">
+                                    @if($order->order_type instanceof \App\Enums\OrderType)
+                                        {{ $order->order_type->getLabel() }}
+                                    @else
+                                        {{ ucfirst(str_replace('_', ' ', $orderTypeValue)) }}
+                                    @endif
+                                </span>
+                            </td>
 
-                            @if(!Route::has('admin.reservations.edit') && !Route::has('admin.orders.takeaway.edit') && !Route::has('admin.orders.show'))
-                                <span class="text-gray-400">No actions available</span>
-                            @endif
-                        </td>
-                    </tr>
+                            <!-- Status -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                    @switch($order->status)
+                                        @case('pending')
+                                            bg-yellow-100 text-yellow-800
+                                            @break
+                                        @case('confirmed')
+                                            bg-blue-100 text-blue-800
+                                            @break
+                                        @case('preparing')
+                                            bg-orange-100 text-orange-800
+                                            @break
+                                        @case('ready')
+                                            bg-indigo-100 text-indigo-800
+                                            @break
+                                        @case('completed')
+                                            bg-green-100 text-green-800
+                                            @break
+                                        @case('cancelled')
+                                            bg-red-100 text-red-800
+                                            @break
+                                        @default
+                                            bg-gray-100 text-gray-800
+                                    @endswitch">
+                                    {{ ucfirst($order->status) }}
+                                </span>
+                            </td>
+
+                            <!-- Total -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">
+                                    LKR {{ number_format($order->total_amount ?? $order->total ?? 0, 2) }}
+                                </div>
+                                @if($order->orderItems && $order->orderItems->count() > 0)
+                                    <div class="text-sm text-gray-500">
+                                        {{ $order->orderItems->count() }} items
+                                    </div>
+                                @endif
+                            </td>
+
+                            <!-- Date -->
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">
+                                    {{ $order->created_at->format('M d, Y') }}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    {{ $order->created_at->format('H:i A') }}
+                                </div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div class="flex items-center justify-end space-x-2">
+                                    <a href="{{ route('admin.orders.show', $order) }}" 
+                                       class="text-indigo-600 hover:text-indigo-900" title="View Order">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    @if(in_array($order->status, ['pending', 'confirmed']))
+                                        <a href="{{ route('admin.orders.edit', $order) }}" 
+                                           class="text-yellow-600 hover:text-yellow-900" title="Edit Order">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    @endif
+
+                                    @if($order->status !== 'cancelled' && $order->status !== 'completed')
+                                        <button onclick="updateOrderStatus({{ $order->id }}, 'cancelled')" 
+                                                class="text-red-600 hover:text-red-900" title="Cancel Order">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    @endif
+
+                                    <!-- Print KOT if order has items -->
+                                    @if($order->orderItems && $order->orderItems->count() > 0)
+                                        <button onclick="printKOT({{ $order->id }})" 
+                                                class="text-green-600 hover:text-green-900" title="Print KOT">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
                     @empty
-                    <tr>
-                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">No orders found</td>
-                    </tr>
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center">
+                                <div class="text-gray-400 text-4xl mb-3">
+                                    <i class="fas fa-receipt"></i>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+                                <p class="text-gray-500 mb-4">Get started by creating your first order.</p>
+                                <a href="{{ route('admin.orders.create') }}" 
+                                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                                    <i class="fas fa-plus mr-2"></i> Create Order
+                                </a>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-            @if($orders->hasPages())
-                <div class="mt-6">
-                    {{ $orders->links() }}
-                </div>
-            @endif
+
+        <!-- Pagination -->
+        @if(isset($orders) && $orders->hasPages())
+            <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                {{ $orders->withQueryString()->links() }}
+            </div>
+        @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+function updateOrderStatus(orderId, status) {
+    if (confirm(`Are you sure you want to ${status} this order?`)) {
+        fetch(`/admin/orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Failed to update order status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the order');
+        });
+    }
+}
+
+function printKOT(orderId) {
+    window.open(`/admin/orders/${orderId}/print-kot`, '_blank');
+}
+
+function exportOrders() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'excel');
+    window.location.href = `${window.location.pathname}?${params.toString()}`;
+}
+</script>
+@endpush
 @endsection

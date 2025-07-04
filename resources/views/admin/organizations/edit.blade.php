@@ -49,11 +49,13 @@
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Subscription Plan <span class="text-red-600">*</span></label>
                     <select name="subscription_plan_id" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        @foreach($plans as $plan)
+                        @forelse($subscriptionPlans ?? [] as $plan)
                             <option value="{{ $plan->id }}" {{ old('subscription_plan_id', $organization->subscription_plan_id) == $plan->id ? 'selected' : '' }}>
                                 {{ $plan->name }} ({{ number_format($plan->price/100, 2) }} {{ $plan->currency }})
                             </option>
-                        @endforeach
+                        @empty
+                            <option value="">No subscription plans available</option>
+                        @endforelse
                     </select>
                 </div>
             @else

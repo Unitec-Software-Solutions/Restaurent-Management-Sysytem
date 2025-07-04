@@ -18,50 +18,50 @@ return new class extends Migration
             });
         }
 
-        // Add sku and related columns to item_masters table
-        if (Schema::hasTable('item_masters')) {
-            if (!Schema::hasColumn('item_masters', 'sku')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+        // Add sku and related columns to item_master table
+        if (Schema::hasTable('item_master')) {
+            if (!Schema::hasColumn('item_master', 'sku')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->string('sku')->nullable()->after('item_code');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'unit')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'unit')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->string('unit')->default('pcs')->after('sku');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'unit_of_measurement')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'unit_of_measurement')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->string('unit_of_measurement')->default('pcs')->after('unit');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'purchase_price')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'purchase_price')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->decimal('purchase_price', 10, 2)->default(0)->after('unit_of_measurement');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'minimum_stock')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'minimum_stock')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->integer('minimum_stock')->default(0)->after('purchase_price');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'maximum_stock')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'maximum_stock')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->integer('maximum_stock')->default(100)->after('minimum_stock');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'is_inventory_item')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'is_inventory_item')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->boolean('is_inventory_item')->default(true)->after('maximum_stock');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'storage_requirements')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'storage_requirements')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->text('storage_requirements')->nullable()->after('is_inventory_item');
                 });
             }
-            if (!Schema::hasColumn('item_masters', 'shelf_life_days')) {
-                Schema::table('item_masters', function (Blueprint $table) {
+            if (!Schema::hasColumn('item_master', 'shelf_life_days')) {
+                Schema::table('item_master', function (Blueprint $table) {
                     $table->integer('shelf_life_days')->nullable()->after('storage_requirements');
                 });
             }
@@ -190,11 +190,11 @@ return new class extends Migration
             });
         }
 
-        // Remove added columns from item_masters
-        Schema::table('item_masters', function (Blueprint $table) {
+        // Remove added columns from item_master
+        Schema::table('item_master', function (Blueprint $table) {
             $columns = ['sku', 'unit', 'unit_of_measurement', 'purchase_price', 'minimum_stock', 'maximum_stock', 'is_inventory_item', 'storage_requirements', 'shelf_life_days'];
             foreach ($columns as $column) {
-                if (Schema::hasColumn('item_masters', $column)) {
+                if (Schema::hasColumn('item_master', $column)) {
                     $table->dropColumn($column);
                 }
             }

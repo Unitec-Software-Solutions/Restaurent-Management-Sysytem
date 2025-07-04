@@ -74,7 +74,7 @@ class ProductionOrderController extends Controller
         $request->validate([
             'production_date' => 'required|date',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.item_id' => 'required|exists:item_master,id',
             'items.*.quantity_to_produce' => 'required|numeric|min:1',
             'notes' => 'nullable|string|max:1000'
         ]);
@@ -116,12 +116,12 @@ class ProductionOrderController extends Controller
             'selected_requests.*' => 'exists:production_requests_master,id',
             'production_notes' => 'nullable|string|max:1000',
             'recipe_ingredients' => 'nullable|array',
-            'recipe_ingredients.*.ingredient_id' => 'required_with:recipe_ingredients.*|exists:item_masters,id',
+            'recipe_ingredients.*.ingredient_id' => 'required_with:recipe_ingredients.*|exists:item_master,id',
             'recipe_ingredients.*.quantity' => 'required_with:recipe_ingredients.*|numeric|min:0.001',
             'recipe_ingredients.*.notes' => 'nullable|string|max:500',
             'recipe_ingredients.*.is_edited' => 'nullable|boolean',
             'manual_ingredients' => 'nullable|array',
-            'manual_ingredients.*.ingredient_id' => 'required_with:manual_ingredients.*|exists:item_masters,id',
+            'manual_ingredients.*.ingredient_id' => 'required_with:manual_ingredients.*|exists:item_master,id',
             'manual_ingredients.*.quantity' => 'required_with:manual_ingredients.*|numeric|min:0.001',
             'manual_ingredients.*.notes' => 'nullable|string|max:500'
         ]);
@@ -350,7 +350,7 @@ class ProductionOrderController extends Controller
     {
         $request->validate([
             'ingredients' => 'required|array',
-            'ingredients.*.ingredient_item_id' => 'required|exists:item_masters,id',
+            'ingredients.*.ingredient_item_id' => 'required|exists:item_master,id',
             'ingredients.*.issued_quantity' => 'required|numeric|min:0.001'
         ]);
 
@@ -692,7 +692,7 @@ class ProductionOrderController extends Controller
             'selected_requests.*' => 'exists:production_requests_master,id',
             'production_notes' => 'nullable|string',
             'manual_ingredients' => 'nullable|array',
-            'manual_ingredients.*.ingredient_id' => 'required|exists:item_masters,id',
+            'manual_ingredients.*.ingredient_id' => 'required|exists:item_master,id',
             'manual_ingredients.*.quantity' => 'required|numeric|min:0.001',
             'manual_ingredients.*.notes' => 'nullable|string'
         ]);

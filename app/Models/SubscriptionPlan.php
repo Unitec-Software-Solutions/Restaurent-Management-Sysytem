@@ -69,16 +69,50 @@ class SubscriptionPlan extends Model
      */
     public function getModulesArray(): array
     {
-        if (is_array($this->modules)) {
-            return $this->modules;
+        return is_array($this->modules) ? $this->modules : [];
+    }
+
+    /**
+     * Get modules with names for display purposes
+     */
+    public function getModulesWithNames(): array
+    {
+        $modules = $this->getModulesArray();
+        $result = [];
+        
+        // Get all module names for lookup
+        $moduleNames = Module::pluck('name', 'id')->toArray();
+        
+        foreach ($modules as $moduleData) {
+            if (is_numeric($moduleData)) {
+                // If it's just an ID, look up the name
+                $result[] = [
+                    'id' => $moduleData,
+                    'name' => $moduleNames[$moduleData] ?? 'Unknown Module',
+                    'tier' => 'basic'
+                ];
+            } elseif (is_array($moduleData)) {
+                // If it's already an array with name/tier
+                if (isset($moduleData['name'])) {
+                    $result[] = $moduleData;
+                } elseif (isset($moduleData['id'])) {
+                    $result[] = [
+                        'id' => $moduleData['id'],
+                        'name' => $moduleNames[$moduleData['id']] ?? 'Unknown Module',
+                        'tier' => $moduleData['tier'] ?? 'basic'
+                    ];
+                }
+            } elseif (is_string($moduleData)) {
+                // If it's a string (slug/name), find the module
+                $module = Module::where('slug', $moduleData)->orWhere('name', $moduleData)->first();
+                $result[] = [
+                    'name' => $module ? $module->name : ucfirst($moduleData),
+                    'tier' => 'basic'
+                ];
+            }
         }
         
-        if (is_string($this->modules)) {
-            $decoded = json_decode($this->modules, true);
-            return is_array($decoded) ? $decoded : [];
-        }
-        
-        return [];
+        return $result;
     }
 
     public function subscriptions()

@@ -8,7 +8,6 @@ use App\Http\Controllers\{
     AdminReservationController,
     AdminController,
     AdminAuthController,
-    AdminAuthTestController,
     OrderController,
     SupplierController,
     SupplierPaymentController,
@@ -18,15 +17,11 @@ use App\Http\Controllers\{
     BranchController,
     UserController,
     RealtimeDashboardController,
-    AdminTestPageController,
-    DatabaseTestController,
     MenuController,
-    SubscriptionController,
-    ModuleController,
-    
+    KitchenController,
+    KotController
 };
-
-// Admin namespace controllers
+ // Admin namespace controllers
 use App\Http\Controllers\Admin\{
     ProductionOrderController,
     ProductionController,
@@ -34,7 +29,8 @@ use App\Http\Controllers\Admin\{
     ProductionRecipeController,
     ProductionSessionController,
     SubscriptionPlanController,
-    PaymentController
+    PaymentController,
+    KitchenStationController
 };
 // Purchase Order Controller
 use App\Http\Controllers\Admin\{
@@ -46,8 +42,8 @@ use App\Http\Controllers\Admin\
     //GrnController,
     GrnDashboardController,
     GoodsTransferNoteController,
-    GoodsTransferItemController,
-    GrnItemController,
+    // GoodsTransferItemController,
+    // GrnItemController,
 };
 // inventory controllers
 use App\Http\Controllers\Admin\
@@ -175,54 +171,6 @@ Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login
 Route::post('/login', [AdminAuthController::class, 'login']);
 
 /*-------------------------------------------------------------------------
-| Debug Routes (Development Only)
-|------------------------------------------------------------------------*/
-if (config('app.debug')) {
-    Route::get('/admin/auth/debug', [AdminAuthTestController::class, 'checkAuth'])->name('admin.auth.check');
-    Route::get('/admin/auth/test', function() {
-        return [
-            'admin_authenticated' => \Illuminate\Support\Facades\Auth::guard('admin')->check(),
-            'admin_user' => \Illuminate\Support\Facades\Auth::guard('admin')->user(),
-            'session_id' => session()->getId(),
-            'session_data' => session()->all()
-        ];
-    })->middleware('auth:admin');
-
-    Route::get('/debug/session', function() {
-        return [
-            'session_driver' => config('session.driver'),
-            'session_table' => config('session.table'),
-            'session_connection' => config('session.connection'),
-            'session_id' => session()->getId(),
-            'session_name' => session()->getName(),
-            'session_exists' => session()->isStarted(),
-        ];
-    });
-
-    // Debug route to check permissions (temporary)
-    Route::get('/debug-permissions', function() {
-        if (!Auth::guard('admin')->check()) {
-            return 'Not logged in as admin';
-        }
-
-        $admin = Auth::guard('admin')->user();
-        $permissions = \App\Models\Permission::all()->pluck('name');
-
-        return [
-            'admin' => $admin->email,
-            'organization_id' => $admin->organization_id,
-            'all_permissions' => $permissions->toArray(),
-            'user_has_permissions' => [
-                'view_inventory' => $admin->can('view_inventory'),
-                'manage_inventory' => $admin->can('manage_inventory'),
-                'inventory.view' => $admin->can('inventory.view'),
-                'inventory.manage' => $admin->can('inventory.manage'),
-            ]
-        ];
-    })->middleware('auth:admin');
-}
-
-/*-------------------------------------------------------------------------
 | Admin Routes
 |------------------------------------------------------------------------*/
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -235,9 +183,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth:admin'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
-
-        // Test page route (development only)
-        Route::get('/testpage', [AdminTestPageController::class, 'index'])->name('testpage');
 
         // Reservations Management
         Route::resource('reservations', AdminReservationController::class);
@@ -473,11 +418,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 
         // Additional Admin Routes
-        Route::get('/testpage', function () {return view('admin.testpage');})->name('testpage');
         Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
-        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.index');
+        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.view');
         Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
-        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.index');
+        Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.view');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
 
     });
@@ -501,7 +445,7 @@ Route::get('/debug/branches', function() {
     $branches = \App\Models\Branch::when($user && !$user->is_super_admin, function($query) use ($user) {
         return $query->where('organization_id', $user->organization_id);
     })->get();
-    
+
     return response()->json([
         'user' => $user ? [
             'id' => $user->id,
@@ -522,8 +466,20 @@ Route::get('/debug/branches', function() {
 
 // Super Admin Routes
 Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
+    // Organization Dashboard
+    Route::get('dashboard/organizations', [OrganizationController::class, 'dashboard'])->name('organizations.dashboard');
+
     // Organizations CRUD
-    
+    Route::resource('organizations', OrganizationController::class);
+    Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
+    Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
+    Route::get('organizations/{organization}/activate', [OrganizationController::class, 'showActivateForm'])->name('organizations.activate.form');
+    Route::post('organizations/{organization}/activate', [OrganizationController::class, 'activate'])->name('organizations.activate');
+
+    // Organization Details & Admin Login
+    Route::get('organizations/{organization}/details', [OrganizationController::class, 'getOrganizationDetails'])->name('organizations.details');
+    Route::post('organizations/{organization}/login-as-admin', [OrganizationController::class, 'loginAsOrgAdmin'])->name('organizations.login-as-admin');
+
     // Branches: Organization-specific CRUD
     Route::prefix('organizations/{organization}')->group(function () {
         Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
@@ -554,6 +510,13 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
     Route::resource('subscription-plans', SubscriptionPlanController::class);
 });
 
+// Organization Activation Routes - Accessible by both Super Admin and Organization Admin
+Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Organization activation index - accessible to both super admins and organization admins
+    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
+    Route::post('organizations/{organization}/activate-by-key', [OrganizationController::class, 'activateByKey'])->name('organizations.activate.by-key');
+});
+
 // Branch summary and regenerate key
 Route::middleware(['auth:admin'])->group(function () {
     Route::get('branches/{branch}/summary', [BranchController::class, 'summary'])->name('branches.summary');
@@ -572,7 +535,7 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
     ->name('admin.')
     ->group(function () {
         // Organizations CRUD
-        
+
         // Branches: Organization-specific CRUD
         Route::prefix('organizations/{organization}')->group(function () {
             Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
@@ -601,7 +564,7 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
 
 Route::middleware(['auth:admin'])->group(function () {
     // Organizations CRUD
-    
+
     // Branches: Organization-specific CRUD
     Route::prefix('organizations/{organization}')->group(function () {
         Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
@@ -686,20 +649,8 @@ Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () 
 // Menu safety dashboard
 Route::get('menus/safety-dashboard', [MenuController::class, 'safetyDashboard'])->name('admin.menus.safety-dashboard');
 
-// Database test operations
+// Payment Management
 Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
-    Route::post('/diagnose-table', [DatabaseTestController::class, 'diagnoseTable']);
-    Route::post('/run-migrations', [DatabaseTestController::class, 'runMigrations']);
-    Route::post('/run-seeder', [DatabaseTestController::class, 'runSeeder']);
-    Route::post('/full-diagnose', [DatabaseTestController::class, 'fullDiagnose']);
-    Route::post('/fresh-migrate', [DatabaseTestController::class, 'freshMigrate']);
-    Route::post('/test-orders', [DatabaseTestController::class, 'testOrderCreation']);
-    Route::get('/system-stats', [DatabaseTestController::class, 'getSystemStats']);
-    Route::get('/order-stats', [DatabaseTestController::class, 'getOrderStats']);
-    Route::get('/recent-orders', [DatabaseTestController::class, 'getRecentOrders']);
-    Route::get('/orders-preview', [DatabaseTestController::class, 'getOrdersPreview']);
-
-    // Payment Management
     Route::get('payments', [App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
     Route::get('payments/create', [App\Http\Controllers\Admin\PaymentController::class, 'create'])->name('payments.create');
     Route::post('payments', [App\Http\Controllers\Admin\PaymentController::class, 'store'])->name('payments.store');
@@ -805,7 +756,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
     // Organization branches
     Route::get('/organizations/{organization}/branches', [ReservationController::class, 'getBranches'])
         ->name('api.organizations.branches');
-    
+
     // Branch availability
     Route::get('/branches/{branch}/availability', [ReservationController::class, 'getAvailableTimeSlots'])
         ->name('api.branches.availability');
@@ -824,3 +775,171 @@ Route::get('/test-branches/{organization}', function($organizationId) {
         ], 500);
     }
 })->name('test.branches');
+
+// Test route for debugging ItemMaster issue - Remove this after debugging
+Route::get('/test-item-master', function () {
+    try {
+        echo "Testing ItemMaster in web context...<br>";
+        echo "Database: " . config('database.default') . "<br>";
+        echo "Connection: " . \Illuminate\Support\Facades\DB::connection()->getName() . "<br>";
+
+        // Test table existence
+        $exists = \Illuminate\Support\Facades\DB::select("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'item_master')");
+        echo "Table exists: " . ($exists[0]->exists ? 'YES' : 'NO') . "<br>";
+
+        // Test direct query
+        $count = \Illuminate\Support\Facades\DB::table('item_master')->count();
+        echo "Direct count: $count<br>";
+
+        // Test model count
+        $modelCount = \App\Models\ItemMaster::count();
+        echo "Model count: $modelCount<br>";
+
+        // Test with relationship
+        $query = \App\Models\ItemMaster::with('itemCategory');
+        $relationCount = $query->count();
+        echo "With relation count: $relationCount<br>";
+
+        // Test pagination - THIS IS WHERE THE ERROR MIGHT OCCUR
+        $pagination = $query->paginate(15);
+        echo "Pagination count: " . $pagination->count() . "<br>";
+        echo "Pagination total: " . $pagination->total() . "<br>";
+
+        // Test the exact same query as in the controller with organization filter
+        echo "<hr>Testing with organization filter (mimicking controller):<br>";
+        $orgQuery = \App\Models\ItemMaster::with('itemCategory');
+        $orgQuery->where('organization_id', 2); // Use the test org we created
+
+        echo "Org query count: " . $orgQuery->count() . "<br>";
+        $orgPagination = $orgQuery->paginate(15);
+        echo "Org pagination count: " . $orgPagination->count() . "<br>";
+
+        echo "All tests passed!";
+
+    } catch (Exception $e) {
+        echo "<h2>Error occurred:</h2>";
+        echo "Message: " . $e->getMessage() . "<br>";
+        echo "File: " . $e->getFile() . "<br>";
+        echo "Line: " . $e->getLine() . "<br>";
+        if ($e instanceof \Illuminate\Database\QueryException) {
+            echo "SQL: " . $e->getSql() . "<br>";
+            echo "Bindings: " . json_encode($e->getBindings()) . "<br>";
+        }
+        echo "<pre>" . $e->getTraceAsString() . "</pre>";
+    }
+});
+
+// Organization Admin Routes - For organization admins to manage their restaurant
+Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Organization Admin Dashboard
+    Route::get('org-dashboard', [OrganizationController::class, 'orgDashboard'])->name('org-dashboard');
+
+    // Switch back to super admin
+    Route::get('switch-back-to-super-admin', [OrganizationController::class, 'switchBackToSuperAdmin'])->name('switch-back-to-super-admin');
+
+    // Organization activation index - accessible to both super admins and organization admins
+    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
+    Route::post('organizations/{organization}/activate-by-key', [OrganizationController::class, 'activateByKey'])->name('organizations.activate.by-key');
+
+    // Branch summary and regenerate key
+    Route::get('branches/{branch}/summary', [BranchController::class, 'summary'])->name('branches.summary');
+    Route::put('branches/{branch}/regenerate-key', [BranchController::class, 'regenerateKey'])->name('branches.regenerate-key');
+
+    // Show activation form for all admins
+    Route::get('branches/activate', [BranchController::class, 'showActivationForm'])->name('branches.activate.form');
+    Route::post('branches/activate', [BranchController::class, 'activateBranch'])->name('branches.activate.submit');
+});
+
+/*-------------------------------------------------------------------------
+| AJAX Routes
+|------------------------------------------------------------------------*/
+Route::middleware(['auth:admin'])->group(function () {
+    // Branches
+    Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+    Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+    Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+    Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+    Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+    Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+
+    // Admins
+    Route::get('admins', [AdminController::class, 'index'])->name('admins.index');
+    Route::get('admins/create', [AdminController::class, 'create'])->name('admins.create');
+    Route::post('admins', [AdminController::class, 'store'])->name('admins.store');
+    Route::get('admins/{admin}/edit', [AdminController::class, 'edit'])->name('admins.edit');
+    Route::put('admins/{admin}', [AdminController::class, 'update'])->name('admins.update');
+    Route::delete('admins/{admin}', [AdminController::class, 'destroy'])->name('admins.destroy');
+
+    // AJAX Modal Details Routes
+    Route::get('branches/{branch}/details', [BranchController::class, 'getBranchDetails'])->name('branches.details');
+    Route::get('admins/{admin}/details', [AdminController::class, 'getAdminDetails'])->name('admins.details');
+});
+
+// Organization Management AJAX Routes
+Route::prefix('inventory')->name('inventory.')->group(function () {
+    Route::get('/', [InventoryController::class, 'index'])->name('index');
+    Route::post('/', [InventoryController::class, 'store'])->name('store');
+    Route::put('/{inventoryItem}/stock', [InventoryController::class, 'updateStock'])->name('update-stock');
+});
+
+Route::prefix('menus')->name('menus.')->group(function () {
+    Route::get('/', [MenuController::class, 'getMenus'])->name('index');
+    Route::post('/', [MenuController::class, 'storeMenu'])->name('store');
+    Route::post('/items', [MenuController::class, 'storeMenuItem'])->name('items.store');
+});
+
+Route::prefix('orders')->name('orders.')->group(function () {
+    Route::post('/takeaway', [OrderController::class, 'createTakeawayOrder'])->name('takeaway.store');
+});
+
+Route::prefix('reservations')->name('reservations.')->group(function () {
+    Route::post('/admin-create', [ReservationController::class, 'createReservationFromAdmin'])->name('admin-create');
+});
+
+// Kitchen Management Routes
+Route::prefix('admin/kitchen')->name('admin.kitchen.')->group(function () {
+    Route::get('/', [KitchenController::class, 'index'])->name('index');
+    Route::get('/status', [KitchenController::class, 'getStatus'])->name('status');
+    Route::get('/queue', [KitchenController::class, 'queue'])->name('queue.index');
+
+    // KOT Management
+    Route::prefix('kots')->name('kots.')->group(function () {
+        Route::get('/', [KotController::class, 'index'])->name('index');
+        Route::get('/print-all', [KotController::class, 'printAll'])->name('print-all');
+        Route::get('/{kot}/print', [KotController::class, 'print'])->name('print');
+        Route::patch('/{kot}/status', [KotController::class, 'updateStatus'])->name('update-status');
+    });
+
+    // Kitchen Stations
+    Route::prefix('stations')->name('stations.')->group(function () {
+        Route::get('/', [KitchenStationController::class, 'index'])->name('index');
+        Route::get('/create', [KitchenStationController::class, 'create'])->name('create');
+        Route::post('/', [KitchenStationController::class, 'store'])->name('store');
+        Route::get('/{station}/edit', [KitchenStationController::class, 'edit'])->name('edit');
+        Route::put('/{station}', [KitchenStationController::class, 'update'])->name('update');
+        Route::patch('/{station}/toggle', [KitchenStationController::class, 'toggleStatus'])->name('toggle');
+    });
+});
+
+/*-------------------------------------------------------------------------
+| Enhanced Menu Management Routes
+|------------------------------------------------------------------------*/
+Route::prefix('admin/menus')->name('admin.menus.')->group(function () {
+    // ...existing routes...
+
+    // Menu validation and assignment
+    Route::get('/validate', [MenuController::class, 'validatePage'])->name('validate');
+    Route::post('/assign-item', [MenuController::class, 'assignSingleItem'])->name('assign-item');
+    Route::post('/assign-multiple', [MenuController::class, 'assignMultipleItems'])->name('assign-multiple');
+});
+
+/*-------------------------------------------------------------------------
+| Enhanced Inventory Routes with Menu Item Integration
+|------------------------------------------------------------------------*/
+Route::prefix('admin/inventory')->name('admin.inventory.')->group(function () {
+    // ...existing routes...
+
+    // Menu items specific routes
+    Route::get('/menu-items', [InventoryController::class, 'menuItems'])->name('menu-items');
+    Route::get('/alerts', [InventoryController::class, 'stockAlerts'])->name('alerts');
+});
