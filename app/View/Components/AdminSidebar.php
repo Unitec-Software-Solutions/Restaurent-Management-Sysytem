@@ -383,8 +383,8 @@ class AdminSidebar extends Component
             'title' => 'Dashboard',
             'route' => 'admin.dashboard',
             'route_params' => [],
-            'icon' => 'layout-dashboard',
-            'icon_type' => 'svg',
+            'icon' => 'fas fa-tachometer-alt',
+            'icon_type' => 'fa',
             'permission' => null,
             'badge' => $this->getDashboardNotificationCount(),
             'badge_color' => 'indigo',
@@ -398,8 +398,8 @@ class AdminSidebar extends Component
                 'title' => 'Organizations',
                 'route' => 'admin.organizations.index',
                 'route_params' => [],
-                'icon' => 'building-office',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-building',
+                'icon_type' => 'fa',
                 'permission' => null, // Super admin doesn't need permission checks
                 'badge' => $this->getPendingOrganizationsCount(),
                 'badge_color' => 'blue',
@@ -408,24 +408,24 @@ class AdminSidebar extends Component
                     [
                         'title' => 'All Organizations',
                         'route' => 'admin.organizations.index',
-                        'icon' => 'list',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-list',
+                        'icon_type' => 'fa',
                         'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.index')
                     ],
                     [
                         'title' => 'Add Organization',
                         'route' => 'admin.organizations.create',
-                        'icon' => 'plus',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-plus',
+                        'icon_type' => 'fa',
                         'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.create')
                     ],
                     [
                         'title' => 'Activate Organization',
                         'route' => 'admin.organizations.activate.form',
-                        'icon' => 'key',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-key',
+                        'icon_type' => 'fa',
                         'permission' => null,
                         'is_route_valid' => $this->validateRoute('admin.organizations.activate.form')
                     ]
@@ -439,8 +439,8 @@ class AdminSidebar extends Component
                 'title' => 'Organization Management',
                 'route' => 'admin.organization.show',
                 'route_params' => ['organization' => $admin->organization_id],
-                'icon' => 'building-office-2',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-building',
+                'icon_type' => 'fa',
                 'permission' => 'organizations.view',
                 'badge' => 0,
                 'badge_color' => 'blue',
@@ -450,8 +450,8 @@ class AdminSidebar extends Component
                         'title' => 'Organization Details',
                         'route' => 'admin.organization.show',
                         'route_params' => ['organization' => $admin->organization_id],
-                        'icon' => 'eye',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-eye',
+                        'icon_type' => 'fa',
                         'permission' => 'organization.view',
                         'is_route_valid' => $this->validateRoute('admin.organization.show', ['organization' => $admin->organization_id])
                     ],
@@ -459,8 +459,8 @@ class AdminSidebar extends Component
                         'title' => 'Edit Organization',
                         'route' => 'admin.organization.edit',
                         'route_params' => ['organization' => $admin->organization_id],
-                        'icon' => 'pencil',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-pencil-alt',
+                        'icon_type' => 'fa',
                         'permission' => 'organization.edit',
                         'is_route_valid' => $this->validateRoute('admin.organization.edit', ['organization' => $admin->organization_id])
                     ],
@@ -468,8 +468,8 @@ class AdminSidebar extends Component
                         'title' => 'Organization Settings',
                         'route' => 'admin.organization.settings',
                         'route_params' => ['organization' => $admin->organization_id],
-                        'icon' => 'cog',
-                        'icon_type' => 'svg',
+                        'icon' => 'fas fa-cog',
+                        'icon_type' => 'fa',
                         'permission' => 'organization.settings',
                         'is_route_valid' => $this->validateRoute('admin.organization.settings', ['organization' => $admin->organization_id])
                     ]
@@ -486,8 +486,8 @@ class AdminSidebar extends Component
                 'title' => 'Branches',
                 'route' => $branchRoute,
                 'route_params' => $branchParams,
-                'icon' => 'store',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-store',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'branches.view',
                 'badge' => $this->getActiveBranchesCount(),
                 'badge_color' => 'green',
@@ -501,8 +501,8 @@ class AdminSidebar extends Component
             'title' => 'Orders',
             'route' => 'admin.orders.index',
             'route_params' => [],
-            'icon' => 'shopping-cart',
-            'icon_type' => 'svg',
+            'icon' => 'fas fa-shopping-cart',
+            'icon_type' => 'fa',
             'permission' => $this->isSuperAdmin($admin) ? null : 'orders.view',
             'badge' => $this->getPendingOrdersCount(),
             'badge_color' => 'red',
@@ -516,8 +516,8 @@ class AdminSidebar extends Component
                 'title' => 'Menus',
                 'route' => 'admin.menus.index',
                 'route_params' => [],
-                'icon' => 'book-open',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-book-open',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.view',
                 'badge' => $this->getActiveMenusCount(),
                 'badge_color' => 'yellow',
@@ -532,8 +532,8 @@ class AdminSidebar extends Component
                 'title' => 'Modules',
                 'route' => 'admin.modules.index',
                 'route_params' => [],
-                'icon' => 'puzzle-piece',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-puzzle-piece',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'modules.view',
                 'badge' => $this->getActiveModulesCount(),
                 'badge_color' => 'indigo',
@@ -548,8 +548,8 @@ class AdminSidebar extends Component
                 'title' => 'Subscription Plans',
                 'route' => 'admin.subscription-plans.index',
                 'route_params' => [],
-                'icon' => 'credit-card',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-credit-card',
+                'icon_type' => 'fa',
                 'permission' => null, // Super admin doesn't need permission checks
                 'badge' => $this->getActiveSubscriptionsCount(),
                 'badge_color' => 'green',
@@ -564,8 +564,8 @@ class AdminSidebar extends Component
                 'title' => 'Subscription',
                 'route' => 'admin.subscription.current',
                 'route_params' => [],
-                'icon' => 'document-text',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-file-alt',
+                'icon_type' => 'fa',
                 'permission' => 'subscription.view',
                 'badge' => 0,
                 'badge_color' => 'yellow',
@@ -580,8 +580,8 @@ class AdminSidebar extends Component
                 'title' => 'Roles & Permissions',
                 'route' => 'admin.roles.index',
                 'route_params' => [],
-                'icon' => 'shield-check',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-shield-alt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'roles.view',
                 'badge' => $this->getActiveRolesCount(),
                 'badge_color' => 'emerald',
@@ -596,8 +596,8 @@ class AdminSidebar extends Component
                 'title' => 'Inventory',
                 'route' => 'admin.inventory.index',
                 'route_params' => [],
-                'icon' => 'package',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-box',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'inventory.view',
                 'badge' => $this->getLowStockItemsCount(),
                 'badge_color' => 'orange',
@@ -612,8 +612,8 @@ class AdminSidebar extends Component
                 'title' => 'Production',
                 'route' => 'admin.production.index',
                 'route_params' => [],
-                'icon' => 'cog',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-cogs',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'production.view',
                 'badge' => $this->getPendingProductionRequestsCount(),
                 'badge_color' => 'blue',
@@ -628,8 +628,8 @@ class AdminSidebar extends Component
                 'title' => 'Suppliers',
                 'route' => 'admin.suppliers.index',
                 'route_params' => [],
-                'icon' => 'truck',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-truck',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'suppliers.view',
                 'badge' => 0,
                 'badge_color' => 'blue',
@@ -644,8 +644,8 @@ class AdminSidebar extends Component
                 'title' => 'Reservations',
                 'route' => 'admin.reservations.index',
                 'route_params' => [],
-                'icon' => 'calendar',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-calendar-alt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reservations.view',
                 'badge' => $this->getTodayReservationsCount(),
                 'badge_color' => 'purple',
@@ -660,8 +660,8 @@ class AdminSidebar extends Component
                 'title' => 'User Management',
                 'route' => 'admin.users.index',
                 'route_params' => [],
-                'icon' => 'users',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-users',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'users.view',
                 'badge' => $this->getActiveStaffCount(),
                 'badge_color' => 'cyan',
@@ -676,8 +676,8 @@ class AdminSidebar extends Component
                 'title' => 'Reports',
                 'route' => 'admin.reports.index',
                 'route_params' => [],
-                'icon' => 'chart-bar',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-chart-bar',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
                 'badge' => 0,
                 'badge_color' => 'gray',
@@ -692,8 +692,8 @@ class AdminSidebar extends Component
                 'title' => 'Kitchen',
                 'route' => 'admin.kitchen.index',
                 'route_params' => [],
-                'icon' => 'chef-hat',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-hat-chef',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'kitchen.view',
                 'badge' => $this->getActiveKOTsCount(),
                 'badge_color' => 'red',
@@ -708,8 +708,8 @@ class AdminSidebar extends Component
                 'title' => 'Settings',
                 'route' => 'admin.settings.index',
                 'route_params' => [],
-                'icon' => 'cog',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-cog',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'settings.view',
                 'badge' => 0,
                 'badge_color' => 'gray',
@@ -854,8 +854,8 @@ class AdminSidebar extends Component
                 'title' => 'All Branches',
                 'route' => $listRoute,
                 'route_params' => $listParams,
-                'icon' => 'list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-list',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'branches.view',
                 'is_route_valid' => $this->validateRoute($listRoute, $listParams)
             ];
@@ -874,8 +874,8 @@ class AdminSidebar extends Component
                     'title' => 'Add Branch',
                     'route' => $createRoute,
                     'route_params' => $createParams,
-                    'icon' => 'plus',
-                    'icon_type' => 'svg',
+                    'icon' => 'fas fa-plus',
+                    'icon_type' => 'fa',
                     'permission' => $this->isSuperAdmin($admin) ? null : 'branches.create',
                     'is_route_valid' => $this->validateRoute($createRoute, $createParams)
                 ];
@@ -887,8 +887,8 @@ class AdminSidebar extends Component
                 'title' => 'Activate Branch',
                 'route' => 'admin.branches.activate.form',
                 'route_params' => [],
-                'icon' => 'key',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-key',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'branches.activate',
                 'is_route_valid' => $this->validateRoute('admin.branches.activate.form')
             ];
@@ -907,16 +907,16 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Orders',
                 'route' => 'admin.orders.index',
-                'icon' => 'list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-list',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'orders.view',
                 'is_route_valid' => $this->validateRoute('admin.orders.index')
             ],
             [
                 'title' => 'Create Order',
                 'route' => 'admin.orders.create',
-                'icon' => 'plus-circle',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-plus-circle',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'orders.create',
                 'is_route_valid' => $this->validateRoute('admin.orders.create')
             ],
@@ -924,8 +924,8 @@ class AdminSidebar extends Component
                 'title' => 'Dine-In Orders',
                 'route' => 'admin.orders.index',
                 'route_params' => ['type' => 'in_house'],
-                'icon' => 'utensils',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-utensils',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'orders.view',
                 'is_route_valid' => $this->validateRoute('admin.orders.index')
             ],
@@ -933,8 +933,8 @@ class AdminSidebar extends Component
                 'title' => 'Takeaway Orders',
                 'route' => 'admin.orders.index',
                 'route_params' => ['type' => 'takeaway'],
-                'icon' => 'shopping-bag',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-shopping-bag',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'orders.view',
                 'is_route_valid' => $this->validateRoute('admin.orders.index')
             ]
@@ -951,48 +951,48 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Menus',
                 'route' => 'admin.menus.index',
-                'icon' => 'list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-list',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.menus.index')
             ],
             [
                 'title' => 'Create Menu',
                 'route' => 'admin.menus.create',
-                'icon' => 'plus',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-plus',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
                 'is_route_valid' => $this->validateRoute('admin.menus.create')
             ],
             [
                 'title' => 'Menu Items',
                 'route' => 'admin.menu-items.index',
-                'icon' => 'utensils',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-utensils',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.menu-items.index')
             ],
             [
                 'title' => 'Add Menu Item',
                 'route' => 'admin.menu-items.create',
-                'icon' => 'plus-circle',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-plus-circle',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
                 'is_route_valid' => $this->validateRoute('admin.menu-items.create')
             ],
             [
                 'title' => 'Create KOT Items',
                 'route' => 'admin.menu-items.create-kot',
-                'icon' => 'fire',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-fire',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
                 'is_route_valid' => $this->validateRoute('admin.menu-items.create-kot')
             ],
             [
                 'title' => 'Menu Categories',
                 'route' => 'admin.menu-categories.index',
-                'icon' => 'tag',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-tag',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.menu-categories.index')
             ]
@@ -1009,32 +1009,32 @@ class AdminSidebar extends Component
             [
                 'title' => 'Stock Levels',
                 'route' => 'admin.inventory.index',
-                'icon' => 'box',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-box',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.inventory.index')
             ],
             [
                 'title' => 'Items Management',
                 'route' => 'admin.inventory.items.index',
-                'icon' => 'package',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-cube',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.inventory.items.index')
             ],
             [
                 'title' => 'Suppliers',
                 'route' => 'admin.suppliers.index',
-                'icon' => 'truck',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-truck',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'suppliers.view',
                 'is_route_valid' => $this->validateRoute('admin.suppliers.index')
             ],
             [
                 'title' => 'Purchase Orders (GRN)',
                 'route' => 'admin.grn.index',
-                'icon' => 'receipt',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-receipt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'inventory.view',
                 'is_route_valid' => $this->validateRoute('admin.grn.index')
             ]
@@ -1051,40 +1051,40 @@ class AdminSidebar extends Component
             [
                 'title' => 'Production Dashboard',
                 'route' => 'admin.production.index',
-                'icon' => 'dashboard',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-tachometer-alt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.index')
             ],
             [
                 'title' => 'Production Requests',
                 'route' => 'admin.production.requests.index',
-                'icon' => 'clipboard-list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-clipboard-list',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.requests.index')
             ],
             [
                 'title' => 'Production Orders',
                 'route' => 'admin.production.orders.index',
-                'icon' => 'cog',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-cog',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.orders.index')
             ],
             [
                 'title' => 'Production Sessions',
                 'route' => 'admin.production.sessions.index',
-                'icon' => 'play',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-play',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.sessions.index')
             ],
             [
                 'title' => 'Production Recipes',
                 'route' => 'admin.production.recipes.index',
-                'icon' => 'book',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-book',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'production.view',
                 'is_route_valid' => $this->validateRoute('admin.production.recipes.index')
             ]
@@ -1101,16 +1101,16 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Suppliers',
                 'route' => 'admin.suppliers.index',
-                'icon' => 'list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-list',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'suppliers.view',
                 'is_route_valid' => $this->validateRoute('admin.suppliers.index')
             ],
             [
                 'title' => 'Add Supplier',
                 'route' => 'admin.suppliers.create',
-                'icon' => 'plus',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-plus',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'suppliers.create',
                 'is_route_valid' => $this->validateRoute('admin.suppliers.create')
             ]
@@ -1127,16 +1127,16 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Reservations',
                 'route' => 'admin.reservations.index',
-                'icon' => 'list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-list',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reservations.view',
                 'is_route_valid' => $this->validateRoute('admin.reservations.index')
             ],
             [
                 'title' => 'Today\'s Reservations',
                 'route' => 'admin.reservations.today',
-                'icon' => 'calendar-day',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-calendar-day',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reservations.view',
                 'is_route_valid' => $this->validateRoute('admin.reservations.today')
             ]
@@ -1153,24 +1153,24 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Staff',
                 'route' => 'admin.users.index',
-                'icon' => 'users',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-users',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'users.view',
                 'is_route_valid' => $this->validateRoute('admin.users.index')
             ],
             [
                 'title' => 'Add Staff',
                 'route' => 'admin.users.create',
-                'icon' => 'user-plus',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-user-plus',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'users.create',
                 'is_route_valid' => $this->validateRoute('admin.users.create')
             ],
             [
                 'title' => 'Roles & Permissions',
                 'route' => 'admin.roles.index',
-                'icon' => 'shield',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-shield-alt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'roles.view',
                 'is_route_valid' => $this->validateRoute('admin.roles.index')
             ]
@@ -1187,16 +1187,16 @@ class AdminSidebar extends Component
             [
                 'title' => 'Active KOTs',
                 'route' => 'admin.kitchen.kots',
-                'icon' => 'receipt',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-receipt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'kitchen.view',
                 'is_route_valid' => $this->validateRoute('admin.kitchen.kots')
             ],
             [
                 'title' => 'Kitchen Stations',
                 'route' => 'admin.kitchen.stations',
-                'icon' => 'grid',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-th',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'kitchen.manage',
                 'is_route_valid' => $this->validateRoute('admin.kitchen.stations')
             ]
@@ -1213,16 +1213,16 @@ class AdminSidebar extends Component
             [
                 'title' => 'Sales Reports',
                 'route' => 'admin.reports.sales',
-                'icon' => 'trending-up',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-chart-line',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
                 'is_route_valid' => $this->validateRoute('admin.reports.sales')
             ],
             [
                 'title' => 'Inventory Reports',
                 'route' => 'admin.reports.inventory',
-                'icon' => 'package',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-box',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
                 'is_route_valid' => $this->validateRoute('admin.reports.inventory')
             ]
@@ -1239,16 +1239,16 @@ class AdminSidebar extends Component
             [
                 'title' => 'General Settings',
                 'route' => 'admin.settings.general',
-                'icon' => 'cog',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-cog',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'settings.view',
                 'is_route_valid' => $this->validateRoute('admin.settings.general')
             ],
             [
                 'title' => 'Payment Settings',
                 'route' => 'admin.settings.payments',
-                'icon' => 'credit-card',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-credit-card',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'settings.payments',
                 'is_route_valid' => $this->validateRoute('admin.settings.payments')
             ]
@@ -1348,24 +1348,24 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Plans',
                 'route' => 'admin.subscription-plans.index',
-                'icon' => 'list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-list',
+                'icon_type' => 'fa',
                 'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.index')
             ],
             [
                 'title' => 'Create Plan',
                 'route' => 'admin.subscription-plans.create',
-                'icon' => 'plus',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-plus',
+                'icon_type' => 'fa',
                 'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.create')
             ],
             [
                 'title' => 'Plan Analytics',
                 'route' => 'admin.subscription-plans.analytics',
-                'icon' => 'chart-bar',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-chart-bar',
+                'icon_type' => 'fa',
                 'permission' => null,
                 'is_route_valid' => $this->validateRoute('admin.subscription-plans.analytics')
             ]
@@ -1382,32 +1382,32 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Modules',
                 'route' => 'admin.modules.index',
-                'icon' => 'list',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-list',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'modules.view',
                 'is_route_valid' => $this->validateRoute('admin.modules.index')
             ],
             [
                 'title' => 'Add Module',
                 'route' => 'admin.modules.create',
-                'icon' => 'plus',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-plus',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'modules.create',
                 'is_route_valid' => $this->validateRoute('admin.modules.create')
             ],
             [
                 'title' => 'Module Configuration',
                 'route' => 'admin.modules.config',
-                'icon' => 'cog',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-cog',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'modules.configure',
                 'is_route_valid' => $this->validateRoute('admin.modules.config')
             ],
             [
                 'title' => 'Module Usage Stats',
                 'route' => 'admin.modules.stats',
-                'icon' => 'chart-bar',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-chart-bar',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'modules.analytics',
                 'is_route_valid' => $this->validateRoute('admin.modules.stats')
             ]
@@ -1424,32 +1424,32 @@ class AdminSidebar extends Component
             [
                 'title' => 'All Roles',
                 'route' => 'admin.roles.index',
-                'icon' => 'users',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-users',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'roles.view',
                 'is_route_valid' => $this->validateRoute('admin.roles.index')
             ],
             [
                 'title' => 'Create Role',
                 'route' => 'admin.roles.create',
-                'icon' => 'plus',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-plus',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'roles.create',
                 'is_route_valid' => $this->validateRoute('admin.roles.create')
             ],
             [
                 'title' => 'Permissions',
                 'route' => 'admin.permissions.index',
-                'icon' => 'shield-check',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-shield-alt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'permissions.view',
                 'is_route_valid' => $this->validateRoute('admin.permissions.index')
             ],
             [
                 'title' => 'Role Templates',
                 'route' => 'admin.roles.templates',
-                'icon' => 'document-duplicate',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-file-alt',
+                'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'roles.templates',
                 'is_route_valid' => $this->validateRoute('admin.roles.templates')
             ]
@@ -1465,16 +1465,16 @@ class AdminSidebar extends Component
             [
                 'title' => 'Current Subscription',
                 'route' => 'admin.subscription.current',
-                'icon' => 'eye',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-eye',
+                'icon_type' => 'fa',
                 'permission' => 'subscription.view',
                 'is_route_valid' => $this->validateRoute('admin.subscription.current')
             ],
             [
                 'title' => 'Billing History',
                 'route' => 'admin.subscription.billing',
-                'icon' => 'receipt',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-receipt',
+                'icon_type' => 'fa',
                 'permission' => 'subscription.billing',
                 'is_route_valid' => $this->validateRoute('admin.subscription.billing')
             ]
@@ -1485,8 +1485,8 @@ class AdminSidebar extends Component
             $items[] = [
                 'title' => 'Upgrade Plan',
                 'route' => 'admin.subscription.upgrade',
-                'icon' => 'arrow-up',
-                'icon_type' => 'svg',
+                'icon' => 'fas fa-arrow-up',
+                'icon_type' => 'fa',
                 'permission' => 'subscription.upgrade',
                 'is_route_valid' => $this->validateRoute('admin.subscription.upgrade')
             ];
