@@ -20,7 +20,7 @@ class AdminReservationController extends Controller
     public function index(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         // Get filter parameters
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -37,8 +37,8 @@ class AdminReservationController extends Controller
 
         // Base query with user permissions
         $query = \App\Models\Reservation::with(['branch', 'organization', 'steward', 'tables']);
-        
-        if ($admin->is_super_admin) { 
+
+        if ($admin->is_super_admin) {
             // Super admin can see all reservations
         } elseif ($admin->branch_id) {
             $query->where('branch_id', $admin->branch_id);
@@ -133,7 +133,7 @@ class AdminReservationController extends Controller
         // Handle payment refund if payment exists
         if ($reservation->payments()->exists()) {
             $payment = $reservation->payments()->latest()->first();
-            
+
             // Create refund payment record
             Payment::create([
                 'reservation_id' => $reservation->id,
@@ -158,20 +158,20 @@ class AdminReservationController extends Controller
     public function edit(Reservation $reservation)
     {
         $admin = auth('admin')->user();
-        
+
         // Load admin's branch relationship if not already loaded
         if (!$admin->relationLoaded('branch')) {
             $admin->load('branch');
         }
-        
+
         // Validate admin has a branch assigned
         if (!$admin->branch_id || !$admin->branch) {
             return redirect()->route('admin.reservations.index')
                 ->with('error', 'You must be assigned to a branch to edit reservations.');
         }
-        
+
         // Load reservation relationships
-        $reservation->load(['branch', 'tables', 'steward']); 
+        $reservation->load(['branch', 'tables', 'steward']);
 
         // Use null-safe operator for branch access
         $branchId = $admin->branch?->id;
@@ -323,18 +323,18 @@ public function update(Request $request, Reservation $reservation)
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         // Load branch relationship if not already loaded
         if (!$admin->relationLoaded('branch')) {
             $admin->load('branch');
         }
-        
+
         // Validate admin has a branch assigned
         if (!$admin->branch_id || !$admin->branch) {
             return redirect()->route('admin.reservations.index')
                 ->with('error', 'You must be assigned to a branch to create reservations.');
         }
-        
+
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'phone' => 'required|string|min:10|max:15',
@@ -350,11 +350,11 @@ public function update(Request $request, Reservation $reservation)
 
         // Use null-safe operator for branch access
         $branch = $admin->branch;
-        
+
         // Validate branch operating hours with null-safe operators
         $branchOpenTime = $branch?->opening_time ? \Carbon\Carbon::parse($branch->opening_time)->format('H:i') : '00:00';
         $branchCloseTime = $branch?->closing_time ? \Carbon\Carbon::parse($branch->closing_time)->format('H:i') : '23:59';
-        
+
         if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
             return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')'])->withInput();
         }
@@ -367,7 +367,7 @@ public function update(Request $request, Reservation $reservation)
         }
         // Check capacity with null-safe operations
         $totalCapacity = $branch?->total_capacity ?? 0;
-        
+
         if ($totalCapacity > 0) {
             $reservedCapacity = $branch->reservations()
                 ->where('date', $validated['date'])
@@ -381,7 +381,7 @@ public function update(Request $request, Reservation $reservation)
                 })
                 ->where('reservations.status', '!=', 'cancelled')
                 ->sum('number_of_people');
-            
+
             $availableCapacity = $totalCapacity - $reservedCapacity;
             if ($availableCapacity < $validated['number_of_people']) {
                 return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
@@ -415,7 +415,7 @@ public function update(Request $request, Reservation $reservation)
         $reservationFee = $branch?->reservation_fee ?? 0;
         $cancellationFee = $branch?->cancellation_fee ?? 0;
         $branchId = $branch?->id;
-        
+
         if (!$branchId) {
             return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
         }
@@ -449,30 +449,30 @@ public function update(Request $request, Reservation $reservation)
     public function create()
     {
         $admin = auth('admin')->user();
-        
+
         // Load branch relationship if not already loaded
         if (!$admin->relationLoaded('branch')) {
             $admin->load('branch');
         }
-        
+
         // Validate admin has a branch assigned
         if (!$admin->branch_id || !$admin->branch) {
             return redirect()->route('admin.dashboard')
                 ->with('error', 'You must be assigned to a branch to create reservations.');
         }
-        
+
         $branch = $admin->branch;
-        
+
         // Use null-safe operators to prevent errors
         $branchId = $branch?->id;
         if (!$branchId) {
             return redirect()->route('admin.dashboard')
                 ->with('error', 'Invalid branch assignment. Please contact administrator.');
         }
-        
+
         // Get tables for the branch with null-safe operations
         $tables = Table::where('branch_id', $branchId)->get();
-        
+
         $availableTableIds = $tables->pluck('id')->toArray();
         $defaultPhone = $branch?->phone ?? '';
         $defaultDate = now()->toDateString();
@@ -609,15 +609,15 @@ public function checkTableAvailability(Request $request)
     ]);
 
     $admin = auth('admin')->user();
-    
+
     // Load branch relationship if not already loaded
     if (!$admin->relationLoaded('branch')) {
         $admin->load('branch');
     }
-    
+
     // Validate admin has a branch assigned with null-safe operator
     $branchId = $admin->branch?->id;
-    
+
     if (!$branchId) {
         return response()->json([
             'error' => 'No branch assigned to admin',
@@ -666,7 +666,7 @@ public function createOrder(Reservation $reservation)
     {
         if ($format === 'csv') {
             $filename = 'reservations_' . now()->format('Y-m-d_H-i-s') . '.csv';
-            
+
             $headers = [
                 'Content-Type' => 'text/csv',
                 'Content-Disposition' => "attachment; filename=\"{$filename}\"",
@@ -674,7 +674,7 @@ public function createOrder(Reservation $reservation)
 
             $callback = function() use ($reservations) {
                 $file = fopen('php://output', 'w');
-                
+
                 // CSV Headers
                 fputcsv($file, [
                     'ID', 'Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time',

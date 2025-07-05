@@ -24,13 +24,13 @@ return new class extends Migration
                     $table->time('opening_time')->default('09:00:00')->nullable();
                     Log::info('Added opening_time column to branches table');
                 }
-                
+
                 // Add closing_time column if it doesn't exist
                 if (!in_array('closing_time', $existingColumns)) {
                     $table->time('closing_time')->default('22:00:00')->nullable();
                     Log::info('Added closing_time column to branches table');
                 }
-                
+
                 // Add max_capacity column if it doesn't exist
                 if (!in_array('max_capacity', $existingColumns)) {
                     $table->integer('max_capacity')->default(50)->nullable();
@@ -125,7 +125,7 @@ return new class extends Migration
 
             // Update existing branches with default values
             $this->updateExistingBranches();
-            
+
             Log::info('Successfully updated branches table structure for Laravel + PostgreSQL + Tailwind CSS');
 
         } catch (\Exception $e) {
@@ -215,10 +215,10 @@ return new class extends Migration
         try {
             Schema::table('branches', function (Blueprint $table) {
                 $existingColumns = Schema::getColumnListing('branches');
-                
+
                 $columnsToRemove = [
-                    'opening_time', 'closing_time', 'max_capacity', 'status', 
-                    'type', 'is_head_office', 'slug', 'contact_person', 
+                    'opening_time', 'closing_time', 'max_capacity', 'status',
+                    'type', 'is_head_office', 'slug', 'contact_person',
                     'contact_person_designation', 'contact_person_phone',
                     'features', 'settings', 'opened_at', 'activated_at',
                     'manager_name', 'manager_phone', 'operating_hours', 'code'

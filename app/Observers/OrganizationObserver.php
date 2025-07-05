@@ -25,18 +25,18 @@ class OrganizationObserver
             try {
                 // Create head office branch
                 $this->createHeadOfficeBranch($organization);
-                
+
                 Log::info('Head office branch created successfully', [
                     'organization_id' => $organization->id
                 ]);
-                
+
             } catch (\Exception $e) {
                 Log::error('Failed to create head office branch', [
                     'organization_id' => $organization->id,
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString()
                 ]);
-                
+
                 throw $e; // Re-throw to rollback transaction
             }
         });
@@ -53,8 +53,8 @@ class OrganizationObserver
             'address' => $organization->address,
             'phone' => $organization->phone,
             'email' => $organization->email,
-            'opening_time' => '08:00:00',
-            'closing_time' => '22:00:00',
+            'opening_time' => '09:00:00', // Set default opening time if not provided
+            'closing_time' => '22:00:00', // Ensure closing_time is set
             'total_capacity' => 100,
             'max_capacity' => 50,
             'reservation_fee' => 0,
@@ -111,31 +111,31 @@ class OrganizationObserver
     {
         try {
             $defaultStations = $branch->getDefaultKitchenStations();
-            
+
             foreach ($defaultStations as $stationData) {
                 $station = KitchenStation::create(array_merge($stationData, [
                     'branch_id' => $branch->id
                 ]));
-                
+
                 Log::info('Kitchen station created', [
                     'station_id' => $station->id,
                     'station_name' => $station->name,
                     'branch_id' => $branch->id
                 ]);
             }
-            
+
             Log::info('All kitchen stations created successfully', [
                 'branch_id' => $branch->id,
                 'stations_count' => count($defaultStations)
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to create kitchen stations', [
                 'branch_id' => $branch->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             throw $e;
         }
     }
