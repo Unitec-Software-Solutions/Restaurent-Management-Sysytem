@@ -31,7 +31,13 @@ class BranchObserver
     {
         Log::info("BranchObserver::created triggered for branch: {$branch->name}, ID: {$branch->id}, is_head_office: " . ($branch->is_head_office ? 'true' : 'false'));
         
-        // Use the automation service to handle branch setup
+        // Skip automation for head office branches - they are handled by OrganizationAutomationService
+        if ($branch->is_head_office) {
+            Log::info("Skipping BranchObserver automation for head office branch: {$branch->name}");
+            return;
+        }
+        
+        // Use the automation service to handle non-head office branch setup
         $this->branchAutomationService->setupNewBranch($branch);
     }
 
