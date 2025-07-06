@@ -74,10 +74,27 @@
                     <span class="font-medium">{{ $organization->activated_at->format('M d, Y H:i') }}</span>
                 </div>
                 @endif
+                @if(auth('admin')->user()->isSuperAdmin())
                 <div>
                     <span class="text-gray-500">Activation Key:</span>
-                    <span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{{ $organization->activation_key }}</span>
+                    <button type="button" id="showKeyBtn" onclick="showActivationKey()" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 ml-2">
+                        Show Key
+                    </button>
+                    <span id="activationKeyDisplay" class="font-mono text-xs bg-gray-100 px-2 py-1 rounded hidden">{{ $organization->activation_key }}</span>
+                    
+                    {{-- Add regenerate key button --}}
+                    <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline ml-2">
+                        @csrf
+                        @method('PUT')
+                        <button type="submit" 
+                                onclick="return confirm('Are you sure you want to regenerate the activation key? This will invalidate the current key and require organizations to use the new key for activation.')"
+                                class="text-xs bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
+                                title="Regenerate Key">
+                            <i class="fas fa-sync-alt mr-1"></i>Regenerate
+                        </button>
+                    </form>
                 </div>
+                @endif
             </div>
         </div>
 
@@ -121,20 +138,28 @@
                     </label>
                     <div class="relative">
                         <input 
-                            type="text" 
+                            type="password" 
+                            id="activationKeyInput"
                             name="activation_key"
-                            value="{{ $organization->activation_key }}"
+                            value=""
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                            placeholder="Enter activation key or use the pre-filled one"
+                            placeholder="Enter activation key"
                             required
                         >
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                            <i class="fas fa-key text-gray-400"></i>
+                            <button type="button" onclick="toggleActivationKeyVisibility()" class="text-gray-400 hover:text-gray-600">
+                                <i id="keyVisibilityIcon" class="fas fa-eye"></i>
+                            </button>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">
-                        The activation key is pre-filled. You can modify it or use the existing one.
-                    </p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <p class="text-xs text-gray-500">
+                            Enter the organization's activation key to activate it.
+                        </p>
+                        <button type="button" onclick="prefillActivationKey()" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                            Use Current Key
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="flex gap-3">
@@ -151,4 +176,49 @@
         @endif
     </div>
 </div>
+
+<script>
+function showActivationKey() {
+    const keyDisplay = document.getElementById('activationKeyDisplay');
+    const showBtn = document.getElementById('showKeyBtn');
+    
+    keyDisplay.classList.remove('hidden');
+    showBtn.textContent = 'Hide Key';
+    showBtn.onclick = hideActivationKey;
+}
+
+function hideActivationKey() {
+    const keyDisplay = document.getElementById('activationKeyDisplay');
+    const showBtn = document.getElementById('showKeyBtn');
+    
+    keyDisplay.classList.add('hidden');
+    showBtn.textContent = 'Show Key';
+    showBtn.onclick = showActivationKey;
+}
+
+function toggleActivationKeyVisibility() {
+    const input = document.getElementById('activationKeyInput');
+    const icon = document.getElementById('keyVisibilityIcon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function prefillActivationKey() {
+    const input = document.getElementById('activationKeyInput');
+    input.value = '{{ $organization->activation_key }}';
+    input.type = 'password';
+    
+    const icon = document.getElementById('keyVisibilityIcon');
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+}
+</script>
 @endsection

@@ -45,6 +45,8 @@ public function show(Organization $organization, Branch $branch)
 
 public function store(Request $request, Organization $organization)
 {
+    $this->authorize('create', [Branch::class, $organization]);
+    
     $isHeadOffice = $organization->branches()->count() === 0; // or use a flag
 
     $validated = $request->validate([
@@ -84,22 +86,42 @@ public function update(Request $request, Organization $organization, Branch $bra
 {
     $this->authorize('update', $branch);
 
+    $admin = auth('admin')->user();
     $isHeadOffice = $branch->id == optional($organization->branches->sortBy('id')->first())->id;
+    $isBranchAdmin = $admin->isBranchAdmin() && $admin->branch_id == $branch->id;
+    $isOrgAdmin = $admin->isOrganizationAdmin() && $admin->organization_id == $branch->organization_id;
+    
+    // Define validation rules based on user permissions
+    if ($admin->isSuperAdmin()) {
+        // Super admin can edit all fields
+        $validationRules = [
+            'name' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'opening_time' => 'required',
+            'closing_time' => 'required',
+            'total_capacity' => 'required|integer|min:1',
+            'reservation_fee' => 'required|numeric',
+            'cancellation_fee' => 'required|numeric',
+            'is_active' => 'required|boolean',
+            'contact_person' => 'nullable|string|max:255',
+            'contact_person_designation' => 'nullable|string|max:255',
+            'contact_person_phone' => 'nullable|string|max:20',
+        ];
+    } elseif ($isOrgAdmin || $isBranchAdmin) {
+        // Org admin and branch admin can edit contact details and address/phone
+        $validationRules = [
+            'address' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'contact_person' => 'nullable|string|max:255',
+            'contact_person_designation' => 'nullable|string|max:255',
+            'contact_person_phone' => 'nullable|string|max:20',
+        ];
+    } else {
+        abort(403, 'Unauthorized action.');
+    }
 
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'address' => 'required|string|max:255',
-        'phone' => 'required|string|max:20',
-        'opening_time' => 'required',
-        'closing_time' => 'required',
-        'total_capacity' => 'required|integer|min:1',
-        'reservation_fee' => 'required|numeric',
-        'cancellation_fee' => 'required|numeric',
-        'is_active' => 'required|boolean',
-        'contact_person' => 'nullable|string|max:255',
-        'contact_person_designation' => 'nullable|string|max:255',
-        'contact_person_phone' => 'nullable|string|max:20',
-    ]);
+    $validated = $request->validate($validationRules);
 
     // For head office, default contact person fields to organization if not set
     if ($isHeadOffice) {
@@ -118,12 +140,14 @@ public function update(Request $request, Organization $organization, Branch $bra
 
 public function deactivate(Branch $branch)
 {
-    Gate::authorize('deactivate', $branch);
+    $this->authorize('deactivate', $branch);
     $branch->update(['is_active' => false]);
     return response()->json(['message' => 'Branch deactivated']);
 }
 public function create(Organization $organization)
 {
+    $this->authorize('create', [Branch::class, $organization]);
+    
     $isHeadOffice = $organization->branches()->count() === 0; // or use a flag
     return view('admin.branches.create', compact('organization', 'isHeadOffice'));
 }
@@ -158,10 +182,18 @@ public function showActivationForm()
     $admin = auth('admin')->user();
 
     if ($admin->is_super_admin) {
+        // Super admin can see all branches
         $branches = Branch::with('organization')->get();
         return view('admin.branches.activate', compact('branches'));
+    } elseif ($admin->organization_id && !$admin->branch_id) {
+        // Organization admin can see their organization's branches
+        $branches = Branch::with('organization')
+            ->where('organization_id', $admin->organization_id)
+            ->get();
+        return view('admin.branches.activate', compact('branches'));
     } elseif ($admin->branch_id) {
-        $branch = \App\Models\Branch::with('organization')->find($admin->branch_id);
+        // Branch admin can see only their branch
+        $branch = Branch::with('organization')->find($admin->branch_id);
         return view('admin.branches.activate', compact('branch'));
     } else {
         abort(403, 'No branch access');
@@ -176,6 +208,9 @@ public function activateBranch(Request $request)
     ]);
 
     $branch = Branch::with('organization')->find($request->branch_id);
+    
+    // Use policy for authorization
+    $this->authorize('activate', $branch);
 
     // Only allow activation if organization is active
     if (!$branch->organization->is_active) {
@@ -229,7 +264,7 @@ public function summary(Branch $branch)
 
 public function regenerateKey(Branch $branch)
 {
-    $this->authorize('update', $branch);
+    $this->authorize('regenerateKey', $branch);
     $branch->activation_key = \Illuminate\Support\Str::random(40);
     $branch->save();
 

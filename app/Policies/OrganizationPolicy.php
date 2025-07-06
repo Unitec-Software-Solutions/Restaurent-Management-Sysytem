@@ -20,8 +20,22 @@ class OrganizationPolicy
 
     public function update(User|Admin $user, Organization $organization): bool
     {
-        return $user->is_super_admin || 
-               ($user->organization_id === $organization->id && $user->hasPermission('manage_organization'));
+        return $user->is_super_admin || ($user->organization_id === $organization->id && $user->hasPermission('manage_organization'));
+    }
+
+    public function activate(User|Admin $user, Organization $organization): bool
+    {
+        // Super admins can activate any organization
+        if ($user->is_super_admin) {
+            return true;
+        }
+        
+        // Organization admins can activate their own organization
+        if ($user->organization_id === $organization->id) {
+            return true;
+        }
+        
+        return false;
     }
 
     public function deactivate(User|Admin $user, Organization $organization): bool
@@ -38,5 +52,11 @@ class OrganizationPolicy
         }
         
         return false;
+    }
+
+    public function regenerateKey(User|Admin $user, Organization $organization): bool
+    {
+        // Only super admins can regenerate organization activation keys
+        return $user->is_super_admin;
     }
 }

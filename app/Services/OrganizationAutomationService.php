@@ -251,12 +251,16 @@ class OrganizationAutomationService
      */
     protected function assignSubscriptionPermissions(Organization $organization, Admin $admin): void
     {
-        // Define comprehensive organization admin permissions
+        // Define COMPREHENSIVE organization admin permissions (all admin functions)
         $orgAdminPermissions = [
             // Organization Management
             'organizations.view',
             'organizations.edit',
             'organizations.settings',
+            'organization.view',
+            'organization.manage',
+            'organization.update',
+            'organization.create',
             
             // Branch Management
             'branches.view',
@@ -264,6 +268,10 @@ class OrganizationAutomationService
             'branches.edit',
             'branches.delete',
             'branches.activate',
+            'branch.view',
+            'branch.create',
+            'branch.manage',
+            'branch.update',
             
             // User Management
             'users.view',
@@ -271,25 +279,158 @@ class OrganizationAutomationService
             'users.edit',
             'users.delete',
             'users.activate',
+            'user.view',
+            'user.create',
+            'user.manage',
+            'user.update',
+            'user.delete',
             
-            // Role Management
+            // Role & Permission Management
             'roles.view',
             'roles.create',
             'roles.edit',
             'roles.assign',
+            'role.view',
+            'role.create',
+            'role.manage',
+            'role.update',
+            'role.delete',
+            'permission.view',
+            'permission.manage',
             
-            // Subscription Management
+            // Subscription & Billing Management
             'subscription.view',
             'subscription.manage',
+            'billing.view',
+            'billing.manage',
+            'billing.create',
             
-            // Reports and Analytics
+            // Staff Management (Organization-wide)
+            'staff.view',
+            'staff.create',
+            'staff.edit',
+            'staff.delete',
+            'staff.manage',
+            'staff.schedule',
+            'staff.performance',
+            'staff.attendance',
+            'staff.update',
+            
+            // Reports and Analytics (All levels)
             'reports.view',
             'reports.export',
             'reports.analytics',
+            'reports.branch',
+            'report.view',
+            'report.generate',
+            'report.export',
+            'report.dashboard',
+            'report.sales',
+            'report.financial',
+            'report.inventory',
+            'report.staff',
+            
+            // Menu Management (Organization-wide)
+            'menus.view',
+            'menus.edit',
+            'menus.activate',
+            'menu.view',
+            'menu.create',
+            'menu.manage',
+            'menu.update',
+            'menu.delete',
+            'menu.categories',
+            'menu.pricing',
+            'menu.publish',
+            'menu.schedule',
+            
+            // Order Management (Organization-wide)
+            'orders.view',
+            'orders.create',
+            'orders.edit',
+            'orders.process',
+            'orders.cancel',
+            'order.view',
+            'order.create',
+            'order.manage',
+            'order.update',
+            'order.delete',
+            'order.process',
+            'order.cancel',
+            'order.refund',
+            'order.print_kot',
+            
+            // Kitchen Management (Organization-wide)
+            'kitchen.view',
+            'kitchen.manage',
+            'kitchen.stations',
+            'kitchen.orders',
+            'kitchen.production',
+            'kitchen.recipes',
+            'kitchen.status',
+            
+            // Inventory Management (Organization-wide)
+            'inventory.view',
+            'inventory.adjust',
+            'inventory.count',
+            'inventory.create',
+            'inventory.delete',
+            'inventory.manage',
+            'inventory.update',
+            'inventory.transfer',
+            'inventory.audit',
+            
+            // Reservation Management (Organization-wide)
+            'reservations.view',
+            'reservations.create',
+            'reservations.edit',
+            'reservations.cancel',
+            'reservation.view',
+            'reservation.create',
+            'reservation.manage',
+            'reservation.update',
+            'reservation.delete',
+            'reservation.approve',
+            'reservation.cancel',
+            'reservation.checkin',
+            
+            // Customer Management
+            'customer.view',
+            'customer.create',
+            'customer.manage',
+            'customer.update',
+            'customer.delete',
+            'customer.communications',
+            'customer.loyalty',
+            
+            // Payment Management
+            'payment.view',
+            'payment.manage',
+            'payment.process',
+            'payment.refund',
+            
+            // KOT Management
+            'kot.view',
+            'kot.create',
+            'kot.manage',
+            'kot.update',
+            'kot.print',
             
             // System Settings
             'settings.view',
-            'settings.edit'
+            'settings.edit',
+            'system.manage',
+            'system.settings',
+            'system.backup',
+            'system.logs',
+            
+            // Dashboard Access
+            'dashboard.view',
+            'dashboard.manage',
+            
+            // Profile Management
+            'profile.view',
+            'profile.update'
         ];
 
         // Create and assign permissions
@@ -310,7 +451,7 @@ class OrganizationAutomationService
             }
         }
 
-        Log::info('Organization admin permissions assigned', [
+        Log::info('Comprehensive organization admin permissions assigned', [
             'organization_id' => $organization->id,
             'admin_id' => $admin->id,
             'permissions_assigned' => count($orgAdminPermissions)
@@ -322,52 +463,148 @@ class OrganizationAutomationService
      */
     protected function assignBranchPermissions(Organization $organization, Admin $branchAdmin, Branch $branch): void
     {
-        // Define comprehensive branch admin permissions
+        // Define COMPREHENSIVE branch admin permissions (all branch-level admin functions)
         $branchAdminPermissions = [
             // Branch Operations
             'branches.view',
             'branches.edit',
+            'branch.view',
+            'branch.manage',
+            'branch.update',
             
-            // Staff Management
+            // Staff Management (Branch-specific)
             'staff.view',
             'staff.create',
             'staff.edit',
+            'staff.delete',
             'staff.schedule',
+            'staff.manage',
+            'staff.performance',
+            'staff.attendance',
+            'staff.update',
             
-            // Order Management
+            // Order Management (Branch-specific)
             'orders.view',
             'orders.create',
             'orders.edit',
             'orders.process',
             'orders.cancel',
+            'order.view',
+            'order.create',
+            'order.manage',
+            'order.update',
+            'order.delete',
+            'order.process',
+            'order.cancel',
+            'order.refund',
+            'order.print_kot',
             
-            // Kitchen Management
+            // Kitchen Management (Branch-specific)
             'kitchen.view',
             'kitchen.manage',
             'kitchen.stations',
+            'kitchen.orders',
+            'kitchen.production',
+            'kitchen.recipes',
+            'kitchen.status',
             
-            // Inventory Management
+            // Inventory Management (Branch-specific)
             'inventory.view',
             'inventory.adjust',
             'inventory.count',
+            'inventory.create',
+            'inventory.delete',
+            'inventory.manage',
+            'inventory.update',
+            'inventory.transfer',
+            'inventory.audit',
             
-            // Menu Management
+            // Menu Management (Branch-specific)
             'menus.view',
             'menus.edit',
             'menus.activate',
+            'menu.view',
+            'menu.create',
+            'menu.manage',
+            'menu.update',
+            'menu.delete',
+            'menu.categories',
+            'menu.pricing',
+            'menu.publish',
+            'menu.schedule',
             
-            // Reservation Management
+            // Reservation Management (Branch-specific)
             'reservations.view',
             'reservations.create',
             'reservations.edit',
             'reservations.cancel',
+            'reservation.view',
+            'reservation.create',
+            'reservation.manage',
+            'reservation.update',
+            'reservation.delete',
+            'reservation.approve',
+            'reservation.cancel',
+            'reservation.checkin',
             
-            // Reports
+            // Customer Management (Branch-specific)
+            'customer.view',
+            'customer.create',
+            'customer.manage',
+            'customer.update',
+            'customer.delete',
+            'customer.communications',
+            'customer.loyalty',
+            
+            // Payment Management (Branch-specific)
+            'payment.view',
+            'payment.manage',
+            'payment.process',
+            'payment.refund',
+            
+            // KOT Management (Branch-specific)
+            'kot.view',
+            'kot.create',
+            'kot.manage',
+            'kot.update',
+            'kot.print',
+            
+            // Reports (Branch-specific)
             'reports.view',
             'reports.branch',
+            'reports.export',
+            'report.view',
+            'report.generate',
+            'report.export',
+            'report.dashboard',
+            'report.sales',
+            'report.financial',
+            'report.inventory',
+            'report.staff',
             
-            // Basic Settings
-            'settings.view'
+            // User Management (Branch-level)
+            'users.view',
+            'users.create',
+            'users.edit',
+            'users.delete',
+            'users.activate',
+            'user.view',
+            'user.create',
+            'user.manage',
+            'user.update',
+            'user.delete',
+            
+            // Basic Settings (Branch-level)
+            'settings.view',
+            'settings.edit',
+            
+            // Dashboard Access
+            'dashboard.view',
+            'dashboard.manage',
+            
+            // Profile Management
+            'profile.view',
+            'profile.update'
         ];
 
         // Create and assign permissions
@@ -388,7 +625,7 @@ class OrganizationAutomationService
             }
         }
 
-        Log::info('Branch admin permissions assigned', [
+        Log::info('Comprehensive branch admin permissions assigned', [
             'organization_id' => $organization->id,
             'branch_id' => $branch->id,
             'admin_id' => $branchAdmin->id,

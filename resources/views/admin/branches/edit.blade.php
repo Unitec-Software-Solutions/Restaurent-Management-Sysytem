@@ -25,18 +25,22 @@
                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
             @enderror
         </div>
+        
+        {{-- Fields editable by super admin, org admin, and branch admin --}}
         <div>
             <label class="block mb-1 font-medium">Address</label>
-            <input type="text" name="address" value="{{ old('address', $branch->address) }}" placeholder="e.g. 123 Main St, City" class="w-full border rounded px-3 py-2"
-                {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || auth('admin')->user()->isBranchAdmin()) ? '' : 'readonly' }}>
+            <input type="text" name="address" value="{{ old('address', $branch->address) }}" placeholder="e.g. 123 Main St, City" 
+                class="w-full border rounded px-3 py-2"
+                {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id)) ? '' : 'readonly' }}>
             @error('address')
                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
             @enderror
         </div>
         <div>
             <label class="block mb-1 font-medium">Phone</label>
-            <input type="text" name="phone" value="{{ old('phone', $branch->phone) }}" placeholder="e.g. 0712345678" class="w-full border rounded px-3 py-2"
-                {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || auth('admin')->user()->isBranchAdmin()) ? '' : 'readonly' }}>
+            <input type="text" name="phone" value="{{ old('phone', $branch->phone) }}" placeholder="e.g. 0712345678" 
+                class="w-full border rounded px-3 py-2"
+                {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id)) ? '' : 'readonly' }}>
             @error('phone')
                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
             @enderror
@@ -49,7 +53,7 @@
                     value="{{ old('contact_person', $isHeadOffice ? $organization->contact_person : $branch->contact_person) }}"
                     placeholder="e.g. John Doe"
                     class="w-full border rounded px-3 py-2"
-                    {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || auth('admin')->user()->isBranchAdmin()) ? '' : 'readonly' }}>
+                    {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id)) ? '' : 'readonly' }}>
                 @error('contact_person')
                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                 @enderror
@@ -60,7 +64,7 @@
                     value="{{ old('contact_person_designation', $isHeadOffice ? $organization->contact_person_designation : $branch->contact_person_designation) }}"
                     placeholder="e.g. Manager"
                     class="w-full border rounded px-3 py-2"
-                    {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || auth('admin')->user()->isBranchAdmin()) ? '' : 'readonly' }}>
+                    {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id)) ? '' : 'readonly' }}>
                 @error('contact_person_designation')
                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                 @enderror
@@ -71,7 +75,7 @@
                     value="{{ old('contact_person_phone', $isHeadOffice ? $organization->contact_person_phone : $branch->contact_person_phone) }}"
                     placeholder="e.g. 0712345678"
                     class="w-full border rounded px-3 py-2"
-                    {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || auth('admin')->user()->isBranchAdmin()) ? '' : 'readonly' }}>
+                    {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id)) ? '' : 'readonly' }}>
                 @error('contact_person_phone')
                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                 @enderror
@@ -134,11 +138,12 @@
             @enderror
         </div>
         <div class="flex gap-3 pt-4">
-            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
-                {{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || auth('admin')->user()->isBranchAdmin()) ? '' : 'disabled' }}>
-                Update Branch
-            </button>
-            <a href="{{ route('admin.branches.index', ['organization' => $organization->id]) }}" class="text-gray-600 hover:underline">Cancel</a>
+            @if(auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id))
+                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">
+                    Update Branch
+                </button>
+            @endif
+            <a href="{{ route('admin.branches.index', ['organization' => $organization->id]) }}" class="text-gray-600 hover:underline">{{ (auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id)) ? 'Cancel' : 'Back' }}</a>
         </div>
     </form>
 </div>

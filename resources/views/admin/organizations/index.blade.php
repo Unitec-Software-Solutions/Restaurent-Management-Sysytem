@@ -48,7 +48,8 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex gap-2 flex-wrap">
-                                <a href="{{ route('admin.organizations.summary', $org) }}"
+                                <a href="{{ route('admin.organizations.show', $org) }}"
+
                                    class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded hover:bg-green-200 transition text-xs font-semibold">
                                     View
                                 </a>
@@ -56,7 +57,7 @@
                                    class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded hover:bg-blue-200 transition text-xs font-semibold">
                                     Edit
                                 </a>
-                                @if(auth('admin')->user()->isSuperAdmin())
+                                @if(auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->canManageOrganization($org))
                                     <a href="{{ route('admin.organizations.activate.form', $org) }}"
                                        class="inline-block {{ $org->is_active ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-purple-100 text-purple-800 hover:bg-purple-200' }} px-3 py-1 rounded transition text-xs font-semibold">
                                         {{ $org->is_active ? 'Manage' : 'Activate' }}

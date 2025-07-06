@@ -473,8 +473,12 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
     // Organization Dashboard
     Route::get('dashboard/organizations', [OrganizationController::class, 'dashboard'])->name('organizations.dashboard');
 
-    // Organizations CRUD
-    Route::resource('organizations', OrganizationController::class);
+    // Organization activation index - must come before resource routes to avoid conflicts
+    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
+
+    // Organizations CRUD (explicitly exclude show to avoid conflicts)
+    Route::resource('organizations', OrganizationController::class)->except(['show']);
+    Route::get('organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show')->where('organization', '[0-9]+');
     Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
     Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
     Route::get('organizations/{organization}/activate', [OrganizationController::class, 'showActivateForm'])->name('organizations.activate.form');
@@ -517,8 +521,6 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
 
 // Organization Activation Routes - Accessible by both Super Admin and Organization Admin
 Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Organization activation index - accessible to both super admins and organization admins
-    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
     Route::post('organizations/{organization}/activate-by-key', [OrganizationController::class, 'activateByKey'])->name('organizations.activate.by-key');
 });
 

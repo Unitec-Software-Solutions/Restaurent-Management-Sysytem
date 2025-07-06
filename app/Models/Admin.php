@@ -457,6 +457,25 @@ class Admin extends Authenticatable
     }
 
     /**
+     * Check if admin can manage a specific organization
+     * Super admins can manage all organizations
+     * Organization admins can manage their own organization
+     */
+    public function canManageOrganization($organization): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // Organization admins can manage their own organization
+        if ($this->organization_id && $this->organization_id == $organization->id) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Dashboard data methods following UI/UX metrics
      */
     public function getDashboardStats(): array

@@ -47,6 +47,46 @@
                                         class="{{ $baseClasses }} {{ $activeClasses }}"
                                         data-route="{{ $item['route'] }}"
                                         title="{{ $item['title'] }}">
+                                        
+                                        @if ($item['icon_type'] === 'svg')
+                                            @if(view()->exists('partials.icons.' . $item['icon']))
+                                                @include('partials.icons.' . $item['icon'])
+                                            @else
+                                                <i class="fas fa-circle w-5 text-center text-gray-400" title="Icon missing: {{ $item['icon'] }}"></i>
+                                            @endif
+                                        @else
+                                            <i class="fas fa-{{ $item['icon'] }} w-5 text-center"></i>
+                                        @endif
+                                        
+                                        <span class="font-medium">{{ $item['title'] }}</span>
+                                        
+                                        @if(isset($item['badge']) && $item['badge'] > 0 && $isPermitted)
+                                            @php
+                                                $badgeColor = $item['badge_color'] ?? 'red';
+                                                $badgeClass = match($badgeColor) {
+                                                    'red' => 'bg-red-500',
+                                                    'green' => 'bg-green-500',
+                                                    'blue' => 'bg-blue-500',
+                                                    'yellow' => 'bg-yellow-500',
+                                                    'purple' => 'bg-purple-500',
+                                                    'indigo' => 'bg-indigo-500',
+                                                    'orange' => 'bg-orange-500',
+                                                    'emerald' => 'bg-emerald-500',
+                                                    'cyan' => 'bg-cyan-500',
+                                                    'gray' => 'bg-gray-500',
+                                                    default => 'bg-red-500'
+                                                };
+                                            @endphp
+                                            <span class="{{ $badgeClass }} text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-auto">
+                                                {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                                            </span>
+                                        @endif
+
+                                        @if(isset($item['sub_items']) && count($item['sub_items']) > 0 && $isPermitted)
+                                            <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200" 
+                                               data-submenu-toggle="{{ $item['route'] }}"></i>
+                                        @endif
+                                    </a>
                                 @else
                                     {{-- Restricted item - disabled link with permission notice --}}
                                     <a href="#"
@@ -54,52 +94,32 @@
                                         data-route="{{ $item['route'] }}"
                                         onclick="showPermissionNotice('{{ $item['title'] }}', '{{ $accessLevel }}'); return false;"
                                         title="Restricted: {{ $item['title'] }} - Contact administrator for access">
-                                @endif
-
-                                    @if ($item['icon_type'] === 'svg')
-                                        @if(view()->exists('partials.icons.' . $item['icon']))
-                                            @include('partials.icons.' . $item['icon'])
+                                        
+                                        @if ($item['icon_type'] === 'svg')
+                                            @if(view()->exists('partials.icons.' . $item['icon']))
+                                                @include('partials.icons.' . $item['icon'])
+                                            @else
+                                                <i class="fas fa-circle w-5 text-center text-gray-400" title="Icon missing: {{ $item['icon'] }}"></i>
+                                            @endif
                                         @else
-                                            <i class="fas fa-circle w-5 text-center text-gray-400" title="Icon missing: {{ $item['icon'] }}"></i>
+                                            <i class="fas fa-{{ $item['icon'] }} w-5 text-center"></i>
                                         @endif
-                                    @else
-                                        <i class="fas fa-{{ $item['icon'] }} w-5 text-center"></i>
-                                    @endif
-                                    
-                                    <span class="font-medium">{{ $item['title'] }}</span>
-                                    
-                                    {{-- Permission indicator --}}
-                                    @if(!$isPermitted)
+                                        
+                                        <span class="font-medium">{{ $item['title'] }}</span>
+                                        
+                                        {{-- Permission indicator --}}
                                         <i class="fas fa-lock w-4 text-center text-white/40 ml-auto" title="Access Restricted"></i>
-                                    @endif
-                                    
-                                    @if(isset($item['badge']) && $item['badge'] > 0 && $isPermitted)
-                                        @php
-                                            $badgeColor = $item['badge_color'] ?? 'red';
-                                            $badgeClass = match($badgeColor) {
-                                                'red' => 'bg-red-500',
-                                                'green' => 'bg-green-500',
-                                                'blue' => 'bg-blue-500',
-                                                'yellow' => 'bg-yellow-500',
-                                                'purple' => 'bg-purple-500',
-                                                'indigo' => 'bg-indigo-500',
-                                                'orange' => 'bg-orange-500',
-                                                'emerald' => 'bg-emerald-500',
-                                                'cyan' => 'bg-cyan-500',
-                                                'gray' => 'bg-gray-500',
-                                                default => 'bg-red-500'
-                                            };
-                                        @endphp
-                                        <span class="{{ $badgeClass }} text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ml-auto">
-                                            {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
-                                        </span>
-                                    @endif
-
-                                    @if(isset($item['sub_items']) && count($item['sub_items']) > 0 && $isPermitted)
-                                        <i class="fas fa-chevron-down w-4 text-center ml-auto transition-transform duration-200" 
-                                           data-submenu-toggle="{{ $item['route'] }}"></i>
-                                    @endif
-                                </a>
+                                    </a>
+                                @endif
+                            @else
+                                {{-- Route doesn't exist - show disabled item --}}
+                                <span class="flex items-center gap-3 px-4 py-2 rounded-xl border text-gray-400 cursor-not-allowed"
+                                      title="Route not available: {{ $item['route'] }}">
+                                    <i class="fas fa-exclamation-triangle w-5 text-center"></i>
+                                    <span class="font-medium">{{ $item['title'] }}</span>
+                                    <small class="ml-auto text-xs">(N/A)</small>
+                                </span>
+                            @endif
 
                                 {{-- Sub-menu items --}}
                                 @if(isset($item['sub_items']) && count($item['sub_items']) > 0)
@@ -120,36 +140,45 @@
                                                             : 'bg-transparent text-white/50 border-white/30');
                                                 @endphp
                                                 <li>
-                                                    @if($subIsPermitted)
-                                                        <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
-                                                            class="{{ $subBaseClasses }} {{ $subActiveClasses }}"
-                                                            data-route="{{ $subItem['route'] }}"
-                                                            title="{{ $subItem['title'] }}">
-                                                    @else
-                                                        <a href="#"
-                                                            class="{{ $subBaseClasses }} {{ $subActiveClasses }}"
-                                                            data-route="{{ $subItem['route'] }}"
-                                                            onclick="showPermissionNotice('{{ $subItem['title'] }}', '{{ $accessLevel }}'); return false;"
-                                                            title="Restricted: {{ $subItem['title'] }} - Contact administrator for access">
-                                                    @endif
-                                                        
-                                                        @if ($subItem['icon_type'] === 'svg')
-                                                            @if(view()->exists('partials.icons.' . $subItem['icon']))
-                                                                @include('partials.icons.' . $subItem['icon'])
-                                                            @else
-                                                                <i class="fas fa-circle w-4 text-center text-gray-400"></i>
-                                                            @endif
+                                                    @if(\Illuminate\Support\Facades\Route::has($subItem['route']))
+                                                        @if($subIsPermitted)
+                                                            <a href="{{ route($subItem['route'], $subItem['route_params'] ?? []) }}"
+                                                                class="{{ $subBaseClasses }} {{ $subActiveClasses }}"
+                                                                data-route="{{ $subItem['route'] }}"
+                                                                title="{{ $subItem['title'] }}">
                                                         @else
-                                                            <i class="fas fa-{{ $subItem['icon'] }} w-4 text-center"></i>
+                                                            <a href="#"
+                                                                class="{{ $subBaseClasses }} {{ $subActiveClasses }}"
+                                                                data-route="{{ $subItem['route'] }}"
+                                                                onclick="showPermissionNotice('{{ $subItem['title'] }}', '{{ $accessLevel }}'); return false;"
+                                                                title="Restricted: {{ $subItem['title'] }} - Contact administrator for access">
                                                         @endif
                                                         
-                                                        <span>{{ $subItem['title'] }}</span>
-                                                        
-                                                        {{-- Sub-item permission indicator --}}
-                                                        @if(!$subIsPermitted)
-                                                            <i class="fas fa-lock w-3 text-center text-white/40 ml-auto" title="Access Restricted"></i>
-                                                        @endif
-                                                    </a>
+                                                            @if ($subItem['icon_type'] === 'svg')
+                                                                @if(view()->exists('partials.icons.' . $subItem['icon']))
+                                                                    @include('partials.icons.' . $subItem['icon'])
+                                                                @else
+                                                                    <i class="fas fa-circle w-4 text-center text-gray-400"></i>
+                                                                @endif
+                                                            @else
+                                                                <i class="fas fa-{{ $subItem['icon'] }} w-4 text-center"></i>
+                                                            @endif
+                                                            
+                                                            <span>{{ $subItem['title'] }}</span>
+                                                            
+                                                            {{-- Sub-item permission indicator --}}
+                                                            @if(!$subIsPermitted)
+                                                                <i class="fas fa-lock w-3 text-center text-white/40 ml-auto" title="Access Restricted"></i>
+                                                            @endif
+                                                        </a>
+                                                    @else
+                                                        <span class="flex items-center gap-2 px-3 py-1 rounded border text-gray-400 cursor-not-allowed text-sm"
+                                                              title="Route not available: {{ $subItem['route'] }}">
+                                                            <i class="fas fa-exclamation-triangle w-4 text-center"></i>
+                                                            <span>{{ $subItem['title'] }}</span>
+                                                            <small class="ml-auto text-xs">(N/A)</small>
+                                                        </span>
+                                                    @endif
                                                 </li>
                                             @elseif(!isset($subItem['is_route_valid']) || !$subItem['is_route_valid'])
                                                 {{-- Show disabled sub-item for missing routes --}}
@@ -165,15 +194,6 @@
                                         @endforeach
                                     </ul>
                                 @endif
-                            @else
-                                {{-- Route doesn't exist - show disabled item --}}
-                                <span class="flex items-center gap-3 px-4 py-2 rounded-xl border text-gray-400 cursor-not-allowed"
-                                      title="Route not available: {{ $item['route'] }}">
-                                    <i class="fas fa-exclamation-triangle w-5 text-center"></i>
-                                    <span class="font-medium">{{ $item['title'] }}</span>
-                                    <small class="ml-auto text-xs">(N/A)</small>
-                                </span>
-                            @endif
                         </li>
                     @endforeach
                 </ul>

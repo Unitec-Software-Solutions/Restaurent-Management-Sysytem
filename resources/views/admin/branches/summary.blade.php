@@ -58,15 +58,35 @@
     <!-- Activation Key Section -->
     <div class="bg-white rounded-2xl shadow p-8 mb-8">
         <label class="block font-medium mb-1">Activation Key</label>
+        
+        {{-- Debug Info --}}
+        @if(config('app.debug'))
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p class="text-sm text-blue-700">
+                <strong>Debug:</strong> Is Super Admin = {{ auth('admin')->user()->isSuperAdmin() ? 'YES' : 'NO' }}
+                | Can Regenerate Key = {{ auth('admin')->user()->can('regenerateKey', $branch) ? 'YES' : 'NO' }}
+            </p>
+        </div>
+        @endif
+        
         <div class="flex items-center gap-2">
             <input type="text" id="activation-key" value="{{ $branch->activation_key }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
             <button type="button" onclick="copyActivationKey()" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Copy</button>
-            @can('update', $branch)
+            @can('regenerateKey', $branch)
                 <form action="{{ route('admin.branches.regenerate-key', $branch->id) }}" method="POST" class="inline">
                     @csrf
                     @method('PUT')
-                    <button type="submit" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">Regenerate</button>
+                    <button type="submit" 
+                            onclick="return confirm('Are you sure you want to regenerate the activation key? This will invalidate the current key.')"
+                            class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">
+                        Regenerate
+                    </button>
                 </form>
+            @else
+                {{-- Debug: Show why regenerate button is hidden --}}
+                @if(config('app.debug'))
+                <span class="text-xs text-red-500 px-2">Regenerate hidden: Not super admin</span>
+                @endif
             @endcan
         </div>
     </div>

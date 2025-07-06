@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -33,18 +34,58 @@ class UserController extends Controller
         $admin = auth('admin')->user();
 
         if ($admin->is_super_admin) {
-            // Super admin: see all users
-            $users = User::with(['userRole', 'branch', 'creator', 'organization'])->paginate(20);
+            // Super admin: see all users (excluding guests when column exists)
+            $query = User::with([
+                'userRole', 
+                'branch.organization', 
+                'creator', 
+                'organization', 
+                'roles',
+                'permissions'
+            ]);
+            
+            // Only filter by is_guest if the column exists
+            if (Schema::hasColumn('users', 'is_guest')) {
+                $query->where('is_guest', false);
+            }
+            
+            $users = $query->orderBy('created_at', 'desc')->paginate(20);
         } elseif ($admin->isOrganizationAdmin()) {
-            // Org admin: see all users in their organization
-            $users = User::where('organization_id', $admin->organization_id)
-                ->with(['userRole', 'branch', 'creator', 'organization'])
-                ->paginate(20);
+            // Org admin: see all users in their organization (excluding guests when column exists)
+            $query = User::where('organization_id', $admin->organization_id)
+                ->with([
+                    'userRole', 
+                    'branch.organization', 
+                    'creator', 
+                    'organization', 
+                    'roles',
+                    'permissions'
+                ]);
+                
+            // Only filter by is_guest if the column exists
+            if (Schema::hasColumn('users', 'is_guest')) {
+                $query->where('is_guest', false);
+            }
+            
+            $users = $query->orderBy('created_at', 'desc')->paginate(20);
         } else {
-            // Branch admin: see all users in their branch
-            $users = User::where('branch_id', $admin->branch_id)
-                ->with(['userRole', 'branch', 'creator', 'organization'])
-                ->paginate(20);
+            // Branch admin: see all users in their branch (excluding guests when column exists)
+            $query = User::where('branch_id', $admin->branch_id)
+                ->with([
+                    'userRole', 
+                    'branch.organization', 
+                    'creator', 
+                    'organization', 
+                    'roles',
+                    'permissions'
+                ]);
+                
+            // Only filter by is_guest if the column exists
+            if (Schema::hasColumn('users', 'is_guest')) {
+                $query->where('is_guest', false);
+            }
+            
+            $users = $query->orderBy('created_at', 'desc')->paginate(20);
         }
 
         return view('admin.users.index', compact('users'));

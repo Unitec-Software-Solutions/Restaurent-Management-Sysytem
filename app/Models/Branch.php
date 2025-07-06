@@ -321,10 +321,13 @@ class Branch extends Model
                 $branch->slug = \Illuminate\Support\Str::slug($branch->name);
             }
 
-            // Ensure branch is inactive by default
-            if (!isset($branch->is_active)) {
-                $branch->is_active = false;
-            }
+            // ALWAYS ensure branch is inactive by default (both manual and automatic creation)
+            $branch->is_active = false;
+            
+            Log::info('Branch set to inactive by default', [
+                'name' => $branch->name,
+                'is_active' => $branch->is_active
+            ]);
         });
 
         static::updating(function ($branch) {

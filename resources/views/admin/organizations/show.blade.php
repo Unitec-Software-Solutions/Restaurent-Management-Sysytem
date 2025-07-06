@@ -12,13 +12,20 @@
                 <p class="text-gray-600 mt-1">Organization Management & Overview</p>
             </div>
             <div class="flex gap-3">
-                @if(auth('admin')->user()->isSuperAdmin())
+                @can('activate', $organization)
+                    <a href="{{ route('admin.organizations.activate.form', $organization) }}"
+                       class="inline-block {{ $organization->is_active ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700' }} text-white px-4 py-2 rounded-lg transition font-semibold flex items-center">
+                        <i class="fas {{ $organization->is_active ? 'fa-cog' : 'fa-play' }} mr-2"></i>
+                        {{ $organization->is_active ? 'Manage Status' : 'Activate' }}
+                    </a>
+                @endcan
+                @can('update', $organization)
                     <a href="{{ route('admin.organizations.edit', $organization) }}" 
                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-edit mr-2"></i>
                         Edit Organization
                     </a>
-                @endif
+                @endcan
                 <a href="{{ route('admin.organizations.index') }}" 
                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-arrow-left mr-2"></i>
@@ -120,6 +127,9 @@
                 <button onclick="showTab('branches')" id="tab-branches" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
                     Branches
                 </button>
+                <button onclick="showTab('users')" id="tab-users" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Users
+                </button>
                 <button onclick="showTab('admins')" id="tab-admins" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
                     Admins
                 </button>
@@ -129,6 +139,11 @@
                 <button onclick="showTab('modules')" id="tab-modules" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
                     Modules
                 </button>
+                @if(auth('admin')->user()->isSuperAdmin() || (auth('admin')->user()->organization_id == $organization->id))
+                <button onclick="showTab('activation')" id="tab-activation" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Activation
+                </button>
+                @endif
             </nav>
         </div>
 
@@ -448,6 +463,113 @@
                 </div>
             </div>
 
+            <!-- Users Tab -->
+            <div id="content-users" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Organization Users</h3>
+                        <p class="text-sm text-gray-500 mt-1">Total: {{ $stats['total_users'] }} users</p>
+                    </div>
+                    <a href="{{ route('admin.users.create', ['organization' => $organization->id]) }}"
+                       class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+                        <i class="fas fa-plus mr-2"></i>Create User
+                    </a>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Info</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spatie Roles</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @forelse($organization->users as $user)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $loop->iteration }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center">
+                                                    <span class="text-white text-xs font-medium">
+                                                        {{ strtoupper(substr($user->name, 0, 2)) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="ml-3">
+                                                <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                                                <div class="text-sm text-gray-500">{{ $user->email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ $user->phone_number ?? '-' }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @if($user->userRole)
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                {{ $user->userRole->name }}
+                                            </span>
+                                        @else
+                                            <span class="text-gray-400 text-sm">No role</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @if($user->roles && $user->roles->count() > 0)
+                                            <div class="flex flex-wrap gap-1">
+                                                @foreach($user->roles as $role)
+                                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                        {{ $role->name }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400 text-sm">No roles</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @if($user->branch)
+                                            <div class="text-sm text-gray-900">{{ $user->branch->name }}</div>
+                                            <div class="text-xs text-gray-500">
+                                                <span class="{{ $user->branch->is_active ? 'text-green-600' : 'text-red-600' }}">
+                                                    {{ $user->branch->is_active ? 'Active' : 'Inactive' }}
+                                                </span>
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400 text-sm">No branch</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                            {{ $user->is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ $user->created_at->format('M d, Y') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                        <div class="flex flex-col items-center justify-center py-8">
+                                            <i class="fas fa-users text-gray-300 text-3xl mb-2"></i>
+                                            <p class="text-gray-500">No users found in this organization.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Branches Tab -->
             <div id="content-branches" class="tab-content hidden">
                 <div class="overflow-x-auto">
@@ -668,6 +790,165 @@
                     @endforelse
                 </div>
             </div>
+
+            <!-- Activation Tab (Super Admin and Organization Admin) -->
+            @if(auth('admin')->user()->isSuperAdmin() || (auth('admin')->user()->organization_id == $organization->id))
+            <div id="content-activation" class="tab-content hidden">
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <!-- Organization Status Card -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Organization Status</h3>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $organization->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                <i class="fas {{ $organization->is_active ? 'fa-check-circle' : 'fa-times-circle' }} mr-2"></i>
+                                {{ $organization->is_active ? 'Active' : 'Inactive' }}
+                            </span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <dl class="space-y-3">
+                                    <div>
+                                        <dt class="text-sm font-medium text-gray-500">Created</dt>
+                                        <dd class="text-sm text-gray-900">{{ $organization->created_at->format('M d, Y H:i') }}</dd>
+                                    </div>
+                                    @if($organization->activated_at)
+                                    <div>
+                                        <dt class="text-sm font-medium text-gray-500">Activated</dt>
+                                        <dd class="text-sm text-gray-900">{{ $organization->activated_at->format('M d, Y H:i') }}</dd>
+                                    </div>
+                                    @endif
+                                    <div>
+                                        <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
+                                        <dd class="text-sm text-gray-900">{{ $organization->updated_at->format('M d, Y H:i') }}</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            
+                            <div class="flex items-center justify-center">
+                                @if(!$organization->is_active)
+                                    <a href="{{ route('admin.organizations.activate.form', $organization) }}"
+                                       class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center">
+                                        <i class="fas fa-play mr-2"></i>
+                                        Activate Organization
+                                    </a>
+                                @else
+                                    <a href="{{ route('admin.organizations.activate.form', $organization) }}"
+                                       class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center">
+                                        <i class="fas fa-cog mr-2"></i>
+                                        Manage Status
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activation Key Management -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Activation Key Management</h3>
+                        
+                        {{-- Debug Info --}}
+                        @if(config('app.debug'))
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                            <p class="text-sm text-blue-700">
+                                <strong>Debug:</strong> Is Super Admin = {{ auth('admin')->user()->isSuperAdmin() ? 'YES' : 'NO' }}
+                                | Admin ID = {{ auth('admin')->user()->id }}
+                                | is_super_admin = {{ auth('admin')->user()->is_super_admin ? 'true' : 'false' }}
+                            </p>
+                        </div>
+                        @endif
+                        
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+                                <div class="text-sm text-yellow-700">
+                                    <p class="font-medium">Security Notice</p>
+                                    <p>The activation key is sensitive information. Only share it with authorized organization administrators.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Current Activation Key</label>
+                                <div class="flex items-center gap-3">
+                                    <input type="password" 
+                                           id="activation-key-show" 
+                                           value="{{ $organization->activation_key ?? '-' }}" 
+                                           readonly 
+                                           class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-mono">
+                                    <button type="button" 
+                                            onclick="toggleShowKeyVisibility()" 
+                                            class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                                            title="Show/Hide Key">
+                                        <i id="show-key-icon" class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" 
+                                            onclick="copyShowActivationKey()" 
+                                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                                            title="Copy Key">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    @if(auth('admin')->user()->isSuperAdmin())
+                                    <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline">
+                                        @csrf
+                                        @method('PUT')
+                                        <button type="submit" 
+                                                onclick="return confirm('Are you sure you want to regenerate the activation key? This will invalidate the current key and require organizations to use the new key for activation.')"
+                                                class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                                                title="Regenerate Key">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </form>
+                                    @else
+                                    {{-- Debug: Show why regenerate button is hidden --}}
+                                    @if(config('app.debug'))
+                                    <span class="text-xs text-red-500 px-2">Regenerate hidden: Not super admin</span>
+                                    @endif
+                                    @endif
+                                </div>
+                                <div class="mt-2">
+                                    <span class="text-sm text-gray-500">
+                                        Last regenerated: {{ $organization->updated_at->format('M d, Y H:i') }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <a href="{{ route('admin.organizations.edit', $organization) }}"
+                               class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                                <div class="text-center">
+                                    <i class="fas fa-edit text-blue-500 text-2xl mb-2"></i>
+                                    <p class="text-sm font-medium text-gray-900">Edit Organization</p>
+                                </div>
+                            </a>
+                            
+                            <a href="{{ route('admin.branches.create', ['organization' => $organization->id]) }}"
+                               class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
+                                <div class="text-center">
+                                    <i class="fas fa-plus text-green-500 text-2xl mb-2"></i>
+                                    <p class="text-sm font-medium text-gray-900">Add Branch</p>
+                                </div>
+                            </a>
+                            
+                            <a href="{{ route('admin.users.create', ['organization' => $organization->id]) }}"
+                               class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
+                                <div class="text-center">
+                                    <i class="fas fa-user-plus text-purple-500 text-2xl mb-2"></i>
+                                    <p class="text-sm font-medium text-gray-900">Add User</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>
@@ -743,6 +1024,76 @@ function showCopySuccess(element) {
     setTimeout(() => {
         button.innerHTML = originalIcon;
         button.classList.remove('text-green-600');
+    }, 2000);
+}
+
+// Activation key specific functions
+function toggleShowKeyVisibility() {
+    const input = document.getElementById('activation-key-show');
+    const icon = document.getElementById('show-key-icon');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function copyShowActivationKey() {
+    const input = document.getElementById('activation-key-show');
+    const text = input.value;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showActivationKeyCopySuccess();
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            fallbackCopyActivationKey(text);
+        });
+    } else {
+        fallbackCopyActivationKey(text);
+    }
+}
+
+function fallbackCopyActivationKey(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showActivationKeyCopySuccess();
+        }
+    } catch (err) {
+        console.error('Fallback: Could not copy text: ', err);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function showActivationKeyCopySuccess() {
+    const copyButton = document.querySelector('button[onclick="copyShowActivationKey()"]');
+    const originalIcon = copyButton.innerHTML;
+    
+    copyButton.innerHTML = '<i class="fas fa-check text-green-600"></i>';
+    copyButton.classList.add('bg-green-500');
+    copyButton.classList.remove('bg-blue-500');
+    
+    setTimeout(() => {
+        copyButton.innerHTML = originalIcon;
+        copyButton.classList.remove('bg-green-500');
+        copyButton.classList.add('bg-blue-500');
     }, 2000);
 }
 </script>
