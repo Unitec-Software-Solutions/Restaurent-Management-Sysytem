@@ -51,7 +51,7 @@
                     <select name="subscription_plan_id" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         @forelse($subscriptionPlans ?? [] as $plan)
                             <option value="{{ $plan->id }}" {{ old('subscription_plan_id', $organization->subscription_plan_id) == $plan->id ? 'selected' : '' }}>
-                                {{ $plan->name }} ({{ number_format($plan->price/100, 2) }} {{ $plan->currency }})
+                                {{ $plan->name }} ({{ number_format($plan->price, 2) }} {{ $plan->currency }})
                             </option>
                         @empty
                             <option value="">No subscription plans available</option>
