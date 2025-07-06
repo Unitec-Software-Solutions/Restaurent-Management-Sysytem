@@ -129,4 +129,29 @@ class SubscriptionPlan extends Model
     {
         return $this->hasMany(Subscription::class, 'plan_id')->where('status', 'active');
     }
+
+    /**
+     * Get formatted price with currency symbol
+     */
+    public function getFormattedPriceAttribute(): string
+    {
+        // Display price as stored (no division by 100)
+        return \App\Helpers\CurrencyHelper::format($this->price, $this->currency ?? 'LKR');
+    }
+
+    /**
+     * Get currency symbol
+     */
+    public function getCurrencySymbolAttribute(): string
+    {
+        return \App\Helpers\CurrencyHelper::getSymbol($this->currency ?? 'LKR');
+    }
+
+    /**
+     * Get currency name
+     */
+    public function getCurrencyNameAttribute(): string
+    {
+        return \App\Helpers\CurrencyHelper::getName($this->currency ?? 'LKR');
+    }
 }
