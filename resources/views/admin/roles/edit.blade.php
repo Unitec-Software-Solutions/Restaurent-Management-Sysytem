@@ -95,34 +95,63 @@
                 </div>
             @endif
         </div>
+        <!-- Role Templates Section -->
         <div class="mt-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Module Permissions</label>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                @foreach($modules as $module)
-                    <div class="mb-4 border rounded p-3">
-                        <div class="font-semibold mb-2">{{ $module->name }}</div>
-                        <div class="text-gray-500 mb-2">{{ $module->description }}</div>
-                        <div class="flex items-center mb-2">
-                            <input type="checkbox"
-                                id="select_all_{{ $module->id }}"
-                                onclick="toggleModulePermissions('{{ $module->id }}', this.checked)">
-                            <label for="select_all_{{ $module->id }}" class="ml-2 text-xs font-semibold text-blue-700 cursor-pointer">
-                                Select All
-                            </label>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            @foreach(is_array($module->permissions) ? $module->permissions : [] as $permission)
-                                <label class="flex items-center space-x-2">
-                                    <input type="checkbox"
-                                        name="permissions[]"
-                                        value="{{ $permission }}"
-                                        class="module-permission-{{ $module->id }}"
-                                        {{ (isset($role) && $role->permissions->pluck('name')->contains($permission)) ? 'checked' : '' }}>
-                                    <span class="text-xs">{{ $permission }}</span>
-                                </label>
-                            @endforeach
-                        </div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Quick Role Templates</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                @if(isset($availableTemplates) && !empty($availableTemplates))
+                    @foreach($availableTemplates as $templateName => $template)
+                        @if(isset($template['description']))
+                            <div class="border rounded p-3 bg-gray-50">
+                                <div class="font-semibold text-blue-600 mb-1">{{ $templateName }}</div>
+                                <div class="text-sm text-gray-600 mb-2">{{ $template['description'] }}</div>
+                                <button type="button" 
+                                        class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                                        onclick="applyRoleTemplate('{{ $templateName }}')">
+                                    Apply Template
+                                </button>
+                            </div>
+                        @endif
+                    @endforeach
+                @else
+                    <div class="col-span-3 text-center text-gray-500">
+                        <p>No role templates available for your current access level.</p>
                     </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- Permissions Section -->
+        <div class="mt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach($permissionDefinitions as $category => $data)
+                    @if(isset($availablePermissions[$category]) && !empty($availablePermissions[$category]))
+                        <div class="mb-4 border rounded p-3">
+                            <div class="font-semibold mb-2 text-gray-800">{{ $data['label'] }}</div>
+                            <div class="text-gray-500 text-sm mb-2">{{ $data['description'] }}</div>
+                            <div class="flex items-center mb-2">
+                                <input type="checkbox"
+                                    id="select_all_{{ $category }}"
+                                    onclick="toggleCategoryPermissions('{{ $category }}', this.checked)">
+                                <label for="select_all_{{ $category }}" class="ml-2 text-xs font-semibold text-blue-700 cursor-pointer">
+                                    Select All
+                                </label>
+                            </div>
+                            <div class="space-y-1">
+                                @foreach($availablePermissions[$category] as $permission)
+                                    <label class="flex items-center space-x-2">
+                                        <input type="checkbox"
+                                            name="permissions[]"
+                                            value="{{ $permission }}"
+                                            class="category-permission-{{ $category }}"
+                                            {{ $role->permissions->pluck('name')->contains($permission) ? 'checked' : '' }}>
+                                        <span class="text-xs">{{ str_replace(['_', '-'], ' ', ucwords($permission, '_-')) }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 @endforeach
             </div>
         </div>
@@ -133,9 +162,41 @@
     </form>
 </div>
 <script>
-function toggleModulePermissions(moduleId, checked) {
-    document.querySelectorAll('.module-permission-' + moduleId).forEach(function(cb) {
+// Role template data
+const roleTemplates = @json($availableTemplates);
+
+function applyRoleTemplate(templateKey) {
+    if (!roleTemplates[templateKey] || !roleTemplates[templateKey].permissions) return;
+    
+    // First, uncheck all permission checkboxes
+    document.querySelectorAll('input[name="permissions[]"]').forEach(function(cb) {
+        cb.checked = false;
+    });
+    
+    // Then check the permissions for this template
+    roleTemplates[templateKey].permissions.forEach(function(permission) {
+        const checkbox = document.querySelector(`input[name="permissions[]"][value="${permission}"]`);
+        if (checkbox) {
+            checkbox.checked = true;
+        }
+    });
+    
+    // Update "Select All" checkboxes
+    updateSelectAllCheckboxes();
+}
+
+function toggleCategoryPermissions(category, checked) {
+    document.querySelectorAll('.category-permission-' + category).forEach(function(cb) {
         cb.checked = checked;
+    });
+}
+
+function updateSelectAllCheckboxes() {
+    document.querySelectorAll('[id^="select_all_"]').forEach(function(selectAllCheckbox) {
+        const category = selectAllCheckbox.id.replace('select_all_', '');
+        const categoryCheckboxes = document.querySelectorAll('.category-permission-' + category);
+        const checkedCount = document.querySelectorAll('.category-permission-' + category + ':checked').length;
+        selectAllCheckbox.checked = categoryCheckboxes.length > 0 && checkedCount === categoryCheckboxes.length;
     });
 }
 
@@ -143,31 +204,17 @@ function toggleModulePermissions(moduleId, checked) {
 document.addEventListener('DOMContentLoaded', function() {
     // For each "Select All" checkbox
     document.querySelectorAll('[id^="select_all_"]').forEach(function(selectAllCheckbox) {
-        const moduleId = selectAllCheckbox.id.replace('select_all_', '');
-        // For each permission checkbox in this module
-        document.querySelectorAll('.module-permission-' + moduleId).forEach(function(cb) {
+        const category = selectAllCheckbox.id.replace('select_all_', '');
+        // For each permission checkbox in this category
+        document.querySelectorAll('.category-permission-' + category).forEach(function(cb) {
             cb.addEventListener('change', function() {
-                // If any permission is unchecked, uncheck "Select All"
-                if (!this.checked) {
-                    selectAllCheckbox.checked = false;
-                } else {
-                    // If all permissions are checked, check "Select All"
-                    let allChecked = true;
-                    document.querySelectorAll('.module-permission-' + moduleId).forEach(function(box) {
-                        if (!box.checked) allChecked = false;
-                    });
-                    selectAllCheckbox.checked = allChecked;
-                }
+                updateSelectAllCheckboxes();
             });
         });
-        // On page load, set "Select All" if all permissions are checked
-        let allChecked = true;
-        const boxes = document.querySelectorAll('.module-permission-' + moduleId);
-        boxes.forEach(function(box) {
-            if (!box.checked) allChecked = false;
-        });
-        selectAllCheckbox.checked = boxes.length > 0 && allChecked;
     });
+    
+    // Initial state of "Select All" checkboxes
+    updateSelectAllCheckboxes();
 });
 </script>
 @endsection
