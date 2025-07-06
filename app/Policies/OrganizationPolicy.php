@@ -31,6 +31,12 @@ class OrganizationPolicy
     
     public function delete($user, Organization $organization)
     {
-        return $user->is_super_admin;
+        // Only super admins can delete organizations
+        if ($user->is_super_admin) {
+            // Only allow deletion of inactive organizations
+            return !$organization->is_active;
+        }
+        
+        return false;
     }
 }
