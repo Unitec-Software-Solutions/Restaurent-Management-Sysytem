@@ -286,8 +286,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{grn}', [GrnDashboardController::class, 'show'])->whereNumber('grn')->name('show');
             Route::get('/{grn}/edit', [GrnDashboardController::class, 'edit'])->whereNumber('grn')->name('edit');
             Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
-            Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->whereNumber('grn')->name('verify');
-            Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
+            Route::delete('/{grn}', [GrnDashboardController::class, 'destroy'])->whereNumber('grn')->name('destroy');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
         });
 
@@ -442,6 +441,18 @@ Route::middleware(['auth:admin'])->group(function () {
         \App\Http\Controllers\Admin\ItemCategoryController::class,
         'getByOrganization'
     ])->name('admin.api.organizations.categories');
+    
+    // Universal admin API route for getting branches by organization
+    Route::get('/admin/api/organizations/{organization}/branches', [
+        \App\Http\Controllers\BranchController::class,
+        'getBranchesByOrganization'
+    ])->name('admin.api.organizations.branches');
+    
+    // Menu categories API route for getting branches by organization
+    Route::get('/admin/api/menu-categories/organizations/{organization}/branches', [
+        \App\Http\Controllers\Admin\MenuCategoryController::class,
+        'getBranchesForOrganization'
+    ])->name('admin.api.menu-categories.organizations.branches');
 });
 
 Route::get('/debug/branches', function() {
@@ -634,6 +645,9 @@ Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     Route::get('/menu-items/{branch}', [AdminOrderController::class, 'getMenuItems']);
     Route::get('/inventory-items/{branch}', [AdminOrderController::class, 'getInventoryItems']);
     Route::post('/update-menu-availability/{branch}', [AdminOrderController::class, 'updateMenuAvailability']);
+    
+    // Organization branches API for admin orders
+    Route::get('/organization-branches', [AdminOrderController::class, 'getBranchesForOrganization']);
 });
 
 // Menu Items API Routes
@@ -761,9 +775,13 @@ Route::get('subscription/required', [App\Http\Controllers\SubscriptionController
 | API Routes
 |------------------------------------------------------------------------*/
 Route::prefix('api')->middleware(['web'])->group(function () {
-    // Organization branches
+    // Organization branches (Public - for guests)
     Route::get('/organizations/{organization}/branches', [ReservationController::class, 'getBranches'])
         ->name('api.organizations.branches');
+    
+    // Organization branches (Public - alternative endpoint)
+    Route::get('/public/organizations/{organization}/branches', [BranchController::class, 'getBranchesPublic'])
+        ->name('api.public.organizations.branches');
 
     // Branch availability
     Route::get('/branches/{branch}/availability', [ReservationController::class, 'getAvailableTimeSlots'])
@@ -773,7 +791,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
 // Remove the duplicate test route - keep only one for debugging
 Route::get('/test-branches/{organization}', function($organizationId) {
     try {
-        $controller = app(App\Http\Controllers\ReservationController::class);
+        $controller = app(App.Http\Controllers\ReservationController::class);
         return $controller->getBranches($organizationId);
     } catch (\Exception $e) {
         return response()->json([
