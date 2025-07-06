@@ -23,35 +23,48 @@ class OrganizationAutomationService
         $this->branchAutomationService = $branchAutomationService;
     }
 
-    /**
-     * Complete organization setup with automation
-     */
+
     public function setupNewOrganization(array $organizationData): Organization
     {
         return DB::transaction(function () use ($organizationData) {
-            // 1. Create organization
+            
             $organization = Organization::create($organizationData);
 
-            // 2. Create head office branch
             $headOffice = $this->createHeadOfficeBranch($organization);
 
-            // 3. Create organization admin
-            $orgAdmin = $this->createOrganizationAdmin($organization);
 
-            // 4. Setup default roles for organization
-            // TODO: Fix Role::getSystemRoles() method to return correct field names
-            // $this->setupOrganizationRoles($organization);
-
-            // 5. Create default kitchen stations (disabled for now to debug other issues)
-            // $this->createDefaultKitchenStations($headOffice);
-
-            // 6. Send welcome email
-            $this->sendWelcomeEmail($organization, $orgAdmin);
-
-            // 7. Log organization creation
+            $this->createDefaultKitchenStations($headOffice);
 
 
-            return $organization->load(['branches', 'admins']);
+            $orgAdmin = $this->createOrganizationAdmin($organization, $headOffice);
+
+            $branchAdmin = $this->createBranchAdmin($organization, $headOffice);
+
+            // 6. Setup organization-specific roles and permissions
+            $this->setupOrganizationRoles($organization);
+
+            // 7. Assign permissions based on subscription plan modules
+            $this->assignSubscriptionPermissions($organization, $orgAdmin);
+            $this->assignBranchPermissions($organization, $branchAdmin, $headOffice);
+
+            // 8. Setup branch-specific resources
+            $this->branchAutomationService->setupBranchResources($headOffice);
+
+            // 9. Send welcome email with credentials
+            $this->sendWelcomeEmail($organization, $orgAdmin, $branchAdmin);
+
+            // 10. Log organization creation
+            Log::info('Organization created successfully with complete automation', [
+                'organization_id' => $organization->id,
+                'name' => $organization->name,
+                'subscription_plan_id' => $organization->subscription_plan_id,
+                'head_office_id' => $headOffice->id,
+                'org_admin_id' => $orgAdmin->id,
+                'branch_admin_id' => $branchAdmin->id,
+                'kitchen_stations_count' => $headOffice->kitchenStations()->count()
+            ]);
+
+            return $organization->load(['branches.kitchenStations', 'admins.roles', 'subscriptionPlan']);
         });
     }
 
@@ -85,31 +98,100 @@ class OrganizationAutomationService
     /**
      * Create organization administrator
      */
-    protected function createOrganizationAdmin(Organization $organization): Admin
+    protected function createOrganizationAdmin(Organization $organization, Branch $headOffice = null): Admin
     {
         $password = Str::random(12);
 
         $adminData = [
             'organization_id' => $organization->id,
-            'name' => $organization->contact_person ?? 'Administrator',
+            'branch_id' => null, // Organization admin is not tied to specific branch
+            'name' => $organization->contact_person ?? 'Organization Administrator',
             'email' => $organization->email,
             'password' => Hash::make($password),
             'phone' => $organization->contact_person_phone ?? $organization->phone,
             'job_title' => 'Organization Administrator',
-
             'is_active' => true,
         ];
 
         $admin = Admin::create($adminData);
 
         // Assign organization admin role
-        $orgAdminRole = Role::where('name', 'Organization Administrator')->first();
-        if ($orgAdminRole) {
-            $admin->assignRole($orgAdminRole);
+        $orgAdminRole = Role::where('name', 'Organization Administrator')
+            ->where('organization_id', $organization->id)
+            ->first();
+        
+        if (!$orgAdminRole) {
+            // Create the role if it doesn't exist
+            $orgAdminRole = Role::create([
+                'name' => 'Organization Administrator',
+                'organization_id' => $organization->id,
+                'guard_name' => 'admin',
+                'scope' => 'organization',
+                'description' => 'Full administrative access to organization',
+            ]);
         }
+
+        $admin->assignRole($orgAdminRole);
 
         // Store password for welcome email
         $admin->temporary_password = $password;
+
+        Log::info('Organization admin created', [
+            'admin_id' => $admin->id,
+            'organization_id' => $organization->id,
+            'email' => $admin->email
+        ]);
+
+        return $admin;
+    }
+
+    /**
+     * Create branch administrator for head office
+     */
+    protected function createBranchAdmin(Organization $organization, Branch $headOffice): Admin
+    {
+        $password = Str::random(12);
+
+        $adminData = [
+            'organization_id' => $organization->id,
+            'branch_id' => $headOffice->id,
+            'name' => ($organization->contact_person ?? 'Head Office') . ' - Branch Admin',
+            'email' => 'branch.admin@' . str_replace('@', '.', $organization->email),
+            'password' => Hash::make($password),
+            'phone' => $organization->contact_person_phone ?? $organization->phone,
+            'job_title' => 'Branch Administrator - Head Office',
+            'is_active' => true,
+        ];
+
+        $admin = Admin::create($adminData);
+
+        // Assign branch admin role
+        $branchAdminRole = Role::where('name', 'Branch Administrator')
+            ->where('organization_id', $organization->id)
+            ->first();
+        
+        if (!$branchAdminRole) {
+            // Create the role if it doesn't exist
+            $branchAdminRole = Role::create([
+                'name' => 'Branch Administrator',
+                'organization_id' => $organization->id,
+                'guard_name' => 'admin',
+                'scope' => 'branch',
+                'description' => 'Full administrative access to branch operations',
+            ]);
+        }
+
+        $admin->assignRole($branchAdminRole);
+
+        // Store password for welcome email
+        $admin->temporary_password = $password;
+
+        Log::info('Branch admin created for head office', [
+            'admin_id' => $admin->id,
+            'organization_id' => $organization->id,
+            'branch_id' => $headOffice->id,
+            'email' => $admin->email
+        ]);
 
         return $admin;
     }
@@ -136,6 +218,127 @@ class OrganizationAutomationService
                 );
             }
         }
+    }
+
+    /**
+     * Assign permissions based on subscription plan
+     */
+    protected function assignSubscriptionPermissions(Organization $organization, Admin $admin): void
+    {
+        $subscriptionPlan = $organization->subscriptionPlan;
+        
+        if (!$subscriptionPlan) {
+            Log::warning('No subscription plan found for organization', ['organization_id' => $organization->id]);
+            return;
+        }
+
+        // Get modules from subscription plan
+        $moduleIds = $subscriptionPlan->getModulesArray();
+        
+        // Get module permissions from config
+        $moduleConfig = config('modules', []);
+        $permissions = [];
+
+        foreach ($moduleIds as $moduleId) {
+            $module = \App\Models\Module::find($moduleId);
+            if (!$module) continue;
+
+            $moduleSlug = $module->slug;
+            if (isset($moduleConfig[$moduleSlug])) {
+                $moduleData = $moduleConfig[$moduleSlug];
+                
+                // Get permissions for the tier (default to basic if not specified)
+                $tier = 'basic'; // You can enhance this to get tier from subscription
+                if (isset($moduleData['tiers'][$tier]['permissions'])) {
+                    $permissions = array_merge($permissions, $moduleData['tiers'][$tier]['permissions']);
+                }
+            }
+        }
+
+        // Create permissions if they don't exist and assign to admin
+        foreach ($permissions as $permissionName) {
+            $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
+                'name' => $permissionName,
+                'guard_name' => 'admin'
+            ]);
+            
+            $admin->givePermissionTo($permission);
+        }
+
+        Log::info('Subscription permissions assigned', [
+            'organization_id' => $organization->id,
+            'admin_id' => $admin->id,
+            'permissions_count' => count($permissions)
+        ]);
+    }
+
+    /**
+     * Assign branch-specific permissions
+     */
+    protected function assignBranchPermissions(Organization $organization, Admin $branchAdmin, Branch $branch): void
+    {
+        $subscriptionPlan = $organization->subscriptionPlan;
+        
+        if (!$subscriptionPlan) {
+            Log::warning('No subscription plan found for branch admin permissions', [
+                'organization_id' => $organization->id,
+                'branch_id' => $branch->id
+            ]);
+            return;
+        }
+
+        // Get branch-specific permissions based on available modules
+        $moduleIds = $subscriptionPlan->getModulesArray();
+        $moduleConfig = config('modules', []);
+        $branchPermissions = [];
+
+        foreach ($moduleIds as $moduleId) {
+            $module = \App\Models\Module::find($moduleId);
+            if (!$module) continue;
+
+            $moduleSlug = $module->slug;
+            if (isset($moduleConfig[$moduleSlug])) {
+                $moduleData = $moduleConfig[$moduleSlug];
+                
+                // Get basic tier permissions for branch admin
+                if (isset($moduleData['tiers']['basic']['permissions'])) {
+                    $branchPermissions = array_merge($branchPermissions, $moduleData['tiers']['basic']['permissions']);
+                }
+            }
+        }
+
+        // Add general branch management permissions
+        $branchPermissions = array_merge($branchPermissions, [
+            'branch.view',
+            'branch.edit',
+            'staff.view',
+            'staff.create',
+            'staff.edit',
+            'orders.view',
+            'orders.create',
+            'orders.process',
+            'kitchen.view',
+            'kitchen.manage',
+            'inventory.view',
+            'reports.view'
+        ]);
+
+        // Create permissions if they don't exist and assign to branch admin
+        foreach (array_unique($branchPermissions) as $permissionName) {
+            $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
+                'name' => $permissionName,
+                'guard_name' => 'admin'
+            ]);
+            
+            $branchAdmin->givePermissionTo($permission);
+        }
+
+        Log::info('Branch permissions assigned', [
+            'organization_id' => $organization->id,
+            'branch_id' => $branch->id,
+            'admin_id' => $branchAdmin->id,
+            'permissions_count' => count(array_unique($branchPermissions))
+        ]);
     }
 
     /**
@@ -195,18 +398,44 @@ class OrganizationAutomationService
     }
 
     /**
-     * Send welcome email to organization
+     * Send welcome emails to both organization and branch admins
      */
-    protected function sendWelcomeEmail(Organization $organization, Admin $admin): void
+    protected function sendWelcomeEmail(Organization $organization, Admin $orgAdmin, Admin $branchAdmin = null): void
     {
+        // Send welcome email to organization admin
         try {
-            Mail::to($admin->email)->send(new OrganizationWelcomeMail($organization, $admin));
-        } catch (\Exception $e) {
-            Log::warning('Failed to send welcome email to organization', [
+            Mail::to($orgAdmin->email)->send(new OrganizationWelcomeMail($organization, $orgAdmin));
+            
+            Log::info('Welcome email sent to organization admin', [
                 'organization_id' => $organization->id,
-                'admin_email' => $admin->email,
+                'admin_email' => $orgAdmin->email
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Failed to send welcome email to organization admin', [
+                'organization_id' => $organization->id,
+                'admin_email' => $orgAdmin->email,
                 'error' => $e->getMessage()
             ]);
+        }
+
+        // Send welcome email to branch admin if provided
+        if ($branchAdmin) {
+            try {
+                Mail::to($branchAdmin->email)->send(new OrganizationWelcomeMail($organization, $branchAdmin));
+                
+                Log::info('Welcome email sent to branch admin', [
+                    'organization_id' => $organization->id,
+                    'branch_admin_email' => $branchAdmin->email,
+                    'branch_id' => $branchAdmin->branch_id
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to send welcome email to branch admin', [
+                    'organization_id' => $organization->id,
+                    'branch_admin_email' => $branchAdmin->email,
+                    'branch_id' => $branchAdmin->branch_id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
     }
 }
