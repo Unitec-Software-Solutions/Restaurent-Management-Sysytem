@@ -30,12 +30,14 @@ class BranchPolicy
 
     public function delete($user, $branch)
     {
-        // Allow super admin
+        // Only super admins can delete branches
         if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
-            return true;
+            // Only allow deletion of inactive branches
+            return !$branch->is_active;
         }
-        // Allow org admin for their own branches
-        return $user->organization_id === $branch->organization_id;
+        
+        // Organization admins and branch admins cannot delete branches
+        return false;
     }
 
     public function create($user, Organization $organization)
