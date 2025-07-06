@@ -160,5 +160,157 @@
             <p class="text-gray-500 text-sm py-4">No users found for this branch.</p>
         @endif
     </div>
+
+    {{-- Branch Statistics Section --}}
+    @if(isset($stats))
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100">
+                    <i class="fas fa-user-shield text-blue-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Admins</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ $stats['total_admins'] }}</p>
+                    <p class="text-xs text-gray-500">{{ $stats['active_admins'] }} active</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100">
+                    <i class="fas fa-users text-green-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Users</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ $stats['total_users'] }}</p>
+                    <p class="text-xs text-gray-500">{{ $stats['active_users'] }} active</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-orange-100">
+                    <i class="fas fa-utensils text-orange-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Kitchen Stations</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ $stats['kitchen_stations'] }}</p>
+                    <p class="text-xs text-gray-500">{{ $stats['active_kitchen_stations'] }} active</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100">
+                    <i class="fas fa-table text-purple-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Tables</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ $stats['total_tables'] }}</p>
+                    <p class="text-xs text-gray-500">dining capacity</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Branch Admins Section --}}
+    @if($branch->admins->count() > 0)
+    <div class="bg-white rounded-2xl shadow p-8 mb-8">
+        <h3 class="text-lg font-semibold text-indigo-700 mb-4">Branch Administrators</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach($branch->admins as $admin)
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ $admin->name }}</div>
+                                <div class="text-sm text-gray-500">{{ $admin->job_title }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $admin->email }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($admin->roles->count() > 0)
+                                    @foreach($admin->roles as $role)
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 mr-1">
+                                            {{ $role->name }}
+                                        </span>
+                                    @endforeach
+                                @else
+                                    <span class="text-sm text-gray-500">No roles assigned</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $admin->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                    {{ $admin->is_active ? 'Active' : 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ $admin->created_at->format('M d, Y') }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
+    {{-- Kitchen Stations Section --}}
+    @if($branch->kitchenStations->count() > 0)
+    <div class="bg-white rounded-2xl shadow p-8 mb-8">
+        <h3 class="text-lg font-semibold text-indigo-700 mb-4">Kitchen Stations</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            @foreach($branch->kitchenStations as $station)
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-semibold text-gray-900">{{ $station->name }}</h4>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $station->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            {{ $station->is_active ? 'Active' : 'Inactive' }}
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">{{ $station->description }}</p>
+                    <div class="text-xs text-gray-500">
+                        <p>Code: {{ $station->code }}</p>
+                        <p>Type: {{ ucfirst($station->type) }}</p>
+                        <p>Capacity: {{ $station->max_capacity ?? 'N/A' }}</p>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    {{-- Available Modules Section --}}
+    @if(isset($stats['available_modules']) && count($stats['available_modules']) > 0)
+    <div class="bg-white rounded-2xl shadow p-8 mb-8">
+        <h3 class="text-lg font-semibold text-indigo-700 mb-4">Available Modules</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            @foreach($stats['available_modules'] as $module)
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-semibold text-gray-900">{{ $module['name'] }}</h4>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {{ ucfirst($module['tier'] ?? 'basic') }}
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-600">Access level: {{ ucfirst($module['tier'] ?? 'basic') }}</p>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 </div>
 @endsection
