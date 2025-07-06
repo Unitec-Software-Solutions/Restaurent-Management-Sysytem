@@ -202,23 +202,39 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (organizationId) {
                 // Fetch branches for selected organization
-                fetch(`/admin/api/organizations/${organizationId}/branches`)
-                    .then(response => response.json())
+                fetch(`/admin/api/menu-categories/organizations/${organizationId}/branches`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         branchSelect.innerHTML = '<option value="">Select Branch</option>';
                         
-                        data.branches.forEach(branch => {
-                            const option = document.createElement('option');
-                            option.value = branch.id;
-                            option.textContent = branch.name;
-                            branchSelect.appendChild(option);
-                        });
+                        if (data.success && data.branches) {
+                            data.branches.forEach(branch => {
+                                const option = document.createElement('option');
+                                option.value = branch.id;
+                                option.textContent = branch.name;
+                                branchSelect.appendChild(option);
+                            });
+                        }
                         
                         branchSelect.disabled = false;
                     })
                     .catch(error => {
                         console.error('Error fetching branches:', error);
                         branchSelect.innerHTML = '<option value="">Error loading branches</option>';
+                        branchSelect.disabled = false;
                     });
             } else {
                 branchSelect.innerHTML = '<option value="">Select Branch</option>';
