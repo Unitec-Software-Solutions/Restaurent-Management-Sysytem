@@ -172,8 +172,33 @@ public function activateBranch(Request $request)
 // Show summary
 public function summary(Branch $branch)
 {
-    $branch->load(['organization', 'subscriptions']);
-    return view('admin.branches.summary', compact('branch'));
+    $branch->load([
+        'organization.subscriptionPlan',
+        'admins.roles',
+        'kitchenStations',
+        'users.roles',
+        'subscriptions',
+        'tables',
+        'menuCategories',
+        'menuItems'
+    ]);
+
+    // Calculate branch statistics
+    $stats = [
+        'total_admins' => $branch->admins()->count(),
+        'active_admins' => $branch->admins()->where('is_active', true)->count(),
+        'total_users' => $branch->users()->count(),
+        'active_users' => $branch->users()->where('is_active', true)->count(),
+        'kitchen_stations' => $branch->kitchenStations()->count(),
+        'active_kitchen_stations' => $branch->kitchenStations()->where('is_active', true)->count(),
+        'total_tables' => $branch->tables()->count(),
+        'menu_categories' => $branch->menuCategories()->count(),
+        'menu_items' => $branch->menuItems()->count(),
+        'available_modules' => $branch->organization->subscriptionPlan ? 
+            $branch->organization->subscriptionPlan->getModulesWithNames() : [],
+    ];
+
+    return view('admin.branches.summary', compact('branch', 'stats'));
 }
 
 public function regenerateKey(Branch $branch)
