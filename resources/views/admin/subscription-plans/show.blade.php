@@ -79,7 +79,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Price</label>
                         <p class="text-2xl font-bold text-gray-900">
-                            {{ $subscriptionPlan->currency ?? 'USD' }} {{ number_format($subscriptionPlan->price) }}
+                            {{ $subscriptionPlan->currency ?? 'USD' }} {{ number_format($subscriptionPlan->price, 2) }}
                             <span class="text-sm font-normal text-gray-500">/month</span>
                         </p>
                     </div>
