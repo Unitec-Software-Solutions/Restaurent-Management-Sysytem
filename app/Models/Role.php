@@ -13,7 +13,6 @@ class Role extends SpatieRole
         'name',
         'guard_name',
         'scope_level',
-        'description',
         'is_system_role',
         'organization_id',
         'branch_id',
