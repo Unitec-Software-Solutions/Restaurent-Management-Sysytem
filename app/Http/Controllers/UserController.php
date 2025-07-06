@@ -92,7 +92,7 @@ class UserController extends Controller
             $branches = Branch::where('id', $admin->branch_id)->get();
             $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')
                 ->where('branch_id', $admin->branch_id)
-                ->orWhereIn('name', ['Branch Administrator', 'Kitchen Manager', 'Operations Manager', 'Staff Member'])
+                ->orWhereIn('name', ['Branch Administrator'])
                 ->get();
                 
             $adminTypes = [
@@ -164,7 +164,7 @@ class UserController extends Controller
             }
             
             if ($admin->isBranchAdmin() && !in_array($role->name, [
-                'Branch Administrator', 'Kitchen Manager', 'Operations Manager', 'Staff Member'
+                'Branch Administrator'
             ])) {
                 return back()->withErrors(['role_id' => 'You can only assign branch-level roles.']);
             }

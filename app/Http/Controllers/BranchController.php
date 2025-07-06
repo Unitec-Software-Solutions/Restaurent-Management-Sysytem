@@ -19,6 +19,30 @@ class BranchController extends Controller
     return view('admin.branches.index', compact('organization'));
 }
 
+public function show(Organization $organization, Branch $branch)
+{
+    $this->authorize('view', $branch);
+    
+    // Load relationships for the branch view
+    $branch->load([
+        'admins.roles',
+        'kitchenStations',
+        'organization.subscriptionPlan'
+    ]);
+    
+    // Get branch statistics
+    $stats = [
+        'admins_count' => $branch->admins()->count(),
+        'active_admins_count' => $branch->admins()->where('is_active', true)->count(),
+        'kitchen_stations_count' => $branch->kitchenStations()->count(),
+        'active_kitchen_stations_count' => $branch->kitchenStations()->where('is_active', true)->count(),
+        'orders_count' => $branch->orders()->count(),
+        'today_orders_count' => $branch->orders()->whereDate('created_at', today())->count(),
+    ];
+    
+    return view('admin.branches.show', compact('organization', 'branch', 'stats'));
+}
+
 public function store(Request $request, Organization $organization)
 {
     $isHeadOffice = $organization->branches()->count() === 0; // or use a flag

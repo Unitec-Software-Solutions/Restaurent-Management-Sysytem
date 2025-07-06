@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Reservation;
+use App\Models\Admin;
+use Spatie\Permission\Models\Role;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -44,7 +48,10 @@ class AdminController extends Controller
         }
     }
 
-    public function index()
+    /**
+     * Display reservations for admin
+     */
+    public function reservations()
     {
         $admin = Auth::user();
 
@@ -65,15 +72,23 @@ class AdminController extends Controller
         return view('admin.reservations.index', compact('reservations'));
     }
 
-    public function profile()
+    /**
+     * Display a listing of admins
+     */
+    public function index()
     {
-        $admin = Auth::user();
-
-        if (!$admin) {
-            return redirect()->route('admin.login')->with('error', 'Please log in to access your profile.');
+        $currentAdmin = Auth::guard('admin')->user();
+        
+        // Only super admins can view admin list
+        if (!$currentAdmin->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only super admins can view admin accounts.');
         }
 
-        return view('admin.profile.index', compact('admin'));
+        $admins = Admin::with(['organization', 'branch'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+        
+        return view('admin.admins.index', compact('admins'));
     }
 
     /**
@@ -102,5 +117,85 @@ class AdminController extends Controller
                 'message' => 'Admin not found'
             ]);
         }
+    }
+
+    /**
+     * Show the form for editing an admin
+     */
+    public function edit(Admin $admin)
+    {
+        $currentAdmin = Auth::guard('admin')->user();
+        
+        // Only super admins can edit other admins
+        if (!$currentAdmin->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only super admins can edit admin accounts.');
+        }
+
+        // Get roles for the form
+        $roles = Role::all();
+        
+        return view('admin.admins.edit', compact('admin', 'roles'));
+    }
+
+    /**
+     * Update an admin
+     */
+    public function update(Request $request, Admin $admin)
+    {
+        $currentAdmin = Auth::guard('admin')->user();
+        
+        // Only super admins can update other admins
+        if (!$currentAdmin->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only super admins can update admin accounts.');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('admins')->ignore($admin->id),
+            ],
+            'organization_id' => 'nullable|exists:organizations,id',
+            'branch_id' => 'nullable|exists:branches,id',
+            'role_id' => 'nullable|exists:roles,id',
+            'password' => 'nullable|string|min:8|confirmed',
+            'is_super_admin' => 'boolean',
+            'is_active' => 'boolean',
+            'department' => 'nullable|string|max:255',
+            'job_title' => 'nullable|string|max:255',
+            'status' => 'required|in:active,inactive,suspended,pending',
+        ]);
+
+        $data = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'organization_id' => $request->organization_id,
+            'branch_id' => $request->branch_id,
+            'is_super_admin' => $request->boolean('is_super_admin'),
+            'is_active' => $request->boolean('is_active'),
+            'department' => $request->department,
+            'job_title' => $request->job_title,
+            'status' => $request->status,
+        ];
+
+        // Handle role assignment
+        if ($request->filled('role_id')) {
+            $data['current_role_id'] = $request->role_id;
+            
+            // Also assign the role via Spatie
+            $role = Role::findOrFail($request->role_id);
+            $admin->syncRoles([$role]);
+        }
+
+        // Handle password update
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $admin->update($data);
+
+        return redirect()->route('admins.index')
+            ->with('success', 'Admin updated successfully.');
     }
 }

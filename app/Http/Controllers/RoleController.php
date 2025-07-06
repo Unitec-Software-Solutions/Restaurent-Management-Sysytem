@@ -298,10 +298,40 @@ class RoleController extends Controller
             }
         }
 
-        // Check if role is in use
-        $usersCount = \App\Models\Admin::where('role_id', $role->id)->count();
-        if ($usersCount > 0) {
-            return back()->withErrors(['role' => "Cannot delete role '{$role->name}' as it is assigned to {$usersCount} user(s)."])
+        // Check if role is in use by admins or users
+        $adminsUsingRole = \App\Models\Admin::where('current_role_id', $role->id)->count();
+        
+        // Also check if role is assigned via Spatie's role system
+        $adminsWithSpatieRole = 0;
+        $usersWithSpatieRole = 0;
+        
+        try {
+            // Check admin guard if role has admin guard
+            if ($role->guard_name === 'admin') {
+                $adminsWithSpatieRole = \App\Models\Admin::role($role->name, 'admin')->count();
+            }
+        } catch (\Exception $e) {
+            // Role doesn't exist for admin guard, which is fine
+        }
+        
+        try {
+            // Check web guard if role has web guard
+            if ($role->guard_name === 'web') {
+                $usersWithSpatieRole = \App\Models\User::role($role->name, 'web')->count();
+            }
+        } catch (\Exception $e) {
+            // Role doesn't exist for web guard, which is fine
+        }
+        
+        $totalUsage = $adminsUsingRole + $adminsWithSpatieRole + $usersWithSpatieRole;
+        
+        if ($totalUsage > 0) {
+            $details = [];
+            if ($adminsUsingRole > 0) $details[] = "{$adminsUsingRole} admin(s) via current_role_id";
+            if ($adminsWithSpatieRole > 0) $details[] = "{$adminsWithSpatieRole} admin(s) via Spatie roles";
+            if ($usersWithSpatieRole > 0) $details[] = "{$usersWithSpatieRole} user(s) via Spatie roles";
+            
+            return back()->withErrors(['role' => "Cannot delete role '{$role->name}' as it is assigned to: " . implode(', ', $details)])
                 ->with('error', 'Role deletion failed.');
         }
 
