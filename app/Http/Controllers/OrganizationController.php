@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\Branch;
 use App\Models\User;
 use App\Models\SubscriptionPlan;
+use App\Services\OrganizationAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -16,6 +17,12 @@ use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
 {
+    protected $organizationAutomationService;
+
+    public function __construct(OrganizationAutomationService $organizationAutomationService)
+    {
+        $this->organizationAutomationService = $organizationAutomationService;
+    }
     /**
      * Display a listing of organizations
      */
@@ -65,11 +72,9 @@ class OrganizationController extends Controller
             'is_active' => 'required|boolean',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            // Create organization - DEFAULT to INACTIVE but respect the form input
-            $organization = Organization::create([
+            // Use automation service for complete organization setup
+            $organization = $this->organizationAutomationService->setupNewOrganization([
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
@@ -80,44 +85,21 @@ class OrganizationController extends Controller
                 'subscription_plan_id' => $request->subscription_plan_id,
                 'discount_percentage' => $request->discount_percentage,
                 'password' => Hash::make($request->password),
-                'is_active' => $request->boolean('is_active', false), // Default to false if not provided
+                'is_active' => $request->boolean('is_active', false),
             ]);
 
-            // Create default head office branch
-            $headOfficeBranch = Branch::create([
+            Log::info('Organization created successfully via automation service', [
                 'organization_id' => $organization->id,
-                'name' => $organization->name . ' - Head Office',
-                'address' => $organization->address,
-                'phone' => $organization->phone,
-                'email' => $organization->email,
-                'is_head_office' => true,
-                'is_active' => false, // Requires activation
-                'activation_key' => Str::random(40),
-                'type' => 'restaurant',
-                'status' => 'inactive',
-                'opening_time' => '09:00:00', // Ensure opening_time is set
-                'closing_time' => '22:00:00', // Ensure closing_time is set
-                'total_capacity' => 50,
-                'reservation_fee' => 0,
-                'cancellation_fee' => 0,
-            ]);
-
-            DB::commit();
-
-            Log::info('Organization created successfully', [
-                'organization_id' => $organization->id,
-                'head_office_branch_id' => $headOfficeBranch->id,
                 'created_by' => Auth::guard('admin')->id()
             ]);
 
-            return redirect()->route('admin.organizations.index')
-                ->with('success', 'Organization created successfully with head office branch.');
+            return redirect()->route('admin.organizations.show', $organization)
+                ->with('success', 'Organization created successfully with head office, admin, and all default resources.');
 
         } catch (\Exception $e) {
-            DB::rollback();
-
             Log::error('Failed to create organization', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'request_data' => $request->except(['password', 'password_confirmation'])
             ]);
 
@@ -133,21 +115,58 @@ class OrganizationController extends Controller
     public function show(Organization $organization)
     {
         $organization->load([
-            'branches.users',
-            'users.roles',
-            'subscriptionPlan'
+            'branches.kitchenStations',
+            'branches.admins.roles',
+            'admins.roles',
+            'subscriptionPlan',
+            'subscriptions' => function($query) {
+                $query->latest();
+            }
         ]);
 
         $stats = [
             'total_branches' => $organization->branches()->count(),
             'active_branches' => $organization->branches()->where('is_active', true)->count(),
-            'total_users' => $organization->users()->count(),
-            'registered_users' => $organization->users()->where('is_registered', true)->count(),
+            'head_office' => $organization->branches()->where('is_head_office', true)->first(),
+            'total_admins' => $organization->admins()->count(),
+            'active_admins' => $organization->admins()->where('is_active', true)->count(),
+            'kitchen_stations' => $organization->branches()->withCount('kitchenStations')->get()->sum('kitchen_stations_count'),
+            'subscription_status' => $this->getSubscriptionStatus($organization),
+            'available_modules' => $this->getAvailableModules($organization),
             'subscription_days_left' => $organization->subscription_end_date ?
-                now()->diffInDays($organization->subscription_end_date, false) : 0,
+                now()->diffInDays($organization->subscription_end_date, false) : null,
         ];
 
-        return view('admin.organizations.summary', compact('organization', 'stats'));
+        return view('admin.organizations.show', compact('organization', 'stats'));
+    }
+
+    /**
+     * Get subscription status for organization
+     */
+    protected function getSubscriptionStatus(Organization $organization): array
+    {
+        $currentSubscription = $organization->subscriptions()->where('status', 'active')->first();
+        
+        return [
+            'is_active' => $currentSubscription ? true : false,
+            'plan_name' => $organization->subscriptionPlan?->name ?? 'No Plan',
+            'expires_at' => $currentSubscription?->expires_at,
+            'is_trial' => $organization->subscriptionPlan?->is_trial ?? false,
+            'price' => $organization->subscriptionPlan?->price ?? 0,
+            'currency' => $organization->subscriptionPlan?->currency ?? 'USD'
+        ];
+    }
+
+    /**
+     * Get available modules for organization
+     */
+    protected function getAvailableModules(Organization $organization): array
+    {
+        if (!$organization->subscriptionPlan) {
+            return [];
+        }
+
+        return $organization->subscriptionPlan->getModulesWithNames();
     }
 
     /**
