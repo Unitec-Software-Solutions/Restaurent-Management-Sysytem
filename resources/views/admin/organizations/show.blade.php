@@ -203,7 +203,7 @@
                                     <div>
                                         <dt class="text-sm font-medium text-gray-500">Price</dt>
                                         <dd class="text-sm text-gray-900">
-                                            {{ number_format($organization->subscriptionPlan->price / 100, 2) }} {{ $organization->subscriptionPlan->currency }}
+                                            {{ number_format($organization->subscriptionPlan->price, 2) }} {{ $organization->subscriptionPlan->currency }}
                                             @if($organization->subscriptionPlan->is_trial)
                                                 <span class="text-xs text-blue-600">(Trial)</span>
                                             @endif
