@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Organization;
 use App\Models\Branch;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
@@ -211,13 +213,79 @@ public function regenerateKey(Branch $branch)
 }
 public function destroy(Organization $organization, Branch $branch)
 {
-    $this->authorize('delete', $branch);
+    $admin = Auth::guard('admin')->user();
 
-    $branch->delete();
+    // Only super admins can delete branches
+    if (!$admin || !$admin->isSuperAdmin()) {
+        return redirect()->back()
+            ->with('error', 'Only super administrators can delete branches.');
+    }
 
-    return redirect()
-        ->route('admin.branches.index', ['organization' => $organization->id])
-        ->with('success', 'Branch deleted successfully.');
+    // Only inactive branches can be deleted
+    if ($branch->is_active) {
+        return redirect()->back()
+            ->with('error', 'Cannot delete active branch. Please deactivate it first.');
+    }
+
+    // Check if branch belongs to the organization
+    if ($branch->organization_id !== $organization->id) {
+        return redirect()->back()
+            ->with('error', 'Branch does not belong to this organization.');
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $branchName = $branch->name;
+        $userCount = $branch->users()->count();
+        $orderCount = $branch->orders()->count();
+        $kitchenStationCount = $branch->kitchenStations()->count();
+        $reservationCount = $branch->reservations()->count();
+        $menuItemCount = $branch->menuItems()->count();
+
+        // Soft delete related users
+        $branch->users()->delete();
+
+        // Note: Orders and reservations should NOT be deleted as they are historical data
+        // Kitchen stations and menu items can be soft deleted
+        $branch->kitchenStations()->delete();
+        $branch->menuItems()->delete();
+        $branch->menuCategories()->delete();
+
+        // Soft delete the branch itself
+        $branch->delete();
+
+        DB::commit();
+
+        Log::info('Branch soft deleted by super admin', [
+            'branch_name' => $branchName,
+            'branch_id' => $branch->id,
+            'organization_id' => $organization->id,
+            'deleted_by' => $admin->id,
+            'deleted_by_name' => $admin->name,
+            'users_deleted' => $userCount,
+            'orders_preserved' => $orderCount,
+            'reservations_preserved' => $reservationCount,
+            'kitchen_stations_deleted' => $kitchenStationCount,
+            'menu_items_deleted' => $menuItemCount,
+            'was_active' => false
+        ]);
+
+        return redirect()
+            ->route('admin.branches.index', ['organization' => $organization->id])
+            ->with('success', "Branch '{$branchName}' and related data soft deleted successfully. Orders and reservations preserved.");
+
+    } catch (\Exception $e) {
+        Log::error('Failed to delete branch', [
+            'branch_id' => $branch->id,
+            'organization_id' => $organization->id,
+            'error' => $e->getMessage(),
+            'deleted_by' => $admin->id
+        ]);
+
+        return redirect()->back()
+            ->with('error', 'Failed to delete branch: ' . $e->getMessage());
+    }
 }
 
 /**
