@@ -480,15 +480,15 @@ class Admin extends Authenticatable
     /**
      * Check if admin is an organization admin (has org but no branch)
      */
-    public function isOrganizationAdmin(): bool
+    public function isOrganizationAdmin()
     {
-        return !$this->is_super_admin && $this->organization_id && !$this->branch_id;
+        return !$this->is_super_admin && $this->organization_id && is_null($this->branch_id);
     }
 
     /**
      * Check if admin is a branch admin (has both org and branch)
      */
-    public function isBranchAdmin(): bool
+    public function isBranchAdmin()
     {
         return !$this->is_super_admin && $this->organization_id && $this->branch_id;
     }
