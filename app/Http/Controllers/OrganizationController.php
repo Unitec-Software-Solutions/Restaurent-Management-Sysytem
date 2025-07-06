@@ -85,6 +85,7 @@ class OrganizationController extends Controller
                 'subscription_plan_id' => $request->subscription_plan_id,
                 'discount_percentage' => $request->discount_percentage,
                 'password' => Hash::make($request->password),
+                'password_plain' => $request->password, // Pass plain text password for admin creation
                 'is_active' => $request->boolean('is_active', false),
             ]);
 
