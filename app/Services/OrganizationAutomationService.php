@@ -100,14 +100,15 @@ class OrganizationAutomationService
      */
     protected function createOrganizationAdmin(Organization $organization, Branch $headOffice = null): Admin
     {
-        $password = Str::random(12);
-
+        // Use the default admin password for organization admins
+        $defaultPassword = config('auto_system_settings.default_org_admin_password', 'AdminPassword123!');
+        
         $adminData = [
             'organization_id' => $organization->id,
             'branch_id' => null, // Organization admin is not tied to specific branch
             'name' => $organization->contact_person ?? 'Organization Administrator',
             'email' => $organization->email,
-            'password' => Hash::make($password),
+            'password' => Hash::make($defaultPassword),
             'phone' => $organization->contact_person_phone ?? $organization->phone,
             'job_title' => 'Organization Administrator',
             'is_active' => true,
@@ -133,13 +134,14 @@ class OrganizationAutomationService
 
         $admin->assignRole($orgAdminRole);
 
-        // Store password for welcome email
-        $admin->temporary_password = $password;
+        // Store the plain text password for welcome email
+        $admin->temporary_password = $defaultPassword;
 
-        Log::info('Organization admin created', [
+        Log::info('Organization admin created with default password', [
             'admin_id' => $admin->id,
             'organization_id' => $organization->id,
-            'email' => $admin->email
+            'email' => $admin->email,
+            'password_used' => 'default_admin_password'
         ]);
 
         return $admin;
@@ -150,14 +152,15 @@ class OrganizationAutomationService
      */
     protected function createBranchAdmin(Organization $organization, Branch $headOffice): Admin
     {
-        $password = Str::random(12);
+        // Use the default branch admin password
+        $defaultPassword = config('auto_system_settings.default_branch_admin_password', 'BranchAdmin123!');
 
         $adminData = [
             'organization_id' => $organization->id,
             'branch_id' => $headOffice->id,
             'name' => ($organization->contact_person ?? 'Head Office') . ' - Branch Admin',
             'email' => 'branch.admin@' . str_replace('@', '.', $organization->email),
-            'password' => Hash::make($password),
+            'password' => Hash::make($defaultPassword),
             'phone' => $organization->contact_person_phone ?? $organization->phone,
             'job_title' => 'Branch Administrator - Head Office',
             'is_active' => true,
@@ -184,13 +187,14 @@ class OrganizationAutomationService
         $admin->assignRole($branchAdminRole);
 
         // Store password for welcome email
-        $admin->temporary_password = $password;
+        $admin->temporary_password = $defaultPassword;
 
-        Log::info('Branch admin created for head office', [
+        Log::info('Branch admin created for head office with default password', [
             'admin_id' => $admin->id,
             'organization_id' => $organization->id,
             'branch_id' => $headOffice->id,
-            'email' => $admin->email
+            'email' => $admin->email,
+            'password_used' => 'default_branch_password'
         ]);
 
         return $admin;
