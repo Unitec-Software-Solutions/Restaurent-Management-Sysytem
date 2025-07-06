@@ -150,7 +150,7 @@
                                         <i class="fas fa-credit-card text-success"></i>
                                         <span class="ml-2">{{ $plan->name }}</span>
                                     </div>
-                                    <span class="badge badge-info">{{ $plan->currency }} {{ number_format($plan->price) }}</span>
+                                    <span class="badge badge-info">{{ $plan->currency }} {{ number_format($plan->price, 2) }}</span>
                                 </div>
                                 @empty
                                 <p class="text-muted text-center">No plans found</p>
