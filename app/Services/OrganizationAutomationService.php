@@ -30,11 +30,24 @@ class OrganizationAutomationService
             
             $organization = Organization::create($organizationData);
 
-            $headOffice = $this->createHeadOfficeBranch($organization);
+            // Check if head office already exists (created by OrganizationObserver)
+            $headOffice = $organization->branches()->where('is_head_office', true)->first();
+            
+            if (!$headOffice) {
+                // Create head office only if it doesn't exist
+                $headOffice = $this->createHeadOfficeBranch($organization);
+            } else {
+                Log::info('Head office already exists, using existing one', [
+                    'organization_id' => $organization->id,
+                    'head_office_id' => $headOffice->id,
+                    'head_office_name' => $headOffice->name
+                ]);
+            }
 
-
-            $this->createDefaultKitchenStations($headOffice);
-
+            // Ensure kitchen stations exist for head office
+            if ($headOffice->kitchenStations()->count() === 0) {
+                $this->createDefaultKitchenStations($headOffice);
+            }
 
             $orgAdmin = $this->createOrganizationAdmin($organization, $headOffice);
 
@@ -47,10 +60,7 @@ class OrganizationAutomationService
             $this->assignSubscriptionPermissions($organization, $orgAdmin);
             $this->assignBranchPermissions($organization, $branchAdmin, $headOffice);
 
-            // 8. Setup branch-specific resources
-            $this->branchAutomationService->setupBranchResources($headOffice);
-
-            // 9. Send welcome email with credentials
+            // 8. Send welcome email with credentials (skip branch automation as it's already done above)
             $this->sendWelcomeEmail($organization, $orgAdmin, $branchAdmin);
 
             // 10. Log organization creation
@@ -116,21 +126,18 @@ class OrganizationAutomationService
 
         $admin = Admin::create($adminData);
 
-        // Assign organization admin role
-        $orgAdminRole = Role::where('name', 'Organization Administrator')
-            ->where('organization_id', $organization->id)
-            ->first();
-        
-        if (!$orgAdminRole) {
-            // Create the role if it doesn't exist
-            $orgAdminRole = Role::create([
+        // Assign organization admin role (use firstOrCreate to avoid duplicates)
+        $orgAdminRole = Role::firstOrCreate(
+            [
                 'name' => 'Organization Administrator',
                 'organization_id' => $organization->id,
-                'guard_name' => 'admin',
+                'guard_name' => 'admin'
+            ],
+            [
                 'scope' => 'organization',
-                'description' => 'Full administrative access to organization',
-            ]);
-        }
+                'description' => 'Full administrative access to organization-wide operations'
+            ]
+        );
 
         $admin->assignRole($orgAdminRole);
 
@@ -168,21 +175,18 @@ class OrganizationAutomationService
 
         $admin = Admin::create($adminData);
 
-        // Assign branch admin role
-        $branchAdminRole = Role::where('name', 'Branch Administrator')
-            ->where('organization_id', $organization->id)
-            ->first();
-        
-        if (!$branchAdminRole) {
-            // Create the role if it doesn't exist
-            $branchAdminRole = Role::create([
+        // Assign branch admin role (use firstOrCreate to avoid duplicates)
+        $branchAdminRole = Role::firstOrCreate(
+            [
                 'name' => 'Branch Administrator',
                 'organization_id' => $organization->id,
-                'guard_name' => 'admin',
+                'guard_name' => 'admin'
+            ],
+            [
                 'scope' => 'branch',
-                'description' => 'Full administrative access to branch operations',
-            ]);
-        }
+                'description' => 'Full administrative access to branch operations'
+            ]
+        );
 
         $admin->assignRole($branchAdminRole);
 
@@ -201,147 +205,194 @@ class OrganizationAutomationService
     }
 
     /**
-     * Setup default roles for organization
+     * Setup only essential roles for organization
      */
     protected function setupOrganizationRoles(Organization $organization): void
     {
-        $systemRoles = Role::getSystemRoles();
+        // Only create the essential roles that will actually be used
+        $essentialRoles = [
+            [
+                'name' => 'Organization Administrator',
+                'scope' => 'organization',
+                'description' => 'Full administrative access to organization-wide operations',
+                'is_system_role' => true
+            ],
+            [
+                'name' => 'Branch Administrator', 
+                'scope' => 'branch',
+                'description' => 'Full administrative access to branch operations',
+                'is_system_role' => true
+            ]
+        ];
 
-        foreach ($systemRoles as $roleKey => $roleData) {
-            if (in_array($roleData['scope'], ['organization', 'branch', 'personal'])) {
-                Role::firstOrCreate(
-                    [
-                        'name' => $roleData['name'],
-                        'organization_id' => $organization->id,
-                        'guard_name' => 'admin'
-                    ],
-                    [
-                        'scope' => $roleData['scope'],
-                        'description' => $roleData['description'] ?? '',
-                    ]
-                );
-            }
+        foreach ($essentialRoles as $roleData) {
+            Role::firstOrCreate(
+                [
+                    'name' => $roleData['name'],
+                    'organization_id' => $organization->id,
+                    'guard_name' => 'admin'
+                ],
+                [
+                    'scope' => $roleData['scope'],
+                    'description' => $roleData['description'],
+                    'is_system_role' => $roleData['is_system_role']
+                ]
+            );
         }
+
+        Log::info('Essential organization roles created', [
+            'organization_id' => $organization->id,
+            'roles_created' => count($essentialRoles)
+        ]);
     }
 
     /**
-     * Assign permissions based on subscription plan
+     * Assign comprehensive permissions to organization admin
      */
     protected function assignSubscriptionPermissions(Organization $organization, Admin $admin): void
     {
-        $subscriptionPlan = $organization->subscriptionPlan;
-        
-        if (!$subscriptionPlan) {
-            Log::warning('No subscription plan found for organization', ['organization_id' => $organization->id]);
-            return;
-        }
+        // Define comprehensive organization admin permissions
+        $orgAdminPermissions = [
+            // Organization Management
+            'organizations.view',
+            'organizations.edit',
+            'organizations.settings',
+            
+            // Branch Management
+            'branches.view',
+            'branches.create',
+            'branches.edit',
+            'branches.delete',
+            'branches.activate',
+            
+            // User Management
+            'users.view',
+            'users.create',
+            'users.edit',
+            'users.delete',
+            'users.activate',
+            
+            // Role Management
+            'roles.view',
+            'roles.create',
+            'roles.edit',
+            'roles.assign',
+            
+            // Subscription Management
+            'subscription.view',
+            'subscription.manage',
+            
+            // Reports and Analytics
+            'reports.view',
+            'reports.export',
+            'reports.analytics',
+            
+            // System Settings
+            'settings.view',
+            'settings.edit'
+        ];
 
-        // Get modules from subscription plan
-        $moduleIds = $subscriptionPlan->getModulesArray();
-        
-        // Get module permissions from config
-        $moduleConfig = config('modules', []);
-        $permissions = [];
-
-        foreach ($moduleIds as $moduleId) {
-            $module = \App\Models\Module::find($moduleId);
-            if (!$module) continue;
-
-            $moduleSlug = $module->slug;
-            if (isset($moduleConfig[$moduleSlug])) {
-                $moduleData = $moduleConfig[$moduleSlug];
-                
-                // Get permissions for the tier (default to basic if not specified)
-                $tier = 'basic'; // You can enhance this to get tier from subscription
-                if (isset($moduleData['tiers'][$tier]['permissions'])) {
-                    $permissions = array_merge($permissions, $moduleData['tiers'][$tier]['permissions']);
-                }
-            }
-        }
-
-        // Create permissions if they don't exist and assign to admin
-        foreach ($permissions as $permissionName) {
+        // Create and assign permissions
+        foreach ($orgAdminPermissions as $permissionName) {
             $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
                 'name' => $permissionName,
                 'guard_name' => 'admin'
             ]);
             
-            $admin->givePermissionTo($permission);
+            try {
+                $admin->givePermissionTo($permission);
+            } catch (\Exception $e) {
+                Log::warning('Failed to assign permission to organization admin', [
+                    'permission' => $permissionName,
+                    'admin_id' => $admin->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
 
-        Log::info('Subscription permissions assigned', [
+        Log::info('Organization admin permissions assigned', [
             'organization_id' => $organization->id,
             'admin_id' => $admin->id,
-            'permissions_count' => count($permissions)
+            'permissions_assigned' => count($orgAdminPermissions)
         ]);
     }
 
     /**
-     * Assign branch-specific permissions
+     * Assign comprehensive permissions to branch admin
      */
     protected function assignBranchPermissions(Organization $organization, Admin $branchAdmin, Branch $branch): void
     {
-        $subscriptionPlan = $organization->subscriptionPlan;
-        
-        if (!$subscriptionPlan) {
-            Log::warning('No subscription plan found for branch admin permissions', [
-                'organization_id' => $organization->id,
-                'branch_id' => $branch->id
-            ]);
-            return;
-        }
-
-        // Get branch-specific permissions based on available modules
-        $moduleIds = $subscriptionPlan->getModulesArray();
-        $moduleConfig = config('modules', []);
-        $branchPermissions = [];
-
-        foreach ($moduleIds as $moduleId) {
-            $module = \App\Models\Module::find($moduleId);
-            if (!$module) continue;
-
-            $moduleSlug = $module->slug;
-            if (isset($moduleConfig[$moduleSlug])) {
-                $moduleData = $moduleConfig[$moduleSlug];
-                
-                // Get basic tier permissions for branch admin
-                if (isset($moduleData['tiers']['basic']['permissions'])) {
-                    $branchPermissions = array_merge($branchPermissions, $moduleData['tiers']['basic']['permissions']);
-                }
-            }
-        }
-
-        // Add general branch management permissions
-        $branchPermissions = array_merge($branchPermissions, [
-            'branch.view',
-            'branch.edit',
+        // Define comprehensive branch admin permissions
+        $branchAdminPermissions = [
+            // Branch Operations
+            'branches.view',
+            'branches.edit',
+            
+            // Staff Management
             'staff.view',
             'staff.create',
             'staff.edit',
+            'staff.schedule',
+            
+            // Order Management
             'orders.view',
             'orders.create',
+            'orders.edit',
             'orders.process',
+            'orders.cancel',
+            
+            // Kitchen Management
             'kitchen.view',
             'kitchen.manage',
+            'kitchen.stations',
+            
+            // Inventory Management
             'inventory.view',
-            'reports.view'
-        ]);
+            'inventory.adjust',
+            'inventory.count',
+            
+            // Menu Management
+            'menus.view',
+            'menus.edit',
+            'menus.activate',
+            
+            // Reservation Management
+            'reservations.view',
+            'reservations.create',
+            'reservations.edit',
+            'reservations.cancel',
+            
+            // Reports
+            'reports.view',
+            'reports.branch',
+            
+            // Basic Settings
+            'settings.view'
+        ];
 
-        // Create permissions if they don't exist and assign to branch admin
-        foreach (array_unique($branchPermissions) as $permissionName) {
+        // Create and assign permissions
+        foreach ($branchAdminPermissions as $permissionName) {
             $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
                 'name' => $permissionName,
                 'guard_name' => 'admin'
             ]);
             
-            $branchAdmin->givePermissionTo($permission);
+            try {
+                $branchAdmin->givePermissionTo($permission);
+            } catch (\Exception $e) {
+                Log::warning('Failed to assign permission to branch admin', [
+                    'permission' => $permissionName,
+                    'admin_id' => $branchAdmin->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
 
-        Log::info('Branch permissions assigned', [
+        Log::info('Branch admin permissions assigned', [
             'organization_id' => $organization->id,
             'branch_id' => $branch->id,
             'admin_id' => $branchAdmin->id,
-            'permissions_count' => count(array_unique($branchPermissions))
+            'permissions_assigned' => count($branchAdminPermissions)
         ]);
     }
 

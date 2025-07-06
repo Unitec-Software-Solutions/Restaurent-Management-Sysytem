@@ -67,14 +67,20 @@ class BranchAutomationService
 
         $admin = Admin::create($adminData);
 
-        // Assign branch admin role
-        $branchAdminRole = Role::where('name', 'Branch Administrator')
-            ->where('organization_id', $branch->organization_id)
-            ->first();
+        // Assign branch admin role (use firstOrCreate to ensure role exists)
+        $branchAdminRole = Role::firstOrCreate(
+            [
+                'name' => 'Branch Administrator',
+                'organization_id' => $branch->organization_id,
+                'guard_name' => 'admin'
+            ],
+            [
+                'scope' => 'branch',
+                'description' => 'Full administrative access to branch operations'
+            ]
+        );
 
-        if ($branchAdminRole) {
-            $admin->assignRole($branchAdminRole);
-        }
+        $admin->assignRole($branchAdminRole);
 
         return $admin;
     }

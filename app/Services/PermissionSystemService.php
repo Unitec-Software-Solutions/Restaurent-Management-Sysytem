@@ -22,7 +22,7 @@ class PermissionSystemService
     private function createScopedRoles()
     {
         $roleStructure = [
-            // Organization Level
+            // Organization Level - Only essential admin roles
             'org_admin' => [
                 'name' => 'Organization Administrator',
                 'scope' => 'organization',
@@ -36,7 +36,7 @@ class PermissionSystemService
                 ]
             ],
             
-            // Branch Level
+            // Branch Level - Only essential admin roles
             'branch_admin' => [
                 'name' => 'Branch Administrator',
                 'scope' => 'branch',
@@ -48,52 +48,11 @@ class PermissionSystemService
                     'orders.manage',
                     'reports.view_branch'
                 ]
-            ],
-            
-            // Staff Level - Task-specific
-            'shift_manager' => [
-                'name' => 'Shift Manager',
-                'scope' => 'branch',
-                'permissions' => [
-                    'orders.view',
-                    'orders.edit',
-                    'staff.assign_tasks',
-                    'inventory.view',
-                    'reports.view_shift'
-                ]
-            ],
-            
-            'cashier' => [
-                'name' => 'Cashier',
-                'scope' => 'branch',
-                'permissions' => [
-                    'orders.create',
-                    'orders.payment',
-                    'reports.view_sales'
-                ]
-            ],
-            
-            'waiter' => [
-                'name' => 'Waiter/Waitress',
-                'scope' => 'branch',
-                'permissions' => [
-                    'orders.create',
-                    'orders.view_assigned',
-                    'menu.view',
-                    'tables.manage'
-                ]
-            ],
-            
-            'kitchen_staff' => [
-                'name' => 'Kitchen Staff',
-                'scope' => 'branch',
-                'permissions' => [
-                    'kitchen.view_orders',
-                    'kitchen.update_status',
-                    'inventory.view',
-                    'inventory.update_usage'
-                ]
             ]
+            
+            // Note: Other operational roles (shift manager, cashier, waiter, kitchen staff) 
+            // should be created manually as needed by organization/branch admins
+            // to avoid cluttering the system with unused roles
         ];
 
         foreach ($roleStructure as $key => $roleData) {
@@ -546,57 +505,11 @@ class PermissionSystemService
                     'production.view', 'production.create', 'production.edit', 'production.manage',
                     'dashboard.view', 'dashboard.manage'
                 ]
-            ],
-
-            'Kitchen Manager' => [
-                'guard_name' => 'admin',
-                'level' => 'branch',
-                'description' => 'Kitchen operations and order processing',
-                'icon' => 'chef-hat',
-                'color' => 'orange',
-                'permissions' => [
-                    'kitchen.view', 'kitchen.manage', 'kitchen.orders', 'kitchen.stations', 'kitchen.staff',
-                    'orders.view', 'orders.process',
-                    'menus.view', 'menus.edit',
-                    'inventory.view', 'inventory.adjust', 'inventory.alerts',
-                    'staff.view', 'staff.schedules',
-                    'production.view', 'production.create', 'production.edit', 'production.manage',
-                    'reports.view', 'reports.inventory',
-                    'dashboard.view'
-                ]
-            ],
-
-            'Operations Manager' => [
-                'guard_name' => 'admin',
-                'level' => 'branch',
-                'description' => 'Daily operations and staff management',
-                'icon' => 'clipboard-check',
-                'color' => 'blue',
-                'permissions' => [
-                    'orders.view', 'orders.create', 'orders.edit', 'orders.process', 'orders.cancel',
-                    'reservations.view', 'reservations.create', 'reservations.edit', 'reservations.confirm',
-                    'staff.view', 'staff.create', 'staff.edit', 'staff.schedules',
-                    'inventory.view', 'inventory.adjust',
-                    'menus.view',
-                    'reports.view', 'reports.sales',
-                    'dashboard.view'
-                ]
-            ],
-
-            'Staff Member' => [
-                'guard_name' => 'admin',
-                'level' => 'staff',
-                'description' => 'Basic operational access',
-                'icon' => 'user',
-                'color' => 'gray',
-                'permissions' => [
-                    'orders.view', 'orders.create',
-                    'reservations.view', 'reservations.create',
-                    'menus.view',
-                    'inventory.view',
-                    'dashboard.view'
-                ]
             ]
+            
+            // Note: Operational roles like Kitchen Manager, Operations Manager, Staff Member 
+            // should be created manually by organization/branch admins as needed,
+            // not automatically provided as templates to reduce noise
         ];
     }
 
