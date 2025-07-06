@@ -268,10 +268,12 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Configuration - Fix the API endpoint
+    // Configuration - Enhanced to handle multiple endpoints
     const CONFIG = {
         API_ENDPOINTS: {
-            BRANCHES: '/api/organizations/{organizationId}/branches', // Fixed endpoint
+            BRANCHES: '/api/organizations/{organizationId}/branches', // Public endpoint for guests
+            BRANCHES_ADMIN: '/admin/api/organizations/{organizationId}/branches', // Admin endpoint
+            BRANCHES_PUBLIC: '/api/public/organizations/{organizationId}/branches', // Alternative public endpoint
             AVAILABILITY: '/api/branches/{branchId}/availability'
         },
         CACHE_EXPIRY: 5 * 60 * 1000, // 5 minutes
@@ -701,57 +703,57 @@ document.addEventListener('DOMContentLoaded', function() {
 
             this.showBranchLoading();
             
-            try {
-                const url = CONFIG.API_ENDPOINTS.BRANCHES.replace('{organizationId}', organizationId);
-                console.log('Fetching branches from URL:', url);
-                
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': utils.getCsrfToken()
-                    }
-                });
-
-                console.log('Response status:', response.status);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                console.log('Response data:', data);
-                
-                if (data.success && Array.isArray(data.branches)) {
-                    // Cache the results
-                    state.branchCache.set(cacheKey, {
-                        data: data.branches,
-                        timestamp: Date.now()
-                    });
+            // Try multiple endpoints in order
+            const endpoints = [
+                CONFIG.API_ENDPOINTS.BRANCHES.replace('{organizationId}', organizationId),
+                CONFIG.API_ENDPOINTS.BRANCHES_PUBLIC.replace('{organizationId}', organizationId),
+                CONFIG.API_ENDPOINTS.BRANCHES_ADMIN.replace('{organizationId}', organizationId)
+            ];
+            
+            for (const url of endpoints) {
+                try {
+                    console.log('Trying to fetch branches from URL:', url);
                     
-                    this.populateBranches(data.branches);
-                } else {
-                    throw new Error(data.message || 'Invalid response format');
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': utils.getCsrfToken()
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    console.log(`Response from ${url}:`, response.status);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('Response data:', data);
+                        
+                        if (data.success && Array.isArray(data.branches)) {
+                            console.log(`Successfully fetched ${data.branches.length} branches from ${url}`);
+                            
+                            // Cache the result
+                            state.branchCache.set(cacheKey, {
+                                data: data.branches,
+                                timestamp: Date.now()
+                            });
+                            
+                            this.populateBranches(data.branches);
+                            return; // Success, stop trying other endpoints
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`Failed to fetch from ${url}:`, error.message);
+                    // Continue to next endpoint
                 }
-                
-            } catch (error) {
-                console.error('Error fetching branches:', error);
-                
-                // Show appropriate error message
-                if (error.message.includes('NetworkError') || error.name === 'TypeError') {
-                    this.showBranchError('Network error. Please check your connection.');
-                } else if (error.message.includes('404')) {
-                    this.showBranchError('Restaurant not found');
-                } else if (error.message.includes('500')) {
-                    this.showBranchError('Server error. Please try again later.');
-                } else {
-                    this.showBranchError('Failed to load branches. Please try again.');
-                }
-                
-                validation.showFormError(`Error loading branches: ${error.message}`);
             }
+            
+            // If all endpoints failed
+            console.error('All branch fetch endpoints failed for organization:', organizationId);
+            this.showBranchError('Unable to load branches. Please try refreshing the page.');
+            validation.showFormError('Failed to load branches for the selected restaurant.');
         },
 
         // Update branch details display
