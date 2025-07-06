@@ -44,11 +44,13 @@ class SubscriptionPlanController extends Controller
             'name' => 'required|string|max:255|unique:subscription_plans',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'billing_cycle' => 'required|in:monthly,yearly',
-            'max_branches' => 'required|integer|min:1',
-            'max_users' => 'required|integer|min:1',
-            'features' => 'nullable|array',
-            'features.*' => 'string|max:255',
+            'currency' => 'required|string|size:3',
+            'modules' => 'nullable|array',
+            'modules.*' => 'integer|exists:modules,id',
+            'max_branches' => 'nullable|integer|min:1',
+            'max_employees' => 'nullable|integer|min:1',
+            'is_trial' => 'boolean',
+            'trial_period_days' => 'nullable|integer|min:1|max:365',
             'is_active' => 'boolean',
         ]);
 
@@ -56,11 +58,13 @@ class SubscriptionPlanController extends Controller
             $plan = SubscriptionPlan::create([
                 'name' => $request->name,
                 'description' => $request->description,
-                'price' => $request->price,
-                'billing_cycle' => $request->billing_cycle,
+                'price' => $request->price, // Store price as entered
+                'currency' => $request->currency,
+                'modules' => $request->modules,
                 'max_branches' => $request->max_branches,
-                'max_users' => $request->max_users,
-                'features' => $request->features ? json_encode($request->features) : null,
+                'max_employees' => $request->max_employees,
+                'is_trial' => $request->boolean('is_trial', false),
+                'trial_period_days' => $request->trial_period_days,
                 'is_active' => $request->boolean('is_active', true),
             ]);
 
@@ -94,10 +98,7 @@ class SubscriptionPlanController extends Controller
         $stats = [
             'total_organizations' => $subscriptionPlan->organizations()->count(),
             'active_organizations' => $subscriptionPlan->organizations()->where('is_active', true)->count(),
-            'monthly_revenue' => $subscriptionPlan->billing_cycle === 'monthly' ? 
-                $subscriptionPlan->organizations()->where('is_active', true)->count() * $subscriptionPlan->price : 0,
-            'yearly_revenue' => $subscriptionPlan->billing_cycle === 'yearly' ? 
-                $subscriptionPlan->organizations()->where('is_active', true)->count() * $subscriptionPlan->price : 0,
+            'total_revenue' => $subscriptionPlan->organizations()->where('is_active', true)->count() * $subscriptionPlan->price,
         ];
 
         return view('admin.subscription-plans.summary', compact('subscriptionPlan', 'stats'));
@@ -123,11 +124,13 @@ class SubscriptionPlanController extends Controller
             'name' => 'required|string|max:255|unique:subscription_plans,name,' . $subscriptionPlan->id,
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'billing_cycle' => 'required|in:monthly,yearly',
-            'max_branches' => 'required|integer|min:1',
-            'max_users' => 'required|integer|min:1',
-            'features' => 'nullable|array',
-            'features.*' => 'string|max:255',
+            'currency' => 'required|string|size:3',
+            'modules' => 'nullable|array',
+            'modules.*' => 'integer|exists:modules,id',
+            'max_branches' => 'nullable|integer|min:1',
+            'max_employees' => 'nullable|integer|min:1',
+            'is_trial' => 'boolean',
+            'trial_period_days' => 'nullable|integer|min:1|max:365',
             'is_active' => 'boolean',
         ]);
 
@@ -135,11 +138,13 @@ class SubscriptionPlanController extends Controller
             $subscriptionPlan->update([
                 'name' => $request->name,
                 'description' => $request->description,
-                'price' => $request->price,
-                'billing_cycle' => $request->billing_cycle,
+                'price' => $request->price, // Store price as entered
+                'currency' => $request->currency,
+                'modules' => $request->modules,
                 'max_branches' => $request->max_branches,
-                'max_users' => $request->max_users,
-                'features' => $request->features ? json_encode($request->features) : null,
+                'max_employees' => $request->max_employees,
+                'is_trial' => $request->boolean('is_trial', false),
+                'trial_period_days' => $request->trial_period_days,
                 'is_active' => $request->boolean('is_active'),
             ]);
 
