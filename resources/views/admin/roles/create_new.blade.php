@@ -30,24 +30,6 @@
                         'icon' => 'store',
                         'color' => 'green',
                         'permissions' => ['branches.edit', 'users.create', 'users.edit', 'users.activate', 'roles.view', 'roles.assign', 'menus.create', 'menus.edit', 'menus.activate', 'orders.manage', 'inventory.manage', 'reservations.manage', 'kitchen.manage', 'staff.manage', 'reports.view', 'reports.export']
-                    ],
-                    'Kitchen Manager' => [
-                        'description' => 'Kitchen operations and order processing',
-                        'icon' => 'chef-hat',
-                        'color' => 'orange',
-                        'permissions' => ['kitchen.manage', 'orders.view', 'orders.process', 'menus.view', 'inventory.view', 'inventory.adjust', 'staff.view', 'staff.schedule', 'reports.view']
-                    ],
-                    'Operations Manager' => [
-                        'description' => 'Daily operations and customer service',
-                        'icon' => 'cogs',
-                        'color' => 'blue',
-                        'permissions' => ['orders.manage', 'reservations.manage', 'menus.view', 'inventory.view', 'staff.view', 'staff.schedule', 'reports.view', 'reports.export']
-                    ],
-                    'Staff Member' => [
-                        'description' => 'Basic staff operations',
-                        'icon' => 'user',
-                        'color' => 'gray',
-                        'permissions' => ['orders.view', 'orders.create', 'orders.edit', 'reservations.view', 'reservations.create', 'reservations.edit', 'menus.view', 'inventory.view']
                     ]
                 ];
             @endphp

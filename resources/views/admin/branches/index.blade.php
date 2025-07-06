@@ -13,7 +13,6 @@
                     + Add Branch
                 </a>
             @endif
-            {{-- Remove the button if $branches is set (global index) --}}
         @endcan
     </div>
 
@@ -57,7 +56,7 @@
                                     <a href="{{ route('admin.branches.edit', ['organization' => $organization->id, 'branch' => $branch->id]) }}"
                                        class="text-blue-600 hover:underline">Edit</a>
                                 @endcan
-                                <a href="{{ route('branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
+                                <a href="{{ route('admin.branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
                                 @can('delete', $branch)
                                     <form action="{{ route('admin.branches.destroy', ['organization' => $organization->id, 'branch' => $branch->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this inactive branch? This action cannot be undone.');">
                                         @csrf
@@ -102,7 +101,7 @@
                                     <a href="{{ route('admin.branches.edit', ['organization' => $branch->organization_id ?? $organization->id, 'branch' => $branch->id]) }}"
                                        class="text-blue-600 hover:underline">Edit</a>
                                 @endcan
-                                <a href="{{ route('branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
+                                <a href="{{ route('admin.branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
                                 @can('delete', $branch)
                                     <form action="{{ route('admin.branches.destroy', ['organization' => $branch->organization_id ?? $organization->id, 'branch' => $branch->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this inactive branch? This action cannot be undone.');">
                                         @csrf

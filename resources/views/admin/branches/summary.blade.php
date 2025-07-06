@@ -62,7 +62,7 @@
             <input type="text" id="activation-key" value="{{ $branch->activation_key }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
             <button type="button" onclick="copyActivationKey()" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Copy</button>
             @can('update', $branch)
-                <form action="{{ route('branches.regenerate-key', $branch->id) }}" method="POST" class="inline">
+                <form action="{{ route('admin.branches.regenerate-key', $branch->id) }}" method="POST" class="inline">
                     @csrf
                     @method('PUT')
                     <button type="submit" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">Regenerate</button>

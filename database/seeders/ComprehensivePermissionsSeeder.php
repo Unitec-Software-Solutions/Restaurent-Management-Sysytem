@@ -294,6 +294,11 @@ class ComprehensivePermissionsSeeder extends Seeder
         ];
         $branchAdminRole->syncPermissions($branchAdminPermissions);
 
+        // NOTE: Noise roles like Kitchen Manager, Operations Manager, Staff Member 
+        // are no longer created. Only essential admin roles are created by the system.
+        // If you need these operational roles, create them manually through the admin interface.
+        
+        /*
         // Kitchen Manager
         $kitchenManagerRole = Role::firstOrCreate([
             'name' => 'Kitchen Manager',
@@ -332,6 +337,7 @@ class ComprehensivePermissionsSeeder extends Seeder
             'menus.view', 'inventory.view',
         ];
         $staffRole->syncPermissions($staffPermissions);
+        */
 
         $this->command->info('  ✅ Predefined roles created with appropriate permissions');
     }

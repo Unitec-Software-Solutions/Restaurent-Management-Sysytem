@@ -57,7 +57,7 @@
                     @if($role->name === 'Super Admin' && !auth('admin')->user()->isSuperAdmin())
                         @continue
                     @endif
-                    <option value="{{ $role->id }}" {{ old('role_id', $user->role_id) == $role->id ? 'selected' : '' }}>
+                    <option value="{{ $role->id }}" {{ old('role_id', $user->current_role_id) == $role->id ? 'selected' : '' }}>
                         {{ $role->name }}
                     </option>
                 @endforeach

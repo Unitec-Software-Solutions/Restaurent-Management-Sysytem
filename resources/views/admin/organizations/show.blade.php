@@ -75,10 +75,33 @@
                 <div class="p-3 rounded-full bg-orange-100">
                     <i class="fas fa-utensils text-orange-600"></i>
                 </div>
-                <div class="ml-4">
+                <div class="ml-4 flex-1">
                     <p class="text-sm font-medium text-gray-600">Kitchen Stations</p>
                     <p class="text-lg font-semibold text-gray-900">{{ $stats['kitchen_stations'] }}</p>
-                    <p class="text-xs text-gray-500">across all branches</p>
+                    <div class="text-xs text-gray-500 mt-1">
+                        @php
+                            $stationTypes = [];
+                            foreach($organization->branches as $branch) {
+                                foreach($branch->kitchenStations as $station) {
+                                    $stationTypes[$station->type] = ($stationTypes[$station->type] ?? 0) + 1;
+                                }
+                            }
+                        @endphp
+                        @if(count($stationTypes) > 0)
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                @foreach($stationTypes as $type => $count)
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium
+                                        {{ $type == 'cooking' ? 'bg-red-100 text-red-700' : 
+                                           ($type == 'prep' ? 'bg-yellow-100 text-yellow-700' : 
+                                           ($type == 'service' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700')) }}">
+                                        {{ $count }} {{ ucfirst($type) }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @else
+                            <span>across all branches</span>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -100,6 +123,9 @@
                 <button onclick="showTab('admins')" id="tab-admins" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
                     Admins
                 </button>
+                <button onclick="showTab('kitchen-stations')" id="tab-kitchen-stations" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Kitchen Stations
+                </button>
                 <button onclick="showTab('modules')" id="tab-modules" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
                     Modules
                 </button>
@@ -109,7 +135,7 @@
         <div class="p-6">
             <!-- Overview Tab -->
             <div id="content-overview" class="tab-content">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Organization Information</h3>
                         <dl class="space-y-3">
@@ -178,10 +204,186 @@
                                     <dt class="text-sm font-medium text-gray-500">Kitchen Stations</dt>
                                     <dd class="text-sm text-gray-900">{{ $stats['head_office']->kitchen_stations_count ?? 0 }}</dd>
                                 </div>
+                                @if($stats['head_office']->kitchenStations && $stats['head_office']->kitchenStations->count() > 0)
+                                <div>
+                                    <dt class="text-sm font-medium text-gray-500">Station Types</dt>
+                                    <dd class="text-sm text-gray-900">
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            @foreach($stats['head_office']->kitchenStations->take(3) as $station)
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                                    {{ $station->type == 'cooking' ? 'bg-red-100 text-red-800' : 
+                                                       ($station->type == 'prep' ? 'bg-yellow-100 text-yellow-800' : 
+                                                       ($station->type == 'service' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800')) }}">
+                                                    <i class="fas fa-fire mr-1"></i>
+                                                    {{ $station->name }}
+                                                </span>
+                                            @endforeach
+                                            @if($stats['head_office']->kitchenStations->count() > 3)
+                                                <span class="text-xs text-gray-500 px-2 py-1">+{{ $stats['head_office']->kitchenStations->count() - 3 }} more</span>
+                                            @endif
+                                        </div>
+                                    </dd>
+                                </div>
+                                @endif
                             </dl>
                         @else
                             <p class="text-gray-500">No head office found</p>
                         @endif
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Admin Login Details</h3>
+                        <div class="space-y-4">
+                            @php
+                                $orgAdmin = $organization->admins->where('branch_id', null)->first();
+                                $branchAdmin = $organization->admins->where('branch_id', '!=', null)->first();
+                            @endphp
+                            
+                            @if($orgAdmin)
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h4 class="text-sm font-semibold text-blue-800 mb-2 flex items-center">
+                                    <i class="fas fa-user-tie mr-2"></i>
+                                    Organization Administrator
+                                </h4>
+                                <dl class="space-y-2 text-sm">
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Name:</dt>
+                                        <dd class="text-gray-900">{{ $orgAdmin->name }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Email:</dt>
+                                        <dd class="text-gray-900">{{ $orgAdmin->email }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Password:</dt>
+                                        <dd class="text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded inline-flex items-center">
+                                            <span id="org-password">{{ config('auto_system_settings.default_org_admin_password', 'AdminPassword123!') }}</span>
+                                            <button onclick="copyToClipboard('org-password')" class="ml-2 text-gray-500 hover:text-gray-700">
+                                                <i class="fas fa-copy text-xs"></i>
+                                            </button>
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Job Title:</dt>
+                                        <dd class="text-gray-900">{{ $orgAdmin->job_title ?? 'Organization Administrator' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Phone:</dt>
+                                        <dd class="text-gray-900">{{ $orgAdmin->phone ?? 'Not provided' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Roles:</dt>
+                                        <dd class="text-gray-900">
+                                            @if($orgAdmin->roles->count() > 0)
+                                                <div class="flex flex-wrap gap-1">
+                                                    @foreach($orgAdmin->roles as $role)
+                                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                            {{ $role->name }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <span class="text-gray-500">No roles assigned</span>
+                                            @endif
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Created:</dt>
+                                        <dd class="text-gray-900">{{ $orgAdmin->created_at->format('M d, Y H:i') }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Status:</dt>
+                                        <dd>
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $orgAdmin->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                {{ $orgAdmin->is_active ? 'Active' : 'Inactive' }}
+                                            </span>
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            @endif
+
+                            @if($branchAdmin)
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h4 class="text-sm font-semibold text-green-800 mb-2 flex items-center">
+                                    <i class="fas fa-user-cog mr-2"></i>
+                                    Branch Administrator
+                                </h4>
+                                <dl class="space-y-2 text-sm">
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Name:</dt>
+                                        <dd class="text-gray-900">{{ $branchAdmin->name }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Email:</dt>
+                                        <dd class="text-gray-900">{{ $branchAdmin->email }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Password:</dt>
+                                        <dd class="text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded inline-flex items-center">
+                                            <span id="branch-password">{{ config('auto_system_settings.default_branch_admin_password', 'BranchAdmin123!') }}</span>
+                                            <button onclick="copyToClipboard('branch-password')" class="ml-2 text-gray-500 hover:text-gray-700">
+                                                <i class="fas fa-copy text-xs"></i>
+                                            </button>
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Job Title:</dt>
+                                        <dd class="text-gray-900">{{ $branchAdmin->job_title ?? 'Branch Administrator' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Phone:</dt>
+                                        <dd class="text-gray-900">{{ $branchAdmin->phone ?? 'Not provided' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Branch:</dt>
+                                        <dd class="text-gray-900">
+                                            <span class="inline-flex items-center">
+                                                {{ $branchAdmin->branch->name ?? 'Unknown' }}
+                                                @if($branchAdmin->branch && $branchAdmin->branch->is_head_office)
+                                                    <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                        Head Office
+                                                    </span>
+                                                @endif
+                                            </span>
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Roles:</dt>
+                                        <dd class="text-gray-900">
+                                            @if($branchAdmin->roles->count() > 0)
+                                                <div class="flex flex-wrap gap-1">
+                                                    @foreach($branchAdmin->roles as $role)
+                                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                            {{ $role->name }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <span class="text-gray-500">No roles assigned</span>
+                                            @endif
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Created:</dt>
+                                        <dd class="text-gray-900">{{ $branchAdmin->created_at->format('M d, Y H:i') }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="font-medium text-gray-600">Status:</dt>
+                                        <dd>
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $branchAdmin->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                {{ $branchAdmin->is_active ? 'Active' : 'Inactive' }}
+                                            </span>
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            @endif
+
+                            @if(!$orgAdmin && !$branchAdmin)
+                            <p class="text-gray-500 text-center">No admin accounts found</p>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -286,7 +488,7 @@
                                         {{ $branch->total_capacity ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <a href="{{ route('branches.show', $branch) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
+                                        <a href="{{ route('admin.branches.show', [$organization, $branch]) }}" class="text-indigo-600 hover:text-indigo-900">View</a>
                                     </td>
                                 </tr>
                             @empty
@@ -354,6 +556,98 @@
                 </div>
             </div>
 
+            <!-- Kitchen Stations Tab -->
+            <div id="content-kitchen-stations" class="tab-content hidden">
+                <div class="space-y-6">
+                    @foreach($organization->branches as $branch)
+                        <div class="border border-gray-200 rounded-lg">
+                            <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i class="fas fa-store mr-2"></i>
+                                    {{ $branch->name }}
+                                    @if($branch->is_head_office)
+                                        <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                            Head Office
+                                        </span>
+                                    @endif
+                                    <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $branch->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                        {{ $branch->is_active ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </h3>
+                            </div>
+                            
+                            <div class="p-6">
+                                @if($branch->kitchenStations->count() > 0)
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        @foreach($branch->kitchenStations as $station)
+                                            <div class="border border-gray-200 rounded-lg p-4 {{ $station->is_active ? 'bg-white' : 'bg-gray-50' }}">
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <h4 class="font-semibold text-gray-900 flex items-center">
+                                                        <i class="fas fa-fire mr-2 {{ $station->is_active ? 'text-orange-500' : 'text-gray-400' }}"></i>
+                                                        {{ $station->name }}
+                                                    </h4>
+                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ $station->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                        {{ $station->is_active ? 'Active' : 'Inactive' }}
+                                                    </span>
+                                                </div>
+                                                
+                                                <dl class="space-y-2 text-sm">
+                                                    <div>
+                                                        <dt class="font-medium text-gray-600">Code:</dt>
+                                                        <dd class="text-gray-900 font-mono">{{ $station->code }}</dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt class="font-medium text-gray-600">Type:</dt>
+                                                        <dd class="text-gray-900">
+                                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                                                                {{ $station->type == 'cooking' ? 'bg-red-100 text-red-800' : 
+                                                                   ($station->type == 'prep' ? 'bg-yellow-100 text-yellow-800' : 
+                                                                   ($station->type == 'service' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800')) }}">
+                                                                {{ ucfirst($station->type) }}
+                                                            </span>
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt class="font-medium text-gray-600">Max Capacity:</dt>
+                                                        <dd class="text-gray-900">{{ $station->max_capacity ?? 'Not set' }}</dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt class="font-medium text-gray-600">Priority:</dt>
+                                                        <dd class="text-gray-900">{{ $station->order_priority ?? 'Not set' }}</dd>
+                                                    </div>
+                                                    @if($station->description)
+                                                    <div>
+                                                        <dt class="font-medium text-gray-600">Description:</dt>
+                                                        <dd class="text-gray-900">{{ $station->description }}</dd>
+                                                    </div>
+                                                    @endif
+                                                    <div>
+                                                        <dt class="font-medium text-gray-600">Created:</dt>
+                                                        <dd class="text-gray-900">{{ $station->created_at->format('M d, Y H:i') }}</dd>
+                                                    </div>
+                                                </dl>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="text-center py-8">
+                                        <i class="fas fa-utensils text-4xl text-gray-300 mb-4"></i>
+                                        <p class="text-gray-500">No kitchen stations found for this branch</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                    
+                    @if($organization->branches->count() == 0)
+                        <div class="text-center py-8">
+                            <i class="fas fa-store text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No branches found for this organization</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
             <!-- Modules Tab -->
             <div id="content-modules" class="tab-content hidden">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -398,6 +692,58 @@ function showTab(tabName) {
     const activeButton = document.getElementById('tab-' + tabName);
     activeButton.classList.add('active', 'border-indigo-500', 'text-indigo-600');
     activeButton.classList.remove('border-transparent', 'text-gray-500');
+}
+
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopySuccess(element);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            fallbackCopyTextToClipboard(text, element);
+        });
+    } else {
+        fallbackCopyTextToClipboard(text, element);
+    }
+}
+
+function fallbackCopyTextToClipboard(text, element) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showCopySuccess(element);
+        }
+    } catch (err) {
+        console.error('Fallback: Could not copy text: ', err);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function showCopySuccess(element) {
+    const button = element.nextElementSibling;
+    const originalIcon = button.innerHTML;
+    
+    button.innerHTML = '<i class="fas fa-check text-xs text-green-600"></i>';
+    button.classList.add('text-green-600');
+    
+    setTimeout(() => {
+        button.innerHTML = originalIcon;
+        button.classList.remove('text-green-600');
+    }, 2000);
 }
 </script>
 

@@ -8,7 +8,7 @@
     <div class="border-l-2 {{ $org->is_active ? 'border-green-500' : 'border-red-500' }} pl-3">
         <!-- Organization Header -->
         <div class="flex items-center justify-between group">
-            <a href="{{ route('organizations.show', $org) }}" class="flex items-center space-x-2 text-sm hover:text-blue-600 transition-colors">
+            <a href="{{ route('admin.organizations.show', $org) }}" class="flex items-center space-x-2 text-sm hover:text-blue-600 transition-colors">
                 <i class="fas fa-building {{ $org->is_active ? 'text-green-500' : 'text-red-500' }}"></i>
                 <span class="font-medium">{{ Str::limit($org->name, 20) }}</span>
                 <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
@@ -119,14 +119,14 @@
         <!-- Quick Actions -->
         <div class="ml-6 mt-2 flex space-x-2">
             @if(!$org->is_active)
-            <form action="{{ route('organizations.activate', $org) }}" method="POST" class="inline">
+            <form action="{{ route('admin.organizations.activate', $org) }}" method="POST" class="inline">
                 @csrf
                 <button type="submit" class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors">
                     Activate
                 </button>
             </form>
             @endif
-            <a href="{{ route('organizations.show', $org) }}" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors">
+            <a href="{{ route('admin.organizations.show', $org) }}" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors">
                 View Details
             </a>
         </div>
@@ -135,7 +135,7 @@
 </div>
 
 <div class="mt-4 px-4">
-    <a href="{{ route('organizations.create') }}" class="flex items-center justify-center w-full text-sm bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
+    <a href="{{ route('admin.organizations.create') }}" class="flex items-center justify-center w-full text-sm bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
         <i class="fas fa-plus mr-2"></i>
         Add Organization
     </a>

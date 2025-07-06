@@ -420,6 +420,11 @@ class ComprehensivePermissionSeeder extends Seeder
                 ]
             ],
 
+            // NOTE: Noise roles like Kitchen Manager, Operations Manager, Staff Member 
+            // are no longer created automatically. Only essential admin roles are created.
+            // If you need these operational roles, create them manually through the admin interface.
+            
+            /*
             'Kitchen Manager' => [
                 'guard_name' => 'admin',
                 'level' => 'branch',
@@ -503,6 +508,7 @@ class ComprehensivePermissionSeeder extends Seeder
                     'dashboard.view',
                 ]
             ],
+            */
         ];
     }
 
