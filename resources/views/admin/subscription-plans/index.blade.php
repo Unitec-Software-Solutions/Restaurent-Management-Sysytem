@@ -56,7 +56,7 @@
                     </div>
                     
                     <div class="text-3xl font-bold text-gray-900 mb-1">
-                        {{ $plan->currency ?? 'USD' }} {{ number_format($plan->price) }}
+                        {{ $plan->currency ?? 'USD' }} {{ number_format($plan->price, 2) }}
                         <span class="text-sm font-normal text-gray-500">/month</span>
                     </div>
                     
