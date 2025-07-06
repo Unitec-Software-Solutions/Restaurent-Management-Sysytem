@@ -264,31 +264,61 @@ class OrganizationController extends Controller
      */
     public function destroy(Organization $organization)
     {
-        try {
-            // Check if organization has active branches or users
-            $branchCount = $organization->branches()->count();
-            $userCount = $organization->users()->count();
+        $admin = Auth::guard('admin')->user();
 
-            if ($branchCount > 0 || $userCount > 0) {
-                return redirect()->back()
-                    ->with('error', "Cannot delete organization with {$branchCount} branches and {$userCount} users. Please remove them first.");
-            }
+        // Only super admins can delete organizations
+        if (!$admin || !$admin->isSuperAdmin()) {
+            return redirect()->back()
+                ->with('error', 'Only super administrators can delete organizations.');
+        }
+
+        // Only inactive organizations can be deleted
+        if ($organization->is_active) {
+            return redirect()->back()
+                ->with('error', 'Cannot delete active organization. Please deactivate it first.');
+        }
+
+        try {
+            DB::beginTransaction();
 
             $organizationName = $organization->name;
+            $branchCount = $organization->branches()->count();
+            $userCount = $organization->users()->count();
+            $adminCount = $organization->admins()->count();
+
+            // Soft delete related branches first (this will cascade to branch-related data)
+            $organization->branches()->delete();
+
+            // Soft delete related users
+            $organization->users()->delete();
+
+            // Soft delete related admins (except super admins)
+            $organization->admins()->where('is_super_admin', false)->delete();
+
+            // Soft delete the organization itself
             $organization->delete();
 
-            Log::info('Organization deleted successfully', [
+            DB::commit();
+
+            Log::info('Organization soft deleted by super admin', [
                 'organization_name' => $organizationName,
-                'deleted_by' => Auth::id()
+                'organization_id' => $organization->id,
+                'deleted_by' => $admin->id,
+                'deleted_by_name' => $admin->name,
+                'branches_deleted' => $branchCount,
+                'users_deleted' => $userCount,
+                'admins_deleted' => $adminCount,
+                'was_active' => false
             ]);
 
             return redirect()->route('admin.organizations.index')
-                ->with('success', 'Organization deleted successfully.');
+                ->with('success', "Organization '{$organizationName}' and all related data soft deleted successfully.");
 
         } catch (\Exception $e) {
             Log::error('Failed to delete organization', [
                 'organization_id' => $organization->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'deleted_by' => $admin->id
             ]);
 
             return redirect()->back()
