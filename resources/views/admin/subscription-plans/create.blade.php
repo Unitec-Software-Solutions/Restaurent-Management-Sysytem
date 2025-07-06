@@ -39,11 +39,11 @@
                     <div>
                         <label class="block mb-2 font-semibold text-gray-700" for="currency">Currency <span class="text-red-500">*</span></label>
                         <select id="currency" name="currency" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                            <option value="USD" {{ old('currency') == 'USD' ? 'selected' : '' }}>USD - US Dollar</option>
-                            <option value="EUR" {{ old('currency') == 'EUR' ? 'selected' : '' }}>EUR - Euro</option>
-                            <option value="GBP" {{ old('currency') == 'GBP' ? 'selected' : '' }}>GBP - British Pound</option>
-                            <option value="PKR" {{ old('currency') == 'PKR' ? 'selected' : '' }}>PKR - Pakistani Rupee</option>
+                            @foreach(\App\Helpers\CurrencyHelper::getAllCurrencies() as $code => $name)
+                                <option value="{{ $code }}" {{ old('currency', 'LKR') == $code ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
                         </select>
+                        <p class="text-xs text-gray-500 mt-1">Select the currency for subscription pricing</p>
                     </div>
                 </div>
 
@@ -54,17 +54,7 @@
                               placeholder="Describe what this plan includes...">{{ old('description') }}</textarea>
                 </div>
             </div>
-                        <option value="GBP" {{ old('currency') == 'GBP' ? 'selected' : '' }}>GBP - British Pound</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="mt-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea name="description" rows="3" 
-                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          placeholder="Brief description of what this plan includes...">{{ old('description') }}</textarea>
-            </div>
+
         </div>
 
         <!-- Modules Selection -->
