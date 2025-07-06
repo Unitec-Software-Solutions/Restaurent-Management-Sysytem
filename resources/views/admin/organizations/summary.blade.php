@@ -7,20 +7,22 @@
     <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organization Summary</h1>
         
-        <!-- Actions for Super Admin -->
-        @if(auth('admin')->user()->isSuperAdmin())
-            <div class="flex gap-3">
+        <!-- Actions -->
+        <div class="flex gap-3">
+            @can('activate', $organization)
                 <a href="{{ route('admin.organizations.activate.form', $organization) }}"
                    class="inline-block {{ $organization->is_active ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700' }} text-white px-4 py-2 rounded-lg transition font-semibold">
                     <i class="fas {{ $organization->is_active ? 'fa-cog' : 'fa-play' }} mr-2"></i>
                     {{ $organization->is_active ? 'Manage Status' : 'Activate' }}
                 </a>
+            @endcan
+            @can('update', $organization)
                 <a href="{{ route('admin.organizations.edit', $organization) }}"
                    class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
                     <i class="fas fa-edit mr-2"></i>Edit
                 </a>
-            </div>
-        @endif
+            @endcan
+        </div>
     </div>
     
     <a href="{{ route('admin.organizations.index') }}"
@@ -35,11 +37,11 @@
                 <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
                 <div>
                     <p class="text-red-700 font-medium">This organization is currently inactive.</p>
-                    @if(auth('admin')->user()->isSuperAdmin())
+                    @can('activate', $organization)
                         <p class="text-red-600 text-sm mt-1">
-                            As a super admin, you can <a href="{{ route('admin.organizations.activate.form', $organization) }}" class="underline font-medium">activate this organization</a>.
+                            You can <a href="{{ route('admin.organizations.activate.form', $organization) }}" class="underline font-medium">activate this organization</a>.
                         </p>
-                    @endif
+                    @endcan
                 </div>
             </div>
         </div>
