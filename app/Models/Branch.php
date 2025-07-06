@@ -267,6 +267,14 @@ class Branch extends Model
     }
 
     /**
+     * Get the admins for the branch
+     */
+    public function admins(): HasMany
+    {
+        return $this->hasMany(\App\Models\Admin::class);
+    }
+
+    /**
      * Scope for active branches
      */
     public function scopeActive($query)

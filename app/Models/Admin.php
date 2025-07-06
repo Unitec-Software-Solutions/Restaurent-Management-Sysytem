@@ -14,9 +14,6 @@ class Admin extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable following UI/UX guidelines.
-     */
     protected $fillable = [
         'name',
         'email',

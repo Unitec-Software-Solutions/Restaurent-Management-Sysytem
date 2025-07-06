@@ -12,7 +12,7 @@ class Role extends SpatieRole
     protected $fillable = [
         'name',
         'guard_name',
-        'scope_level',
+        'scope',
         'is_system_role',
         'organization_id',
         'branch_id',
@@ -88,7 +88,7 @@ class Role extends SpatieRole
             'personal' => 4,
         ];
 
-        return $levels[$this->scope_level] ?? 5;
+        return $levels[$this->scope] ?? 5;
     }
 
     /**
@@ -100,20 +100,20 @@ class Role extends SpatieRole
     }
 
     /**
-     * Get default system roles
+     * Get default system roles - Only essential admin roles
      */
     public static function getSystemRoles(): array
     {
         return [
             'super_admin' => [
                 'name' => 'Super Administrator',
-                'scope_level' => 'system',
+                'scope' => 'system',
                 'description' => 'Full system access across all organizations',
                 'permissions' => ['*']
             ],
             'org_admin' => [
                 'name' => 'Organization Administrator',
-                'scope_level' => 'organization',
+                'scope' => 'organization',
                 'description' => 'Full access within organization',
                 'permissions' => [
                     'manage_organization',
@@ -125,7 +125,7 @@ class Role extends SpatieRole
             ],
             'branch_admin' => [
                 'name' => 'Branch Administrator',
-                'scope_level' => 'branch',
+                'scope' => 'branch',
                 'description' => 'Full access within branch',
                 'permissions' => [
                     'manage_branch_operations',
@@ -134,39 +134,10 @@ class Role extends SpatieRole
                     'view_branch_reports',
                     'manage_orders'
                 ]
-            ],
-            'manager' => [
-                'name' => 'Manager',
-                'scope_level' => 'branch',
-                'description' => 'Operational management within branch',
-                'permissions' => [
-                    'view_branch_operations',
-                    'manage_orders',
-                    'manage_reservations',
-                    'view_inventory',
-                    'manage_staff_schedules'
-                ]
-            ],
-            'staff' => [
-                'name' => 'Staff Member',
-                'scope_level' => 'personal',
-                'description' => 'Basic operational access',
-                'permissions' => [
-                    'view_menu',
-                    'create_orders',
-                    'manage_assigned_tasks'
-                ]
-            ],
-            'guest' => [
-                'name' => 'Guest User',
-                'scope_level' => 'personal',
-                'description' => 'Limited public access',
-                'permissions' => [
-                    'view_public_menu',
-                    'create_guest_orders',
-                    'create_reservations'
-                ]
             ]
+            
+            // Note: Operational roles like Manager, Staff Member, Guest User should be created
+            // manually by organization/branch admins as needed, not automatically seeded
         ];
     }
 }
