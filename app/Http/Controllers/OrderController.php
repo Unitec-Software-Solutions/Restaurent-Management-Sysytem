@@ -1091,158 +1091,190 @@ class OrderController extends Controller
     }
 
     /**
-     * Get available menu items for ordering with stock and KOT status
+     * Get available menu items for ordering with enhanced filtering
      */
     public function getAvailableMenuItems(Request $request)
     {
         $branchId = $request->input('branch_id', Auth::user()->branch_id);
         $categoryId = $request->input('category_id');
         $type = $request->input('type'); // 'buy_sell', 'kot', 'all'
+        $search = $request->input('search');
         
-        $query = ItemMaster::with(['category', 'branch'])
-            ->where('branch_id', $branchId)
-            ->where('is_active', true);
+        $query = MenuItem::with(['menuCategory', 'itemMaster', 'kitchenStation'])
+            ->where('is_active', true)
+            ->where('is_available', true);
             
-        // Filter by category if specified
+        // Apply branch filter
+        if ($branchId) {
+            $query->where(function($q) use ($branchId) {
+                $q->where('branch_id', $branchId)
+                  ->orWhereNull('branch_id'); // Include organization-wide items
+            });
+        }
+            
+        // Apply category filter
         if ($categoryId) {
             $query->where('menu_category_id', $categoryId);
         }
         
-        // Filter by type if specified
+        // Apply type filter
         if ($type && $type !== 'all') {
             if ($type === 'buy_sell') {
-                $query->where('item_type', 'Buy & Sell');
+                $query->where('type', MenuItem::TYPE_BUY_SELL);
             } elseif ($type === 'kot') {
-                $query->where('item_type', 'KOT');
-            }
-        }
-        
-        $menuItems = $query->get()->filter(function ($item) {
-            // Validate buy/sell prices for all items
-            if (empty($item->buying_price) || empty($item->selling_price) || $item->selling_price <= 0) {
-                return false;
-            }
-            
-            // Check menu attributes for menu items
-            if ($item->is_menu_item) {
-                $attributes = is_array($item->attributes) ? $item->attributes : [];
-                $requiredAttrs = ['cuisine_type', 'prep_time_minutes'];
-                
-                foreach ($requiredAttrs as $attr) {
-                    if (empty($attributes[$attr])) {
-                        return false;
-                    }
-                }
-            }
-            
-            // Additional stock validation for Buy & Sell items
-            if ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) {
-                return false;
-            }
-            
-            return true;
-        })->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'name' => $item->item_name,
-                'price' => $item->selling_price,
-                'category' => $item->category->category_name ?? 'Uncategorized',
-                'type' => $item->item_type,
-                'stock_quantity' => $item->item_type === 'Buy & Sell' ? $item->current_stock : null,
-                'is_available' => $item->item_type === 'KOT' ? true : ($item->current_stock > 0),
-                'description' => $item->description,
-                'image_url' => $item->image_path,
-                'display_stock' => $item->item_type === 'Buy & Sell',
-                'display_kot_badge' => $item->item_type === 'KOT',
-                'buying_price' => $item->buying_price,
-                'has_valid_prices' => !empty($item->buying_price) && !empty($item->selling_price) && $item->selling_price > 0
-            ];
-        });
-        
-        return response()->json([
-            'success' => true,
-            'data' => $menuItems,
-            'total' => $menuItems->count()
-        ]);
-    }
-
-    /**
-     * Get menu items filtered by specific type
-     */
-    public function getMenuItemsByType(Request $request)
-    {
-        $type = $request->input('type', 'all'); // 'buy_sell', 'kot', 'all'
-        $branchId = $request->input('branch_id', Auth::user()->branch_id);
-        $search = $request->input('search');
-        
-        $query = ItemMaster::with(['category'])
-            ->where('branch_id', $branchId)
-            ->where('is_active', true);
-            
-        // Apply type filter
-        if ($type !== 'all') {
-            if ($type === 'buy_sell') {
-                $query->where('item_type', 'Buy & Sell')
-                      ->where('current_stock', '>', 0); // Only show items with stock
-            } elseif ($type === 'kot') {
-                $query->where('item_type', 'KOT');
+                $query->where('type', MenuItem::TYPE_KOT);
             }
         }
         
         // Apply search filter
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('item_name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'ILIKE', "%{$search}%")
+                  ->orWhere('description', 'ILIKE', "%{$search}%")
+                  ->orWhere('item_code', 'ILIKE', "%{$search}%");
             });
         }
         
-        $items = $query->orderBy('item_name')->get();
-        
-        $formattedItems = $items->map(function ($item) {
+        $menuItems = $query->orderBy('display_order')
+                          ->orderBy('name')
+                          ->get()
+                          ->map(function($item) use ($branchId) {
+            
+            // Determine current stock and availability
+            $currentStock = 0;
+            $isAvailable = true;
+            $stockStatus = 'available';
+            
+            if ($item->type === MenuItem::TYPE_BUY_SELL && $item->item_master_id && $item->itemMaster) {
+                // Get real-time stock for Buy & Sell items
+                $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
+                $isAvailable = $currentStock > 0;
+                
+                if ($currentStock <= 0) {
+                    $stockStatus = 'out_of_stock';
+                } elseif ($currentStock <= ($item->itemMaster->reorder_level ?? 5)) {
+                    $stockStatus = 'low_stock';
+                } else {
+                    $stockStatus = 'in_stock';
+                }
+            }
+            
+            // Calculate stock percentage for progress bars
+            $stockPercentage = 0;
+            if ($item->type === MenuItem::TYPE_BUY_SELL && $item->itemMaster) {
+                $maxStock = $item->itemMaster->maximum_stock ?? 100;
+                $stockPercentage = $maxStock > 0 ? min(100, ($currentStock / $maxStock) * 100) : 0;
+            }
+            
             return [
                 'id' => $item->id,
-                'name' => $item->item_name,
-                'price' => $item->selling_price,
-                'type' => $item->item_type,
-                'category' => $item->category->category_name ?? 'Uncategorized',
-                'stock_quantity' => $item->item_type === 'Buy & Sell' ? $item->current_stock : null,
-                'is_kot_item' => $item->item_type === 'KOT',
-                'is_buy_sell_item' => $item->item_type === 'Buy & Sell',
-                'is_available' => $item->item_type === 'KOT' || $item->current_stock > 0,
-                'stock_status' => $this->getStockStatus($item),
-                'description' => $item->description
+                'name' => $item->name,
+                'description' => $item->description,
+                'price' => $item->current_price, // Use current price (considers promotions)
+                'original_price' => $item->price,
+                'currency' => $item->currency ?? 'LKR',
+                'category_id' => $item->menu_category_id,
+                'category' => $item->menuCategory->name ?? 'Uncategorized',
+                'type' => $item->type,
+                'type_name' => $item->type === MenuItem::TYPE_BUY_SELL ? 'Buy & Sell' : 'KOT',
+                'item_code' => $item->item_code,
+                
+                // Stock and availability info
+                'current_stock' => $currentStock,
+                'is_available' => $isAvailable && $item->is_available,
+                'stock_status' => $stockStatus,
+                'stock_percentage' => $stockPercentage,
+                'requires_preparation' => $item->requires_preparation,
+                'preparation_time' => $item->preparation_time,
+                
+                // Enhanced display info
+                'image_url' => $item->image_path ? asset('storage/' . $item->image_path) : null,
+                'is_featured' => $item->is_featured,
+                'is_on_promotion' => $item->is_on_promotion,
+                'promotion_price' => $item->promotion_price,
+                
+                // Dietary and allergen info
+                'is_vegetarian' => $item->is_vegetarian,
+                'is_vegan' => $item->is_vegan,
+                'is_spicy' => $item->is_spicy,
+                'spice_level' => $item->spice_level,
+                'allergens' => $item->allergens ?? [],
+                'allergen_info' => $item->allergen_info ?? [],
+                
+                // Kitchen info (for KOT items)
+                'kitchen_station' => $item->kitchenStation ? [
+                    'id' => $item->kitchenStation->id,
+                    'name' => $item->kitchenStation->name
+                ] : null,
+                
+                // Item master link info
+                'item_master_id' => $item->item_master_id,
+                'linked_to_inventory' => (bool) $item->item_master_id,
+                
+                // Availability info for frontend
+                'availability_info' => [
+                    'status' => $stockStatus,
+                    'message' => $this->getAvailabilityMessage($stockStatus, $currentStock, $item->type),
+                    'color' => $this->getAvailabilityColor($stockStatus)
+                ]
             ];
+        });
+        
+        // Filter out items based on availability if needed
+        $availableItems = $menuItems->filter(function($item) {
+            // Always show KOT items as available
+            if ($item['type'] === MenuItem::TYPE_KOT) {
+                return true;
+            }
+            
+            // For Buy & Sell items, check stock
+            return $item['current_stock'] > 0;
         });
         
         return response()->json([
             'success' => true,
-            'data' => $formattedItems,
-            'type_filter' => $type,
-            'total' => $formattedItems->count()
+            'data' => $availableItems->values(),
+            'total' => $availableItems->count(),
+            'filtered_total' => $menuItems->count(),
+            'summary' => [
+                'total_items' => $menuItems->count(),
+                'available_items' => $availableItems->count(),
+                'buy_sell_items' => $menuItems->where('type', MenuItem::TYPE_BUY_SELL)->count(),
+                'kot_items' => $menuItems->where('type', MenuItem::TYPE_KOT)->count(),
+                'out_of_stock' => $menuItems->where('stock_status', 'out_of_stock')->count(),
+                'low_stock' => $menuItems->where('stock_status', 'low_stock')->count()
+            ]
         ]);
     }
-
+    
     /**
-     * Helper method to get stock status for display
+     * Get availability message for display
      */
-    private function getStockStatus($item)
+    private function getAvailabilityMessage(string $status, int $stock, int $type): string
     {
-        if ($item->item_type === 'KOT') {
-            return 'available'; // KOT items are always available
+        if ($type === MenuItem::TYPE_KOT) {
+            return 'Available (Made to Order)';
         }
         
-        if ($item->item_type === 'Buy & Sell') {
-            if ($item->current_stock <= 0) {
-                return 'out_of_stock';
-            } elseif ($item->current_stock <= 5) {
-                return 'low_stock';
-            } else {
-                return 'in_stock';
-            }
-        }
-        
-        return 'unknown';
+        return match($status) {
+            'out_of_stock' => 'Out of Stock',
+            'low_stock' => "Low Stock ({$stock} remaining)",
+            'in_stock' => "In Stock ({$stock} available)",
+            default => 'Available'
+        };
+    }
+    
+    /**
+     * Get availability color for display
+     */
+    private function getAvailabilityColor(string $status): string
+    {
+        return match($status) {
+            'out_of_stock' => 'red',
+            'low_stock' => 'orange',
+            'in_stock' => 'green',
+            default => 'gray'
+        };
     }
 
     /**

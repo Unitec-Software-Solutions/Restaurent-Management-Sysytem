@@ -20,7 +20,7 @@ class OrganizationPolicy
 
     public function update(User|Admin $user, Organization $organization): bool
     {
-        return $user->is_super_admin || ($user->organization_id === $organization->id && $user->hasPermission('manage_organization'));
+        return $user->is_super_admin || ($user->organization_id === $organization->id);
     }
 
     public function activate(User|Admin $user, Organization $organization): bool

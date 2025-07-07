@@ -373,4 +373,116 @@ public function destroy(Organization $organization, Branch $branch)
             'stats' => $stats
         ]);
     }
+    
+    /**
+     * Get branches for organization (Admin API endpoint)
+     * Works for both super admins and organization admins
+     */
+    public function getBranchesByOrganization(Organization $organization)
+    {
+        try {
+            $admin = Auth::guard('admin')->user();
+            
+            if (!$admin) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            
+            // Super admin can access any organization's branches
+            if ($admin->is_super_admin) {
+                $branches = Branch::where('organization_id', $organization->id)
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'address', 'phone', 'is_head_office', 'opening_time', 'closing_time', 'email'])
+                    ->orderBy('is_head_office', 'desc')
+                    ->orderBy('name')
+                    ->get();
+            }
+            // Organization admin can only access their own organization's branches
+            elseif ($admin->organization_id && $admin->organization_id == $organization->id) {
+                $branches = Branch::where('organization_id', $organization->id)
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'address', 'phone', 'is_head_office', 'opening_time', 'closing_time', 'email'])
+                    ->orderBy('is_head_office', 'desc')
+                    ->orderBy('name')
+                    ->get();
+            }
+            // Branch admin can only see their own branch
+            elseif ($admin->branch_id) {
+                $branches = Branch::where('id', $admin->branch_id)
+                    ->where('organization_id', $organization->id)
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'address', 'phone', 'is_head_office', 'opening_time', 'closing_time', 'email'])
+                    ->get();
+            }
+            else {
+                return response()->json(['error' => 'Access denied'], 403);
+            }
+
+            Log::info('Admin branches fetched for organization', [
+                'admin_id' => $admin->id,
+                'admin_type' => $admin->is_super_admin ? 'super_admin' : ($admin->organization_id ? 'org_admin' : 'branch_admin'),
+                'organization_id' => $organization->id,
+                'branches_count' => $branches->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'branches' => $branches,
+                'organization' => [
+                    'id' => $organization->id,
+                    'name' => $organization->name
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching admin branches by organization', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch branches'
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get branches for organization (Public API endpoint for guests)
+     * This endpoint doesn't require authentication
+     */
+    public function getBranchesPublic(Organization $organization)
+    {
+        try {
+            $branches = Branch::where('organization_id', $organization->id)
+                ->where('is_active', true)
+                ->select(['id', 'name', 'address', 'phone', 'opening_time', 'closing_time', 'email'])
+                ->orderBy('name')
+                ->get();
+
+            Log::info('Public branches fetched for organization', [
+                'organization_id' => $organization->id,
+                'branches_count' => $branches->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'branches' => $branches,
+                'organization' => [
+                    'id' => $organization->id,
+                    'name' => $organization->name
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching public branches by organization', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch branches'
+            ], 500);
+        }
+    }
 }

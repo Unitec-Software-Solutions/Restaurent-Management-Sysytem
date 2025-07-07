@@ -20,48 +20,99 @@ class KotController extends Controller
             $admin = auth('admin')->user();
             
             // Check if admin can access this order
-            if (!$admin->isSuperAdmin() && $order->organization_id !== $admin->organization_id) {
+            if (!$admin->is_super_admin && $order->organization_id !== $admin->organization_id) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized access'
                 ]);
             }
 
+            // Check if KOT already exists for this order
+            $existingKot = Kot::where('order_id', $order->id)->first();
+            if ($existingKot) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'KOT already exists for this order',
+                    'kot' => $existingKot->load(['kotItems.menuItem', 'order.customer']),
+                    'print_url' => route('admin.kots.print', $existingKot->id)
+                ]);
+            }
+
             DB::beginTransaction();
+
+            // Filter order items that require KOT (only KOT type items)
+            $kotRequiredItems = $order->orderItems()
+                                     ->whereHas('menuItem', function($q) {
+                                         $q->where('type', \App\Models\MenuItem::TYPE_KOT)
+                                           ->where('requires_preparation', true);
+                                     })
+                                     ->get();
+
+            if ($kotRequiredItems->isEmpty()) {
+                DB::rollback();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No items in this order require kitchen preparation'
+                ]);
+            }
 
             // Create KOT record
             $kot = Kot::create([
                 'order_id' => $order->id,
-                'kot_number' => $this->generateKotNumber(),
+                'kot_number' => $this->generateKotNumber($order->branch_id),
                 'status' => 'pending',
                 'created_by' => $admin->id,
                 'organization_id' => $order->organization_id,
                 'branch_id' => $order->branch_id,
+                'table_number' => $order->reservation?->table_number,
+                'customer_name' => $order->customer_name,
+                'order_type' => $order->order_type,
+                'priority' => $this->determineKotPriority($order),
+                'special_instructions' => $order->special_instructions,
             ]);
 
-            // Create KOT items from order items
-            foreach ($order->orderItems as $orderItem) {
+            // Create KOT items from order items that require preparation
+            foreach ($kotRequiredItems as $orderItem) {
+                $menuItem = $orderItem->menuItem;
+                
                 $kot->kotItems()->create([
+                    'order_item_id' => $orderItem->id,
                     'menu_item_id' => $orderItem->menu_item_id,
+                    'item_master_id' => $menuItem->item_master_id,
+                    'item_name' => $menuItem->name,
+                    'item_description' => $menuItem->description,
                     'quantity' => $orderItem->quantity,
+                    'unit_price' => $orderItem->unit_price,
                     'special_instructions' => $orderItem->special_instructions ?? '',
+                    'customizations' => $orderItem->customizations ?? null,
                     'status' => 'pending',
+                    'priority' => $this->determineItemPriority($menuItem, $orderItem),
+                    'estimated_prep_time' => $menuItem->preparation_time ?? 15,
                 ]);
             }
+
+            // Update order to mark KOT as generated
+            $order->update([
+                'kot_generated' => true,
+                'kot_generated_at' => now(),
+                'status' => 'preparing'
+            ]);
 
             DB::commit();
 
             Log::info('KOT generated', [
                 'kot_id' => $kot->id,
                 'order_id' => $order->id,
-                'created_by' => $admin->id
+                'created_by' => $admin->id,
+                'items_count' => $kotRequiredItems->count()
             ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'KOT generated successfully',
                 'kot' => $kot->load(['kotItems.menuItem', 'order.customer']),
-                'print_url' => route('admin.kots.print', $kot->id)
+                'print_url' => route('admin.kots.print', $kot->id),
+                'items_count' => $kotRequiredItems->count()
             ]);
 
         } catch (\Exception $e) {
@@ -69,12 +120,13 @@ class KotController extends Controller
             
             Log::error('Failed to generate KOT', [
                 'error' => $e->getMessage(),
-                'order_id' => $order->id
+                'order_id' => $order->id,
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate KOT'
+                'message' => 'Failed to generate KOT: ' . $e->getMessage()
             ]);
         }
     }
@@ -150,14 +202,68 @@ class KotController extends Controller
     }
 
     /**
-     * Generate unique KOT number
+     * Generate KOT number with branch prefix
      */
-    private function generateKotNumber()
+    private function generateKotNumber($branchId = null): string
     {
         $prefix = 'KOT';
-        $timestamp = now()->format('YmdHis');
-        $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
         
-        return $prefix . $timestamp . $random;
+        if ($branchId) {
+            $branch = \App\Models\Branch::find($branchId);
+            if ($branch) {
+                $prefix = strtoupper(substr($branch->code ?? $branch->name, 0, 3)) . '-KOT';
+            }
+        }
+        
+        $todayCount = Kot::whereDate('created_at', today())
+                         ->when($branchId, function($q) use ($branchId) {
+                             $q->where('branch_id', $branchId);
+                         })
+                         ->count();
+        
+        $number = str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
+        
+        return $prefix . '-' . now()->format('Ymd') . '-' . $number;
+    }
+
+    /**
+     * Determine KOT priority based on order characteristics
+     */
+    private function determineKotPriority(Order $order): string
+    {
+        // VIP customers or special occasions
+        if ($order->customer && isset($order->customer->attributes['is_vip'])) {
+            return 'high';
+        }
+        
+        // Rush orders or late orders
+        if ($order->order_type && str_contains((string)$order->order_type, 'rush')) {
+            return 'urgent';
+        }
+        
+        // Large orders
+        if ($order->orderItems->sum('quantity') > 10) {
+            return 'high';
+        }
+        
+        return 'normal';
+    }
+
+    /**
+     * Determine individual item priority
+     */
+    private function determineItemPriority($menuItem, $orderItem): string
+    {
+        // Long preparation time items get higher priority
+        if ($menuItem->preparation_time > 30) {
+            return 'high';
+        }
+        
+        // Large quantities
+        if ($orderItem->quantity > 5) {
+            return 'high';
+        }
+        
+        return 'normal';
     }
 }

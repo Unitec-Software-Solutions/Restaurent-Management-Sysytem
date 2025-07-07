@@ -521,16 +521,9 @@ class OrganizationController extends Controller
      */
     public function activateByKey(Request $request, Organization $organization)
     {
+        $this->authorize('activate', $organization);
+        
         $admin = Auth::guard('admin')->user();
-
-        if (!$admin) {
-            abort(403, 'Unauthorized');
-        }
-
-        // Check permissions: Super admin can activate any org, org admin can only activate their own
-        if (!$admin->isSuperAdmin() && $admin->organization_id !== $organization->id) {
-            abort(403, 'You can only activate your own organization');
-        }
 
         $request->validate([
             'activation_key' => 'required|string',
@@ -697,10 +690,12 @@ class OrganizationController extends Controller
     }
 
     /**
-     * Show activation form for super admin
+     * Show activation form for super admin and organization admin
      */
     public function showActivateForm(Organization $organization)
     {
+        $this->authorize('activate', $organization);
+        
         return view('admin.organizations.activate', compact('organization'));
     }
 
@@ -712,17 +707,10 @@ class OrganizationController extends Controller
         // Check permissions based on action
         if ($request->action === 'deactivate') {
             // Only super admins can deactivate organizations
-            if (!Auth::guard('admin')->user()->isSuperAdmin()) {
-                return redirect()->back()
-                    ->with('error', 'You do not have permission to deactivate organizations.');
-            }
+            $this->authorize('deactivate', $organization);
         } else {
             // For activation, both super admins and organization admins can activate
-            if (!Auth::guard('admin')->user()->isSuperAdmin() &&
-                !Auth::guard('admin')->user()->canManageOrganization($organization)) {
-                return redirect()->back()
-                    ->with('error', 'You do not have permission to activate this organization.');
-            }
+            $this->authorize('activate', $organization);
         }
 
         $request->validate([

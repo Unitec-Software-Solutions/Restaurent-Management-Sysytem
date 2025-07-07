@@ -93,6 +93,8 @@ class EnhancedOrderManager {
             const name = $card.data('name').toLowerCase();
             const category = $card.data('category');
             const availability = $card.data('availability');
+            const itemType = $card.data('type') || 'KOT';
+            const stock = parseInt($card.data('stock')) || 0;
 
             let show = true;
 
@@ -107,8 +109,23 @@ class EnhancedOrderManager {
             }
 
             // Availability filter
-            if (availabilityFilter && availability !== availabilityFilter) {
-                show = false;
+            if (availabilityFilter) {
+                if (availabilityFilter === 'available') {
+                    // For Buy & Sell items, check stock; for KOT items, always available
+                    if (itemType === 'Buy & Sell' && stock <= 0) {
+                        show = false;
+                    }
+                } else if (availabilityFilter === 'low_stock') {
+                    // Only show Buy & Sell items with low stock (1-4 items)
+                    if (itemType !== 'Buy & Sell' || stock < 1 || stock > 4) {
+                        show = false;
+                    }
+                } else if (availabilityFilter === 'out_of_stock') {
+                    // Only show Buy & Sell items with no stock
+                    if (itemType !== 'Buy & Sell' || stock > 0) {
+                        show = false;
+                    }
+                }
             }
 
             $card.toggle(show);

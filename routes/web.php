@@ -650,11 +650,6 @@ Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     Route::get('/organization-branches', [AdminOrderController::class, 'getBranchesForOrganization']);
 });
 
-// Menu Items API Routes
-Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
-    Route::get('/menu-items/by-branch', [AdminOrderController::class, 'getMenuItems'])->name('menu-items.by-branch');
-});
-
 Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () {
     Route::get('/realtime-inventory', [RealtimeDashboardController::class, 'index'])->name('admin.dashboard.realtime-inventory');
 
@@ -791,7 +786,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
 // Remove the duplicate test route - keep only one for debugging
 Route::get('/test-branches/{organization}', function($organizationId) {
     try {
-        $controller = app(App.Http\Controllers\ReservationController::class);
+        $controller = app(\App\Http\Controllers\ReservationController::class);
         return $controller->getBranches($organizationId);
     } catch (\Exception $e) {
         return response()->json([
@@ -953,22 +948,27 @@ Route::prefix('admin/kitchen')->name('admin.kitchen.')->group(function () {
 Route::prefix('admin/menu-items')->name('admin.menu-items.')->middleware(['auth:admin'])->group(function () {
     // Standard CRUD routes
     Route::get('/', [MenuItemController::class, 'index'])->name('index');
+    Route::get('/enhanced', [MenuItemController::class, 'enhancedIndex'])->name('enhanced.index');
     Route::get('/create', [MenuItemController::class, 'create'])->name('create');
+    
+    // Enhanced KOT specific routes (MUST be before dynamic routes)
+    Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
+    Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('store-kot');
+    
+    // AJAX routes
+    Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
+    Route::get('/by-branch', [AdminOrderController::class, 'getMenuItems'])->name('by-branch');
+    Route::get('/menu-eligible-items', [MenuItemController::class, 'getMenuEligibleItems'])->name('menu-eligible-items');
+    
+    // Bulk operations with enhanced validation
+    Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');
+    
+    // Dynamic routes (MUST be after specific routes)
     Route::post('/', [MenuItemController::class, 'store'])->name('store');
     Route::get('/{menuItem}', [MenuItemController::class, 'show'])->name('show');
     Route::get('/{menuItem}/edit', [MenuItemController::class, 'edit'])->name('edit');
     Route::patch('/{menuItem}', [MenuItemController::class, 'update'])->name('update');
     Route::delete('/{menuItem}', [MenuItemController::class, 'destroy'])->name('destroy');
-    
-    // AJAX routes
-    Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
-    
-    // Bulk operations
-    Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');
-    
-    // KOT specific routes
-    Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
-    Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('create-kot.store');
 });
 
 /*-------------------------------------------------------------------------
@@ -1002,3 +1002,35 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/staff', [App\Http\Controllers\DashboardController::class, 'staff'])->name('dashboard.staff');
     Route::get('/dashboard/management', [App\Http\Controllers\DashboardController::class, 'management'])->name('dashboard.management');
 });
+
+// Debug route for testing reservation form
+Route::get('/debug/reservation', function () {
+    return view('debug_reservation');
+})->name('debug.reservation');
+
+// Test route for branch loading
+Route::get('/test/branch-loading', function () {
+    return view('test_branch_loading');
+})->name('test.branch-loading');
+
+// Debug route for branch loading
+Route::get('/debug/branch-loading', function () {
+    // Get organizations for testing
+    $organizations = App\Models\Organization::where('is_active', true)
+        ->select('id', 'name', 'trading_name')
+        ->orderBy('name')
+        ->get()
+        ->map(function($org) {
+            return [
+                'id' => $org->id,
+                'name' => $org->trading_name ?: $org->name
+            ];
+        });
+    
+    return view('debug_reservation_branch_loading', compact('organizations'));
+})->name('debug.branch-loading');
+
+// Simple branch test route
+Route::get('/test/simple-branch', function () {
+    return view('simple_branch_test');
+})->name('test.simple-branch');

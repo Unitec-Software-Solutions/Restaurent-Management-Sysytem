@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branch Loading Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        select, button { margin: 10px 0; padding: 8px; width: 100%; }
+        .log { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Branch Loading Test</h1>
+        
+        <div>
+            <label for="organization">Organization:</label>
+            <select id="organization">
+                <option value="">Select a restaurant</option>
+                <option value="1">Helabojun hala</option>
+                <option value="2">Priyangani Resataurants</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="branch">Branch:</label>
+            <select id="branch" disabled>
+                <option value="">First select a restaurant</option>
+            </select>
+        </div>
+        
+        <button onclick="testDirectAPI()">Test API Directly</button>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message) {
+            log.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            console.log(message);
+        }
+        
+        document.getElementById('organization').addEventListener('change', function(e) {
+            const orgId = e.target.value;
+            addLog(`Organization selected: ${orgId}`);
+            
+            if (!orgId) {
+                clearBranches();
+                return;
+            }
+            
+            loadBranches(orgId);
+        });
+        
+        function clearBranches() {
+            const branchSelect = document.getElementById('branch');
+            branchSelect.innerHTML = '<option value="">First select a restaurant</option>';
+            branchSelect.disabled = true;
+            addLog('Branches cleared');
+        }
+        
+        async function loadBranches(organizationId) {
+            const branchSelect = document.getElementById('branch');
+            
+            // Show loading
+            branchSelect.innerHTML = '<option value="">Loading branches...</option>';
+            branchSelect.disabled = true;
+            addLog(`Loading branches for organization ${organizationId}...`);
+            
+            try {
+                const response = await fetch(`/api/organizations/${organizationId}/branches`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                addLog(`Response status: ${response.status}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                addLog(`Response data: ${JSON.stringify(data, null, 2)}`);
+                
+                if (data.success && Array.isArray(data.branches)) {
+                    populateBranches(data.branches);
+                } else {
+                    addLog('Invalid response format');
+                    showBranchError('Invalid response format');
+                }
+                
+            } catch (error) {
+                addLog(`Error loading branches: ${error.message}`);
+                showBranchError(`Error: ${error.message}`);
+            }
+        }
+        
+        function populateBranches(branches) {
+            const branchSelect = document.getElementById('branch');
+            
+            if (!branches || branches.length === 0) {
+                branchSelect.innerHTML = '<option value="">No branches available</option>';
+                branchSelect.disabled = true;
+                addLog('No branches available');
+                return;
+            }
+            
+            branchSelect.innerHTML = '<option value="">Select a branch</option>';
+            
+            branches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch.id;
+                option.textContent = `${branch.name}${branch.address ? ' - ' + branch.address : ''}`;
+                branchSelect.appendChild(option);
+            });
+            
+            branchSelect.disabled = false;
+            addLog(`Successfully loaded ${branches.length} branches`);
+        }
+        
+        function showBranchError(message) {
+            const branchSelect = document.getElementById('branch');
+            branchSelect.innerHTML = `<option value="">${message}</option>`;
+            branchSelect.disabled = true;
+        }
+        
+        async function testDirectAPI() {
+            addLog('Testing API endpoints directly...');
+            
+            for (const orgId of [1, 2]) {
+                try {
+                    const response = await fetch(`/api/organizations/${orgId}/branches`);
+                    const data = await response.json();
+                    addLog(`Org ${orgId}: ${response.status} - ${data.branches?.length || 0} branches`);
+                } catch (error) {
+                    addLog(`Org ${orgId}: Error - ${error.message}`);
+                }
+            }
+        }
+        
+        // Test on page load
+        addLog('Page loaded, ready to test branch loading');
+    </script>
+</body>
+</html>
