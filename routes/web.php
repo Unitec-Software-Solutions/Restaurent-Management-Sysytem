@@ -60,6 +60,7 @@ use App\Http\Controllers\Admin\
 
 use App\Http\Controllers\PaymentController as MainPaymentController;
 use App\Http\Middleware\SuperAdmin;
+use App\Http\Controllers\ReservationWorkflowController;
 
 /*-------------------------------------------------------------------------
 | Debug Routes - Removed in production refactoring
@@ -135,6 +136,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/all', [OrderController::class, 'allOrders'])->name('all');
         Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('update-cart');
         Route::get('/create', [OrderController::class, 'create'])->name('create');
+        Route::get('/create-from-reservation/{reservation}', [OrderController::class, 'createFromReservation'])->name('create-from-reservation');
         Route::post('/store', [OrderController::class, 'store'])->name('store');
         Route::get('/{order}/summary', [OrderController::class, 'summary'])->whereNumber('order')->name('summary');
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('edit');
@@ -149,7 +151,8 @@ Route::middleware(['web'])->group(function () {
         Route::post('/{order}/mark-ready', [OrderController::class, 'markAsReady'])->name('mark-ready');
         Route::post('/{order}/complete', [OrderController::class, 'completeOrder'])->name('complete');
 
-        // Takeaway Orders
+        // Takeaway Orders - DISABLED: Using ReservationWorkflowController instead
+        /* 
         Route::prefix('takeaway')->name('takeaway.')->group(function () {
             Route::get('/', [OrderController::class, 'indexTakeaway'])->name('index');
             Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
@@ -161,6 +164,7 @@ Route::middleware(['web'])->group(function () {
             Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->whereNumber('order')->name('submit');
             Route::get('/{order}', [OrderController::class, 'showTakeaway'])->whereNumber('order')->name('show');
         });
+        */
     });
 });
 
@@ -915,7 +919,8 @@ Route::prefix('menus')->name('menus.')->group(function () {
 });
 
 Route::prefix('orders')->name('orders.')->group(function () {
-    Route::post('/takeaway', [OrderController::class, 'createTakeawayOrder'])->name('takeaway.store');
+    // DISABLED: Using ReservationWorkflowController instead
+    // Route::post('/takeaway', [OrderController::class, 'createTakeawayOrder'])->name('takeaway.store');
 });
 
 Route::prefix('reservations')->name('reservations.')->group(function () {
@@ -1045,3 +1050,10 @@ Route::get('/debug/branch-loading', function () {
 Route::get('/test/simple-branch', function () {
     return view('simple_branch_test');
 })->name('test.simple-branch');
+
+// Include reservation workflow routes
+require __DIR__.'/reservation_workflow.php';
+
+// Include public route groups
+require __DIR__.'/groups/public.php';
+

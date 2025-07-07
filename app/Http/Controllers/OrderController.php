@@ -504,7 +504,7 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
             'special_instructions' => 'nullable|string|max:1000',
             'order_type' => 'nullable|string|in:takeaway_walk_in_demand,takeaway_in_call_scheduled,takeaway_online_scheduled',
@@ -529,28 +529,28 @@ class OrderController extends Controller
             $subtotal = 0;
 
             foreach ($data['items'] as $item) {
-                $menuItem = ItemMaster::find($item['item_id']);
+                $menuItem = MenuItem::find($item['menu_item_id']);
                 if (!$menuItem || !$menuItem->is_active) {
-                    $stockErrors[] = "Item {$item['item_id']} is not available";
+                    $stockErrors[] = "Item {$item['menu_item_id']} is not available";
                     continue;
                 }
                 
-                // Only check stock for items that track inventory
-                if ($menuItem->is_perishable) {
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->id, $data['branch_id']);
+                // Only check stock for items that track inventory (Buy & Sell items with item_master_id)
+                if ($menuItem->type === MenuItem::TYPE_BUY_SELL && $menuItem->item_master_id) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $data['branch_id']);
                     if ($currentStock < $item['quantity']) {
                         $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
                     }
                 }
 
                 // Calculate item total
-                $itemTotal = $menuItem->selling_price * $item['quantity'];
+                $itemTotal = $menuItem->price * $item['quantity'];
                 $subtotal += $itemTotal;
 
                 $orderItems[] = [
                     'menu_item' => $menuItem,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $menuItem->selling_price,
+                    'unit_price' => $menuItem->price,
                     'total_price' => $itemTotal
                 ];
             }
@@ -595,7 +595,7 @@ class OrderController extends Controller
                 \App\Models\OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $itemData['menu_item']->id,
-                    'inventory_item_id' => $itemData['menu_item']->id,
+                    'inventory_item_id' => $itemData['menu_item']->item_master_id, // Use item_master_id if exists, null otherwise
                     'item_name' => $itemData['menu_item']->name,
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $itemData['unit_price'],
@@ -603,12 +603,12 @@ class OrderController extends Controller
                     'subtotal' => $itemData['total_price'], 
                 ]);
 
-                // Deduct stock for perishable items
-                if ($itemData['menu_item']->is_perishable) {
+                // Deduct stock for Buy & Sell items that have item_master_id
+                if ($itemData['menu_item']->type === MenuItem::TYPE_BUY_SELL && $itemData['menu_item']->item_master_id) {
                     \App\Models\ItemTransaction::create([
                         'organization_id' => $branch->organization_id,
                         'branch_id' => $data['branch_id'],
-                        'inventory_item_id' => $itemData['menu_item']->id,
+                        'inventory_item_id' => $itemData['menu_item']->item_master_id,
                         'transaction_type' => 'order_deduction',
                         'quantity' => -$itemData['quantity'],
                         'reference_type' => 'order',
@@ -1289,5 +1289,214 @@ class OrderController extends Controller
             ->count() + 1;
         
         return $prefix . $date . str_pad($sequence, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Show reservation summary and ask if user wants to create an order
+     */
+    public function showReservationSummary(Request $request)
+    {
+        $reservationId = $request->query('reservation_id');
+        $reservation = Reservation::with(['branch', 'customer', 'orders'])->findOrFail($reservationId);
+        
+        return view('orders.reservation-summary', compact('reservation'));
+    }
+
+    /**
+     * Create order from reservation workflow
+     */
+    public function createFromReservation(Request $request)
+    {
+        $reservationId = $request->query('reservation_id');
+        $reservation = Reservation::with(['branch.organization', 'customer'])->findOrFail($reservationId);
+        
+        // Validate reservation can have orders
+        if (!in_array($reservation->status, ['confirmed', 'pending'])) {
+            return redirect()->back()->with('error', 'Orders can only be created for confirmed reservations');
+        }
+        
+        // Get available menu items
+        $menuItems = ItemMaster::where('is_menu_item', true)
+            ->where('is_active', true)
+            ->where('branch_id', $reservation->branch_id)
+            ->with(['category'])
+            ->orderBy('category_id')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('category.name');
+        
+        // Get available stewards for the branch
+        $stewards = Employee::whereHas('roles', function($query) {
+                $query->where('name', 'steward');
+            })
+            ->where('branch_id', $reservation->branch_id)
+            ->where('is_active', true)
+            ->get();
+
+        // Get order types for dine-in
+        $orderTypes = collect(OrderType::dineInTypes())->map(function($type) {
+            return [
+                'value' => $type->value,
+                'label' => $type->getLabel(),
+            ];
+        });
+
+        return view('orders.create-from-reservation', compact(
+            'reservation', 
+            'menuItems', 
+            'stewards', 
+            'orderTypes'
+        ));
+    }
+
+    /**
+     * Store order created from reservation
+     */
+    public function storeFromReservation(Request $request)
+    {
+        $data = $request->validate([
+            'reservation_id' => 'required|exists:reservations,id',
+            'order_type' => 'required|string|in:' . implode(',', array_column(OrderType::dineInTypes(), 'value')),
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_masters,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'special_instructions' => 'nullable|string|max:500',
+            'steward_id' => 'nullable|exists:employees,id',
+        ]);
+
+        return DB::transaction(function () use ($data, $request) {
+            $reservation = Reservation::with(['branch.organization', 'customer'])->findOrFail($data['reservation_id']);
+            
+            // Validate reservation
+            if (!in_array($reservation->status, ['confirmed', 'pending'])) {
+                throw new \Exception('Orders can only be created for confirmed reservations');
+            }
+
+            // Create order from reservation
+            $orderData = [
+                'order_type' => OrderType::from($data['order_type']),
+                'special_instructions' => $data['special_instructions'] ?? null,
+                'user_id' => $data['steward_id'] ?? null,
+                'placed_by_admin' => Auth::check() && Auth::user()->hasRole(['admin', 'super_admin']),
+                'created_by' => Auth::id(),
+            ];
+
+            $order = Order::createFromReservation($reservation, $orderData);
+
+            // Add order items
+            $subtotal = 0;
+            foreach ($data['items'] as $itemData) {
+                $menuItem = ItemMaster::findOrFail($itemData['item_id']);
+                
+                // Check inventory availability
+                if (!$this->inventoryService->checkAvailability($menuItem, $itemData['quantity'])) {
+                    throw new \Exception("Insufficient inventory for {$menuItem->name}");
+                }
+                
+                $orderItem = OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $menuItem->id,
+                    'item_name' => $menuItem->name,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $menuItem->selling_price,
+                    'total_price' => $menuItem->selling_price * $itemData['quantity'],
+                    'inventory_item_id' => $menuItem->id,
+                ]);
+                
+                $subtotal += $orderItem->total_price;
+                
+                // Reserve inventory
+                $this->inventoryService->reserveItem($menuItem, $itemData['quantity'], $order->id);
+            }
+
+            // Calculate totals
+            $order->calculateTotals();
+            $order->estimated_prep_time = $order->calculateEstimatedPrepTime();
+            $order->save();
+
+            // Send order creation notification
+            $this->notificationService->sendOrderCreated($order);
+
+            return redirect()->route('orders.payment-selection', ['order' => $order->id])
+                ->with('success', 'Order created successfully! Please proceed with payment.');
+        });
+    }
+
+    /**
+     * Show payment selection for order
+     */
+    public function showPaymentSelection(Order $order)
+    {
+        $order->load(['reservation', 'orderItems.menuItem']);
+        
+        $paymentMethods = [
+            Order::PAYMENT_METHOD_CASH => 'Cash',
+            Order::PAYMENT_METHOD_CARD => 'Card',
+            Order::PAYMENT_METHOD_DIGITAL => 'Digital Payment',
+        ];
+
+        return view('orders.payment-selection', compact('order', 'paymentMethods'));
+    }
+
+    /**
+     * Process payment for order
+     */
+    public function processPayment(Request $request, Order $order)
+    {
+        $data = $request->validate([
+            'payment_method' => 'required|string|in:' . implode(',', [
+                Order::PAYMENT_METHOD_CASH,
+                Order::PAYMENT_METHOD_CARD, 
+                Order::PAYMENT_METHOD_DIGITAL
+            ]),
+            'payment_reference' => 'nullable|string|max:255',
+        ]);
+
+        return DB::transaction(function () use ($data, $order) {
+            $order->update([
+                'payment_method' => $data['payment_method'],
+                'payment_reference' => $data['payment_reference'] ?? null,
+                'payment_status' => Order::PAYMENT_STATUS_PAID,
+                'status' => Order::STATUS_CONFIRMED,
+                'confirmed_at' => now(),
+            ]);
+
+            // Update reservation status if needed
+            if ($order->reservation && $order->reservation->status === 'pending') {
+                $order->reservation->confirmReservation();
+            }
+
+            // Send confirmation notifications
+            $this->notificationService->sendOrderConfirmed($order);
+
+            return redirect()->route('orders.confirmation', ['order' => $order->id])
+                ->with('success', 'Payment processed successfully!');
+        });
+    }
+
+    /**
+     * Show order confirmation
+     */
+    public function showConfirmation(Order $order)
+    {
+        $order->load(['reservation', 'orderItems.menuItem', 'customer']);
+        
+        return view('orders.confirmation', compact('order'));
+    }
+    /**
+     * Get today's orders for admin dashboard with KOT filter
+     */
+    public function getTodaysOrdersForAdmin(Request $request)
+    {
+        $filters = $request->only(['status', 'order_type', 'has_kot', 'branch_id']);
+        
+        $branchId = $request->user()->branch_id;
+        if ($request->user()->hasRole('super_admin')) {
+            $branchId = $request->input('branch_id', null);
+        }
+
+        $orders = Order::getTodaysOrders($branchId, $filters)->paginate(20);
+        
+        return view('admin.orders.today', compact('orders', 'filters'));
     }
 }

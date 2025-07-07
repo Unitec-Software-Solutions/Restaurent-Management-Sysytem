@@ -126,7 +126,6 @@ class Order extends Model
         'service_charge' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
         'total_amount' => 'decimal:2',
-        // Compatibility casts
         'tax' => 'decimal:2',
         'discount' => 'decimal:2',
         'total' => 'decimal:2',

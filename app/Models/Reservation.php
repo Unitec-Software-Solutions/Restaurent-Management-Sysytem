@@ -33,8 +33,8 @@ class Reservation extends Model
         'check_in_time',
         'check_out_time',
         'send_notification',
-        'created_by_admin_id', // Track which admin created the reservation
-        'assigned_table_ids', // Store assigned table IDs as JSON
+        'created_by_admin_id', 
+        'assigned_table_ids', 
     ];
 
     protected $casts = [
@@ -263,6 +263,118 @@ class Reservation extends Model
     public function getTypeLabel(): string
     {
         return $this->type ? $this->type->getLabel() : 'Unknown';
+    }
+
+    /**
+     * Generate reservation summary for confirmation
+     */
+    public function getReservationSummary(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'phone' => $this->phone,
+            'date' => $this->date->format('Y-m-d'),
+            'start_time' => $this->start_time->format('H:i'),
+            'end_time' => $this->end_time->format('H:i'),
+            'number_of_people' => $this->number_of_people,
+            'type' => $this->getTypeLabel(),
+            'reservation_fee' => $this->reservation_fee,
+            'status' => $this->status,
+            'table_size' => $this->table_size,
+            'tables_assigned' => $this->assigned_table_ids ?? [],
+        ];
+    }
+
+    /**
+     * Confirm reservation and prepare for order workflow
+     */
+    public function confirmReservation(): bool
+    {
+        if ($this->status !== 'pending') {
+            throw new \Exception('Only pending reservations can be confirmed');
+        }
+
+        $this->status = 'confirmed';
+        $this->save();
+
+        // Send confirmation notification if enabled
+        if ($this->send_notification) {
+            // NotificationService::sendReservationConfirmation($this);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if reservation has any orders
+     */
+    public function hasOrders(): bool
+    {
+        return $this->orders()->exists();
+    }
+
+    /**
+     * Get admin defaults for reservation creation
+     */
+    public static function getAdminDefaults($adminUser): array
+    {
+        $defaults = [
+            'type' => ReservationType::WALK_IN,
+            'date' => now()->addHours(1)->toDateString(),
+            'start_time' => now()->addHours(1)->format('H:i'),
+            'end_time' => now()->addHours(3)->format('H:i'),
+            'status' => 'pending',
+            'branch_id' => $adminUser->branch_id,
+            'created_by_admin_id' => $adminUser->id,
+            'send_notification' => false,
+        ];
+
+        // Get admin's default phone if configured
+        $defaultPhone = RestaurantConfig::get('admin_default_phone', null, $adminUser->branch_id, $adminUser->organization_id);
+        if ($defaultPhone) {
+            $defaults['phone'] = $defaultPhone;
+        }
+
+        return $defaults;
+    }
+
+    /**
+     * Arrange tables based on reservation size
+     */
+    public function arrangeTables(): array
+    {
+        $tableSize = $this->table_size ?? $this->number_of_people;
+        
+        // Get available tables that can accommodate the party size
+        $availableTables = Table::where('branch_id', $this->branch_id)
+            ->where('capacity', '>=', $tableSize)
+            ->whereDoesntHave('reservations', function($query) {
+                $query->forDate($this->date)
+                      ->forTimeSlot($this->start_time, $this->end_time)
+                      ->whereIn('status', ['confirmed', 'checked_in']);
+            })
+            ->orderBy('capacity')
+            ->get();
+
+        $selectedTables = [];
+        $remainingSeats = $tableSize;
+
+        foreach ($availableTables as $table) {
+            if ($remainingSeats <= 0) break;
+            
+            $selectedTables[] = $table->id;
+            $remainingSeats -= $table->capacity;
+        }
+
+        if ($remainingSeats > 0) {
+            throw new \Exception('Not enough table capacity available for this reservation');
+        }
+
+        $this->assigned_table_ids = $selectedTables;
+        $this->save();
+
+        return $selectedTables;
     }
 }
 

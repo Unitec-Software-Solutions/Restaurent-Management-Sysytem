@@ -59,15 +59,23 @@ class AdminController extends Controller
             return redirect()->route('admin.login')->with('error', 'You must be logged in to access reservations.');
         }
 
-        if (!$admin->branch_id || !$admin->organization_id) {
+        // Build query based on admin permissions
+        $query = Reservation::with(['user', 'table']);
+
+        if ($admin->is_super_admin) {
+            // Super admin can see all reservations
+        } elseif ($admin->branch_id) {
+            // Branch admin sees only their branch
+            $query->where('branch_id', $admin->branch_id)
+                  ->where('organization_id', $admin->organization_id);
+        } elseif ($admin->organization_id) {
+            // Organization admin sees all branches in their organization
+            $query->where('organization_id', $admin->organization_id);
+        } else {
             return redirect()->route('admin.dashboard')->with('error', 'Incomplete admin details. Contact support.');
         }
 
-        $reservations = Reservation::with(['user', 'table'])
-            ->where('branch_id', $admin->branch_id)
-            ->where('organization_id', $admin->organization_id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $reservations = $query->orderBy('created_at', 'desc')->get();
 
         return view('admin.reservations.index', compact('reservations'));
     }

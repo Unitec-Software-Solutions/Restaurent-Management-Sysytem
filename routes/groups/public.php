@@ -1,9 +1,5 @@
 <?php
 
-// public routes - Updated to use modern [Controller::class, 'method'] syntax
-// Updated on: 2025-01-27
-// Total routes: 79
-
 use Illuminate\Support\Facades\Route;
 
 // Controller imports
