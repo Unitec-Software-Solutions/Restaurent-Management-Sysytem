@@ -123,11 +123,11 @@ document.getElementById('order_branch').addEventListener('change', function() {
 function loadMenuItems(branchId) {
     document.getElementById('menuItemsList').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i><p class="mt-2">Loading menu items...</p></div>';
     
-    fetch(`/admin/branches/${branchId}/menu-items`)
+    fetch(`/admin/menu-items/all-items?branch_id=${branchId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                displayMenuItems(data.menu_items);
+                displayMenuItems(data.items);
             } else {
                 document.getElementById('menuItemsList').innerHTML = '<p class="text-muted text-center">No menu items found</p>';
             }
@@ -148,19 +148,33 @@ function displayMenuItems(menuItems) {
     
     let html = '';
     menuItems.forEach(item => {
+        const typeIcon = item.type === 1 ? 'fas fa-boxes text-blue' : 'fas fa-utensils text-orange';
+        const typeBadge = item.type === 1 ? 'badge-info' : 'badge-warning';
+        const availabilityClass = item.can_make ? '' : 'opacity-50';
+        const availabilityText = item.can_make ? '' : '(Out of Stock)';
+        
         html += `
-            <div class="card mb-2">
+            <div class="card mb-2 ${availabilityClass}">
                 <div class="card-body p-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="mb-1">${item.name}</h6>
+                            <div class="d-flex align-items-center mb-1">
+                                <h6 class="mb-0 mr-2">${item.name}</h6>
+                                <i class="${typeIcon}" title="${item.type_name}"></i>
+                            </div>
                             <small class="text-muted">${item.description || ''}</small>
                             <div class="mt-1">
-                                <span class="badge badge-info">LKR ${item.price}</span>
+                                <span class="badge badge-primary">LKR ${parseFloat(item.price).toFixed(2)}</span>
+                                <span class="badge ${typeBadge}">${item.type_name}</span>
                                 ${item.is_vegetarian ? '<span class="badge badge-success">Veg</span>' : ''}
+                                ${!item.can_make ? '<span class="badge badge-danger">Out of Stock</span>' : ''}
                             </div>
+                            ${item.type === 1 ? `<small class="text-info">Stock: ${item.current_stock}</small>` : 
+                              `<small class="text-warning">Prep Time: ${item.preparation_time || 15} mins</small>`}
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addToOrder(${item.id}, '${item.name}', ${item.price})">
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                onclick="addToOrder(${item.id}, '${item.name}', ${item.price})"
+                                ${!item.can_make ? 'disabled' : ''}>
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>

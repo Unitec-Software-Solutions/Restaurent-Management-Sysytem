@@ -143,6 +143,42 @@
         </div>
     </div>
 
+    <!-- Item Type Selection Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Item Type <span class="text-red-500">*</span>
+            </label>
+            <select name="{{ $prefix }}[item_type]" required
+                class="item-type-select w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                data-index="{{ $index }}">
+                <option value="">Select Item Type</option>
+                <option value="buy_sell">Buy & Sell Item (Inventory Item)</option>
+            </select>
+            <div class="text-xs text-gray-500 mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 mr-2 mt-0.5"></i>
+                    <div>
+                        <div class="font-medium text-blue-800 mb-1">Item Master is for inventory items only</div>
+                        <div class="text-blue-700 mb-2"><strong>Buy & Sell:</strong> Items you purchase and sell directly with stock tracking</div>
+                        <div class="text-amber-700"><strong>For KOT Items (Recipes):</strong> Create dishes/recipes in Menu Items → Create KOT Recipe instead</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Current Stock Level
+            </label>
+            <input type="number" name="{{ $prefix }}[current_stock]" min="0" step="0.01"
+                class="current-stock-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                placeholder="0.00" data-index="{{ $index }}">
+            <p class="text-xs text-gray-500 mt-1">
+                <span class="stock-required-text">Required for Buy & Sell items, optional for KOT items</span>
+            </p>
+        </div>
+    </div>
+
     <div class="flex items-center space-x-6 mt-4">
         <div class="flex items-center">
             <input type="hidden" name="{{ $prefix }}[is_perishable]" value="0">
@@ -160,6 +196,24 @@
                 data-index="{{ $index }}">
             <label for="menuitem-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Include in Menu</label>
+        </div>
+        <div class="flex items-center">
+            <input type="hidden" name="{{ $prefix }}[requires_production]" value="0">
+            <input type="checkbox" id="requires-production-{{ $index }}" name="{{ $prefix }}[requires_production]"
+                value="1"
+                class="production-checkbox h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+                data-index="{{ $index }}">
+            <label for="requires-production-{{ $index }}"
+                class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Requires Production</label>
+        </div>
+        <div class="flex items-center">
+            <input type="hidden" name="{{ $prefix }}[is_inventory_item]" value="0">
+            <input type="checkbox" id="inventory-item-{{ $index }}" name="{{ $prefix }}[is_inventory_item]"
+                value="1"
+                class="inventory-checkbox h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+                data-index="{{ $index }}">
+            <label for="inventory-item-{{ $index }}"
+                class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Track Inventory</label>
         </div>
     </div>
 
@@ -321,3 +375,73 @@
         });
     </script>
 @endif
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Item type selection logic
+    const itemTypeSelect = document.querySelector('.item-type-select[data-index="{{ $index }}"]');
+    const currentStockInput = document.querySelector('.current-stock-input[data-index="{{ $index }}"]');
+    const menuItemCheckbox = document.querySelector('.menu-item-checkbox[data-index="{{ $index }}"]');
+    const productionCheckbox = document.querySelector('.production-checkbox[data-index="{{ $index }}"]');
+    const inventoryCheckbox = document.querySelector('.inventory-checkbox[data-index="{{ $index }}"]');
+    
+    if (itemTypeSelect) {
+        // Initialize based on current selection
+        handleItemTypeChange();
+        
+        // Handle item type changes
+        itemTypeSelect.addEventListener('change', handleItemTypeChange);
+        
+        function handleItemTypeChange() {
+            const itemType = itemTypeSelect.value;
+            const stockRequiredText = document.querySelector('.stock-required-text');
+            
+            if (itemType === 'buy_sell') {
+                // Buy & Sell Item Configuration
+                currentStockInput.required = true;
+                currentStockInput.style.borderColor = '#F59E0B'; // Amber border for required
+                
+                // Auto-check appropriate flags
+                inventoryCheckbox.checked = true;
+                productionCheckbox.checked = false;
+                menuItemCheckbox.checked = true; // Most buy & sell items go to menu
+                
+                // Update helper text
+                if (stockRequiredText) {
+                    stockRequiredText.innerHTML = '<span class="text-amber-600 font-medium">Required for Buy & Sell items</span> - Enter current inventory level';
+                }
+                
+                showItemTypeInfo('Buy & Sell items require current stock and are sold directly to customers with inventory tracking.');
+                
+            } else {
+                // Clear selection
+                currentStockInput.required = false;
+                currentStockInput.style.borderColor = '#D1D5DB';
+                
+                if (stockRequiredText) {
+                    stockRequiredText.innerHTML = 'Required for Buy & Sell items';
+                }
+                showItemTypeInfo('');
+            }
+        }
+        
+        function showItemTypeInfo(message) {
+            let infoDiv = document.querySelector(`.item-type-info-${{{ $index }}}`);
+            if (!infoDiv && message) {
+                infoDiv = document.createElement('div');
+                infoDiv.className = `item-type-info-${{{ $index }}} mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800`;
+                itemTypeSelect.parentNode.appendChild(infoDiv);
+            }
+            
+            if (infoDiv) {
+                if (message) {
+                    infoDiv.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
+                    infoDiv.style.display = 'block';
+                } else {
+                    infoDiv.style.display = 'none';
+                }
+            }
+        }
+    }
+});
+</script>

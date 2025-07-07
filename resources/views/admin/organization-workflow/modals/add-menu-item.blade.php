@@ -10,6 +10,28 @@
                     <span>&times;</span>
                 </button>
             </div>
+            
+            <!-- Menu Item Type Selection -->
+            <div class="bg-light border-bottom p-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-2"><i class="fas fa-info-circle text-blue"></i> Menu Item Types</h6>
+                        <div class="small text-muted">
+                            <div><strong>Buy & Sell:</strong> Items from inventory (beverages, packaged foods)</div>
+                            <div><strong>KOT Recipe:</strong> Dishes made by cooking ingredients</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="font-weight-bold">Item Type <span class="text-danger">*</span></label>
+                        <select class="form-control" id="menu_item_type" name="item_type" required onchange="toggleMenuItemFields()">
+                            <option value="">Select Type</option>
+                            <option value="buy_sell">Buy & Sell Item (From Inventory)</option>
+                            <option value="kot_recipe">KOT Recipe (Kitchen Prepared)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
             <form id="addMenuItemForm" onsubmit="submitMenuItemForm(event)">
                 <div class="modal-body">
                     <div class="row">
@@ -109,8 +131,35 @@
 </div>
 
 <script>
+function toggleMenuItemFields() {
+    const itemType = document.getElementById('menu_item_type').value;
+    const buysellFields = document.getElementById('buy_sell_fields');
+    const kotFields = document.getElementById('kot_recipe_fields');
+    
+    if (itemType === 'buy_sell') {
+        buysellFields.style.display = 'block';
+        kotFields.style.display = 'none';
+        document.getElementById('preparation_time').value = '0';
+        document.getElementById('preparation_time').disabled = true;
+    } else if (itemType === 'kot_recipe') {
+        buyellFields.style.display = 'none';
+        kotFields.style.display = 'block';
+        document.getElementById('preparation_time').disabled = false;
+        document.getElementById('preparation_time').value = '15';
+    } else {
+        buyellFields.style.display = 'none';
+        kotFields.style.display = 'none';
+    }
+}
+
 function submitMenuItemForm(event) {
     event.preventDefault();
+    
+    const itemType = document.getElementById('menu_item_type').value;
+    if (!itemType) {
+        alert('Please select a menu item type');
+        return;
+    }
     
     const formData = new FormData(event.target);
     const data = {};
@@ -118,7 +167,18 @@ function submitMenuItemForm(event) {
         data[key] = value;
     });
     
-    fetch('/admin/organizations/{{ $organization->id ?? "0" }}/menu-items', {
+    // Add type information
+    data.item_type = itemType;
+    
+    // Determine the appropriate endpoint based on type
+    let endpoint;
+    if (itemType === 'buy_sell') {
+        endpoint = '/admin/menu-items/create-from-item-master';
+    } else {
+        endpoint = '/admin/menu-items/create-kot';
+    }
+    
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -144,5 +204,22 @@ function submitMenuItemForm(event) {
         console.error('Error:', error);
         alert('Failed to add menu item');
     });
+}
+
+function toggleMenuItemFields() {
+    const itemType = document.getElementById('menu_item_type').value;
+    const kotFields = document.querySelectorAll('.kot-recipe-field');
+    const buySellFields = document.querySelectorAll('.buy-sell-field');
+    
+    if (itemType === 'kot_recipe') {
+        kotFields.forEach(field => field.style.display = 'block');
+        buySellFields.forEach(field => field.style.display = 'none');
+    } else if (itemType === 'buy_sell') {
+        kotFields.forEach(field => field.style.display = 'none');
+        buySellFields.forEach(field => field.style.display = 'block');
+    } else {
+        kotFields.forEach(field => field.style.display = 'none');
+        buySellFields.forEach(field => field.style.display = 'none');
+    }
 }
 </script>

@@ -23,6 +23,49 @@
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
             
+            @auth('admin')
+                @if(auth('admin')->user()->is_super_admin)
+                    <!-- Organization and Branch Selection for Super Admin -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div>
+                            <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                Organization <span class="text-red-500">*</span>
+                            </label>
+                            <select id="organization_id" name="organization_id" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error('organization_id') border-red-500 @enderror">
+                                <option value="">Select Organization</option>
+                                @foreach($organizations as $organization)
+                                    <option value="{{ $organization->id }}" {{ old('organization_id') == $organization->id ? 'selected' : '' }}>
+                                        {{ $organization->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('organization_id')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                Branch <span class="text-gray-400">(Optional)</span>
+                            </label>
+                            <select id="branch_id" name="branch_id"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error('branch_id') border-red-500 @enderror">
+                                <option value="">All Branches</option>
+                                @foreach($branches as $branch)
+                                    <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                        {{ $branch->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('branch_id')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                @endif
+            @endauth
+            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Name -->
                 <div>
@@ -52,11 +95,11 @@
                 <!-- Category -->
                 <div>
                     <label for="menu_category_id" class="block text-sm font-medium text-gray-700 mb-1">
-                        Category <span class="text-gray-400">(Optional)</span>
+                        Category <span class="text-red-500">*</span>
                     </label>
-                    <select id="menu_category_id" name="menu_category_id"
+                    <select id="menu_category_id" name="menu_category_id" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error('menu_category_id') border-red-500 @enderror">
-                        <option value="">No Category (Uncategorized)</option>
+                        <option value="">Select a Category</option>
                         @foreach($categories as $category)
                             <option value="{{ $category->id }}" {{ old('menu_category_id') == $category->id ? 'selected' : '' }}>
                                 {{ $category->name }}
@@ -215,8 +258,8 @@
                 <div>
                     <label for="station" class="block text-sm font-medium text-gray-700 mb-1">Station</label>
                     <input type="text" id="station" name="station"
-                           value="{{ old('station') }}"
-                           placeholder="e.g., grill, fryer, salad"
+                           value="{{ old('station', 'Kitchen') }}"
+                           placeholder="e.g., grill, fryer, salad, kitchen"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error('station') border-red-500 @enderror">
                     @error('station')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>

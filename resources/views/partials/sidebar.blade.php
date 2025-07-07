@@ -133,31 +133,7 @@
             </div>
             <ul class="space-y-1 px-3">
                 
-                {{-- Menu Builder --}}
-                @canany(['view_menu', 'manage_menu'])
-                <li class="sidebar-item {{ request()->routeIs('admin.menus*') ? 'active' : '' }}" 
-                    x-data="{ open: {{ request()->routeIs('admin.menus*') ? 'true' : 'false' }} }">
-                    <a href="#" @click="open = !open" class="sidebar-link group has-submenu">
-                        <i class="fas fa-book-open sidebar-icon"></i>
-                        <span class="sidebar-text" x-show="!collapsed" x-transition>Menu Builder</span>
-                        <i class="fas fa-chevron-down submenu-arrow" x-show="!collapsed" 
-                           :class="{ 'rotate-180': open }" x-transition></i>
-                        <div class="tooltip" x-show="collapsed" x-cloak>Menu Builder</div>
-                    </a>
-                    <ul class="submenu" x-show="open && !collapsed" x-transition>
-                        @can('view_menu')
-                        <li><a href="{{ route('admin.menus.index') }}" class="submenu-link">All Menus</a></li>
-                        <li><a href="{{ route('admin.menus.calendar') }}" class="submenu-link">Menu Calendar</a></li>
-                        @endcan
-                        @can('manage_menu')
-                        <li><a href="{{ route('admin.menus.create') }}" class="submenu-link">Create Menu</a></li>
-                        <li><a href="{{ route('admin.menus.bulk-create') }}" class="submenu-link">Bulk Create</a></li>
-                        @endcan
-                    </ul>
-                </li>
-                @endcanany
-
-                {{-- Menu Items --}}
+                {{-- Menu Items: Individual Food/Drink Items --}}
                 @auth('admin')
                 <li class="sidebar-item {{ request()->routeIs('admin.menu-items*') ? 'active' : '' }}" 
                     x-data="{ open: {{ request()->routeIs('admin.menu-items*') ? 'true' : 'false' }} }">
@@ -166,23 +142,85 @@
                         <span class="sidebar-text" x-show="!collapsed" x-transition>Menu Items</span>
                         <i class="fas fa-chevron-down submenu-arrow" x-show="!collapsed" 
                            :class="{ 'rotate-180': open }" x-transition></i>
-                        <div class="tooltip" x-show="collapsed" x-cloak>Menu Items</div>
+                        <div class="tooltip" x-show="collapsed" x-cloak>Menu Items (Individual Items)</div>
                     </a>
                     <ul class="submenu" x-show="open && !collapsed" x-transition>
-                        <li><a href="{{ route('admin.menu-items.index') }}" class="submenu-link">All Menu Items</a></li>
-                        <li><a href="{{ route('admin.menu-items.create') }}" class="submenu-link">Add Menu Item</a></li>
-                        <li><a href="{{ route('admin.menu-items.create-kot') }}" class="submenu-link">Create KOT Items</a></li>
+                        <li><a href="{{ route('admin.menu-items.enhanced.index') }}" class="submenu-link">
+                            <i class="fas fa-list-ul text-gray-400 mr-2"></i>View All Items
+                        </a></li>
+                        <li class="submenu-note">
+                            <span class="text-xs text-gray-500 italic px-3 py-1 block">Individual food & drink items</span>
+                        </li>
+                        <li class="submenu-divider"></li>
+                        <li><a href="{{ route('admin.menu-items.create') }}" class="submenu-link">
+                            <i class="fas fa-plus text-indigo-500 mr-2"></i>Add Menu Item
+                            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full ml-auto">Single</span>
+                        </a></li>
+                        <li><a href="{{ route('admin.menu-items.create-kot') }}" class="submenu-link">
+                            <i class="fas fa-warehouse text-orange-500 mr-2"></i>Bulk Add from Inventory
+                            <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full ml-auto">Bulk</span>
+                        </a></li>
+                        <li class="submenu-note">
+                            <span class="text-xs text-gray-500 italic px-3 py-1 block">Auto-detects KOT vs Buy & Sell</span>
+                        </li>
+                        <li class="submenu-divider"></li>
+                        <li><a href="{{ route('admin.menu-categories.index') }}" class="submenu-link">
+                            <i class="fas fa-tags text-green-500 mr-2"></i>Item Categories
+                        </a></li>
                     </ul>
                 </li>
                 @endauth
 
-                {{-- Inventory --}}
+                {{-- Menu Builder: Grouping Items into Menus --}}
+                @canany(['view_menu', 'manage_menu'])
+                <li class="sidebar-item {{ request()->routeIs('admin.menus*') ? 'active' : '' }}" 
+                    x-data="{ open: {{ request()->routeIs('admin.menus*') ? 'true' : 'false' }} }">
+                    <a href="#" @click="open = !open" class="sidebar-link group has-submenu">
+                        <i class="fas fa-book-open sidebar-icon"></i>
+                        <span class="sidebar-text" x-show="!collapsed" x-transition>Menu Builder</span>
+                        <i class="fas fa-chevron-down submenu-arrow" x-show="!collapsed" 
+                           :class="{ 'rotate-180': open }" x-transition></i>
+                        <div class="tooltip" x-show="collapsed" x-cloak">Menu Builder (Group Items)</div>
+                    </a>
+                    <ul class="submenu" x-show="open && !collapsed" x-transition>
+                        @can('view_menu')
+                        <li><a href="{{ route('admin.menus.index') }}" class="submenu-link">
+                            <i class="fas fa-book text-gray-400 mr-2"></i>View All Menus
+                        </a></li>
+                        <li><a href="{{ route('admin.menus.calendar') }}" class="submenu-link">
+                            <i class="fas fa-calendar text-purple-500 mr-2"></i>Menu Calendar
+                        </a></li>
+                        @endcan
+                        <li class="submenu-note">
+                            <span class="text-xs text-gray-500 italic px-3 py-1 block">Create menus (Lunch, Dinner, etc.)</span>
+                        </li>
+                        <li class="submenu-divider"></li>
+                        @can('manage_menu')
+                        <li><a href="{{ route('admin.menus.create') }}" class="submenu-link">
+                            <i class="fas fa-plus text-indigo-500 mr-2"></i>Create Menu
+                            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full ml-auto">Single</span>
+                        </a></li>
+                        <li><a href="{{ route('admin.menus.bulk-create') }}" class="submenu-link">
+                            <i class="fas fa-copy text-blue-500 mr-2"></i>Bulk Create Menus
+                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full ml-auto">Multiple</span>
+                        </a></li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcanany
+                        </a></li>
+                        @endcan
+                    </ul>
+                </li>
+                @endcanany
+
+                {{-- Inventory Management: Only for Buy/Sell Items --}}
                 @auth('admin')
                 <li class="sidebar-item {{ request()->routeIs('admin.inventory*') ? 'active' : '' }}" 
                     x-data="{ open: {{ request()->routeIs('admin.inventory*') ? 'true' : 'false' }} }">
                     <a href="#" @click="open = !open" class="sidebar-link group has-submenu">
                         <i class="fas fa-warehouse sidebar-icon"></i>
-                        <span class="sidebar-text" x-show="!collapsed" x-transition>Inventory</span>
+                        <span class="sidebar-text" x-show="!collapsed" x-transition>Inventory Management</span>
                         @php
                             try {
                                 $lowStockCount = \App\Models\ItemMaster::where('current_stock', '<', \Illuminate\Support\Facades\DB::raw('min_stock_level'))->count();
@@ -193,12 +231,24 @@
                         <span class="badge badge-warning" x-show="!collapsed">{{ $lowStockCount }}</span>
                         <i class="fas fa-chevron-down submenu-arrow" x-show="!collapsed" 
                            :class="{ 'rotate-180': open }" x-transition></i>
-                        <div class="tooltip" x-show="collapsed" x-cloak>Inventory</div>
+                        <div class="tooltip" x-show="collapsed" x-cloak>Inventory (Buy/Sell Only)</div>
                     </a>
                     <ul class="submenu" x-show="open && !collapsed" x-transition>
-                        <li><a href="{{ route('admin.inventory.index') }}" class="submenu-link">Stock Levels</a></li>
-                        <li><a href="{{ route('admin.grn.index') }}" class="submenu-link">Purchase Orders (GRN)</a></li>
-                        <li><a href="{{ route('admin.suppliers.index') }}" class="submenu-link">Suppliers</a></li>
+                        <li class="submenu-note">
+                            <span class="text-xs text-gray-500 italic px-3 py-1 block">Buy & sell items only - not KOT recipes</span>
+                        </li>
+                        <li><a href="{{ route('admin.inventory.index') }}" class="submenu-link">
+                            <i class="fas fa-chart-bar text-blue-500 mr-2"></i>Stock Levels
+                        </a></li>
+                        <li><a href="{{ route('admin.inventory.items.index') }}" class="submenu-link">
+                            <i class="fas fa-boxes text-green-500 mr-2"></i>Item Master (Inventory)
+                        </a></li>
+                        <li><a href="{{ route('admin.grn.index') }}" class="submenu-link">
+                            <i class="fas fa-truck text-purple-500 mr-2"></i>Goods Received (GRN)
+                        </a></li>
+                        <li><a href="{{ route('admin.suppliers.index') }}" class="submenu-link">
+                            <i class="fas fa-building text-orange-500 mr-2"></i>Suppliers
+                        </a></li>
                     </ul>
                 </li>
                 @endauth
@@ -443,6 +493,10 @@
 
 .sidebar.collapsed .submenu-arrow {
     @apply hidden;
+}
+
+.submenu-divider {
+    @apply border-t border-gray-600 my-2 opacity-50;
 }
 
 .sidebar.collapsed .badge {
