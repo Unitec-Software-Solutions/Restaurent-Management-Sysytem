@@ -392,6 +392,38 @@ class AdminSidebar extends Component
             'sub_items' => []
         ];
 
+        // Subscription Plans Management (Super Admin only)
+        if ($this->isSuperAdmin($admin)) {
+            $menuItems[] = [
+                'title' => 'Subscriptions',
+                'route' => 'admin.subscription-plans.index',
+                'route_params' => [],
+                'icon' => 'fas fa-credit-card',
+                'icon_type' => 'fa',
+                'permission' => null, // Super admin doesn't need permission checks
+                'badge' => $this->getActiveSubscriptionsCount(),
+                'badge_color' => 'green',
+                'is_route_valid' => $this->validateRoute('admin.subscription-plans.index'),
+                'sub_items' => $this->getSubscriptionPlanSubItems()
+            ];
+        }
+
+        // Subscription Management (For Organization Admins)
+        if (!$this->isSuperAdmin($admin) && $admin->organization_id && $this->hasPermission($admin, 'subscription.view')) {
+            $menuItems[] = [
+                'title' => 'Subscription',
+                'route' => 'admin.subscription.current',
+                'route_params' => [],
+                'icon' => 'fas fa-file-alt',
+                'icon_type' => 'fa',
+                'permission' => 'subscription.view',
+                'badge' => 0,
+                'badge_color' => 'yellow',
+                'is_route_valid' => $this->validateRoute('admin.subscription.current'),
+                'sub_items' => $this->getSubscriptionManagementSubItems($admin)
+            ];
+        }
+
         // Organization Management (Super Admin only)
         if ($this->isSuperAdmin($admin)) {
             $menuItems[] = [
@@ -496,19 +528,53 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Orders with real-time status
-        $menuItems[] = [
-            'title' => 'Orders',
-            'route' => 'admin.orders.index',
-            'route_params' => [],
-            'icon' => 'fas fa-shopping-cart',
-            'icon_type' => 'fa',
-            'permission' => $this->isSuperAdmin($admin) ? null : 'orders.view',
-            'badge' => $this->getPendingOrdersCount(),
-            'badge_color' => 'red',
-            'is_route_valid' => $this->validateRoute('admin.orders.index'),
-            'sub_items' => $this->getOrderSubItems()
-        ];
+        // Modules Management (Super Admin and Organization Admin)
+        if ($this->isSuperAdmin($admin) || ($admin->organization_id && $this->hasPermission($admin, 'modules.view'))) {
+            $menuItems[] = [
+                'title' => 'Modules',
+                'route' => 'admin.modules.index',
+                'route_params' => [],
+                'icon' => 'fas fa-puzzle-piece',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'modules.view',
+                'badge' => $this->getActiveModulesCount(),
+                'badge_color' => 'indigo',
+                'is_route_valid' => $this->validateRoute('admin.modules.index'),
+                'sub_items' => $this->getModulesSubItems()
+            ];
+        }
+
+        // Roles & Permissions Management (Super Admin and Organization Admin)
+        if ($this->isSuperAdmin($admin) || ($admin->organization_id && $this->hasPermission($admin, 'roles.view'))) {
+            $menuItems[] = [
+                'title' => 'Roles & Permissions',
+                'route' => 'admin.roles.index',
+                'route_params' => [],
+                'icon' => 'fas fa-shield-alt',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'roles.view',
+                'badge' => $this->getActiveRolesCount(),
+                'badge_color' => 'emerald',
+                'is_route_valid' => $this->validateRoute('admin.roles.index'),
+                'sub_items' => $this->getRolesPermissionsSubItems()
+            ];
+        }
+
+         // User Management (Admin level and above)
+        if ($this->hasPermission($admin, 'users.view') && !$this->isStaffLevel($admin)) {
+            $menuItems[] = [
+                'title' => 'User Management',
+                'route' => 'admin.users.index',
+                'route_params' => [],
+                'icon' => 'fas fa-users',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'users.view',
+                'badge' => $this->getActiveStaffCount(),
+                'badge_color' => 'cyan',
+                'is_route_valid' => $this->validateRoute('admin.users.index'),
+                'sub_items' => $this->getStaffSubItems()
+            ];
+        }
 
         // Menu Management
         if ($this->hasPermission($admin, 'menus.view')) {
@@ -526,67 +592,53 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Modules Management (Super Admin and Organization Admin)
-        if ($this->isSuperAdmin($admin) || ($admin->organization_id && $this->hasPermission($admin, 'modules.view'))) {
+
+        // Orders with real-time status
+        $menuItems[] = [
+            'title' => 'Orders',
+            'route' => 'admin.orders.index',
+            'route_params' => [],
+            'icon' => 'fas fa-shopping-cart',
+            'icon_type' => 'fa',
+            'permission' => $this->isSuperAdmin($admin) ? null : 'orders.view',
+            'badge' => $this->getPendingOrdersCount(),
+            'badge_color' => 'red',
+            'is_route_valid' => $this->validateRoute('admin.orders.index'),
+            'sub_items' => $this->getOrderSubItems()
+        ];
+
+        // Reservations
+        if ($this->hasPermission($admin, 'reservations.view')) {
             $menuItems[] = [
-                'title' => 'Modules',
-                'route' => 'admin.modules.index',
+                'title' => 'Reservations',
+                'route' => 'admin.reservations.index',
                 'route_params' => [],
-                'icon' => 'fas fa-puzzle-piece',
+                'icon' => 'fas fa-calendar-alt',
                 'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'modules.view',
-                'badge' => $this->getActiveModulesCount(),
-                'badge_color' => 'indigo',
-                'is_route_valid' => $this->validateRoute('admin.modules.index'),
-                'sub_items' => $this->getModulesSubItems()
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reservations.view',
+                'badge' => $this->getTodayReservationsCount(),
+                'badge_color' => 'purple',
+                'is_route_valid' => $this->validateRoute('admin.reservations.index'),
+                'sub_items' => $this->getReservationSubItems()
             ];
         }
 
-        // Subscription Plans Management (Super Admin only)
-        if ($this->isSuperAdmin($admin)) {
-            $menuItems[] = [
-                'title' => 'Subscription Plans',
-                'route' => 'admin.subscription-plans.index',
-                'route_params' => [],
-                'icon' => 'fas fa-credit-card',
-                'icon_type' => 'fa',
-                'permission' => null, // Super admin doesn't need permission checks
-                'badge' => $this->getActiveSubscriptionsCount(),
-                'badge_color' => 'green',
-                'is_route_valid' => $this->validateRoute('admin.subscription-plans.index'),
-                'sub_items' => $this->getSubscriptionPlanSubItems()
-            ];
-        }
 
-        // Subscription Management (For Organization Admins)
-        if (!$this->isSuperAdmin($admin) && $admin->organization_id && $this->hasPermission($admin, 'subscription.view')) {
+
+
+        // Suppliers Management (separate from inventory)
+        if ($this->hasPermission($admin, 'suppliers.view')) {
             $menuItems[] = [
-                'title' => 'Subscription',
-                'route' => 'admin.subscription.current',
+                'title' => 'Suppliers',
+                'route' => 'admin.suppliers.index',
                 'route_params' => [],
-                'icon' => 'fas fa-file-alt',
+                'icon' => 'fas fa-truck',
                 'icon_type' => 'fa',
-                'permission' => 'subscription.view',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'suppliers.view',
                 'badge' => 0,
-                'badge_color' => 'yellow',
-                'is_route_valid' => $this->validateRoute('admin.subscription.current'),
-                'sub_items' => $this->getSubscriptionManagementSubItems($admin)
-            ];
-        }
-
-        // Roles & Permissions Management (Super Admin and Organization Admin)
-        if ($this->isSuperAdmin($admin) || ($admin->organization_id && $this->hasPermission($admin, 'roles.view'))) {
-            $menuItems[] = [
-                'title' => 'Roles & Permissions',
-                'route' => 'admin.roles.index',
-                'route_params' => [],
-                'icon' => 'fas fa-shield-alt',
-                'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'roles.view',
-                'badge' => $this->getActiveRolesCount(),
-                'badge_color' => 'emerald',
-                'is_route_valid' => $this->validateRoute('admin.roles.index'),
-                'sub_items' => $this->getRolesPermissionsSubItems()
+                'badge_color' => 'blue',
+                'is_route_valid' => $this->validateRoute('admin.suppliers.index'),
+                'sub_items' => $this->getSupplierSubItems()
             ];
         }
 
@@ -622,53 +674,23 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Suppliers Management (separate from inventory)
-        if ($this->hasPermission($admin, 'suppliers.view')) {
+        // Kitchen Operations (for branch staff)
+        if ($this->hasPermission($admin, 'kitchen.view')) {
             $menuItems[] = [
-                'title' => 'Suppliers',
-                'route' => 'admin.suppliers.index',
+                'title' => 'Kitchen',
+                'route' => 'admin.kitchen.index',
                 'route_params' => [],
-                'icon' => 'fas fa-truck',
+                'icon' => 'fas fa-hat-chef',
                 'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'suppliers.view',
-                'badge' => 0,
-                'badge_color' => 'blue',
-                'is_route_valid' => $this->validateRoute('admin.suppliers.index'),
-                'sub_items' => $this->getSupplierSubItems()
+                'permission' => $this->isSuperAdmin($admin) ? null : 'kitchen.view',
+                'badge' => $this->getActiveKOTsCount(),
+                'badge_color' => 'red',
+                'is_route_valid' => $this->validateRoute('admin.kitchen.index'),
+                'sub_items' => $this->getKitchenSubItems()
             ];
         }
 
-        // Reservations
-        if ($this->hasPermission($admin, 'reservations.view')) {
-            $menuItems[] = [
-                'title' => 'Reservations',
-                'route' => 'admin.reservations.index',
-                'route_params' => [],
-                'icon' => 'fas fa-calendar-alt',
-                'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'reservations.view',
-                'badge' => $this->getTodayReservationsCount(),
-                'badge_color' => 'purple',
-                'is_route_valid' => $this->validateRoute('admin.reservations.index'),
-                'sub_items' => $this->getReservationSubItems()
-            ];
-        }
 
-        // User Management (Admin level and above)
-        if ($this->hasPermission($admin, 'users.view') && !$this->isStaffLevel($admin)) {
-            $menuItems[] = [
-                'title' => 'User Management',
-                'route' => 'admin.users.index',
-                'route_params' => [],
-                'icon' => 'fas fa-users',
-                'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'users.view',
-                'badge' => $this->getActiveStaffCount(),
-                'badge_color' => 'cyan',
-                'is_route_valid' => $this->validateRoute('admin.users.index'),
-                'sub_items' => $this->getStaffSubItems()
-            ];
-        }
 
         // Reports and Analytics
         if ($this->hasPermission($admin, 'reports.view')) {
@@ -686,21 +708,7 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Kitchen Operations (for branch staff)
-        if ($this->hasPermission($admin, 'kitchen.view')) {
-            $menuItems[] = [
-                'title' => 'Kitchen',
-                'route' => 'admin.kitchen.index',
-                'route_params' => [],
-                'icon' => 'fas fa-hat-chef',
-                'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'kitchen.view',
-                'badge' => $this->getActiveKOTsCount(),
-                'badge_color' => 'red',
-                'is_route_valid' => $this->validateRoute('admin.kitchen.index'),
-                'sub_items' => $this->getKitchenSubItems()
-            ];
-        }
+
 
         // Settings (Admin level and above)
         if (!$this->isStaffLevel($admin)) {
