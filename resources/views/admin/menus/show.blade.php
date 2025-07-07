@@ -96,7 +96,7 @@
                 </div>
                 <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-500">Total Revenue</h3>
-                    <p class="text-2xl font-bold text-gray-900">${{ number_format($analytics['total_revenue'], 2) }}</p>
+                    <p class="text-2xl font-bold text-gray-900">LKR{{ number_format($analytics['total_revenue'], 2) }}</p>
                 </div>
             </div>
         </div>

@@ -287,64 +287,33 @@ class AdminOrderController extends Controller
             'order_type' => $orderType,
             'created_by' => $admin->id,
             'placed_by_admin' => true,
-            'customer_name' => '',
-            'customer_phone' => $admin->phone ?? '',
+            'customer_name' => 'Walk-in Customer',
+            'customer_phone' => $admin->branch ? $admin->branch->phone ?? '0000000000' : '0000000000',
             'customer_email' => '',
             'order_time' => now()->addMinutes(30)->format('Y-m-d\TH:i')
         ];
         
         $branches = $this->getAdminAccessibleBranches($admin);
         
-        // Get menu items with proper relationships for stock/KOT display
-        $menuItems = MenuItem::with(['menuCategory', 'itemMaster'])
-            ->where('is_active', true)
-            ->where('is_available', true)
-            ->when(!$admin->is_super_admin && $admin->branch_id, function($q) use ($admin) {
-                $q->where('branch_id', $admin->branch_id);
-            })
-            ->get()
-            ->map(function($item) use ($admin) {
-                // Use the menu item's type field (which should be set correctly)
-                $itemType = $item->type ?? MenuItem::TYPE_KOT;
-                $currentStock = 0;
-                
-                // For Buy & Sell items linked to item master, get current stock
-                if ($itemType === MenuItem::TYPE_BUY_SELL && 
-                    $item->item_master_id && 
-                    $item->itemMaster && 
-                    $item->itemMaster->is_active) {
-                    // Calculate current stock from item_transactions
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $admin->branch_id ?? null);
-                }
-                
-                // Add type and availability information for frontend display
-                $item->display_type = $itemType == MenuItem::TYPE_BUY_SELL ? 'stock' : 'kot';
-                $item->current_stock = $currentStock;
-                $item->stock = $currentStock; // For view compatibility
-                $item->item_type = $itemType;
-                $item->type_name = $itemType == MenuItem::TYPE_BUY_SELL ? 'Buy & Sell' : 'KOT';
-                $item->availability_info = $this->getItemAvailabilityInfo($item, $currentStock, $itemType);
-                
-                return $item;
-            });
+        // Get organizations if super admin
+        $organizations = $admin->is_super_admin ? 
+            \App\Models\Organization::where('is_active', true)->get() : 
+            collect([$admin->organization]);
         
-        // Get categories for filtering
-        $categories = \App\Models\MenuCategory::where('is_active', true)
-            ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
-                $q->where('organization_id', $admin->organization_id);
-            })
-            ->get();
-        
-        // Set default branch for the template
-        $defaultBranch = $admin->branch_id ?? $branches->first()?->id;
-        
-        // Always use the unified create template
-        return view('admin.orders.create', compact('menuItems', 'categories', 'branches', 'defaultData', 'orderType', 'defaultBranch'));
+        return view('admin.orders.create', [
+            'admin' => $admin,
+            'organizations' => $organizations,
+            'branches' => $branches,
+            'defaultBranch' => $admin->branch_id,
+            'defaultOrganization' => $admin->organization_id,
+            'defaultCustomerName' => $defaultData['customer_name'],
+            'defaultPhone' => $defaultData['customer_phone'],
+            'orderType' => $orderType,
+            'defaultData' => $defaultData
+        ]);
     }
 
-    /**
-     * Get availability information for menu item display
-     */
+    
     private function getItemAvailabilityInfo($item, $currentStock, $itemType)
     {
         if ($itemType == MenuItem::TYPE_BUY_SELL) {
@@ -661,11 +630,12 @@ class AdminOrderController extends Controller
             'order_type' => 'required|in:takeaway_walk_in_demand,takeaway_in_call_scheduled,takeaway_online_scheduled',
             'branch_id' => 'required|exists:branches,id',
             'order_time' => 'required|date|after_or_equal:now',
-            'customer_name' => 'nullable|string|max:255',
+            'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:item_master,id',
-            'items.*.quantity' => 'required|integer|min:1'
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'special_instructions' => 'nullable|string|max:1000',
         ]);
 
         // Validate admin can access this branch
@@ -673,66 +643,157 @@ class AdminOrderController extends Controller
             return back()->withErrors(['branch_id' => 'Access denied to this branch.']);
         }
 
-        DB::beginTransaction();
-        try {
-            // Set default customer name if empty
-            if (empty($data['customer_name']) || trim($data['customer_name']) === '') {
-                $data['customer_name'] = 'Not Provided';
+        return DB::transaction(function () use ($data, $admin) {
+            // Validate branch exists and is active
+            $branch = Branch::with('organization')->findOrFail($data['branch_id']);
+            if (!$branch->is_active || !$branch->organization->is_active) {
+                throw new \Exception('Branch or organization is not active');
             }
 
-            // Generate order number and takeaway ID
+            // Generate order number first for customer name
             $orderNumber = OrderNumberService::generate($data['branch_id']);
-            $takeawayId = OrderNumberService::generateTakeawayId($data['branch_id']);
+            
+            // Update customer name with actual order number if it was default
+            if (strpos($data['customer_name'], 'Customer with Order #') !== false) {
+                $data['customer_name'] = 'Customer with Order #' . $orderNumber;
+            }
 
-            // Create order
-            $order = Order::create([
-                'order_type' => $data['order_type'],
-                'branch_id' => $data['branch_id'],
-                'order_time' => $data['order_time'],
-                'customer_name' => $data['customer_name'],
-                'customer_phone' => $data['customer_phone'],
-                'status' => 'active',
-                'placed_by_admin' => true,
-                'created_by_admin_id' => $admin->id,
-                'order_number' => $orderNumber,
-                'takeaway_id' => $takeawayId
+            // Find or create customer
+            $customer = Customer::findOrCreateByPhone($data['customer_phone'], [
+                'name' => $data['customer_name']
             ]);
 
-            // Add order items
+            // Stock validation
+            $stockErrors = [];
+            $orderItems = [];
             $subtotal = 0;
-            foreach ($data['items'] as $item) {
-                $menuItem = ItemMaster::find($item['item_id']);
-                $lineTotal = $menuItem->selling_price * $item['quantity'];
-                $subtotal += $lineTotal;
 
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'menu_item_id' => $item['item_id'],
-                    'inventory_item_id' => $item['item_id'],
+            foreach ($data['items'] as $item) {
+                // Validate that menu_item_id exists and find the menu item
+                if (!isset($item['menu_item_id'])) {
+                    $stockErrors[] = "Missing menu item ID in order data";
+                    continue;
+                }
+                
+                $menuItem = MenuItem::find($item['menu_item_id']);
+                if (!$menuItem) {
+                    $stockErrors[] = "Menu item with ID {$item['menu_item_id']} not found";
+                    continue;
+                }
+                
+                if (!$menuItem->is_active) {
+                    $stockErrors[] = "Menu item {$menuItem->name} is not active";
+                    continue;
+                }
+                
+                // Get the associated ItemMaster for stock checking if available
+                $itemMaster = $menuItem->itemMaster;
+                if ($itemMaster && $itemMaster->is_perishable) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($itemMaster->id, $data['branch_id']);
+                    if ($currentStock < $item['quantity']) {
+                        $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
+                    }
+                }
+
+                // Calculate item total using MenuItem's price
+                $itemTotal = $menuItem->price * $item['quantity'];
+                $subtotal += $itemTotal;
+
+                $orderItems[] = [
+                    'menu_item' => $menuItem,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $menuItem->selling_price,
-                    'total_price' => $lineTotal,
-                ]);
+                    'unit_price' => $menuItem->price,
+                    'total_price' => $itemTotal
+                ];
+            }
+
+            if (!empty($stockErrors)) {
+                throw new \Exception('Stock validation failed: ' . implode(', ', $stockErrors));
             }
 
             // Calculate totals
-            $tax = $subtotal * 0.10;
-            $order->update([
+            $taxRate = 0.10; // 10% tax
+            $tax = $subtotal * $taxRate;
+            $total = $subtotal + $tax;
+
+            // Generate takeaway ID
+            $takeawayId = OrderNumberService::generateTakeawayId($data['branch_id']);
+
+            // Create takeaway order with all required fields
+            $order = Order::create([
+                'branch_id' => $data['branch_id'],
+                'organization_id' => $branch->organization_id,
+                'customer_name' => $data['customer_name'], // Use updated customer name
+                'customer_phone' => $customer->phone,
+                'customer_phone_fk' => $customer->phone,
+                'order_type' => $data['order_type'],
+                'order_number' => $orderNumber,
+                'status' => 'pending',
+                'order_date' => now(),
+                'order_time' => $data['order_time'] ?? now(),
                 'subtotal' => $subtotal,
-                'tax' => $tax,
-                'total' => $subtotal + $tax,
+                'tax_amount' => $tax,
+                'total_amount' => $total,
+                'tax' => $tax, 
+                'total' => $total, 
+                'currency' => 'LKR',
+                'payment_status' => 'pending',
+                'special_instructions' => $data['special_instructions'] ?? null,
+                'takeaway_id' => $takeawayId,
+                'placed_by_admin' => true,
+                'created_by_admin_id' => $admin->id,
             ]);
 
-            DB::commit();
+            // Create order items
+            foreach ($orderItems as $itemData) {
+                \App\Models\OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $itemData['menu_item']->id, // MenuItem ID
+                    'inventory_item_id' => $itemData['menu_item']->itemMaster ? $itemData['menu_item']->itemMaster->id : null, // ItemMaster ID if available
+                    'item_name' => $itemData['menu_item']->name,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'total_price' => $itemData['total_price'],
+                    'subtotal' => $itemData['total_price'], 
+                ]);
 
-            return redirect()->route('admin.orders.summary', $order->id)
-                ->with('success', 'Takeaway order created successfully! Order ID: ' . $order->takeaway_id);
+                // Deduct stock for perishable items (Buy & Sell items)
+                if ($itemData['menu_item']->itemMaster && $itemData['menu_item']->itemMaster->is_perishable) {
+                    \App\Models\ItemTransaction::create([
+                        'organization_id' => $branch->organization_id,
+                        'branch_id' => $data['branch_id'],
+                        'inventory_item_id' => $itemData['menu_item']->itemMaster->id,
+                        'transaction_type' => 'order_deduction',
+                        'quantity' => -$itemData['quantity'],
+                        'reference_type' => 'order',
+                        'reference_id' => $order->id,
+                        'notes' => "Stock deduction for admin takeaway order #{$order->order_number}",
+                        'is_active' => true,
+                        'created_by_user_id' => $admin->id,
+                    ]);
+                }
+            }
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Takeaway order creation failed: ' . $e->getMessage());
-            return back()->withInput()->withErrors(['error' => 'Failed to create order. Please try again.']);
+            return redirect()->route('admin.orders.takeaway.summary', $order)
+                ->with('success', 'Takeaway order created successfully!');
+        });
+    }
+
+    /**
+     * Display takeaway order summary after creation
+     */
+    public function summaryTakeaway($id)
+    {
+        $order = Order::with(['orderItems.menuItem', 'branch', 'customer'])
+            ->findOrFail($id);
+        
+        // Check if admin has access to this order
+        $admin = auth()->guard('admin')->user();
+        if (!$admin->is_super_admin && $admin->branch_id && $order->branch_id != $admin->branch_id) {
+            abort(403, 'Access denied to this order.');
         }
+
+        return view('admin.orders.takeaway.summary', compact('order'));
     }
 
     /**
@@ -1222,7 +1283,7 @@ class AdminOrderController extends Controller
                 'customer_phone' => $validated['customer_phone'],
                 'order_time' => $validated['order_time'],
                 'special_instructions' => $validated['special_instructions'],
-                'subtotal' => $subtotal,
+               
                 'tax' => $tax,
                 'total' => $total,
                 'stock_deducted' => true,
@@ -1397,49 +1458,91 @@ class AdminOrderController extends Controller
                 }
             }
             
-            // Get menu items with proper relationships
-            $query = MenuItem::with(['menuCategory', 'itemMaster'])
-                ->where('is_active', true)
-                ->where('is_available', true);
-                
-            if ($branchId) {
-                $query->where('branch_id', $branchId);
+            if (!$branchId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Branch ID is required',
+                    'items' => []
+                ]);
             }
             
-            $menuItems = $query->get()->map(function($item) use ($branchId) {
-                // Determine item type and stock
+            // Get the currently active menu for the branch
+            $activeMenu = Menu::getActiveMenuForBranch($branchId);
+            
+            if (!$activeMenu) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active menu found for this branch',
+                    'items' => [],
+                    'menu' => null
+                ]);
+            }
+
+            // Get menu items from the active menu only
+            $menuItems = $activeMenu->menuItems()
+                ->with(['menuCategory', 'itemMaster'])
+                ->where('is_active', true)
+                ->wherePivot('is_available', true)
+                ->get();
+            
+            $items = $menuItems->map(function($item) use ($branchId) {
+                $itemType = $item->type ?? MenuItem::TYPE_KOT;
                 $currentStock = 0;
-                $itemType = MenuItem::TYPE_KOT;
+                $canOrder = true;
+                $stockStatus = 'available';
                 
-                if ($item->item_master_id && $item->itemMaster && $item->itemMaster->is_active) {
-                    $itemType = MenuItem::TYPE_BUY_SELL;
+                if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id) {
                     $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
+                    $canOrder = $currentStock > 0;
+                    
+                    if ($currentStock <= 0) {
+                        $stockStatus = 'out_of_stock';
+                    } elseif ($currentStock <= 5) {
+                        $stockStatus = 'low_stock';
+                    }
                 }
                 
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
                     'description' => $item->description,
-                    'price' => $item->price,
-                    'category' => $item->menuCategory?->name,
-                    'display_type' => $itemType == MenuItem::TYPE_BUY_SELL ? 'stock' : 'kot',
+                    'price' => $item->pivot->override_price ?? $item->price,
+                    'selling_price' => $item->pivot->override_price ?? $item->price,
+                    'category' => $item->menuCategory?->name ?? 'Uncategorized',
+                    'category_id' => $item->menu_category_id,
+                    'display_type' => $itemType === MenuItem::TYPE_BUY_SELL ? 'stock' : 'kot',
+                    'type' => $itemType,
+                    'type_name' => $itemType === MenuItem::TYPE_KOT ? 'KOT' : 'Buy & Sell',
+                    'item_type' => $itemType === MenuItem::TYPE_KOT ? 'KOT' : 'Buy & Sell',
                     'current_stock' => $currentStock,
-                    'is_available' => $itemType == MenuItem::TYPE_KOT || $currentStock > 0,
-                    'stock_status' => $this->getStockStatus($currentStock),
+                    'can_order' => $canOrder,
+                    'is_available' => $canOrder,
+                    'stock_status' => $stockStatus,
+                    'preparation_time' => $item->preparation_time ?? 15,
+                    'is_vegetarian' => $item->is_vegetarian ?? false,
+                    'is_featured' => $item->is_featured ?? false,
+                    'display_order' => $item->display_order ?? 0,
+                    'special_notes' => $item->pivot->special_notes,
                 ];
             });
             
             return response()->json([
                 'success' => true,
-                'items' => $menuItems,
+                'menu' => [
+                    'id' => $activeMenu->id,
+                    'name' => $activeMenu->name,
+                    'type' => $activeMenu->menu_type
+                ],
+                'items' => $items->toArray(),
                 'branch_id' => $branchId
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Failed to get menu items', [
+            Log::error('Failed to get menu items from active menu', [
                 'branch_id' => $branchId,
                 'admin_id' => $admin->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return response()->json([
@@ -1677,7 +1780,51 @@ class AdminOrderController extends Controller
      */
     public function createTakeaway()
     {
-        return redirect()->route('admin.orders.create', ['type' => 'takeaway']);
+        $admin = auth()->guard('admin')->user();
+        
+        // Generate default customer info with order ID placeholder
+        $defaultCustomerName = 'Customer with Order #PENDING';
+        $defaultPhone = $admin->branch ? $admin->branch->phone ?? '0000000000' : '0000000000';
+        
+        if ($admin->is_super_admin) {
+            // Super admin can see all organizations and branches like customer
+            $organizations = \App\Models\Organization::where('is_active', true)->get();
+            $branches = \App\Models\Branch::with('organization')
+                ->where('is_active', true)
+                ->get();
+            
+            return view('admin.orders.takeaway.create', [
+                'admin' => $admin,
+                'organizations' => $organizations,
+                'branches' => $branches,
+                'defaultCustomerName' => $defaultCustomerName,
+                'defaultPhone' => $defaultPhone
+            ]);
+        } else {
+            // Regular admin - use their assigned branch
+            $currentBranch = $admin->branch;
+            if (!$currentBranch) {
+                return redirect()->route('admin.orders.index')->with('error', 'No branch assigned to your account.');
+            }
+            
+            if (!$currentBranch->is_active || !$currentBranch->organization->is_active) {
+                return redirect()->route('admin.orders.index')->with('error', 'Your branch or organization is not active.');
+            }
+            
+            // For branch admin, only show their branch
+            $branches = collect([$currentBranch]);
+            $organizations = collect([$currentBranch->organization]);
+            
+            return view('admin.orders.takeaway.create', [
+                'admin' => $admin,
+                'organizations' => $organizations,
+                'branches' => $branches,
+                'defaultBranch' => $currentBranch->id,
+                'defaultOrganization' => $currentBranch->organization_id,
+                'defaultCustomerName' => $defaultCustomerName,
+                'defaultPhone' => $defaultPhone
+            ]);
+        }
     }
 
     /**
