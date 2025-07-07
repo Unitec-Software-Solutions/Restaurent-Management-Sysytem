@@ -39,6 +39,24 @@
                 </div>
             </div>
 
+            {{-- item categories --}}
+            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Item Categories</h2>
+                    <p class="text-gray-500 text-sm">Manage item categories and their details</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ route('admin.item-categories.index') }}"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center shadow-sm">
+                        <i class="fas fa-file-alt mr-2"></i> View All Categories
+                    </a>
+                    <a href="{{ route('admin.item-categories.create') }}"
+                        class="bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg flex items-center shadow-sm">
+                        <i class="fas fa-plus mr-2"></i> New Category
+                    </a>
+                </div>
+            </div>
+
             {{-- Stock Management --}}
             <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
                 <div>
