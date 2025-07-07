@@ -181,19 +181,24 @@ document.getElementById('menu_end_time').value = '22:00';
 function loadOrganizationMenuItems() {
     const container = document.getElementById('availableMenuItems');
     
-    fetch('/admin/organizations/{{ $organization->id ?? "0" }}/menu-items')
+    fetch('/admin/menu-items/all-items')
         .then(response => response.json())
         .then(data => {
-            if (data.success && data.menu_items.length > 0) {
-                displayAvailableMenuItems(data.menu_items);
+            if (data.success && data.items.length > 0) {
+                displayAvailableMenuItems(data.items);
             } else {
                 container.innerHTML = `
                     <div class="text-center">
                         <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
                         <p class="mt-2 text-muted">No menu items found.</p>
-                        <button type="button" class="btn btn-sm btn-primary" onclick="createMenuItemFirst()">
-                            <i class="fas fa-plus"></i> Create Menu Item First
-                        </button>
+                        <div class="mt-2">
+                            <a href="/admin/menu-items/create-kot" class="btn btn-sm btn-primary mr-2">
+                                <i class="fas fa-utensils"></i> Create KOT Recipe
+                            </a>
+                            <a href="/admin/inventory/items" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-boxes"></i> Manage Inventory
+                            </a>
+                        </div>
                     </div>
                 `;
             }
@@ -209,18 +214,29 @@ function displayAvailableMenuItems(menuItems) {
     
     let html = '';
     menuItems.forEach(item => {
+        const typeIcon = item.type === 1 ? 'fas fa-boxes text-blue' : 'fas fa-utensils text-orange';
+        const typeBadge = item.type === 1 ? 'badge-info' : 'badge-warning';
+        
         html += `
             <div class="form-check mb-2">
                 <input class="form-check-input" type="checkbox" id="item_${item.id}" value="${item.id}" onchange="toggleMenuItem(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.price})">
                 <label class="form-check-label" for="item_${item.id}">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <strong>${item.name}</strong>
-                            <br><small class="text-muted">${item.description || ''}</small>
+                            <div class="d-flex align-items-center">
+                                <strong>${item.name}</strong>
+                                <i class="${typeIcon} ml-2" title="${item.type_name}"></i>
+                            </div>
+                            <small class="text-muted">${item.description || ''}</small>
+                            <div class="mt-1">
+                                <span class="badge ${typeBadge}">${item.type_name}</span>
+                                <small class="text-muted ml-2">${item.category}</small>
+                            </div>
                         </div>
                         <div class="text-right">
-                            <span class="badge badge-info">LKR ${item.price}</span>
-                            <br><small class="text-muted">${item.category}</small>
+                            <span class="badge badge-primary">LKR ${parseFloat(item.price).toFixed(2)}</span>
+                            ${item.type === 1 ? `<br><small class="text-info">Stock: ${item.current_stock}</small>` : 
+                              `<br><small class="text-warning">Recipe</small>`}
                         </div>
                     </div>
                 </label>

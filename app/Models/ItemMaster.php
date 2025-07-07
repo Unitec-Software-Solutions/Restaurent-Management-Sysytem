@@ -52,6 +52,7 @@ class ItemMaster extends Model
         'is_inventory_item',
         'is_perishable',
         'track_expiry',
+        'requires_production',
         'shelf_life_in_days',
         'primary_supplier_id',
         'supplier_ids',
@@ -82,6 +83,7 @@ class ItemMaster extends Model
         'is_inventory_item' => 'boolean',
         'is_perishable' => 'boolean',
         'track_expiry' => 'boolean',
+        'requires_production' => 'boolean',
         'shelf_life_in_days' => 'integer'
     ];
 

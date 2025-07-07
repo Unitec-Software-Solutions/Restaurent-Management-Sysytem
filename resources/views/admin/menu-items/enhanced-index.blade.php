@@ -1,28 +1,92 @@
 @extends('layouts.admin')
 
-@section('title', 'Enhanced Menu Items Management')
+@section('title', 'Menu Items Management')
 
 @section('content')
 <div class="p-6">
+    <!-- Breadcrumb Navigation -->
+    <x-breadcrumb 
+        :items="[['name' => 'Menu Items', 'url' => route('admin.menu-items.enhanced.index')]]"
+        current="All Menu Items"
+        type="menu-items" />
+
     <!-- Header with Enhanced Actions -->
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Enhanced Menu Items</h1>
-            <p class="text-gray-600">Manage your restaurant menu items with refined type classification</p>
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Menu Items Management</h1>
+                <p class="text-gray-600 mb-3">Manage all your menu items: Buy & Sell items (from inventory) + KOT recipes (dishes)</p>
+                
+                <!-- Quick Stats -->
+                <div class="flex items-center gap-6 text-sm">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                        <span class="text-gray-600">{{ $menuItems->where('type', App\Models\MenuItem::TYPE_BUY_SELL)->count() }} Buy & Sell Items</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                        <span class="text-gray-600">{{ $menuItems->where('type', App\Models\MenuItem::TYPE_KOT)->count() }} KOT Recipes</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                        <span class="text-gray-600">{{ $menuItems->where('is_available', true)->count() }} Available</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <a href="{{ route('admin.menu-items.create') }}" 
+                   class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+                    <i class="fas fa-plus mr-2"></i>Add Menu Item
+                    <span class="ml-2 text-xs bg-indigo-500 px-2 py-0.5 rounded-full">Single</span>
+                </a>
+                <a href="{{ route('admin.menu-items.create-kot') }}" 
+                   class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center">
+                    <i class="fas fa-warehouse mr-2"></i>Bulk Add from Inventory
+                    <span class="ml-2 text-xs bg-orange-500 px-2 py-0.5 rounded-full">Bulk</span>
+                </a>
+                <a href="{{ route('admin.menu-categories.index') }}" 
+                   class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center">
+                    <i class="fas fa-tags mr-2"></i>Categories
+                </a>
+            </div>
         </div>
-        <div class="flex gap-3">
-            <a href="{{ route('admin.menu-items.create') }}" 
-               class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <i class="fas fa-plus mr-2"></i>Add Menu Item
-            </a>
-            <a href="{{ route('admin.menu-items.create-kot') }}" 
-               class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                <i class="fas fa-fire mr-2"></i>Create KOT Items
-            </a>
-            <button onclick="openCreateFromItemMasterModal()" 
-                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                <i class="fas fa-link mr-2"></i>From Item Master
-            </button>
+    </div>
+
+    <!-- System Explanation -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500 text-xl mt-0.5"></i>
+            </div>
+            <div class="ml-4 flex-1">
+                <h3 class="text-base font-semibold text-blue-900 mb-3">What are Menu Items?</h3>
+                <div class="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3 mt-0.5">
+                            <i class="fas fa-utensils text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium mb-1">Individual Food & Drink Items</h4>
+                            <p class="text-blue-700">Menu Items are the individual products customers can order - each dish, drink, or product that appears on your menu.</p>
+                            <p class="text-blue-600 text-xs mt-1 italic">Examples: Chicken Curry, Caesar Salad, Coca Cola, Coffee</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3 mt-0.5">
+                            <i class="fas fa-book-open text-orange-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium mb-1">Different from "Menus"</h4>
+                            <p class="text-blue-700">Menus are collections of menu items for specific times/contexts (like "Lunch Menu 12PM-3PM").</p>
+                            <p class="text-orange-600 text-xs mt-1 italic">Create items here, then group them into menus in Menu Builder</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 p-3 bg-blue-100 rounded-lg">
+                    <p class="text-blue-800 text-sm"><strong>Two Types:</strong> 🍳 <strong>KOT Items</strong> (kitchen-prepared dishes) and 📦 <strong>Buy & Sell Items</strong> (sold directly from inventory). Both can be ordered by customers.</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -57,9 +121,13 @@
                     <select name="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Types</option>
                         <option value="{{ App\Models\MenuItem::TYPE_BUY_SELL }}" {{ request('type') == App\Models\MenuItem::TYPE_BUY_SELL ? 'selected' : '' }}>
-                            <i class="fas fa-boxes mr-1"></i>Buy & Sell (Direct)
+                            📦 Buy & Sell (Inventory)
                         </option>
                         <option value="{{ App\Models\MenuItem::TYPE_KOT }}" {{ request('type') == App\Models\MenuItem::TYPE_KOT ? 'selected' : '' }}>
+                            🍳 KOT Recipes (Dishes)
+                        </option>
+                    </select>
+                </div>
                             <i class="fas fa-fire mr-1"></i>KOT (Kitchen Order)
                         </option>
                     </select>
@@ -123,9 +191,10 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Buy & Sell Items</p>
-                    <p class="text-2xl font-semibold text-gray-900">
+                    <p class="text-lg font-semibold text-gray-900">
                         {{ $menuItems->where('type', App\Models\MenuItem::TYPE_BUY_SELL)->count() }}
                     </p>
+                    <p class="text-xs text-blue-600">From Item Master (inventory)</p>
                 </div>
             </div>
         </div>
@@ -134,14 +203,15 @@
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-fire text-orange-600"></i>
+                        <i class="fas fa-utensils text-orange-600"></i>
                     </div>
                 </div>
                 <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">KOT Items</p>
-                    <p class="text-2xl font-semibold text-gray-900">
+                    <p class="text-sm font-medium text-gray-500">KOT Recipes</p>
+                    <p class="text-lg font-semibold text-gray-900">
                         {{ $menuItems->where('type', App\Models\MenuItem::TYPE_KOT)->count() }}
                     </p>
+                    <p class="text-xs text-orange-600">Dishes made from ingredients</p>
                 </div>
             </div>
         </div>
@@ -196,11 +266,11 @@
                     <div class="absolute top-3 right-3">
                         @if($item->type == App\Models\MenuItem::TYPE_BUY_SELL)
                             <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                                <i class="fas fa-boxes mr-1"></i>Buy & Sell
+                                📦 Inventory
                             </span>
                         @else
                             <span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
-                                <i class="fas fa-fire mr-1"></i>KOT
+                                🍳 Recipe
                             </span>
                         @endif
                     </div>
@@ -222,6 +292,25 @@
                                 @endif
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Source Information -->
+                    <div class="mb-3 p-2 bg-gray-50 rounded text-xs">
+                        @if($item->type == App\Models\MenuItem::TYPE_BUY_SELL)
+                            <div class="flex items-center text-blue-600">
+                                <i class="fas fa-boxes mr-2"></i>
+                                <span><strong>Source:</strong> Item Master (Inventory) 
+                                @if($item->itemMaster)
+                                    - Code: {{ $item->itemMaster->item_code }}
+                                @endif
+                                </span>
+                            </div>
+                        @else
+                            <div class="flex items-center text-orange-600">
+                                <i class="fas fa-utensils mr-2"></i>
+                                <span><strong>Source:</strong> KOT Recipe (Made from ingredients)</span>
+                            </div>
+                        @endif
                     </div>
 
                     <!-- Description -->

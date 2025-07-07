@@ -850,6 +850,11 @@ Route::get('/test-item-master', function () {
     }
 });
 
+// Test route for menu items system
+Route::get('/test-menu-items', function () {
+    return view('test-menu-items');
+})->name('test.menu-items');
+
 // Organization Admin Routes - For organization admins to manage their restaurant
 Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Organization Admin Dashboard
@@ -955,10 +960,16 @@ Route::prefix('admin/menu-items')->name('admin.menu-items.')->middleware(['auth:
     Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
     Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('store-kot');
     
+    // Standalone KOT creation routes
+    Route::get('/create-standalone-kot', [MenuItemController::class, 'createStandaloneKotForm'])->name('standalone-kot.create');
+    Route::post('/create-standalone-kot', [MenuItemController::class, 'createStandaloneKotItems'])->name('standalone-kot.store');
+    
     // AJAX routes
     Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
+    Route::get('/all-items', [MenuItemController::class, 'getAllMenuItems'])->name('all-items');
     Route::get('/by-branch', [AdminOrderController::class, 'getMenuItems'])->name('by-branch');
     Route::get('/menu-eligible-items', [MenuItemController::class, 'getMenuEligibleItems'])->name('menu-eligible-items');
+    Route::get('/activated-items', [MenuItemController::class, 'getActivatedMenuItems'])->name('activated-items');
     
     // Bulk operations with enhanced validation
     Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');

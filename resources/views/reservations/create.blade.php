@@ -51,17 +51,6 @@
                 </div>
             </div>
 
-            <!-- Success Message (Hidden by default) -->
-            <div id="successMessage" class="hidden bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-6">
-                <div class="flex items-center">
-                    <i class="fas fa-check-circle text-2xl mr-3"></i>
-                    <div>
-                        <h3 class="font-bold text-lg">Reservation Confirmed!</h3>
-                        <p id="confirmationDetails" class="text-sm opacity-90 mt-1"></p>
-                    </div>
-                </div>
-            </div>
-
             <!-- Form Content -->
             <div class="px-8 py-8">
                 <!-- Error Messages -->
@@ -84,10 +73,6 @@
                         </div>
                     </div>
                 @endif
-
-                <div id="errorContainer" class="hidden bg-red-50 border-l-4 border-red-400 p-6 mb-8 rounded-r-lg">
-                    <ul id="errorList" class="text-red-700"></ul>
-                </div>
 
                 @php
                     $name = old('name', $input['name'] ?? '');
@@ -125,11 +110,6 @@
                                         <i class="fas fa-user text-gray-400"></i>
                                     </div>
                                 </div>
-                                @error('name')
-                                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                    </p>
-                                @enderror
                             </div>
 
                             <!-- Email -->
@@ -145,11 +125,6 @@
                                         <i class="fas fa-envelope text-gray-400"></i>
                                     </div>
                                 </div>
-                                @error('email')
-                                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                    </p>
-                                @enderror
                             </div>
 
                             <!-- Phone -->
@@ -165,11 +140,6 @@
                                         <i class="fas fa-phone text-gray-400"></i>
                                     </div>
                                 </div>
-                                @error('phone')
-                                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                    </p>
-                                @enderror
                             </div>
 
                             <!-- Number of People -->
@@ -183,7 +153,7 @@
                                             required>
                                         <option value="" disabled selected>👥 Select number of people</option>
                                         @for($i = 1; $i <= 20; $i++)
-                                            <option value="{{ $i }}" {{ old('number_of_people', $number_of_people) == $i ? 'selected' : '' }}>
+                                            <option value="{{ $i }}" {{ $number_of_people == $i ? 'selected' : '' }}>
                                                 {{ $i }} {{ $i == 1 ? 'person' : 'people' }}
                                             </option>
                                         @endfor
@@ -192,11 +162,6 @@
                                         <i class="fas fa-chevron-down text-gray-400"></i>
                                     </div>
                                 </div>
-                                @error('number_of_people')
-                                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                    </p>
-                                @enderror
                             </div>
                         </div>
 
@@ -219,7 +184,7 @@
                                         <option value="" disabled selected>🍽️ Select a restaurant</option>
                                         @foreach($organizations as $organization)
                                             <option value="{{ $organization['id'] }}" 
-                                                    {{ old('organization_id', $organization_id) == $organization['id'] ? 'selected' : '' }}>
+                                                    {{ $organization_id == $organization['id'] ? 'selected' : '' }}>
                                                 {{ $organization['name'] }}
                                             </option>
                                         @endforeach
@@ -228,11 +193,6 @@
                                         <i class="fas fa-chevron-down text-gray-400"></i>
                                     </div>
                                 </div>
-                                @error('organization_id')
-                                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                    </p>
-                                @enderror
                             </div>
 
                             <!-- Branch Selection -->
@@ -243,23 +203,19 @@
                                 </label>
                                 <div class="relative">
                                     <select name="branch_id" id="branch_id" 
-                                            class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 appearance-none cursor-pointer hover:border-blue-300 disabled:bg-gray-50 disabled:cursor-not-allowed" 
-                                            required disabled>
-                                        <option value="" disabled selected>🏢 First select a restaurant</option>
+                                            class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 appearance-none cursor-pointer hover:border-blue-300" 
+                                            required>
+                                        <option value="" disabled selected>🏢 Select a branch</option>
+                                        <!-- Branches will be dynamically loaded here -->
                                     </select>
                                     <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
                                         <i class="fas fa-chevron-down text-gray-400"></i>
                                     </div>
                                 </div>
-                                <div id="branch-hours-text" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                <div id="branch-info" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <i class="fas fa-info-circle text-blue-600 mr-2"></i>
-                                    <span class="text-sm text-blue-700">Select a restaurant above to view available branches</span>
+                                    <span id="branch-info-text" class="text-sm text-blue-700">Select a restaurant to view available branches</span>
                                 </div>
-                                @error('branch_id')
-                                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                    </p>
-                                @enderror
                             </div>
 
                             <!-- Date -->
@@ -276,11 +232,6 @@
                                         <i class="fas fa-calendar text-gray-400"></i>
                                     </div>
                                 </div>
-                                @error('date')
-                                    <p class="mt-1 text-sm text-red-600 flex items-center">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                    </p>
-                                @enderror
                             </div>
 
                             <!-- Time Selection -->
@@ -298,11 +249,6 @@
                                             <i class="fas fa-clock text-gray-400"></i>
                                         </div>
                                     </div>
-                                    @error('start_time')
-                                        <p class="mt-1 text-sm text-red-600 flex items-center">
-                                            <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                        </p>
-                                    @enderror
                                 </div>
 
                                 <!-- End Time -->
@@ -318,11 +264,6 @@
                                             <i class="fas fa-clock text-gray-400"></i>
                                         </div>
                                     </div>
-                                    @error('end_time')
-                                        <p class="mt-1 text-sm text-red-600 flex items-center">
-                                            <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                                        </p>
-                                    @enderror
                                 </div>
                             </div>
                         </div>
@@ -342,11 +283,6 @@
                             </div>
                         </div>
                         <p class="text-xs text-gray-500">We'll do our best to accommodate your requests</p>
-                        @error('comments')
-                            <p class="mt-1 text-sm text-red-600 flex items-center">
-                                <i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}
-                            </p>
-                        @enderror
                     </div>
 
                     <!-- Submit Button -->
@@ -356,7 +292,7 @@
                             <i class="fas fa-arrow-left mr-2"></i> Cancel
                         </button>
                         <button type="submit" id="submitButton" 
-                                class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-100 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-100 flex items-center">
                             <i class="fas fa-search mr-2"></i> Review Reservation
                         </button>
                     </div>
@@ -394,222 +330,138 @@
 </div>
 @endsection
 
-@push('styles')
-<style>
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-    }
-    .animate-fade-in {
-        animation: fadeIn 0.6s ease-out forwards;
-    }
-    .animate-pulse-subtle {
-        animation: pulse 2s infinite;
-    }
-    
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #a1a1a1;
-    }
-    
-    /* Form animations */
-    select:focus, input:focus, textarea:focus {
-        transform: translateY(-1px);
-    }
-    
-    /* Loading spinner */
-    .loading-spinner {
-        border: 2px solid #f3f3f3;
-        border-top: 2px solid #3498db;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-</style>
-@endpush
-
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Configuration
-    const CONFIG = {
-        API_ENDPOINTS: {
-            BRANCHES: '/api/organizations/{organizationId}/branches'
-        },
-        CACHE_EXPIRY: 5 * 60 * 1000 // 5 minutes
-    };
-
-    // State management
-    const state = {
-        branchCache: new Map()
-    };
-
     // DOM elements
-    const elements = {
-        organizationSelect: document.getElementById('organization_id'),
-        branchSelect: document.getElementById('branch_id'),
-        branchHoursText: document.getElementById('branch-hours-text')
-    };
+    const organizationSelect = document.getElementById('organization_id');
+    const branchSelect = document.getElementById('branch_id');
+    const branchInfo = document.getElementById('branch-info-text');
+    const branchInfoContainer = document.getElementById('branch-info');
 
-    // Branch management functions
-    const branchManager = {
-        clearBranchDropdown() {
-            if (elements.branchSelect) {
-                elements.branchSelect.innerHTML = '<option value="" disabled selected>🏢 First select a restaurant</option>';
-                elements.branchSelect.disabled = true;
-            }
-            
-            if (elements.branchHoursText) {
-                elements.branchHoursText.innerHTML = `
-                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
-                    <span class="text-sm text-blue-700">Select a restaurant above to view available branches</span>
-                `;
-            }
-        },
+    // Pre-selected values from PHP
+    const selectedOrganization = @json($organization_id);
+    const selectedBranch = @json($branch_id);
 
-        showBranchLoading() {
-            if (elements.branchSelect) {
-                elements.branchSelect.innerHTML = '<option value="">🔄 Loading branches...</option>';
-                elements.branchSelect.disabled = true;
-            }
-        },
+    // Branch cache
+    const branchCache = new Map();
 
-        showBranchError(message = 'Failed to load branches') {
-            if (elements.branchSelect) {
-                elements.branchSelect.innerHTML = `<option value="" disabled selected>❌ ${message}</option>`;
-                elements.branchSelect.disabled = true;
+    // Initialize branch selection
+    if (selectedOrganization) {
+        loadBranches(selectedOrganization).then(() => {
+            if (selectedBranch) {
+                branchSelect.value = selectedBranch;
+                updateBranchInfo();
             }
-        },
+        });
+    }
 
-        populateBranches(branches) {
-            if (!elements.branchSelect) return;
-            
-            if (!branches || branches.length === 0) {
-                elements.branchSelect.innerHTML = '<option value="" disabled selected>📍 No branches available</option>';
-                elements.branchSelect.disabled = true;
-                return;
-            }
+    // Event listeners
+    organizationSelect.addEventListener('change', function() {
+        const orgId = this.value;
+        loadBranches(orgId);
+    });
 
-            // Clear and populate options
-            elements.branchSelect.innerHTML = '<option value="" disabled selected>🏢 Select a restaurant branch</option>';
-            
-            branches.forEach((branch) => {
-                const option = document.createElement('option');
-                option.value = branch.id;
-                
-                // Enhanced option text
-                let optionText = `🏢 ${branch.name}`;
-                if (branch.address) {
-                    const shortAddress = branch.address.length > 30 
-                        ? branch.address.substring(0, 30) + '...' 
-                        : branch.address;
-                    optionText += ` - ${shortAddress}`;
+    branchSelect.addEventListener('change', updateBranchInfo);
+
+    // Load branches for organization
+    async function loadBranches(organizationId) {
+        // Clear branch dropdown
+        branchSelect.innerHTML = '<option value="" disabled selected>🏢 Loading branches...</option>';
+        branchSelect.disabled = true;
+        
+        // Check cache first
+        if (branchCache.has(organizationId)) {
+            populateBranchDropdown(branchCache.get(organizationId));
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/organizations/${organizationId}/branches`, {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 }
-                option.textContent = optionText;
-                
-                // Store branch data
-                option.dataset.opening = branch.opening_time || '';
-                option.dataset.closing = branch.closing_time || '';
-                option.dataset.address = branch.address || '';
-                option.dataset.phone = branch.phone || '';
-                
-                elements.branchSelect.appendChild(option);
             });
 
-            // Enable dropdown
-            elements.branchSelect.disabled = false;
-        },
-
-        async fetchBranches(organizationId) {
-            // Check cache first
-            const cacheKey = `org_${organizationId}`;
-            if (state.branchCache.has(cacheKey)) {
-                const cached = state.branchCache.get(cacheKey);
-                if (Date.now() - cached.timestamp < CONFIG.CACHE_EXPIRY) {
-                    this.populateBranches(cached.data);
-                    return;
-                }
-            }
-
-            this.showBranchLoading();
+            if (!response.ok) throw new Error('Failed to fetch branches');
             
-            const url = `/api/organizations/${organizationId}/branches`;
+            const { branches } = await response.json();
             
-            try {
-                const response = await fetch(url, {
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && Array.isArray(data.branches)) {
-                        // Cache the result
-                        state.branchCache.set(cacheKey, {
-                            data: data.branches,
-                            timestamp: Date.now()
-                        });
-                        this.populateBranches(data.branches);
-                    } else {
-                        this.showBranchError('Invalid response from server');
-                    }
-                } else {
-                    this.showBranchError(`Server error: ${response.status}`);
-                }
-            } catch (error) {
-                this.showBranchError('Network error - please check your connection');
-            }
-        }
-    };
-
-    // Event handlers
-    const eventHandlers = {
-        handleOrganizationChange(event) {
-            const organizationId = parseInt(event.target.value);
-            branchManager.clearBranchDropdown();
+            // Cache the result
+            branchCache.set(organizationId, branches);
+            populateBranchDropdown(branches);
             
-            if (!organizationId || isNaN(organizationId)) return;
-            branchManager.fetchBranches(organizationId);
-        }
-    };
-
-    // Initialize form
-    function initializeForm() {
-        if (!elements.organizationSelect || !elements.branchSelect) return;
-
-        // Add event listeners
-        elements.organizationSelect.addEventListener('change', eventHandlers.handleOrganizationChange);
-        
-        // Initialize with pre-selected values
-        if (elements.organizationSelect.value) {
-            eventHandlers.handleOrganizationChange({ target: elements.organizationSelect });
+        } catch (error) {
+            console.error('Error loading branches:', error);
+            branchSelect.innerHTML = '<option value="" disabled selected>❌ Error loading branches</option>';
+            branchInfo.textContent = 'Failed to load branches. Please try again.';
         }
     }
 
-    // Initialize
-    initializeForm();
+    // Populate branch dropdown
+    function populateBranchDropdown(branches) {
+        branchSelect.innerHTML = '<option value="" disabled selected>🏢 Select a branch</option>';
+        
+        if (!branches || branches.length === 0) {
+            branchSelect.innerHTML = '<option value="" disabled selected>📍 No branches available</option>';
+            branchInfo.textContent = 'No branches available for this restaurant';
+            return;
+        }
+
+        branches.forEach(branch => {
+            const option = document.createElement('option');
+            option.value = branch.id;
+            
+            // Enhanced display text
+            let text = `🏢 ${branch.name}`;
+            if (branch.address) {
+                text += ` - ${branch.address.substring(0, 30)}${branch.address.length > 30 ? '...' : ''}`;
+            }
+            option.textContent = text;
+            
+            // Store additional data
+            option.dataset.opening = branch.opening_time;
+            option.dataset.closing = branch.closing_time;
+            option.dataset.address = branch.address;
+            option.dataset.phone = branch.phone;
+            
+            branchSelect.appendChild(option);
+        });
+
+        branchSelect.disabled = false;
+        updateBranchInfo();
+    }
+
+    // Update branch info display
+    function updateBranchInfo() {
+        const selectedOption = branchSelect.options[branchSelect.selectedIndex];
+        
+        if (!selectedOption || !selectedOption.value) {
+            branchInfo.textContent = 'Select a branch to view details';
+            return;
+        }
+
+        const opening = selectedOption.dataset.opening;
+        const closing = selectedOption.dataset.closing;
+        const address = selectedOption.dataset.address;
+        const phone = selectedOption.dataset.phone;
+
+        let infoHTML = '';
+        
+        if (opening && closing) {
+            infoHTML += `<div class="mb-1"><i class="fas fa-clock mr-2"></i> ${opening} - ${closing}</div>`;
+        }
+        
+        if (address) {
+            infoHTML += `<div class="mb-1"><i class="fas fa-map-marker-alt mr-2"></i> ${address}</div>`;
+        }
+        
+        if (phone) {
+            infoHTML += `<div><i class="fas fa-phone mr-2"></i> ${phone}</div>`;
+        }
+
+        branchInfo.innerHTML = infoHTML || 'No additional information available';
+    }
 });
 </script>
 @endpush

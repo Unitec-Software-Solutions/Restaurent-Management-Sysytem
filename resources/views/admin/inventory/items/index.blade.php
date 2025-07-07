@@ -1,8 +1,17 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Item Management')
+@section('header-title', 'Item Master - Inventory Management')
 
 @section('content')
+    <!-- Breadcrumb Navigation -->
+    <x-breadcrumb 
+        :items="[
+            ['name' => 'Inventory Management', 'url' => route('admin.inventory.index')],
+            ['name' => 'Item Master']
+        ]"
+        current="Inventory Items"
+        type="inventory" />
+
     <div class="p-4 rounded-lg">
         <!-- Header with navigation buttons -->
         <div class="justify-between items-center mb-4">
@@ -16,6 +25,49 @@
                     ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
                 ]" active="Item Management" />
             </div>
+        </div>
+
+        <!-- Inventory System Clarification -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Item Master - Inventory Management</h1>
+                    <p class="text-gray-600 mb-3">Manage buy & sell items with inventory tracking, stock levels, and supplier information</p>
+                    <div class="flex items-center text-sm">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs mr-3">
+                            📦 Buy & Sell Items Only
+                        </span>
+                        <span class="text-gray-500">For KOT recipes (dishes), use</span>
+                        <a href="{{ route('admin.menu-items.enhanced.index') }}" class="text-orange-600 hover:text-orange-700 ml-1 font-medium">Menu Items →</a>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <a href="{{ route('admin.menu-items.enhanced.index') }}" 
+                       class="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors">
+                        <i class="fas fa-utensils mr-2"></i>Menu Items
+                    </a>
+                    <a href="{{ route('admin.inventory.items.create') }}" 
+                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Add Inventory Item
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Note -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-500 text-lg mt-0.5 mr-3"></i>
+                <div>
+                    <h3 class="font-medium text-blue-900 mb-1">Inventory Items vs Menu Items</h3>
+                    <p class="text-sm text-blue-800">
+                        <strong>This section is for inventory items</strong> that are bought and sold directly (like beverages, packaged foods). 
+                        For <strong>KOT recipes/dishes</strong> that are cooked using ingredients, create them in the 
+                        <a href="{{ route('admin.menu-items.enhanced.index') }}" class="text-orange-600 hover:text-orange-700 font-medium">Menu Items section</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
 
             <!-- Enhanced Filters Section -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
@@ -219,9 +271,8 @@
 
             <!-- Item List -->
             <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h2 class="text-xl font-semibold text-gray-900">Inventory Items</h2>
+                <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Item Master (Inventory Items)</h2>
                         <p class="text-sm text-gray-500">
                             @if ($items instanceof \Illuminate\Pagination\LengthAwarePaginator || $items instanceof \Illuminate\Pagination\Paginator)
                                 Showing {{ $items->firstItem() ?? 0 }} to {{ $items->lastItem() ?? 0 }} of
@@ -230,18 +281,22 @@
                                 {{ $items->count() }} items
                             @endif
                             @if (request()->hasAny([
-                                    'search',
-                                    'category',
-                                    'status',
-                                    'menu_item',
-                                    'perishable',
-                                    'price_min',
-                                    'price_max',
-                                    'date_from',
-                                    'date_to',
-                                ]))
+                                'search',
+                                'category',
+                                'status',
+                                'menu_item',
+                                'perishable',
+                                'price_min',
+                                'price_max',
+                                'date_from',
+                                'date_to',
+                            ]))
                                 <span class="text-indigo-600 font-medium">(filtered)</span>
                             @endif
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            For KOT items (recipes), use Menu Items → Create KOT Recipe instead
                         </p>
                         <p class="text-sm text-gray-500 mt-1">
                             @if (Auth::guard('admin')->user()->is_super_admin)

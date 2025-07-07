@@ -15,7 +15,8 @@ class MenuItem extends Model
 
     // Menu Item Types
     const TYPE_BUY_SELL = 1;  
-    const TYPE_KOT = 2;      
+    const TYPE_PRODUCTION = 2;
+    const TYPE_KOT = 3;      
     
     // Spice Levels
     const SPICE_MILD = 'mild';
@@ -273,6 +274,7 @@ class MenuItem extends Model
     {
         return [
             self::TYPE_BUY_SELL => 'Buy & Sell (Direct)',
+            self::TYPE_PRODUCTION => 'Production (Requires Preparation before)',
             self::TYPE_KOT => 'Kitchen Order Ticket'
         ];
     }
