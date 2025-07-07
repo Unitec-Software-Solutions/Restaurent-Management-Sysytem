@@ -455,10 +455,10 @@ public function update(Request $request, Reservation $reservation)
             $admin->load('branch');
         }
 
-        // For super admin, redirect to reservation initialization page
-        if ($admin->is_super_admin) {
-            return redirect()->route('reservations.initialize');
-        }
+        // // For super admin, redirect to reservation initialization page
+        // if ($admin->is_super_admin) {
+        //     return redirect()->route('reservations.initialize');
+        // }
 
         // Validate admin has a branch assigned
         if (!$admin->branch_id || !$admin->branch) {

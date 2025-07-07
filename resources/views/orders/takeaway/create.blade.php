@@ -1,17 +1,33 @@
-@extends('layouts.app')
+@extends(isset($isAdmin) && $isAdmin ? 'layouts.admin' : 'layouts.app')
 
 @section('content')
 <div class="container mx-auto px-4 py-6">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <!-- Card Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
-            <h2 class="text-2xl font-bold text-white">Create Takeaway Order</h2>
+            <h2 class="text-2xl font-bold text-white">
+                Create Takeaway Order{{ isset($isAdmin) && $isAdmin ? ' (Admin)' : '' }}
+            </h2>
+            @if(isset($isAdmin) && $isAdmin)
+                <p class="text-blue-100 mt-1">Admin mode: Default values pre-filled</p>
+            @endif
         </div>
         
         <!-- Card Body -->
         <div class="p-6">
-            <form method="POST" action="{{ route('orders.takeaway.store') }}" class="space-y-6">
+            <form method="POST" action="{{ isset($isAdmin) && $isAdmin ? route('admin.orders.takeaway.store') : route('orders.takeaway.store') }}" class="space-y-6" id="takeaway-order-form">
                 @csrf
+
+                <!-- Admin Hidden Fields -->
+                @if(isset($isAdmin) && $isAdmin)
+                    <input type="hidden" name="is_admin" value="1">
+                    @if(isset($defaultOrganization))
+                        <input type="hidden" name="default_organization_id" value="{{ $defaultOrganization }}">
+                    @endif
+                    @if(isset($defaultBranch))
+                        <input type="hidden" name="default_branch_id" value="{{ $defaultBranch }}">
+                    @endif
+                @endif
 
                 <!-- Display Validation Errors -->
                 @if($errors->any())
@@ -114,7 +130,7 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
                                 <input type="datetime-local" name="order_time" 
-                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? now()->addMinutes(30)->format('Y-m-d\TH:i') : old('order_time', '') }}"
+                                    value="{{ isset($isAdmin) && $isAdmin ? now()->addMinutes(30)->format('Y-m-d\TH:i') : old('order_time', '') }}"
                                     min="{{ now()->format('Y-m-d\TH:i') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
                                     required>
@@ -137,28 +153,33 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
                                 <input type="text" name="customer_name" 
-                                    value="{{ old('customer_name', '') }}"
+                                    value="{{ old('customer_name', isset($defaultCustomerName) ? $defaultCustomerName : '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
-                                    placeholder="Enter your full name"
+                                    placeholder="{{ isset($isAdmin) && $isAdmin ? 'Customer name will be auto-generated' : 'Enter your full name' }}"
                                     required>
                             </div>
 
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
                                 <input type="tel" name="customer_phone" 
-                                    value="{{ old('customer_phone', '') }}"
+                                    value="{{ old('customer_phone', isset($defaultPhone) ? $defaultPhone : '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
-                                    placeholder="Enter your phone number"
+                                    placeholder="{{ isset($isAdmin) && $isAdmin ? 'Branch phone number (default)' : 'Enter your phone number' }}"
                                     required
                                     pattern="[0-9+]{10,15}" 
                                     title="Please enter a valid 10-15 digit phone number">
-                                <p class="mt-1 text-sm text-gray-500">We'll notify you about your order status</p>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    @if(isset($isAdmin) && $isAdmin)
+                                        Admin mode: Using branch phone as default
+                                    @else
+                                        We'll notify you about your order status
+                                    @endif
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right Column - Menu Items -->
-                    <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 h-fit">
+                    <!-- Right Column - Menu Items -->                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 h-fit">
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Menu Items</h3>
                         
                         <div id="menu-loading" class="hidden text-center py-8">
@@ -168,6 +189,13 @@
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 Loading menu items...
+                            </div>
+                        </div>
+
+                        <div id="menu-error" class="hidden text-center py-8">
+                            <div class="text-red-500">
+                                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                                <p>Please select a branch to view menu items</p>
                             </div>
                         </div>
 
@@ -362,6 +390,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
+        // Check if branch is selected
+        const branchSelect = document.querySelector('select[name="branch_id"]');
+        if (!branchSelect || !branchSelect.value) {
+            e.preventDefault();
+            alert('Please select a branch');
+            if (branchSelect) branchSelect.focus();
+            return false;
+        }
+
         const phoneInput = document.querySelector('input[name="customer_phone"]');
         if (phoneInput && !phoneInput.value.trim()) {
             e.preventDefault();
@@ -377,6 +414,11 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select at least one item');
             return false;
         }
+
+        console.log('Form validation passed. Submitting with:');
+        console.log('- Branch ID:', branchSelect.value);
+        console.log('- Selected Items:', checkedItems.length);
+        console.log('- Customer Phone:', phoneInput.value);
         
         // Add loading state to form
         const submitBtn = this.querySelector('button[type="submit"]');
@@ -431,11 +473,22 @@ function initializeLocationHandling() {
         });
     }
 
-    // Auto-load menu items if branch is pre-selected
-    const selectedBranchId = branchSelect ? branchSelect.value : null;
-    if (selectedBranchId) {
+    // Auto-load menu items if branch is pre-selected (especially for admin)
+    if (branchSelect && branchSelect.value) {
+        console.log('Auto-loading menu items for pre-selected branch:', branchSelect.value);
         const organizationId = organizationSelect ? organizationSelect.value : null;
-        loadMenuItems(selectedBranchId, organizationId);
+        loadMenuItems(branchSelect.value, organizationId);
+    } else if (isAdmin) {
+        // For admin users, check if we have default branch
+        const defaultBranchInput = document.getElementById('admin_default_branch');
+        if (defaultBranchInput && defaultBranchInput.value) {
+            console.log('Loading menu items for admin default branch:', defaultBranchInput.value);
+            loadMenuItems(defaultBranchInput.value);
+        } else {
+            showMenuError('Please select a branch to view menu items');
+        }
+    } else {
+        showMenuError('Please select a branch to view menu items');
     }
 }
 
@@ -487,26 +540,32 @@ function loadMenuItems(branchId, organizationId = null) {
         return;
     }
 
+    console.log('Loading menu items for branch:', branchId);
     showMenuLoading();
 
-    // Use new API endpoint that loads from active menus only
-    const url = `/api/menu-items/branch/${branchId}/active`;
+    // Use API endpoint that works for admin
+    const url = `/admin/menu-items/${branchId}?branch_id=${branchId}`;
     
-    fetch(url)
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        }
+    })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                displayMenuItems(data.items || []);
-                if (data.menu) {
-                    console.log('Loaded items from active menu:', data.menu.name);
-                }
+            console.log('Menu API response:', data);
+            if (data.success && data.items) {
+                displayMenuItems(data.items);
+                console.log(`Loaded ${data.items.length} menu items for branch ${branchId}`);
             } else {
-                showMenuError(data.message || 'No active menu found for this branch');
+                showMenuError(data.message || 'No menu items found for this branch');
             }
         })
         .catch(error => {
             console.error('Error loading menu items:', error);
-            showMenuError();
+            showMenuError('Failed to load menu items. Please try again.');
         });
 }
 
@@ -516,9 +575,28 @@ function loadMenuItems(branchId, organizationId = null) {
 function showMenuLoading() {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
+    const error = document.getElementById('menu-error');
     
     container.style.display = 'none';
     loading.classList.remove('hidden');
+    error.classList.add('hidden');
+}
+
+/**
+ * Show error state for menu items
+ */
+function showMenuError(message = 'Failed to load menu items') {
+    const container = document.getElementById('menu-items-container');
+    const loading = document.getElementById('menu-loading');
+    const error = document.getElementById('menu-error');
+    
+    container.style.display = 'none';
+    loading.classList.add('hidden');
+    error.classList.remove('hidden');
+    
+    if (message !== 'Failed to load menu items') {
+        error.querySelector('p').textContent = message;
+    }
 }
 
 /**
@@ -527,8 +605,10 @@ function showMenuLoading() {
 function displayMenuItems(items) {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
+    const error = document.getElementById('menu-error');
     
     loading.classList.add('hidden');
+    error.classList.add('hidden');
     container.style.display = 'block';
     
     if (items.length === 0) {
@@ -538,32 +618,35 @@ function displayMenuItems(items) {
 
     let html = '';
     items.forEach(item => {
-        const stockDisplay = item.item_type === 'KOT' 
+        const isDisabled = (item.display_type === 'stock' && !item.is_available);
+        const stockDisplay = item.display_type === 'kot' 
             ? '<div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>'
-            : item.current_stock > 0 
+            : (item.is_available && item.current_stock > 0)
                 ? `<div class="text-xs text-green-600 font-medium mt-1">In Stock (${item.current_stock})</div>`
-                : '<div class="text-xs text-red-600 font-medium mt-1">Out of Stock</div>';
+                : '<div class="text-xs text-red-600 font-medium mt-1 bg-red-50 px-2 py-1 rounded">❌ Out of Stock</div>';
 
-        const kotBadge = item.item_type === 'KOT' 
+        const kotBadge = item.display_type === 'kot' 
             ? '<span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>'
             : '';
 
         html += `
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150">
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150 ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" onclick="${isDisabled ? '' : 'toggleItemSelection(\'' + item.id + '\')'}">
                 <div class="flex items-center">
                     <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
                         type="checkbox" 
                         value="${item.id}" 
                         id="item_${item.id}" 
-                        data-item-id="${item.id}">
+                        data-item-id="${item.id}"
+                        ${isDisabled ? 'disabled' : ''}
+                        onclick="event.stopPropagation();">
                     
-                    <label for="item_${item.id}" class="ml-3 flex-1">
+                    <label for="item_${item.id}" class="ml-3 flex-1 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center space-x-2">
                                 <span class="font-medium text-gray-800">${item.name}</span>
                                 ${kotBadge}
                             </div>
-                            <span class="text-blue-600 font-semibold">LKR ${parseFloat(item.selling_price || item.price).toFixed(2)}</span>
+                            <span class="text-blue-600 font-semibold">LKR ${parseFloat(item.price).toFixed(2)}</span>
                         </div>
                         ${stockDisplay}
                     </label>
@@ -572,10 +655,35 @@ function displayMenuItems(items) {
                         <button type="button"
                             class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
                             data-item-id="${item.id}"
+                            onclick="event.stopPropagation();"
                             disabled>−</button>
                         <input type="number"
                             min="1"
-                            max="99"
+                            max="${item.display_type === 'stock' ? (item.current_stock || 99) : 99}"
+                            value="1"
+                            class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
+                            data-item-id="${item.id}"
+                            onclick="event.stopPropagation();"
+                            disabled
+                            readonly>
+                        <button type="button"
+                            class="qty-increase w-12 h-12 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-l border-gray-300"
+                            data-item-id="${item.id}"
+                            onclick="event.stopPropagation();"
+                            disabled>+</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    });
+
+    container.innerHTML = html;
+    
+    // Reinitialize event handlers for new items
+    initializeQuantityControls();
+    initializeItemCheckboxes();
+}
                             value="1"
                             class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
                             data-item-id="${item.id}"

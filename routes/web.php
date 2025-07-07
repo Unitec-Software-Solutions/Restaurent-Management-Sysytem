@@ -327,11 +327,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::prefix('takeaway')->name('takeaway.')->group(function () {
                 Route::get('/', [AdminOrderController::class, 'indexTakeaway'])->name('index');
-                Route::get('/create', function() {
-                    return redirect()->route('admin.orders.create', ['type' => 'takeaway']);
-                })->name('create');
+                Route::get('/create', [AdminOrderController::class, 'createTakeaway'])->name('create');
                 Route::post('/', [AdminOrderController::class, 'storeTakeaway'])->name('store');
                 Route::get('/{order}', [AdminOrderController::class, 'showTakeaway'])->whereNumber('order')->name('show');
+                Route::get('/{order}/summary', [AdminOrderController::class, 'summaryTakeaway'])->whereNumber('order')->name('summary');
                 Route::get('/{order}/edit', [AdminOrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
                 Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
                 Route::delete('/{order}', [AdminOrderController::class, 'destroyTakeaway'])->whereNumber('order')->name('destroy');
