@@ -310,8 +310,8 @@ class Sidebar extends Component
                             'permission' => 'create_organizations'
                         ],
                         [
-                            'name' => 'Activate Organization',
-                            'route' => 'admin.organizations.activate.form',
+                            'name' => 'Activation Center',
+                            'route' => 'admin.organizations.activation.index',
                             'icon' => 'key',
                             'permission' => 'manage_organizations'
                         ]

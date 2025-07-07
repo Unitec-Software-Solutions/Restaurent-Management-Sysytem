@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Organization;
 use App\Models\Branch;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
@@ -17,8 +19,34 @@ class BranchController extends Controller
     return view('admin.branches.index', compact('organization'));
 }
 
+public function show(Organization $organization, Branch $branch)
+{
+    $this->authorize('view', $branch);
+    
+    // Load relationships for the branch view
+    $branch->load([
+        'admins.roles',
+        'kitchenStations',
+        'organization.subscriptionPlan'
+    ]);
+    
+    // Get branch statistics
+    $stats = [
+        'admins_count' => $branch->admins()->count(),
+        'active_admins_count' => $branch->admins()->where('is_active', true)->count(),
+        'kitchen_stations_count' => $branch->kitchenStations()->count(),
+        'active_kitchen_stations_count' => $branch->kitchenStations()->where('is_active', true)->count(),
+        'orders_count' => $branch->orders()->count(),
+        'today_orders_count' => $branch->orders()->whereDate('created_at', today())->count(),
+    ];
+    
+    return view('admin.branches.show', compact('organization', 'branch', 'stats'));
+}
+
 public function store(Request $request, Organization $organization)
 {
+    $this->authorize('create', [Branch::class, $organization]);
+    
     $isHeadOffice = $organization->branches()->count() === 0; // or use a flag
 
     $validated = $request->validate([
@@ -58,22 +86,42 @@ public function update(Request $request, Organization $organization, Branch $bra
 {
     $this->authorize('update', $branch);
 
+    $admin = auth('admin')->user();
     $isHeadOffice = $branch->id == optional($organization->branches->sortBy('id')->first())->id;
+    $isBranchAdmin = $admin->isBranchAdmin() && $admin->branch_id == $branch->id;
+    $isOrgAdmin = $admin->isOrganizationAdmin() && $admin->organization_id == $branch->organization_id;
+    
+    // Define validation rules based on user permissions
+    if ($admin->isSuperAdmin()) {
+        // Super admin can edit all fields
+        $validationRules = [
+            'name' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'opening_time' => 'required',
+            'closing_time' => 'required',
+            'total_capacity' => 'required|integer|min:1',
+            'reservation_fee' => 'required|numeric',
+            'cancellation_fee' => 'required|numeric',
+            'is_active' => 'required|boolean',
+            'contact_person' => 'nullable|string|max:255',
+            'contact_person_designation' => 'nullable|string|max:255',
+            'contact_person_phone' => 'nullable|string|max:20',
+        ];
+    } elseif ($isOrgAdmin || $isBranchAdmin) {
+        // Org admin and branch admin can edit contact details and address/phone
+        $validationRules = [
+            'address' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'contact_person' => 'nullable|string|max:255',
+            'contact_person_designation' => 'nullable|string|max:255',
+            'contact_person_phone' => 'nullable|string|max:20',
+        ];
+    } else {
+        abort(403, 'Unauthorized action.');
+    }
 
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'address' => 'required|string|max:255',
-        'phone' => 'required|string|max:20',
-        'opening_time' => 'required',
-        'closing_time' => 'required',
-        'total_capacity' => 'required|integer|min:1',
-        'reservation_fee' => 'required|numeric',
-        'cancellation_fee' => 'required|numeric',
-        'is_active' => 'required|boolean',
-        'contact_person' => 'nullable|string|max:255',
-        'contact_person_designation' => 'nullable|string|max:255',
-        'contact_person_phone' => 'nullable|string|max:20',
-    ]);
+    $validated = $request->validate($validationRules);
 
     // For head office, default contact person fields to organization if not set
     if ($isHeadOffice) {
@@ -92,12 +140,14 @@ public function update(Request $request, Organization $organization, Branch $bra
 
 public function deactivate(Branch $branch)
 {
-    Gate::authorize('deactivate', $branch);
+    $this->authorize('deactivate', $branch);
     $branch->update(['is_active' => false]);
     return response()->json(['message' => 'Branch deactivated']);
 }
 public function create(Organization $organization)
 {
+    $this->authorize('create', [Branch::class, $organization]);
+    
     $isHeadOffice = $organization->branches()->count() === 0; // or use a flag
     return view('admin.branches.create', compact('organization', 'isHeadOffice'));
 }
@@ -132,10 +182,18 @@ public function showActivationForm()
     $admin = auth('admin')->user();
 
     if ($admin->is_super_admin) {
+        // Super admin can see all branches
         $branches = Branch::with('organization')->get();
         return view('admin.branches.activate', compact('branches'));
+    } elseif ($admin->organization_id && !$admin->branch_id) {
+        // Organization admin can see their organization's branches
+        $branches = Branch::with('organization')
+            ->where('organization_id', $admin->organization_id)
+            ->get();
+        return view('admin.branches.activate', compact('branches'));
     } elseif ($admin->branch_id) {
-        $branch = \App\Models\Branch::with('organization')->find($admin->branch_id);
+        // Branch admin can see only their branch
+        $branch = Branch::with('organization')->find($admin->branch_id);
         return view('admin.branches.activate', compact('branch'));
     } else {
         abort(403, 'No branch access');
@@ -150,6 +208,9 @@ public function activateBranch(Request $request)
     ]);
 
     $branch = Branch::with('organization')->find($request->branch_id);
+    
+    // Use policy for authorization
+    $this->authorize('activate', $branch);
 
     // Only allow activation if organization is active
     if (!$branch->organization->is_active) {
@@ -172,13 +233,38 @@ public function activateBranch(Request $request)
 // Show summary
 public function summary(Branch $branch)
 {
-    $branch->load(['organization', 'subscriptions']);
-    return view('admin.branches.summary', compact('branch'));
+    $branch->load([
+        'organization.subscriptionPlan',
+        'admins.roles',
+        'kitchenStations',
+        'users.roles',
+        'subscriptions',
+        'tables',
+        'menuCategories',
+        'menuItems'
+    ]);
+
+    // Calculate branch statistics
+    $stats = [
+        'total_admins' => $branch->admins()->count(),
+        'active_admins' => $branch->admins()->where('is_active', true)->count(),
+        'total_users' => $branch->users()->count(),
+        'active_users' => $branch->users()->where('is_active', true)->count(),
+        'kitchen_stations' => $branch->kitchenStations()->count(),
+        'active_kitchen_stations' => $branch->kitchenStations()->where('is_active', true)->count(),
+        'total_tables' => $branch->tables()->count(),
+        'menu_categories' => $branch->menuCategories()->count(),
+        'menu_items' => $branch->menuItems()->count(),
+        'available_modules' => $branch->organization->subscriptionPlan ? 
+            $branch->organization->subscriptionPlan->getModulesWithNames() : [],
+    ];
+
+    return view('admin.branches.summary', compact('branch', 'stats'));
 }
 
 public function regenerateKey(Branch $branch)
 {
-    $this->authorize('update', $branch);
+    $this->authorize('regenerateKey', $branch);
     $branch->activation_key = \Illuminate\Support\Str::random(40);
     $branch->save();
 
@@ -186,13 +272,79 @@ public function regenerateKey(Branch $branch)
 }
 public function destroy(Organization $organization, Branch $branch)
 {
-    $this->authorize('delete', $branch);
+    $admin = Auth::guard('admin')->user();
 
-    $branch->delete();
+    // Only super admins can delete branches
+    if (!$admin || !$admin->isSuperAdmin()) {
+        return redirect()->back()
+            ->with('error', 'Only super administrators can delete branches.');
+    }
 
-    return redirect()
-        ->route('admin.branches.index', ['organization' => $organization->id])
-        ->with('success', 'Branch deleted successfully.');
+    // Only inactive branches can be deleted
+    if ($branch->is_active) {
+        return redirect()->back()
+            ->with('error', 'Cannot delete active branch. Please deactivate it first.');
+    }
+
+    // Check if branch belongs to the organization
+    if ($branch->organization_id !== $organization->id) {
+        return redirect()->back()
+            ->with('error', 'Branch does not belong to this organization.');
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $branchName = $branch->name;
+        $userCount = $branch->users()->count();
+        $orderCount = $branch->orders()->count();
+        $kitchenStationCount = $branch->kitchenStations()->count();
+        $reservationCount = $branch->reservations()->count();
+        $menuItemCount = $branch->menuItems()->count();
+
+        // Soft delete related users
+        $branch->users()->delete();
+
+        // Note: Orders and reservations should NOT be deleted as they are historical data
+        // Kitchen stations and menu items can be soft deleted
+        $branch->kitchenStations()->delete();
+        $branch->menuItems()->delete();
+        $branch->menuCategories()->delete();
+
+        // Soft delete the branch itself
+        $branch->delete();
+
+        DB::commit();
+
+        Log::info('Branch soft deleted by super admin', [
+            'branch_name' => $branchName,
+            'branch_id' => $branch->id,
+            'organization_id' => $organization->id,
+            'deleted_by' => $admin->id,
+            'deleted_by_name' => $admin->name,
+            'users_deleted' => $userCount,
+            'orders_preserved' => $orderCount,
+            'reservations_preserved' => $reservationCount,
+            'kitchen_stations_deleted' => $kitchenStationCount,
+            'menu_items_deleted' => $menuItemCount,
+            'was_active' => false
+        ]);
+
+        return redirect()
+            ->route('admin.branches.index', ['organization' => $organization->id])
+            ->with('success', "Branch '{$branchName}' and related data soft deleted successfully. Orders and reservations preserved.");
+
+    } catch (\Exception $e) {
+        Log::error('Failed to delete branch', [
+            'branch_id' => $branch->id,
+            'organization_id' => $organization->id,
+            'error' => $e->getMessage(),
+            'deleted_by' => $admin->id
+        ]);
+
+        return redirect()->back()
+            ->with('error', 'Failed to delete branch: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -220,5 +372,117 @@ public function destroy(Organization $organization, Branch $branch)
             'branch' => $branch,
             'stats' => $stats
         ]);
+    }
+    
+    /**
+     * Get branches for organization (Admin API endpoint)
+     * Works for both super admins and organization admins
+     */
+    public function getBranchesByOrganization(Organization $organization)
+    {
+        try {
+            $admin = Auth::guard('admin')->user();
+            
+            if (!$admin) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            
+            // Super admin can access any organization's branches
+            if ($admin->is_super_admin) {
+                $branches = Branch::where('organization_id', $organization->id)
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'address', 'phone', 'is_head_office', 'opening_time', 'closing_time', 'email'])
+                    ->orderBy('is_head_office', 'desc')
+                    ->orderBy('name')
+                    ->get();
+            }
+            // Organization admin can only access their own organization's branches
+            elseif ($admin->organization_id && $admin->organization_id == $organization->id) {
+                $branches = Branch::where('organization_id', $organization->id)
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'address', 'phone', 'is_head_office', 'opening_time', 'closing_time', 'email'])
+                    ->orderBy('is_head_office', 'desc')
+                    ->orderBy('name')
+                    ->get();
+            }
+            // Branch admin can only see their own branch
+            elseif ($admin->branch_id) {
+                $branches = Branch::where('id', $admin->branch_id)
+                    ->where('organization_id', $organization->id)
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'address', 'phone', 'is_head_office', 'opening_time', 'closing_time', 'email'])
+                    ->get();
+            }
+            else {
+                return response()->json(['error' => 'Access denied'], 403);
+            }
+
+            Log::info('Admin branches fetched for organization', [
+                'admin_id' => $admin->id,
+                'admin_type' => $admin->is_super_admin ? 'super_admin' : ($admin->organization_id ? 'org_admin' : 'branch_admin'),
+                'organization_id' => $organization->id,
+                'branches_count' => $branches->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'branches' => $branches,
+                'organization' => [
+                    'id' => $organization->id,
+                    'name' => $organization->name
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching admin branches by organization', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch branches'
+            ], 500);
+        }
+    }
+    
+    /**
+     * Get branches for organization (Public API endpoint for guests)
+     * This endpoint doesn't require authentication
+     */
+    public function getBranchesPublic(Organization $organization)
+    {
+        try {
+            $branches = Branch::where('organization_id', $organization->id)
+                ->where('is_active', true)
+                ->select(['id', 'name', 'address', 'phone', 'opening_time', 'closing_time', 'email'])
+                ->orderBy('name')
+                ->get();
+
+            Log::info('Public branches fetched for organization', [
+                'organization_id' => $organization->id,
+                'branches_count' => $branches->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'branches' => $branches,
+                'organization' => [
+                    'id' => $organization->id,
+                    'name' => $organization->name
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching public branches by organization', [
+                'organization_id' => $organization->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch branches'
+            ], 500);
+        }
     }
 }

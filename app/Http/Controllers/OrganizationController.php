@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\Branch;
 use App\Models\User;
 use App\Models\SubscriptionPlan;
+use App\Services\OrganizationAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -16,6 +17,12 @@ use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
 {
+    protected $organizationAutomationService;
+
+    public function __construct(OrganizationAutomationService $organizationAutomationService)
+    {
+        $this->organizationAutomationService = $organizationAutomationService;
+    }
     /**
      * Display a listing of organizations
      */
@@ -65,11 +72,9 @@ class OrganizationController extends Controller
             'is_active' => 'required|boolean',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            // Create organization - DEFAULT to INACTIVE but respect the form input
-            $organization = Organization::create([
+            // Use automation service for complete organization setup
+            $organization = $this->organizationAutomationService->setupNewOrganization([
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
@@ -80,44 +85,22 @@ class OrganizationController extends Controller
                 'subscription_plan_id' => $request->subscription_plan_id,
                 'discount_percentage' => $request->discount_percentage,
                 'password' => Hash::make($request->password),
-                'is_active' => $request->boolean('is_active', false), // Default to false if not provided
+                'password_plain' => $request->password, // Pass plain text password for admin creation
+                'is_active' => $request->boolean('is_active', false),
             ]);
 
-            // Create default head office branch
-            $headOfficeBranch = Branch::create([
+            Log::info('Organization created successfully via automation service', [
                 'organization_id' => $organization->id,
-                'name' => $organization->name . ' - Head Office',
-                'address' => $organization->address,
-                'phone' => $organization->phone,
-                'email' => $organization->email,
-                'is_head_office' => true,
-                'is_active' => false, // Requires activation
-                'activation_key' => Str::random(40),
-                'type' => 'restaurant',
-                'status' => 'inactive',
-                'opening_time' => '09:00:00', // Ensure opening_time is set
-                'closing_time' => '22:00:00', // Ensure closing_time is set
-                'total_capacity' => 50,
-                'reservation_fee' => 0,
-                'cancellation_fee' => 0,
-            ]);
-
-            DB::commit();
-
-            Log::info('Organization created successfully', [
-                'organization_id' => $organization->id,
-                'head_office_branch_id' => $headOfficeBranch->id,
                 'created_by' => Auth::guard('admin')->id()
             ]);
 
-            return redirect()->route('admin.organizations.index')
-                ->with('success', 'Organization created successfully with head office branch.');
+            return redirect()->route('admin.organizations.show', $organization)
+                ->with('success', 'Organization created successfully with head office, admin, and all default resources.');
 
         } catch (\Exception $e) {
-            DB::rollback();
-
             Log::error('Failed to create organization', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'request_data' => $request->except(['password', 'password_confirmation'])
             ]);
 
@@ -133,21 +116,74 @@ class OrganizationController extends Controller
     public function show(Organization $organization)
     {
         $organization->load([
-            'branches.users',
+            'branches.kitchenStations',
+            'branches.admins.roles',
+            'branches.users.userRole',
+            'branches.users.roles', 
+            'branches.users.branch',
+            'admins.roles',
+            'users.userRole',
             'users.roles',
-            'subscriptionPlan'
+            'users.branch',
+            'users.organization',
+            'subscriptionPlan',
+            'subscriptions' => function($query) {
+                $query->latest();
+            }
         ]);
 
         $stats = [
             'total_branches' => $organization->branches()->count(),
             'active_branches' => $organization->branches()->where('is_active', true)->count(),
+            'head_office' => $organization->branches()->where('is_head_office', true)->first(),
+            'total_admins' => $organization->admins()->count(),
+            'active_admins' => $organization->admins()->where('is_active', true)->count(),
             'total_users' => $organization->users()->count(),
             'registered_users' => $organization->users()->where('is_registered', true)->count(),
+            'kitchen_stations' => $organization->branches()->withCount('kitchenStations')->get()->sum('kitchen_stations_count'),
+            'subscription_status' => $this->getSubscriptionStatus($organization),
+            'available_modules' => $this->getAvailableModules($organization),
             'subscription_days_left' => $organization->subscription_end_date ?
-                now()->diffInDays($organization->subscription_end_date, false) : 0,
+                now()->diffInDays($organization->subscription_end_date, false) : null,
         ];
 
-        return view('admin.organizations.summary', compact('organization', 'stats'));
+        // Get recent activity
+        $recentActivity = [
+            'orders' => $this->getRecentOrders($organization),
+            'reservations' => $this->getRecentReservations($organization),
+            'users' => $this->getRecentUsers($organization),
+        ];
+
+        return view('admin.organizations.show', compact('organization', 'stats', 'recentActivity'));
+    }
+
+    /**
+     * Get subscription status for organization
+     */
+    protected function getSubscriptionStatus(Organization $organization): array
+    {
+        $currentSubscription = $organization->subscriptions()->where('status', 'active')->first();
+        
+        return [
+            'is_active' => $currentSubscription ? true : false,
+            'plan_name' => $organization->subscriptionPlan?->name ?? 'No Plan',
+            'expires_at' => $currentSubscription?->expires_at,
+            'is_trial' => $organization->subscriptionPlan?->is_trial ?? false,
+            'price' => $organization->subscriptionPlan?->price ?? 0,
+            'currency' => $organization->subscriptionPlan?->currency ?? 'USD'
+        ];
+    }
+
+    /**
+     * Get available modules for organization
+     */
+    protected function getAvailableModules(Organization $organization): array
+    {
+        if (!$organization->subscriptionPlan) {
+            return [];
+        }
+
+        return $organization->subscriptionPlan->getModulesWithNames();
     }
 
     /**
@@ -170,38 +206,73 @@ class OrganizationController extends Controller
      */
     public function update(Request $request, Organization $organization)
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('organizations')->ignore($organization->id)],
-            'email' => ['required', 'email', Rule::unique('organizations')->ignore($organization->id)],
-            'phone' => 'required|string|max:20',
-            'address' => 'nullable|string|max:500',
-            'subscription_plan_id' => 'required|exists:subscription_plans,id',
-            'is_active' => 'required|boolean',
-            'contact_person' => 'required|string|max:255',
-            'contact_person_designation' => 'required|string|max:255',
-            'contact_person_phone' => 'required|string|max:20',
-            'discount_percentage' => 'required|numeric|min:0|max:100',
-            'password' => 'nullable|string|min:8|confirmed',
-        ]);
+        $this->authorize('update', $organization);
+        
+        $admin = auth('admin')->user();
+        $isOrgAdmin = $admin->isOrganizationAdmin() && $admin->organization_id === $organization->id;
+        
+        // Define validation rules based on user permissions
+        if ($admin->isSuperAdmin()) {
+            // Super admin can edit all fields
+            $validationRules = [
+                'name' => ['required', 'string', 'max:255', Rule::unique('organizations')->ignore($organization->id)],
+                'email' => ['required', 'email', Rule::unique('organizations')->ignore($organization->id)],
+                'phone' => 'required|string|max:20',
+                'address' => 'nullable|string|max:500',
+                'subscription_plan_id' => 'required|exists:subscription_plans,id',
+                'is_active' => 'required|boolean',
+                'contact_person' => 'required|string|max:255',
+                'contact_person_designation' => 'required|string|max:255',
+                'contact_person_phone' => 'required|string|max:20',
+                'discount_percentage' => 'required|numeric|min:0|max:100',
+                'password' => 'nullable|string|min:8|confirmed',
+            ];
+        } elseif ($isOrgAdmin) {
+            // Org admin can only edit specific fields
+            $validationRules = [
+                'phone' => 'required|string|max:20',
+                'address' => 'nullable|string|max:500',
+                'contact_person' => 'required|string|max:255',
+                'contact_person_designation' => 'required|string|max:255',
+                'contact_person_phone' => 'required|string|max:20',
+                'password' => 'nullable|string|min:8|confirmed',
+            ];
+        } else {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate($validationRules);
 
         $wasInactive = !$organization->is_active;
-        $willBeActive = $request->boolean('is_active');
+        $willBeActive = $admin->isSuperAdmin() ? $request->boolean('is_active') : $organization->is_active;
 
         DB::beginTransaction();
 
         try {
-            $updateData = [
-                'name' => $request->name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'address' => $request->address,
-                'subscription_plan_id' => $request->subscription_plan_id,
-                'is_active' => $willBeActive,
-                'contact_person' => $request->contact_person,
-                'contact_person_designation' => $request->contact_person_designation,
-                'contact_person_phone' => $request->contact_person_phone,
-                'discount_percentage' => $request->discount_percentage,
-            ];
+            if ($admin->isSuperAdmin()) {
+                // Super admin can update all fields
+                $updateData = [
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'phone' => $request->phone,
+                    'address' => $request->address,
+                    'subscription_plan_id' => $request->subscription_plan_id,
+                    'is_active' => $willBeActive,
+                    'contact_person' => $request->contact_person,
+                    'contact_person_designation' => $request->contact_person_designation,
+                    'contact_person_phone' => $request->contact_person_phone,
+                    'discount_percentage' => $request->discount_percentage,
+                ];
+            } elseif ($isOrgAdmin) {
+                // Org admin can only update specific fields
+                $updateData = [
+                    'phone' => $request->phone,
+                    'address' => $request->address,
+                    'contact_person' => $request->contact_person,
+                    'contact_person_designation' => $request->contact_person_designation,
+                    'contact_person_phone' => $request->contact_person_phone,
+                ];
+            }
 
             // Only update password if provided
             if ($request->filled('password')) {
@@ -210,8 +281,8 @@ class OrganizationController extends Controller
 
             $organization->update($updateData);
 
-            // If organization is being deactivated, deactivate all branches
-            if (!$willBeActive && $organization->is_active) {
+            // If organization is being deactivated, deactivate all branches (super admin only)
+            if ($admin->isSuperAdmin() && !$willBeActive && $organization->is_active) {
                 $organization->branches()->update(['is_active' => false]);
             }
 
@@ -244,31 +315,61 @@ class OrganizationController extends Controller
      */
     public function destroy(Organization $organization)
     {
-        try {
-            // Check if organization has active branches or users
-            $branchCount = $organization->branches()->count();
-            $userCount = $organization->users()->count();
+        $admin = Auth::guard('admin')->user();
 
-            if ($branchCount > 0 || $userCount > 0) {
-                return redirect()->back()
-                    ->with('error', "Cannot delete organization with {$branchCount} branches and {$userCount} users. Please remove them first.");
-            }
+        // Only super admins can delete organizations
+        if (!$admin || !$admin->isSuperAdmin()) {
+            return redirect()->back()
+                ->with('error', 'Only super administrators can delete organizations.');
+        }
+
+        // Only inactive organizations can be deleted
+        if ($organization->is_active) {
+            return redirect()->back()
+                ->with('error', 'Cannot delete active organization. Please deactivate it first.');
+        }
+
+        try {
+            DB::beginTransaction();
 
             $organizationName = $organization->name;
+            $branchCount = $organization->branches()->count();
+            $userCount = $organization->users()->count();
+            $adminCount = $organization->admins()->count();
+
+            // Soft delete related branches first (this will cascade to branch-related data)
+            $organization->branches()->delete();
+
+            // Soft delete related users
+            $organization->users()->delete();
+
+            // Soft delete related admins (except super admins)
+            $organization->admins()->where('is_super_admin', false)->delete();
+
+            // Soft delete the organization itself
             $organization->delete();
 
-            Log::info('Organization deleted successfully', [
+            DB::commit();
+
+            Log::info('Organization soft deleted by super admin', [
                 'organization_name' => $organizationName,
-                'deleted_by' => Auth::id()
+                'organization_id' => $organization->id,
+                'deleted_by' => $admin->id,
+                'deleted_by_name' => $admin->name,
+                'branches_deleted' => $branchCount,
+                'users_deleted' => $userCount,
+                'admins_deleted' => $adminCount,
+                'was_active' => false
             ]);
 
             return redirect()->route('admin.organizations.index')
-                ->with('success', 'Organization deleted successfully.');
+                ->with('success', "Organization '{$organizationName}' and all related data soft deleted successfully.");
 
         } catch (\Exception $e) {
             Log::error('Failed to delete organization', [
                 'organization_id' => $organization->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'deleted_by' => $admin->id
             ]);
 
             return redirect()->back()
@@ -282,9 +383,15 @@ class OrganizationController extends Controller
     public function summary(Organization $organization)
     {
         $organization->load([
-            'branches.users',
+            'branches.users.userRole',
+            'branches.users.roles', 
+            'branches.users.branch',
+            'users.userRole',
             'users.roles',
-            'subscriptionPlan'
+            'users.branch',
+            'users.organization',
+            'subscriptionPlan',
+            'admins.roles'
         ]);
 
         $stats = [
@@ -311,14 +418,9 @@ class OrganizationController extends Controller
      */
     public function regenerateKey(Organization $organization)
     {
+        $this->authorize('regenerateKey', $organization);
+
         $admin = Auth::guard('admin')->user();
-
-        // Only super admins can regenerate activation keys
-        if (!$admin || !$admin->isSuperAdmin()) {
-            return redirect()->back()
-                ->with('error', 'You do not have permission to regenerate activation keys.');
-        }
-
         $oldKey = $organization->activation_key;
         $newKey = Str::uuid();
 
@@ -419,16 +521,9 @@ class OrganizationController extends Controller
      */
     public function activateByKey(Request $request, Organization $organization)
     {
+        $this->authorize('activate', $organization);
+        
         $admin = Auth::guard('admin')->user();
-
-        if (!$admin) {
-            abort(403, 'Unauthorized');
-        }
-
-        // Check permissions: Super admin can activate any org, org admin can only activate their own
-        if (!$admin->isSuperAdmin() && $admin->organization_id !== $organization->id) {
-            abort(403, 'You can only activate your own organization');
-        }
 
         $request->validate([
             'activation_key' => 'required|string',
@@ -595,10 +690,12 @@ class OrganizationController extends Controller
     }
 
     /**
-     * Show activation form for super admin
+     * Show activation form for super admin and organization admin
      */
     public function showActivateForm(Organization $organization)
     {
+        $this->authorize('activate', $organization);
+        
         return view('admin.organizations.activate', compact('organization'));
     }
 
@@ -610,17 +707,10 @@ class OrganizationController extends Controller
         // Check permissions based on action
         if ($request->action === 'deactivate') {
             // Only super admins can deactivate organizations
-            if (!Auth::guard('admin')->user()->isSuperAdmin()) {
-                return redirect()->back()
-                    ->with('error', 'You do not have permission to deactivate organizations.');
-            }
+            $this->authorize('deactivate', $organization);
         } else {
             // For activation, both super admins and organization admins can activate
-            if (!Auth::guard('admin')->user()->isSuperAdmin() &&
-                !Auth::guard('admin')->user()->canManageOrganization($organization)) {
-                return redirect()->back()
-                    ->with('error', 'You do not have permission to activate this organization.');
-            }
+            $this->authorize('activate', $organization);
         }
 
         $request->validate([

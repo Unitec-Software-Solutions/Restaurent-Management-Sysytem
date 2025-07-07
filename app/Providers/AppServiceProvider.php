@@ -5,7 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use App\Models\Organization;
-use App\Observers\OrganizationObserver;
+// use App\Observers\OrganizationObserver; // DISABLED: Using OrganizationAutomationService instead
 use Illuminate\Support\Facades\Gate;
 use App\Policies\RolePolicy;
 use App\Models\Role;
@@ -36,7 +36,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Register observer
-        Organization::observe(OrganizationObserver::class);
+        // Organization::observe(OrganizationObserver::class); // DISABLED: Using OrganizationAutomationService instead
         
         // Register policy
         Gate::policy(Role::class, RolePolicy::class);

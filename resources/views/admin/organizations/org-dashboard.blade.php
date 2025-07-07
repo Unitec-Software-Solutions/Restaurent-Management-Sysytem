@@ -22,7 +22,7 @@
                 </div>
                 <div class="flex space-x-3">
                     @if(!$organization->is_active && auth('admin')->user()->isSuperAdmin())
-                    <form action="{{ route('organizations.activate', $organization) }}" method="POST" class="inline">
+                    <form action="{{ route('admin.organizations.activate', $organization) }}" method="POST" class="inline">
                         @csrf
                         <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors" onclick="return confirm('Are you sure you want to activate this organization?')">
                             <i class="fas fa-power-off mr-2"></i>
@@ -311,7 +311,7 @@
                         </div>
                     </a>
 
-                    <a href="{{ route('organizations.edit', $organization) }}" class="bg-orange-50 hover:bg-orange-100 p-4 rounded-lg transition-colors">
+                    <a href="{{ route('admin.organizations.edit', $organization) }}" class="bg-orange-50 hover:bg-orange-100 p-4 rounded-lg transition-colors">
                         <div class="flex items-center space-x-3">
                             <i class="fas fa-cog text-orange-600 text-xl"></i>
                             <div>

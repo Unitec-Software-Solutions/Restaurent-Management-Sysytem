@@ -67,14 +67,20 @@ class BranchAutomationService
 
         $admin = Admin::create($adminData);
 
-        // Assign branch admin role
-        $branchAdminRole = Role::where('name', 'Branch Administrator')
-            ->where('organization_id', $branch->organization_id)
-            ->first();
+        // Assign branch admin role (use firstOrCreate to ensure role exists)
+        $branchAdminRole = Role::firstOrCreate(
+            [
+                'name' => 'Branch Administrator',
+                'organization_id' => $branch->organization_id,
+                'guard_name' => 'admin'
+            ],
+            [
+                'scope' => 'branch',
+                'description' => 'Full administrative access to branch operations'
+            ]
+        );
 
-        if ($branchAdminRole) {
-            $admin->assignRole($branchAdminRole);
-        }
+        $admin->assignRole($branchAdminRole);
 
         return $admin;
     }
@@ -228,5 +234,89 @@ class BranchAutomationService
         $sequenceCode = str_pad($sequence, 3, '0', STR_PAD_LEFT);
 
         return $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
+    }
+
+    
+    public function setupBranchResources(Branch $branch): void
+    {
+        // Create inventory items from head office master items
+        $this->createBranchInventory($branch);
+        
+        // Create default kitchen stations if not head office
+        if (!$branch->is_head_office) {
+            $this->createDefaultKitchenStations($branch);
+        }
+        
+        // Setup branch-specific settings
+        $this->setupBranchSettings($branch);
+        
+        Log::info('Branch resources setup completed', [
+            'branch_id' => $branch->id,
+            'organization_id' => $branch->organization_id
+        ]);
+    }
+
+    /**
+     * Create inventory items for the branch from head office master items
+     */
+    protected function createBranchInventory(Branch $branch): void
+    {
+        $headOfficeItems = ItemMaster::where('organization_id', $branch->organization_id)
+            ->where('is_active', true)
+            ->where('is_inventory_item', true)
+            ->get();
+
+        foreach ($headOfficeItems as $item) {
+            InventoryItem::firstOrCreate([
+                'organization_id' => $branch->organization_id,
+                'branch_id' => $branch->id,
+                'item_master_id' => $item->id,
+            ], [
+                'current_stock' => 0,
+                'minimum_stock' => $item->minimum_stock ?? 10,
+                'maximum_stock' => $item->maximum_stock ?? 100,
+                'reorder_level' => $item->reorder_level ?? 20,
+                'unit_cost' => $item->purchase_price ?? 0,
+                'last_updated' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Setup branch-specific settings and configurations
+     */
+    protected function setupBranchSettings(Branch $branch): void
+    {
+        $defaultSettings = [
+            'pos_enabled' => true,
+            'kitchen_display_enabled' => true,
+            'reservation_enabled' => true,
+            'delivery_enabled' => false,
+            'takeaway_enabled' => true,
+            'tax_rate' => 10.0,
+            'service_charge' => 5.0,
+            'currency' => 'USD',
+            'timezone' => 'UTC',
+            'language' => 'en'
+        ];
+
+        $branch->update([
+            'settings' => array_merge($branch->settings ?? [], $defaultSettings)
+        ]);
+    }
+
+    /**
+     * Create default kitchen stations for new branch
+     */
+    protected function createDefaultKitchenStations(Branch $branch): void
+    {
+        $defaultStations = $branch->getDefaultKitchenStations();
+        
+        foreach ($defaultStations as $stationData) {
+            KitchenStation::create(array_merge($stationData, [
+                'branch_id' => $branch->id,
+                'organization_id' => $branch->organization_id
+            ]));
+        }
     }
 }

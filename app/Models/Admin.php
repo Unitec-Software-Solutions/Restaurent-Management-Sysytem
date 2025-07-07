@@ -14,9 +14,6 @@ class Admin extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable following UI/UX guidelines.
-     */
     protected $fillable = [
         'name',
         'email',
@@ -460,6 +457,25 @@ class Admin extends Authenticatable
     }
 
     /**
+     * Check if admin can manage a specific organization
+     * Super admins can manage all organizations
+     * Organization admins can manage their own organization
+     */
+    public function canManageOrganization($organization): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // Organization admins can manage their own organization
+        if ($this->organization_id && $this->organization_id == $organization->id) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Dashboard data methods following UI/UX metrics
      */
     public function getDashboardStats(): array
@@ -475,5 +491,21 @@ class Admin extends Authenticatable
             'department' => $this->department,
             'job_title' => $this->job_title,
         ];
+    }
+
+    /**
+     * Check if admin is an organization admin (has org but no branch)
+     */
+    public function isOrganizationAdmin()
+    {
+        return !$this->is_super_admin && $this->organization_id && is_null($this->branch_id);
+    }
+
+    /**
+     * Check if admin is a branch admin (has both org and branch)
+     */
+    public function isBranchAdmin()
+    {
+        return !$this->is_super_admin && $this->organization_id && $this->branch_id;
     }
 }

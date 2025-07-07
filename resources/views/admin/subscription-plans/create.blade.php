@@ -2,63 +2,59 @@
 @section('title', 'Create Subscription Plan')
 
 @section('content')
-<div class="bg-white rounded-lg shadow-sm p-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Create Subscription Plan</h1>
-            <p class="text-gray-600">Set up a new subscription plan with modules and pricing</p>
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="bg-white rounded-2xl shadow-lg">
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
+            <h1 class="text-2xl font-bold">Create New Subscription Plan</h1>
+            <p class="mt-1 opacity-90">Define a new subscription tier with modules and features</p>
         </div>
-        <a href="{{ route('admin.subscription-plans.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
-            <i class="fas fa-arrow-left mr-2"></i> Back to Plans
-        </a>
-    </div>
 
-    <!-- Error Display -->
-    @if($errors->any())
-        <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
-            <h3 class="font-medium mb-2">Validation Errors</h3>
-            <ul class="list-disc pl-5">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+        <!-- Error Display -->
+        @if($errors->any())
+            <div class="bg-red-50 text-red-700 p-4 m-6 rounded-lg">
+                <h3 class="font-medium mb-2">Validation Errors</h3>
+                <ul class="list-disc pl-5">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
-    <!-- Form -->
-    <form action="{{ route('admin.subscription-plans.store') }}" method="POST" class="space-y-6">
-        @csrf
-        
-        <!-- Basic Information -->
-        <div class="bg-gray-50 p-4 rounded-lg">
-            <h3 class="text-lg font-medium text-gray-700 mb-4">Basic Information</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Plan Name <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" value="{{ old('name') }}" 
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
-                           placeholder="e.g., Basic Plan, Premium Plan" required>
-                </div>
+        <form action="{{ route('admin.subscription-plans.store') }}" method="POST" class="p-8 space-y-8">
+            @csrf
+
+            <!-- Basic Information -->
+            <div class="space-y-6">
+                <h2 class="text-xl font-semibold text-gray-900 border-b pb-2">Basic Information</h2>
                 
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-700" for="name">Plan Name <span class="text-red-500">*</span></label>
+                        <input type="text" id="name" name="name" value="{{ old('name') }}" 
+                               class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                               placeholder="e.g., Professional Plan" required>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-700" for="currency">Currency <span class="text-red-500">*</span></label>
+                        <select id="currency" name="currency" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            @foreach(\App\Helpers\CurrencyHelper::getAllCurrencies() as $code => $name)
+                                <option value="{{ $code }}" {{ old('currency', 'LKR') == $code ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Select the currency for subscription pricing</p>
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Currency <span class="text-red-500">*</span></label>
-                    <select name="currency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
-                        <option value="USD" {{ old('currency') == 'USD' ? 'selected' : '' }}>USD - US Dollar</option>
-                        <option value="LKR" {{ old('currency', 'LKR') == 'LKR' ? 'selected' : '' }}>LKR - Sri Lankan Rupee</option>
-                        <option value="EUR" {{ old('currency') == 'EUR' ? 'selected' : '' }}>EUR - Euro</option>
-                        <option value="GBP" {{ old('currency') == 'GBP' ? 'selected' : '' }}>GBP - British Pound</option>
-                    </select>
+                    <label class="block mb-2 font-semibold text-gray-700" for="description">Description</label>
+                    <textarea id="description" name="description" rows="3" 
+                              class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Describe what this plan includes...">{{ old('description') }}</textarea>
                 </div>
             </div>
-            
-            <div class="mt-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea name="description" rows="3" 
-                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          placeholder="Brief description of what this plan includes...">{{ old('description') }}</textarea>
-            </div>
+
         </div>
 
         <!-- Modules Selection -->

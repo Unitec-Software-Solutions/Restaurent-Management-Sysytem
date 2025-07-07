@@ -7,17 +7,26 @@ use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\PermissionSystemService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    protected $permissionService;
+
+    public function __construct(PermissionSystemService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
+
     public function index()
     {
         $this->authorize('viewAny', User::class);
@@ -25,18 +34,58 @@ class UserController extends Controller
         $admin = auth('admin')->user();
 
         if ($admin->is_super_admin) {
-            // Super admin: see all users
-            $users = User::with(['userRole', 'branch', 'creator', 'organization'])->paginate(20);
-        } elseif ($admin->is_Admin) {
-            // Org admin: see all users in their organization
-            $users = User::where('organization_id', $admin->organization_id)
-                ->with(['userRole', 'branch', 'creator', 'organization'])
-                ->paginate(20);
+            // Super admin: see all users (excluding guests when column exists)
+            $query = User::with([
+                'userRole', 
+                'branch.organization', 
+                'creator', 
+                'organization', 
+                'roles',
+                'permissions'
+            ]);
+            
+            // Only filter by is_guest if the column exists
+            if (Schema::hasColumn('users', 'is_guest')) {
+                $query->where('is_guest', false);
+            }
+            
+            $users = $query->orderBy('created_at', 'desc')->paginate(20);
+        } elseif ($admin->isOrganizationAdmin()) {
+            // Org admin: see all users in their organization (excluding guests when column exists)
+            $query = User::where('organization_id', $admin->organization_id)
+                ->with([
+                    'userRole', 
+                    'branch.organization', 
+                    'creator', 
+                    'organization', 
+                    'roles',
+                    'permissions'
+                ]);
+                
+            // Only filter by is_guest if the column exists
+            if (Schema::hasColumn('users', 'is_guest')) {
+                $query->where('is_guest', false);
+            }
+            
+            $users = $query->orderBy('created_at', 'desc')->paginate(20);
         } else {
-            // Branch admin: see all users in their branch
-            $users = User::where('branch_id', $admin->branch_id)
-                ->with(['userRole', 'branch', 'creator', 'organization'])
-                ->paginate(20);
+            // Branch admin: see all users in their branch (excluding guests when column exists)
+            $query = User::where('branch_id', $admin->branch_id)
+                ->with([
+                    'userRole', 
+                    'branch.organization', 
+                    'creator', 
+                    'organization', 
+                    'roles',
+                    'permissions'
+                ]);
+                
+            // Only filter by is_guest if the column exists
+            if (Schema::hasColumn('users', 'is_guest')) {
+                $query->where('is_guest', false);
+            }
+            
+            $users = $query->orderBy('created_at', 'desc')->paginate(20);
         }
 
         return view('admin.users.index', compact('users'));
@@ -47,51 +96,91 @@ class UserController extends Controller
     {
         $this->authorize('create', User::class);
 
-        $organizations = collect();
-        $branches = collect();
-        $allBranches = collect();
-        $roles = collect();
-        $adminTypes = [];
-
         $admin = auth('admin')->user();
 
+        // Get permission definitions and role templates
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $roleTemplates = $this->permissionService->getRoleTemplates();
+        $availableTemplates = $this->permissionService->filterTemplatesByScope($roleTemplates, $admin);
+        $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
+
+        // Get organizations, branches, and roles based on admin scope
         if ($admin->is_super_admin) {
             $organizations = Organization::all();
             $allBranches = Branch::with('organization')->get();
             $branches = $allBranches;
-            $roles = Role::all();
+            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')->get();
             $adminTypes = [
                 'org_admin' => 'Organization Admin',
                 'branch_admin' => 'Branch Admin'
             ];
 
-        } elseif ($admin->is_Admin) {
+        } elseif ($admin->isOrganizationAdmin()) {
             $organizations = Organization::where('id', $admin->organization_id)->get();
             $branches = Branch::where('organization_id', $admin->organization_id)->get();
-            $roles = Role::where('organization_id', $admin->organization_id)->get();
+            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')
+                ->where('organization_id', $admin->organization_id)
+                ->orWhere('name', 'Super Administrator') // But they can't assign it
+                ->get();
+                
             $adminTypes = [
                 'org_admin' => 'Organization Admin',
                 'branch_admin' => 'Branch Admin'
             ];
         } else {
+            // Branch admin
             $organizations = Organization::where('id', $admin->organization_id)->get();
             $branches = Branch::where('id', $admin->branch_id)->get();
-            $roles = Role::where('branch_id', $admin->branch_id)->get();
+            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')
+                ->where('branch_id', $admin->branch_id)
+                ->orWhereIn('name', ['Branch Administrator'])
+                ->get();
+                
             $adminTypes = [
                 'branch_admin' => 'Branch Admin'
             ];
         }
+
+        // Group permissions for better UI
+        $permissionGroups = $this->groupPermissions($availablePermissions);
 
         return view('admin.users.create', compact(
             'organizations',
             'branches',
             'allBranches',
             'roles',
-            'adminTypes'
+            'adminTypes',
+            'availablePermissions',
+            'permissionGroups',
+            'permissionDefinitions',
+            'availableTemplates'
         ));
     }
 
-    
+    /**
+     * Group permissions by category for UI display
+     */
+    private function groupPermissions($permissions)
+    {
+        $groups = [];
+        
+        foreach ($permissions as $permission => $description) {
+            $category = explode('.', $permission)[0];
+            $categoryName = ucwords(str_replace('_', ' ', $category)) . ' Management';
+            
+            if (!isset($groups[$categoryName])) {
+                $groups[$categoryName] = [
+                    'title' => $categoryName,
+                    'permissions' => []
+                ];
+            }
+            
+            $groups[$categoryName]['permissions'][$permission] = $description;
+        }
+
+        return $groups;
+    }
+
     public function store(Request $request)
     {
         $this->authorize('create', User::class);
@@ -102,35 +191,67 @@ class UserController extends Controller
             'phone_number' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
             'role_id' => 'required|exists:roles,id',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'exists:permissions,id',
         ]);
 
-        $role = Role::findOrFail($request->role_id);
+        $role = \Spatie\Permission\Models\Role::findOrFail($request->role_id);
+        $admin = auth('admin')->user();
 
-      
-
-        // Example mapping logic (customize as needed)
-        if ($role->name === 'Super Admin') {
-            $userType = 'super_admin';
-        } elseif ($role->name === 'Organization Admin') {
-            $userType = 'org_admin';
-        } elseif ($role->name === 'Branch Admin') {
-            $userType = 'branch_admin';
+        // Validate role assignment permissions
+        if (!$admin->is_super_admin) {
+            if ($role->name === 'Super Administrator') {
+                return back()->withErrors(['role_id' => 'You cannot assign Super Administrator role.']);
+            }
+            
+            if ($admin->isBranchAdmin() && !in_array($role->name, [
+                'Branch Administrator'
+            ])) {
+                return back()->withErrors(['role_id' => 'You can only assign branch-level roles.']);
+            }
         }
 
+        // Validate permission assignments
+        if ($request->permissions) {
+            $requestedPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $request->permissions)->get();
+            
+            foreach ($requestedPermissions as $permission) {
+                if (!$admin->is_super_admin && !$admin->can($permission->name)) {
+                    return back()->withErrors([
+                        'permissions' => "You cannot assign permission: {$permission->name}"
+                    ]);
+                }
+            }
+        }
+
+        // Create the user
         $user = User::create([
-            'organization_id' => $request->organization_id ?? auth('admin')->user()->organization_id,
+            'organization_id' => $request->organization_id ?? $admin->organization_id,
             'name' => $request->name,
             'email' => $request->email,
             'phone_number' => $request->phone_number,
             'password' => Hash::make($request->password),
             'branch_id' => $request->branch_id,
             'role_id' => $request->role_id,
-            'created_by' => auth('admin')->id(),
+            'created_by' => $admin->id,
         ]);
 
-        Log::info('User created', $user->toArray());
+        // Assign role to the user (using Spatie)
+        $user->assignRole($role);
 
-        return redirect()->route('admin.users.index')->with('success', 'User created successfully');
+        // Assign additional permissions if specified
+        if ($request->permissions) {
+            $user->givePermissionTo($requestedPermissions->pluck('name')->toArray());
+        }
+
+        Log::info('User created with role and permissions', [
+            'user_id' => $user->id,
+            'role' => $role->name,
+            'permissions' => $requestedPermissions->pluck('name')->toArray() ?? [],
+            'created_by' => $admin->id
+        ]);
+
+        return redirect()->route('admin.users.index')->with('success', 'User created successfully with assigned role and permissions.');
     }
 
     // Show form to edit a user
@@ -150,7 +271,7 @@ class UserController extends Controller
             $allBranches = \App\Models\Branch::with('organization')->get();
             $branches = $allBranches;
             $roles = \App\Models\Role::all();
-        } elseif ($admin->isAdmin()) {
+        } elseif ($admin->isOrganizationAdmin()) {
             $organizations = \App\Models\Organization::where('id', $admin->organization_id)->get();
             $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
             $allBranches = $branches;

@@ -49,7 +49,12 @@
             </div>
             <div>
                 <label class="block mb-2 font-semibold text-gray-700" for="currency">Currency</label>
-                <input type="text" id="currency" name="currency" value="{{ old('currency', $subscriptionPlan->currency) }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200" required>
+                <select id="currency" name="currency" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring focus:ring-blue-200" required>
+                    @foreach(\App\Helpers\CurrencyHelper::getAllCurrencies() as $code => $name)
+                        <option value="{{ $code }}" {{ old('currency', $subscriptionPlan->currency) == $code ? 'selected' : '' }}>{{ $name }}</option>
+                    @endforeach
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Select the currency for subscription pricing</p>
             </div>
         </div>
         <div>

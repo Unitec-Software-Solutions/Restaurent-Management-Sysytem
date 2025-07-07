@@ -25,6 +25,7 @@ class User extends Authenticatable
         'phone_number',
         'password',
         'is_registered',
+        'is_guest',
         'organization_id',
         'branch_id',
         'role_id',
@@ -68,7 +69,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_registered' => 'boolean',
+            'is_guest' => 'boolean',
             'is_admin' => 'boolean',
+            'is_super_admin' => 'boolean',
         ];
     }
     public function organization()

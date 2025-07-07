@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Branch Loading Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Branch Loading Test</h1>
+    
+    <div>
+        <label for="organization">Organization:</label>
+        <select id="organization">
+            <option value="">Select Organization</option>
+            <option value="1">Helabojun hala</option>
+            <option value="2">Priyangani Resataurants</option>
+        </select>
+    </div>
+    
+    <div>
+        <label for="branch">Branch:</label>
+        <select id="branch">
+            <option value="">Select Branch</option>
+        </select>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        const baseUrl = 'http://localhost:8000';
+        
+        $('#organization').change(function() {
+            const organizationId = $(this).val();
+            const $branchSelect = $('#branch');
+            const $status = $('#status');
+            const $results = $('#results');
+            
+            // Clear branch dropdown
+            $branchSelect.html('<option value="">Select Branch</option>');
+            $status.html('');
+            $results.html('');
+            
+            if (!organizationId) {
+                return;
+            }
+            
+            $status.html('Loading branches...');
+            
+            // Try multiple endpoints (same logic as in the actual form)
+            const endpoints = [
+                `/api/public/organizations/${organizationId}/branches`,
+                `/admin/api/menu-categories/organizations/${organizationId}/branches`,
+                `/admin/api/organization-branches?organization_id=${organizationId}`,
+                `/api/organizations/${organizationId}/branches`
+            ];
+            
+            function tryEndpoint(index = 0) {
+                if (index >= endpoints.length) {
+                    $status.html('<span style="color: red;">Failed to load branches from all endpoints</span>');
+                    return;
+                }
+                
+                const endpoint = endpoints[index];
+                $status.html(`Trying endpoint ${index + 1}/${endpoints.length}: ${endpoint}`);
+                
+                $.ajax({
+                    url: baseUrl + endpoint,
+                    method: 'GET',
+                    dataType: 'json',
+                    timeout: 5000,
+                    success: function(data) {
+                        console.log(`Endpoint ${index + 1} success:`, data);
+                        
+                        let branches = [];
+                        if (data.success && data.branches) {
+                            branches = data.branches;
+                        } else if (data.branches) {
+                            branches = data.branches;
+                        } else if (Array.isArray(data)) {
+                            branches = data;
+                        }
+                        
+                        if (branches.length > 0) {
+                            $status.html(`<span style="color: green;">✓ Loaded ${branches.length} branches from endpoint ${index + 1}</span>`);
+                            
+                            // Populate dropdown
+                            branches.forEach(function(branch) {
+                                $branchSelect.append(`<option value="${branch.id}">${branch.name}</option>`);
+                            });
+                            
+                            // Show results
+                            $results.html('<h3>Branches found:</h3><pre>' + JSON.stringify(branches, null, 2) + '</pre>');
+                        } else {
+                            $status.html(`<span style="color: orange;">Endpoint ${index + 1} returned no branches, trying next...</span>`);
+                            setTimeout(() => tryEndpoint(index + 1), 1000);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(`Endpoint ${index + 1} failed:`, {xhr, status, error});
+                        $status.html(`<span style="color: orange;">Endpoint ${index + 1} failed (${xhr.status}), trying next...</span>`);
+                        setTimeout(() => tryEndpoint(index + 1), 1000);
+                    }
+                });
+            }
+            
+            tryEndpoint();
+        });
+    </script>
+</body>
+</html>

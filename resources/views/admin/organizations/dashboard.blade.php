@@ -13,7 +13,7 @@
                     <p class="text-gray-600 mt-2">Manage organizations, subscription plans, and system-wide settings</p>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ route('organizations.create') }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+                    <a href="{{ route('admin.organizations.create') }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
                         <i class="fas fa-plus mr-2"></i>
                         Add Organization
                     </a>
@@ -143,9 +143,13 @@
                                 <div class="text-xs text-gray-500 mb-1">Stations:</div>
                                 <div class="flex flex-wrap gap-1">
                                     @foreach($headOffice->kitchenStations->take(3) as $station)
-                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs 
+                                        {{ $station->type == 'cooking' ? 'bg-red-100 text-red-800' : 
+                                           ($station->type == 'prep' ? 'bg-yellow-100 text-yellow-800' : 
+                                           ($station->type == 'service' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800')) }}">
                                         <i class="fas fa-fire mr-1"></i>
                                         {{ $station->name }}
+                                        <span class="ml-1 text-xs opacity-75">({{ ucfirst($station->type) }})</span>
                                     </span>
                                     @endforeach
                                     @if($headOffice->kitchenStations->count() > 3)
@@ -172,17 +176,24 @@
                             <div class="font-medium text-gray-900">{{ $orgAdmin->name }}</div>
                             <div class="text-gray-600">{{ $orgAdmin->email }}</div>
                             <div class="text-gray-600">{{ $orgAdmin->job_title ?? 'Organization Administrator' }}</div>
+                            <div class="mt-2 p-2 bg-white rounded border">
+                                <div class="text-xs text-gray-500">Quick Login:</div>
+                                <div class="font-mono text-xs text-gray-700">
+                                    <div>Email: {{ $orgAdmin->email }}</div>
+                                    <div>Pass: {{ config('auto_system_settings.default_org_admin_password', 'AdminPassword123!') }}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     @endif
 
                     <!-- Action Buttons -->
                     <div class="flex space-x-2">
-                        <a href="{{ route('organizations.show', $org) }}" class="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                        <a href="{{ route('admin.organizations.show', $org) }}" class="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors text-sm">
                             View Details
                         </a>
                         @if(!$org->is_active)
-                        <form action="{{ route('organizations.activate', $org) }}" method="POST" class="flex-1">
+                        <form action="{{ route('admin.organizations.activate', $org) }}" method="POST" class="flex-1">
                             @csrf
                             <button type="submit" class="w-full bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 transition-colors text-sm" onclick="return confirm('Are you sure you want to activate this organization?')">
                                 Activate

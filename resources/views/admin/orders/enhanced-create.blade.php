@@ -128,23 +128,52 @@
                                     @foreach($menuItems as $item)
                                     <div class="menu-item-card border rounded-lg p-4 transition-all duration-300 hover:shadow-md" 
                                          data-item-id="{{ $item->id }}" 
-                                         data-category="{{ $item->category->name ?? 'Uncategorized' }}"
+                                         data-category="{{ $item->menuCategory->name ?? 'Uncategorized' }}"
                                          data-name="{{ $item->name }}"
-                                         data-availability="{{ $item->availability_status }}">
+                                         data-type="{{ $item->type_name ?? 'KOT' }}"
+                                         data-availability="{{ $item->availability_info['status'] ?? 'available' }}"
+                                         data-stock="{{ $item->current_stock ?? 0 }}">
                                         
                                         <!-- Item Header -->
                                         <div class="flex items-start justify-between mb-3">
                                             <div class="flex-1">
                                                 <h3 class="font-semibold text-gray-900">{{ $item->name }}</h3>
-                                                <p class="text-sm text-gray-600">{{ $item->category->name ?? 'Uncategorized' }}</p>
+                                                <div class="flex items-center gap-2 mt-1">
+                                                    <p class="text-sm text-gray-600">{{ $item->menuCategory->name ?? 'Uncategorized' }}</p>
+                                                    <!-- Item Type Badge -->
+                                                    @if(($item->type ?? 2) === App\Models\MenuItem::TYPE_BUY_SELL)
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                                            <i class="fas fa-boxes mr-1"></i>Buy & Sell
+                                                        </span>
+                                                    @else
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                                                            <i class="fas fa-fire mr-1"></i>KOT
+                                                        </span>
+                                                    @endif
+                                                </div>
                                                 @if($item->description)
                                                     <p class="text-xs text-gray-500 mt-1">{{ Str::limit($item->description, 50) }}</p>
                                                 @endif
                                             </div>
                                             <div class="ml-3 text-right">
                                                 <div class="font-bold text-lg text-gray-900">LKR {{ number_format($item->price, 2) }}</div>
-                                                <div class="stock-indicator" data-item-id="{{ $item->id }}">
-                                                    {!! $item->stock_indicator !!}
+                                                <!-- Stock/Availability Indicator -->
+                                                <div class="stock-indicator mt-1" data-item-id="{{ $item->id }}">
+                                                    @if(($item->type ?? 2) === App\Models\MenuItem::TYPE_BUY_SELL)
+                                                        @if($item->current_stock > 0)
+                                                            <span class="text-xs {{ $item->current_stock < 5 ? 'text-orange-600' : 'text-green-600' }}">
+                                                                <i class="fas fa-box mr-1"></i>Stock: {{ $item->current_stock }}
+                                                            </span>
+                                                        @else
+                                                            <span class="text-xs text-red-600">
+                                                                <i class="fas fa-exclamation-triangle mr-1"></i>Out of Stock
+                                                            </span>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-xs text-green-600">
+                                                            <i class="fas fa-check-circle mr-1"></i>Available
+                                                        </span>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>

@@ -276,12 +276,15 @@ class AdminOrderController extends Controller
             })
             ->get()
             ->map(function($item) use ($admin) {
-                // Determine item type based on linked item_master (if exists)
+                // Use the menu item's type field (which should be set correctly)
+                $itemType = $item->type ?? MenuItem::TYPE_KOT;
                 $currentStock = 0;
-                $itemType = MenuItem::TYPE_KOT; // Default to KOT
                 
-                if ($item->item_master_id && $item->itemMaster && $item->itemMaster->is_active) {
-                    $itemType = MenuItem::TYPE_BUY_SELL;
+                // For Buy & Sell items linked to item master, get current stock
+                if ($itemType === MenuItem::TYPE_BUY_SELL && 
+                    $item->item_master_id && 
+                    $item->itemMaster && 
+                    $item->itemMaster->is_active) {
                     // Calculate current stock from item_transactions
                     $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $admin->branch_id ?? null);
                 }
@@ -290,6 +293,7 @@ class AdminOrderController extends Controller
                 $item->display_type = $itemType == MenuItem::TYPE_BUY_SELL ? 'stock' : 'kot';
                 $item->current_stock = $currentStock;
                 $item->item_type = $itemType;
+                $item->type_name = $itemType == MenuItem::TYPE_BUY_SELL ? 'Buy & Sell' : 'KOT';
                 $item->availability_info = $this->getItemAvailabilityInfo($item, $currentStock, $itemType);
                 
                 return $item;
@@ -1732,5 +1736,68 @@ class AdminOrderController extends Controller
             'available_quantity' => 999,
             'message' => 'Item available'
         ];
+    }
+
+    /**
+     * Get branches for organization (API endpoint for admin orders)
+     */
+    public function getBranchesForOrganization(Request $request)
+    {
+        try {
+            $admin = auth('admin')->user();
+            $organizationId = $request->get('organization_id');
+            
+            if (!$admin) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            
+            if (!$organizationId) {
+                return response()->json(['error' => 'Organization ID required'], 400);
+            }
+            
+            // Build query based on admin permissions
+            $query = Branch::where('organization_id', $organizationId)
+                ->where('is_active', true);
+            
+            // Super admin can access any organization's branches
+            if (!$admin->is_super_admin) {
+                // Non-super admin can only access their own organization
+                if ($admin->organization_id && $admin->organization_id != $organizationId) {
+                    return response()->json(['error' => 'Access denied'], 403);
+                }
+                
+                // Branch admin can only see their own branch
+                if ($admin->branch_id) {
+                    $query->where('id', $admin->branch_id);
+                }
+            }
+            
+            $branches = $query->select(['id', 'name', 'address', 'phone', 'is_head_office'])
+                ->orderBy('is_head_office', 'desc')
+                ->orderBy('name')
+                ->get();
+            
+            Log::info('Admin order branches fetched for organization', [
+                'admin_id' => $admin->id,
+                'organization_id' => $organizationId,
+                'branches_count' => $branches->count()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'branches' => $branches
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error fetching admin order branches', [
+                'organization_id' => $organizationId ?? null,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to fetch branches'
+            ], 500);
+        }
     }
 }

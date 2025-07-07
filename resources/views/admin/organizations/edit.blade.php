@@ -51,15 +51,46 @@
                     <select name="subscription_plan_id" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         @forelse($subscriptionPlans ?? [] as $plan)
                             <option value="{{ $plan->id }}" {{ old('subscription_plan_id', $organization->subscription_plan_id) == $plan->id ? 'selected' : '' }}>
-                                {{ $plan->name }} ({{ number_format($plan->price/100, 2) }} {{ $plan->currency }})
+                                {{ $plan->name }} ({{ number_format($plan->price, 2) }} {{ $plan->currency }})
                             </option>
                         @empty
                             <option value="">No subscription plans available</option>
                         @endforelse
                     </select>
                 </div>
+            @endif
+
+            {{-- Fields editable by org admins and super admins --}}
+            @if(auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin())
+                {{-- Editable for super admin and org admin --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-600">*</span></label>
+                    <input type="text" name="phone" value="{{ old('phone', $organization->phone) }}" required pattern="\d{10,15}" maxlength="15"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-600">*</span></label>
+                    <textarea name="address" rows="4" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Line 1&#10;Line 2&#10;Line 3&#10;Line 4">{{ old('address', $organization->address ?? '') }}</textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person <span class="text-red-600">*</span></label>
+                    <input type="text" name="contact_person" value="{{ old('contact_person', $organization->contact_person) }}" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Designation <span class="text-red-600">*</span></label>
+                    <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation', $organization->contact_person_designation) }}" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Phone <span class="text-red-600">*</span></label>
+                    <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone', $organization->contact_person_phone) }}" required pattern="\d{10,15}" maxlength="15"
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
             @else
-                {{-- Non-super admin: show as readonly --}}
+                {{-- Read-only for other users --}}
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
                     <input type="text" value="{{ $organization->name }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
@@ -76,48 +107,43 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Subscription Plan</label>
                     <input type="text" value="{{ $organization->plan->name ?? 'N/A' }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
                 </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input type="text" value="{{ $organization->phone }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <textarea rows="4" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>{{ $organization->address ?? '' }}</textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
+                    <input type="text" value="{{ $organization->contact_person }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Designation</label>
+                    <input type="text" value="{{ $organization->contact_person_designation }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Phone</label>
+                    <input type="text" value="{{ $organization->contact_person_phone }}" class="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-500" readonly>
+                </div>
             @endif
 
-            {{-- Editable for all --}}
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-600">*</span></label>
-                <input type="text" name="phone" value="{{ old('phone', $organization->phone) }}" required pattern="\d{10,15}" maxlength="15"
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Address <span class="text-red-600">*</span></label>
-                <textarea name="address" rows="4" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Line 1&#10;Line 2&#10;Line 3&#10;Line 4">{{ old('address', $organization->address ?? '') }}</textarea>
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person <span class="text-red-600">*</span></label>
-                <input type="text" name="contact_person" value="{{ old('contact_person', $organization->contact_person) }}" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Designation <span class="text-red-600">*</span></label>
-                <input type="text" name="contact_person_designation" value="{{ old('contact_person_designation', $organization->contact_person_designation) }}" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Contact Person Phone <span class="text-red-600">*</span></label>
-                <input type="text" name="contact_person_phone" value="{{ old('contact_person_phone', $organization->contact_person_phone) }}" required pattern="\d{10,15}" maxlength="15"
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
+            @if(auth('admin')->user()->isSuperAdmin())
+                {{-- Discount field - super admin only --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Discount (%) <span class="text-red-600">*</span>
+                    </label>
+                    <input type="number" name="discount_percentage" value="{{ old('discount_percentage', $organization->discount_percentage ?? 0) }}"
+                        min="0" max="100" step="0.01" required
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="0.00">
+                </div>
+            @endif
 
-            {{-- Discount field --}}
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                    Discount (%) <span class="text-red-600">*</span>
-                </label>
-                <input type="number" name="discount_percentage" value="{{ old('discount_percentage', $organization->discount_percentage ?? 0) }}"
-                    min="0" max="100" step="0.01" required
-                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="0.00">
-            </div>
-
-            {{-- Password fields --}}
+            @if(auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin())
+                {{-- Password fields - editable by super admin and org admin --}}
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                     Old Password
@@ -169,6 +195,11 @@
                 <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50">Cancel</a>
                 <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update Organization</button>
             </div>
+            @else
+                <div class="flex justify-end gap-3 mt-6">
+                    <a href="{{ route('admin.organizations.index') }}" class="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50">Back</a>
+                </div>
+            @endif
         </form>
     </div>
 </div>

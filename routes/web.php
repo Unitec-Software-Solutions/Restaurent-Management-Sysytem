@@ -286,8 +286,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{grn}', [GrnDashboardController::class, 'show'])->whereNumber('grn')->name('show');
             Route::get('/{grn}/edit', [GrnDashboardController::class, 'edit'])->whereNumber('grn')->name('edit');
             Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
-            Route::post('/{grn}/verify', [GrnDashboardController::class, 'verify'])->whereNumber('grn')->name('verify');
-            Route::get('/statistics/data', [GrnDashboardController::class, 'statistics'])->name('statistics');
+            Route::delete('/{grn}', [GrnDashboardController::class, 'destroy'])->whereNumber('grn')->name('destroy');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
         });
 
@@ -442,6 +441,18 @@ Route::middleware(['auth:admin'])->group(function () {
         \App\Http\Controllers\Admin\ItemCategoryController::class,
         'getByOrganization'
     ])->name('admin.api.organizations.categories');
+    
+    // Universal admin API route for getting branches by organization
+    Route::get('/admin/api/organizations/{organization}/branches', [
+        \App\Http\Controllers\BranchController::class,
+        'getBranchesByOrganization'
+    ])->name('admin.api.organizations.branches');
+    
+    // Menu categories API route for getting branches by organization
+    Route::get('/admin/api/menu-categories/organizations/{organization}/branches', [
+        \App\Http\Controllers\Admin\MenuCategoryController::class,
+        'getBranchesForOrganization'
+    ])->name('admin.api.menu-categories.organizations.branches');
 });
 
 Route::get('/debug/branches', function() {
@@ -473,8 +484,12 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
     // Organization Dashboard
     Route::get('dashboard/organizations', [OrganizationController::class, 'dashboard'])->name('organizations.dashboard');
 
-    // Organizations CRUD
-    Route::resource('organizations', OrganizationController::class);
+    // Organization activation index - must come before resource routes to avoid conflicts
+    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
+
+    // Organizations CRUD (explicitly exclude show to avoid conflicts)
+    Route::resource('organizations', OrganizationController::class)->except(['show']);
+    Route::get('organizations/{organization}', [OrganizationController::class, 'show'])->name('organizations.show')->where('organization', '[0-9]+');
     Route::get('organizations/{organization}/summary', [OrganizationController::class, 'summary'])->name('organizations.summary');
     Route::put('organizations/{organization}/regenerate-key', [OrganizationController::class, 'regenerateKey'])->name('organizations.regenerate-key');
     Route::get('organizations/{organization}/activate', [OrganizationController::class, 'showActivateForm'])->name('organizations.activate.form');
@@ -489,6 +504,7 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
         Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
         Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
         Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}', [BranchController::class, 'show'])->name('branches.show');
         Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
@@ -516,8 +532,6 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
 
 // Organization Activation Routes - Accessible by both Super Admin and Organization Admin
 Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Organization activation index - accessible to both super admins and organization admins
-    Route::get('organizations/activation', [OrganizationController::class, 'activationIndex'])->name('organizations.activation.index');
     Route::post('organizations/{organization}/activate-by-key', [OrganizationController::class, 'activateByKey'])->name('organizations.activate.by-key');
 });
 
@@ -604,7 +618,8 @@ Route::middleware(['auth:admin', SuperAdmin::class])
         Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
     });
 
-Route::middleware(['auth:admin', App\Http\Middleware\SuperAdmin::class])
+// User Management Routes - Accessible by Superadmin, Org Admin, and Branch Admin with permissions
+Route::middleware(['auth:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -630,11 +645,9 @@ Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     Route::get('/menu-items/{branch}', [AdminOrderController::class, 'getMenuItems']);
     Route::get('/inventory-items/{branch}', [AdminOrderController::class, 'getInventoryItems']);
     Route::post('/update-menu-availability/{branch}', [AdminOrderController::class, 'updateMenuAvailability']);
-});
-
-// Menu Items API Routes
-Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(function () {
-    Route::get('/menu-items/by-branch', [AdminOrderController::class, 'getMenuItems'])->name('menu-items.by-branch');
+    
+    // Organization branches API for admin orders
+    Route::get('/organization-branches', [AdminOrderController::class, 'getBranchesForOrganization']);
 });
 
 Route::prefix('admin/dashboard')->middleware(['auth:admin'])->group(function () {
@@ -757,9 +770,13 @@ Route::get('subscription/required', [App\Http\Controllers\SubscriptionController
 | API Routes
 |------------------------------------------------------------------------*/
 Route::prefix('api')->middleware(['web'])->group(function () {
-    // Organization branches
+    // Organization branches (Public - for guests)
     Route::get('/organizations/{organization}/branches', [ReservationController::class, 'getBranches'])
         ->name('api.organizations.branches');
+    
+    // Organization branches (Public - alternative endpoint)
+    Route::get('/public/organizations/{organization}/branches', [BranchController::class, 'getBranchesPublic'])
+        ->name('api.public.organizations.branches');
 
     // Branch availability
     Route::get('/branches/{branch}/availability', [ReservationController::class, 'getAvailableTimeSlots'])
@@ -769,7 +786,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
 // Remove the duplicate test route - keep only one for debugging
 Route::get('/test-branches/{organization}', function($organizationId) {
     try {
-        $controller = app(App\Http\Controllers\ReservationController::class);
+        $controller = app(\App\Http\Controllers\ReservationController::class);
         return $controller->getBranches($organizationId);
     } catch (\Exception $e) {
         return response()->json([
@@ -931,22 +948,27 @@ Route::prefix('admin/kitchen')->name('admin.kitchen.')->group(function () {
 Route::prefix('admin/menu-items')->name('admin.menu-items.')->middleware(['auth:admin'])->group(function () {
     // Standard CRUD routes
     Route::get('/', [MenuItemController::class, 'index'])->name('index');
+    Route::get('/enhanced', [MenuItemController::class, 'enhancedIndex'])->name('enhanced.index');
     Route::get('/create', [MenuItemController::class, 'create'])->name('create');
+    
+    // Enhanced KOT specific routes (MUST be before dynamic routes)
+    Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
+    Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('store-kot');
+    
+    // AJAX routes
+    Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
+    Route::get('/by-branch', [AdminOrderController::class, 'getMenuItems'])->name('by-branch');
+    Route::get('/menu-eligible-items', [MenuItemController::class, 'getMenuEligibleItems'])->name('menu-eligible-items');
+    
+    // Bulk operations with enhanced validation
+    Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');
+    
+    // Dynamic routes (MUST be after specific routes)
     Route::post('/', [MenuItemController::class, 'store'])->name('store');
     Route::get('/{menuItem}', [MenuItemController::class, 'show'])->name('show');
     Route::get('/{menuItem}/edit', [MenuItemController::class, 'edit'])->name('edit');
     Route::patch('/{menuItem}', [MenuItemController::class, 'update'])->name('update');
     Route::delete('/{menuItem}', [MenuItemController::class, 'destroy'])->name('destroy');
-    
-    // AJAX routes
-    Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
-    
-    // Bulk operations
-    Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');
-    
-    // KOT specific routes
-    Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
-    Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('create-kot.store');
 });
 
 /*-------------------------------------------------------------------------
@@ -980,3 +1002,35 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/staff', [App\Http\Controllers\DashboardController::class, 'staff'])->name('dashboard.staff');
     Route::get('/dashboard/management', [App\Http\Controllers\DashboardController::class, 'management'])->name('dashboard.management');
 });
+
+// Debug route for testing reservation form
+Route::get('/debug/reservation', function () {
+    return view('debug_reservation');
+})->name('debug.reservation');
+
+// Test route for branch loading
+Route::get('/test/branch-loading', function () {
+    return view('test_branch_loading');
+})->name('test.branch-loading');
+
+// Debug route for branch loading
+Route::get('/debug/branch-loading', function () {
+    // Get organizations for testing
+    $organizations = App\Models\Organization::where('is_active', true)
+        ->select('id', 'name', 'trading_name')
+        ->orderBy('name')
+        ->get()
+        ->map(function($org) {
+            return [
+                'id' => $org->id,
+                'name' => $org->trading_name ?: $org->name
+            ];
+        });
+    
+    return view('debug_reservation_branch_loading', compact('organizations'));
+})->name('debug.branch-loading');
+
+// Simple branch test route
+Route::get('/test/simple-branch', function () {
+    return view('simple_branch_test');
+})->name('test.simple-branch');

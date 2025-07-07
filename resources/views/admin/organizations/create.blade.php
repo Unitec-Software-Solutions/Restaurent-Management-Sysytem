@@ -153,7 +153,7 @@
                     </label>
                     <select name="subscription_plan_id" required class="w-full border rounded px-3 py-2">
                         @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}">{{ $plan->name }} ({{ number_format($plan->price/100,2) }} {{ $plan->currency }})</option>
+                            <option value="{{ $plan->id }}">{{ $plan->name }} ({{ number_format($plan->price, 2) }} {{ $plan->currency }})</option>
                         @endforeach
                     </select>
                 </div>

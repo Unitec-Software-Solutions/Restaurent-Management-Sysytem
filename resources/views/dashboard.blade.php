@@ -85,7 +85,7 @@
                     </a>
                 @endif
 
-                @if($role && in_array($role->name, ['Manager', 'Supervisor']))
+                @if($role && in_array($role->name, ['Organization Administrator', 'Branch Administrator']))
                     <a href="{{ route('dashboard.management') }}" class="bg-white rounded-lg p-4 shadow hover:shadow-md transition-shadow">
                         <div class="flex items-center">
                             <div class="p-2 bg-green-100 rounded-lg">

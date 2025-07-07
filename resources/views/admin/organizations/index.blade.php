@@ -48,7 +48,8 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex gap-2 flex-wrap">
-                                <a href="{{ route('admin.organizations.summary', $org) }}"
+                                <a href="{{ route('admin.organizations.show', $org) }}"
+
                                    class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded hover:bg-green-200 transition text-xs font-semibold">
                                     View
                                 </a>
@@ -56,21 +57,39 @@
                                    class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded hover:bg-blue-200 transition text-xs font-semibold">
                                     Edit
                                 </a>
-                                @if(auth('admin')->user()->isSuperAdmin())
+                                @if(auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->canManageOrganization($org))
                                     <a href="{{ route('admin.organizations.activate.form', $org) }}"
                                        class="inline-block {{ $org->is_active ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-purple-100 text-purple-800 hover:bg-purple-200' }} px-3 py-1 rounded transition text-xs font-semibold">
                                         {{ $org->is_active ? 'Manage' : 'Activate' }}
                                     </a>
+                                    
+                                    {{-- Only super admins can delete inactive organizations --}}
+                                    @can('delete', $org)
+                                        <form action="{{ route('admin.organizations.destroy', $org) }}" method="POST" class="inline"
+                                              onsubmit="return confirm('Are you sure you want to delete this inactive organization? This action cannot be undone.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-block bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition text-xs font-semibold">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @else
+                                        @if(!$org->is_active)
+                                            <button type="button" disabled
+                                                    title="Only super administrators can delete inactive organizations."
+                                                    class="inline-block bg-gray-100 text-gray-500 px-3 py-1 rounded cursor-not-allowed text-xs font-semibold">
+                                                Delete
+                                            </button>
+                                        @else
+                                            <button type="button" disabled
+                                                    title="Cannot delete active organization. Please deactivate it first."
+                                                    class="inline-block bg-gray-100 text-gray-500 px-3 py-1 rounded cursor-not-allowed text-xs font-semibold">
+                                                Delete
+                                            </button>
+                                        @endif
+                                    @endcan
                                 @endif
-                                <form action="{{ route('admin.organizations.destroy', $org) }}" method="POST" class="inline"
-                                      onsubmit="return confirm('Are you sure?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="inline-block bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition text-xs font-semibold">
-                                        Delete
-                                    </button>
-                                </form>
                             </div>
                         </td>
                     </tr>

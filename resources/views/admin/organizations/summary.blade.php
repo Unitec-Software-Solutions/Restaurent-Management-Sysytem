@@ -7,20 +7,22 @@
     <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organization Summary</h1>
         
-        <!-- Actions for Super Admin -->
-        @if(auth('admin')->user()->isSuperAdmin())
-            <div class="flex gap-3">
+        <!-- Actions -->
+        <div class="flex gap-3">
+            @can('activate', $organization)
                 <a href="{{ route('admin.organizations.activate.form', $organization) }}"
                    class="inline-block {{ $organization->is_active ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700' }} text-white px-4 py-2 rounded-lg transition font-semibold">
                     <i class="fas {{ $organization->is_active ? 'fa-cog' : 'fa-play' }} mr-2"></i>
                     {{ $organization->is_active ? 'Manage Status' : 'Activate' }}
                 </a>
+            @endcan
+            @can('update', $organization)
                 <a href="{{ route('admin.organizations.edit', $organization) }}"
                    class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
                     <i class="fas fa-edit mr-2"></i>Edit
                 </a>
-            </div>
-        @endif
+            @endcan
+        </div>
     </div>
     
     <a href="{{ route('admin.organizations.index') }}"
@@ -35,11 +37,11 @@
                 <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
                 <div>
                     <p class="text-red-700 font-medium">This organization is currently inactive.</p>
-                    @if(auth('admin')->user()->isSuperAdmin())
+                    @can('activate', $organization)
                         <p class="text-red-600 text-sm mt-1">
-                            As a super admin, you can <a href="{{ route('admin.organizations.activate.form', $organization) }}" class="underline font-medium">activate this organization</a>.
+                            You can <a href="{{ route('admin.organizations.activate.form', $organization) }}" class="underline font-medium">activate this organization</a>.
                         </p>
-                    @endif
+                    @endcan
                 </div>
             </div>
         </div>
@@ -93,8 +95,12 @@
             <div class="mt-6">
                 <label class="block font-medium mb-1">Activation Key</label>
                 <div class="flex items-center gap-2">
-                    <input type="text" id="activation-key" value="{{ $organization->activation_key ?? '-' }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
+                    <input type="password" id="activation-key" value="{{ $organization->activation_key ?? '-' }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
+                    <button type="button" onclick="toggleSummaryKeyVisibility()" class="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">
+                        <i id="summaryKeyIcon" class="fas fa-eye"></i>
+                    </button>
                     <button type="button" onclick="copyActivationKey()" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Copy</button>
+                    @can('regenerateKey', $organization)
                     <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline">
                         @csrf
                         @method('PUT')
@@ -103,6 +109,7 @@
                             Regenerate
                         </button>
                     </form>
+                    @endcan
                 </div>
             </div>
             @endif
@@ -115,6 +122,21 @@
         input.setSelectionRange(0, 99999);
         document.execCommand('copy');
         alert('Activation key copied!');
+    }
+
+    function toggleSummaryKeyVisibility() {
+        const input = document.getElementById('activation-key');
+        const icon = document.getElementById('summaryKeyIcon');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     }
     </script>
 
@@ -242,45 +264,102 @@
     <!-- Users Table -->
     <div class="bg-white rounded-2xl shadow p-8 mb-10">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold text-indigo-700">Users</h3>
-            <a href="{{ route('admin.users.create', ['organization' => $organization->id]) }}"
-               class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold">
-                + Create User
-            </a>
+            <h3 class="text-lg font-semibold text-indigo-700">Organization Users</h3>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-500">Total: {{ $organization->users->count() }} users</span>
+                <a href="{{ route('admin.users.create', ['organization' => $organization->id]) }}"
+                   class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition font-semibold">
+                    + Create User
+                </a>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-2 text-left">#</th>
-                        <th class="px-4 py-2 text-left">Name</th>
-                        <th class="px-4 py-2 text-left">Email</th>
-                        <th class="px-4 py-2 text-left">Phone</th>
-                        <th class="px-4 py-2 text-left">Role</th>
-                        <th class="px-4 py-2 text-left">Status</th>
-                        <th class="px-4 py-2 text-left">Created</th>
-                        <th class="px-4 py-2 text-left">Updated</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User Info</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spatie Roles</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($organization->users as $user)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-2">{{ $loop->iteration }}</td>
-                            <td class="px-4 py-2">{{ $user->name }}</td>
-                            <td class="px-4 py-2">{{ $user->email }}</td>
-                            <td class="px-4 py-2">{{ $user->phone ?? '-' }}</td>
-                            <td class="px-4 py-2">{{ $user->role }}</td>
-                            <td class="px-4 py-2">
-                                <span class="inline-block px-2 py-1 rounded {{ $user->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $loop->iteration }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-8 w-8">
+                                        <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center">
+                                            <span class="text-white text-xs font-medium">
+                                                {{ strtoupper(substr($user->name, 0, 2)) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                                        <div class="text-sm text-gray-500">{{ $user->email }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ $user->phone_number ?? '-' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($user->userRole)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        {{ $user->userRole->name }}
+                                    </span>
+                                @else
+                                    <span class="text-gray-400 text-sm">No role</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($user->roles && $user->roles->count() > 0)
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach($user->roles as $role)
+                                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                {{ $role->name }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 text-sm">No roles</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                @if($user->branch)
+                                    <div class="text-sm text-gray-900">{{ $user->branch->name }}</div>
+                                    <div class="text-xs text-gray-500">
+                                        <span class="{{ $user->branch->is_active ? 'text-green-600' : 'text-red-600' }}">
+                                            {{ $user->branch->is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 text-sm">No branch</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                     {{ $user->is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-2">{{ $user->created_at }}</td>
-                            <td class="px-4 py-2">{{ $user->updated_at }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ $user->created_at->format('M d, Y') }}
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-2 text-center text-gray-500">No users found.</td>
+                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                <div class="flex flex-col items-center justify-center py-8">
+                                    <i class="fas fa-users text-gray-300 text-3xl mb-2"></i>
+                                    <p class="text-gray-500">No users found in this organization.</p>
+                                </div>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

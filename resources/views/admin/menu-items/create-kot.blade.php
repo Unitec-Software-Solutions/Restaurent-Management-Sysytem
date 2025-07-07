@@ -105,7 +105,7 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $item->item_code }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $item->category->name ?? 'N/A' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $item->itemCategory->name ?? 'N/A' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">LKR {{ number_format($item->selling_price, 2) }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($item->is_active)

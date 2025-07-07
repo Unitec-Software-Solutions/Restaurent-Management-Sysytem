@@ -385,6 +385,36 @@ class MenuCategoryController extends Controller
     }
 
     /**
+     * Get branches for organization (AJAX endpoint)
+     * Enhanced to handle super admin access better
+     */
+    public function getBranchesForOrganization(Request $request, Organization $organization): JsonResponse
+    {
+        $admin = Auth::guard('admin')->user();
+        
+        // Check access permissions
+        if (!$this->canAccessOrganization($admin, $organization)) {
+            return response()->json(['error' => 'Unauthorized access'], 403);
+        }
+
+        $branches = Branch::where('organization_id', $organization->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'address', 'is_head_office']);
+
+        Log::info('Branches fetched for organization in menu categories', [
+            'admin_id' => $admin->id,
+            'organization_id' => $organization->id,
+            'branches_count' => $branches->count()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'branches' => $branches
+        ]);
+    }
+
+    /**
      * Check if admin is super admin
      */
     private function isSuperAdmin($admin): bool
@@ -435,6 +465,26 @@ class MenuCategoryController extends Controller
 
         if ($admin->organization_id) {
             return $branch->organization_id === $admin->organization_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if admin can access a specific organization
+     */
+    private function canAccessOrganization($admin, Organization $organization): bool
+    {
+        if (!$admin) {
+            return false;
+        }
+
+        if ($this->isSuperAdmin($admin)) {
+            return true;
+        }
+
+        if ($admin->organization_id) {
+            return $organization->id === $admin->organization_id;
         }
 
         return false;

@@ -13,7 +13,6 @@
                     + Add Branch
                 </a>
             @endif
-            {{-- Remove the button if $branches is set (global index) --}}
         @endcan
     </div>
 
@@ -57,13 +56,23 @@
                                     <a href="{{ route('admin.branches.edit', ['organization' => $organization->id, 'branch' => $branch->id]) }}"
                                        class="text-blue-600 hover:underline">Edit</a>
                                 @endcan
-                                <a href="{{ route('branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
+                                <a href="{{ route('admin.branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
                                 @can('delete', $branch)
-                                    <form action="{{ route('admin.branches.destroy', ['organization' => $organization->id, 'branch' => $branch->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this branch?');">
+                                    <form action="{{ route('admin.branches.destroy', ['organization' => $organization->id, 'branch' => $branch->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this inactive branch? This action cannot be undone.');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-red-600 hover:underline">Delete</button>
                                     </form>
+                                @else
+                                    @if($branch->is_active)
+                                        <button type="button" disabled
+                                                title="Cannot delete active branch. Please deactivate it first."
+                                                class="text-gray-400 cursor-not-allowed">Delete</button>
+                                    @else
+                                        <button type="button" disabled
+                                                title="Only super administrators can delete inactive branches."
+                                                class="text-gray-400 cursor-not-allowed">Delete</button>
+                                    @endif
                                 @endcan
                             </td>
                         </tr>
@@ -92,13 +101,23 @@
                                     <a href="{{ route('admin.branches.edit', ['organization' => $branch->organization_id ?? $organization->id, 'branch' => $branch->id]) }}"
                                        class="text-blue-600 hover:underline">Edit</a>
                                 @endcan
-                                <a href="{{ route('branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
+                                <a href="{{ route('admin.branches.summary', $branch->id) }}" class="text-green-600 hover:underline">View</a>
                                 @can('delete', $branch)
-                                    <form action="{{ route('admin.branches.destroy', ['organization' => $branch->organization_id ?? $organization->id, 'branch' => $branch->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this branch?');">
+                                    <form action="{{ route('admin.branches.destroy', ['organization' => $branch->organization_id ?? $organization->id, 'branch' => $branch->id]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this inactive branch? This action cannot be undone.');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-red-600 hover:underline">Delete</button>
                                     </form>
+                                @else
+                                    @if($branch->is_active)
+                                        <button type="button" disabled
+                                                title="Cannot delete active branch. Please deactivate it first."
+                                                class="text-gray-400 cursor-not-allowed">Delete</button>
+                                    @else
+                                        <button type="button" disabled
+                                                title="Only super administrators can delete inactive branches."
+                                                class="text-gray-400 cursor-not-allowed">Delete</button>
+                                    @endif
                                 @endcan
                             </td>
                         </tr>

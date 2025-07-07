@@ -23,35 +23,58 @@ class OrganizationAutomationService
         $this->branchAutomationService = $branchAutomationService;
     }
 
-    /**
-     * Complete organization setup with automation
-     */
+
     public function setupNewOrganization(array $organizationData): Organization
     {
         return DB::transaction(function () use ($organizationData) {
-            // 1. Create organization
+            
             $organization = Organization::create($organizationData);
 
-            // 2. Create head office branch
-            $headOffice = $this->createHeadOfficeBranch($organization);
+            // Check if head office already exists (created by OrganizationObserver)
+            $headOffice = $organization->branches()->where('is_head_office', true)->first();
+            
+            if (!$headOffice) {
+                // Create head office only if it doesn't exist
+                $headOffice = $this->createHeadOfficeBranch($organization);
+            } else {
+                Log::info('Head office already exists, using existing one', [
+                    'organization_id' => $organization->id,
+                    'head_office_id' => $headOffice->id,
+                    'head_office_name' => $headOffice->name
+                ]);
+            }
 
-            // 3. Create organization admin
-            $orgAdmin = $this->createOrganizationAdmin($organization);
+            // Ensure kitchen stations exist for head office
+            if ($headOffice->kitchenStations()->count() === 0) {
+                $this->createDefaultKitchenStations($headOffice);
+            }
 
-            // 4. Setup default roles for organization
-            // TODO: Fix Role::getSystemRoles() method to return correct field names
-            // $this->setupOrganizationRoles($organization);
+            $orgAdmin = $this->createOrganizationAdmin($organization, $headOffice);
 
-            // 5. Create default kitchen stations (disabled for now to debug other issues)
-            // $this->createDefaultKitchenStations($headOffice);
+            $branchAdmin = $this->createBranchAdmin($organization, $headOffice);
 
-            // 6. Send welcome email
-            $this->sendWelcomeEmail($organization, $orgAdmin);
+            // 6. Setup organization-specific roles and permissions
+            $this->setupOrganizationRoles($organization);
 
-            // 7. Log organization creation
+            // 7. Assign permissions based on subscription plan modules
+            $this->assignSubscriptionPermissions($organization, $orgAdmin);
+            $this->assignBranchPermissions($organization, $branchAdmin, $headOffice);
 
+            // 8. Send welcome email with credentials (skip branch automation as it's already done above)
+            $this->sendWelcomeEmail($organization, $orgAdmin, $branchAdmin);
 
-            return $organization->load(['branches', 'admins']);
+            // 10. Log organization creation
+            Log::info('Organization created successfully with complete automation', [
+                'organization_id' => $organization->id,
+                'name' => $organization->name,
+                'subscription_plan_id' => $organization->subscription_plan_id,
+                'head_office_id' => $headOffice->id,
+                'org_admin_id' => $orgAdmin->id,
+                'branch_admin_id' => $branchAdmin->id,
+                'kitchen_stations_count' => $headOffice->kitchenStations()->count()
+            ]);
+
+            return $organization->load(['branches.kitchenStations', 'admins.roles', 'subscriptionPlan']);
         });
     }
 
@@ -85,57 +108,529 @@ class OrganizationAutomationService
     /**
      * Create organization administrator
      */
-    protected function createOrganizationAdmin(Organization $organization): Admin
+    protected function createOrganizationAdmin(Organization $organization, Branch $headOffice = null): Admin
     {
-        $password = Str::random(12);
-
+        // Use the default admin password for organization admins
+        $defaultPassword = config('auto_system_settings.default_org_admin_password', 'AdminPassword123!');
+        
         $adminData = [
             'organization_id' => $organization->id,
-            'name' => $organization->contact_person ?? 'Administrator',
+            'branch_id' => null, // Organization admin is not tied to specific branch
+            'name' => $organization->contact_person ?? 'Organization Administrator',
             'email' => $organization->email,
-            'password' => Hash::make($password),
+            'password' => Hash::make($defaultPassword),
             'phone' => $organization->contact_person_phone ?? $organization->phone,
             'job_title' => 'Organization Administrator',
-
             'is_active' => true,
         ];
 
         $admin = Admin::create($adminData);
 
-        // Assign organization admin role
-        $orgAdminRole = Role::where('name', 'Organization Administrator')->first();
-        if ($orgAdminRole) {
-            $admin->assignRole($orgAdminRole);
-        }
+        // Assign organization admin role (use firstOrCreate to avoid duplicates)
+        $orgAdminRole = Role::firstOrCreate(
+            [
+                'name' => 'Organization Administrator',
+                'organization_id' => $organization->id,
+                'guard_name' => 'admin'
+            ],
+            [
+                'scope' => 'organization',
+                'description' => 'Full administrative access to organization-wide operations'
+            ]
+        );
 
-        // Store password for welcome email
-        $admin->temporary_password = $password;
+        $admin->assignRole($orgAdminRole);
+
+        // Store the plain text password for welcome email
+        $admin->temporary_password = $defaultPassword;
+
+        Log::info('Organization admin created with default password', [
+            'admin_id' => $admin->id,
+            'organization_id' => $organization->id,
+            'email' => $admin->email,
+            'password_used' => 'default_admin_password'
+        ]);
 
         return $admin;
     }
 
     /**
-     * Setup default roles for organization
+     * Create branch administrator for head office
+     */
+    protected function createBranchAdmin(Organization $organization, Branch $headOffice): Admin
+    {
+        // Use the default branch admin password
+        $defaultPassword = config('auto_system_settings.default_branch_admin_password', 'BranchAdmin123!');
+
+        $adminData = [
+            'organization_id' => $organization->id,
+            'branch_id' => $headOffice->id,
+            'name' => ($organization->contact_person ?? 'Head Office') . ' - Branch Admin',
+            'email' => 'branch.admin@' . str_replace('@', '.', $organization->email),
+            'password' => Hash::make($defaultPassword),
+            'phone' => $organization->contact_person_phone ?? $organization->phone,
+            'job_title' => 'Branch Administrator - Head Office',
+            'is_active' => true,
+        ];
+
+        $admin = Admin::create($adminData);
+
+        // Assign branch admin role (use firstOrCreate to avoid duplicates)
+        $branchAdminRole = Role::firstOrCreate(
+            [
+                'name' => 'Branch Administrator',
+                'organization_id' => $organization->id,
+                'guard_name' => 'admin'
+            ],
+            [
+                'scope' => 'branch',
+                'description' => 'Full administrative access to branch operations'
+            ]
+        );
+
+        $admin->assignRole($branchAdminRole);
+
+        // Store password for welcome email
+        $admin->temporary_password = $defaultPassword;
+
+        Log::info('Branch admin created for head office with default password', [
+            'admin_id' => $admin->id,
+            'organization_id' => $organization->id,
+            'branch_id' => $headOffice->id,
+            'email' => $admin->email,
+            'password_used' => 'default_branch_password'
+        ]);
+
+        return $admin;
+    }
+
+    /**
+     * Setup only essential roles for organization
      */
     protected function setupOrganizationRoles(Organization $organization): void
     {
-        $systemRoles = Role::getSystemRoles();
+        // Only create the essential roles that will actually be used
+        $essentialRoles = [
+            [
+                'name' => 'Organization Administrator',
+                'scope' => 'organization',
+                'description' => 'Full administrative access to organization-wide operations',
+                'is_system_role' => true
+            ],
+            [
+                'name' => 'Branch Administrator', 
+                'scope' => 'branch',
+                'description' => 'Full administrative access to branch operations',
+                'is_system_role' => true
+            ]
+        ];
 
-        foreach ($systemRoles as $roleKey => $roleData) {
-            if (in_array($roleData['scope'], ['organization', 'branch', 'personal'])) {
-                Role::firstOrCreate(
-                    [
-                        'name' => $roleData['name'],
-                        'organization_id' => $organization->id,
-                        'guard_name' => 'admin'
-                    ],
-                    [
-                        'scope' => $roleData['scope'],
-                        'description' => $roleData['description'] ?? '',
-                    ]
-                );
+        foreach ($essentialRoles as $roleData) {
+            Role::firstOrCreate(
+                [
+                    'name' => $roleData['name'],
+                    'organization_id' => $organization->id,
+                    'guard_name' => 'admin'
+                ],
+                [
+                    'scope' => $roleData['scope'],
+                    'description' => $roleData['description'],
+                    'is_system_role' => $roleData['is_system_role']
+                ]
+            );
+        }
+
+        Log::info('Essential organization roles created', [
+            'organization_id' => $organization->id,
+            'roles_created' => count($essentialRoles)
+        ]);
+    }
+
+    /**
+     * Assign comprehensive permissions to organization admin
+     */
+    protected function assignSubscriptionPermissions(Organization $organization, Admin $admin): void
+    {
+        // Define COMPREHENSIVE organization admin permissions (all admin functions)
+        $orgAdminPermissions = [
+            // Organization Management
+            'organizations.view',
+            'organizations.edit',
+            'organizations.settings',
+            'organization.view',
+            'organization.manage',
+            'organization.update',
+            'organization.create',
+            
+            // Branch Management
+            'branches.view',
+            'branches.create',
+            'branches.edit',
+            'branches.delete',
+            'branches.activate',
+            'branch.view',
+            'branch.create',
+            'branch.manage',
+            'branch.update',
+            
+            // User Management
+            'users.view',
+            'users.create',
+            'users.edit',
+            'users.delete',
+            'users.activate',
+            'user.view',
+            'user.create',
+            'user.manage',
+            'user.update',
+            'user.delete',
+            
+            // Role & Permission Management
+            'roles.view',
+            'roles.create',
+            'roles.edit',
+            'roles.assign',
+            'role.view',
+            'role.create',
+            'role.manage',
+            'role.update',
+            'role.delete',
+            'permission.view',
+            'permission.manage',
+            
+            // Subscription & Billing Management
+            'subscription.view',
+            'subscription.manage',
+            'billing.view',
+            'billing.manage',
+            'billing.create',
+            
+            // Staff Management (Organization-wide)
+            'staff.view',
+            'staff.create',
+            'staff.edit',
+            'staff.delete',
+            'staff.manage',
+            'staff.schedule',
+            'staff.performance',
+            'staff.attendance',
+            'staff.update',
+            
+            // Reports and Analytics (All levels)
+            'reports.view',
+            'reports.export',
+            'reports.analytics',
+            'reports.branch',
+            'report.view',
+            'report.generate',
+            'report.export',
+            'report.dashboard',
+            'report.sales',
+            'report.financial',
+            'report.inventory',
+            'report.staff',
+            
+            // Menu Management (Organization-wide)
+            'menus.view',
+            'menus.edit',
+            'menus.activate',
+            'menu.view',
+            'menu.create',
+            'menu.manage',
+            'menu.update',
+            'menu.delete',
+            'menu.categories',
+            'menu.pricing',
+            'menu.publish',
+            'menu.schedule',
+            
+            // Order Management (Organization-wide)
+            'orders.view',
+            'orders.create',
+            'orders.edit',
+            'orders.process',
+            'orders.cancel',
+            'order.view',
+            'order.create',
+            'order.manage',
+            'order.update',
+            'order.delete',
+            'order.process',
+            'order.cancel',
+            'order.refund',
+            'order.print_kot',
+            
+            // Kitchen Management (Organization-wide)
+            'kitchen.view',
+            'kitchen.manage',
+            'kitchen.stations',
+            'kitchen.orders',
+            'kitchen.production',
+            'kitchen.recipes',
+            'kitchen.status',
+            
+            // Inventory Management (Organization-wide)
+            'inventory.view',
+            'inventory.adjust',
+            'inventory.count',
+            'inventory.create',
+            'inventory.delete',
+            'inventory.manage',
+            'inventory.update',
+            'inventory.transfer',
+            'inventory.audit',
+            
+            // Reservation Management (Organization-wide)
+            'reservations.view',
+            'reservations.create',
+            'reservations.edit',
+            'reservations.cancel',
+            'reservation.view',
+            'reservation.create',
+            'reservation.manage',
+            'reservation.update',
+            'reservation.delete',
+            'reservation.approve',
+            'reservation.cancel',
+            'reservation.checkin',
+            
+            // Customer Management
+            'customer.view',
+            'customer.create',
+            'customer.manage',
+            'customer.update',
+            'customer.delete',
+            'customer.communications',
+            'customer.loyalty',
+            
+            // Payment Management
+            'payment.view',
+            'payment.manage',
+            'payment.process',
+            'payment.refund',
+            
+            // KOT Management
+            'kot.view',
+            'kot.create',
+            'kot.manage',
+            'kot.update',
+            'kot.print',
+            
+            // System Settings
+            'settings.view',
+            'settings.edit',
+            'system.manage',
+            'system.settings',
+            'system.backup',
+            'system.logs',
+            
+            // Dashboard Access
+            'dashboard.view',
+            'dashboard.manage',
+            
+            // Profile Management
+            'profile.view',
+            'profile.update'
+        ];
+
+        // Create and assign permissions
+        foreach ($orgAdminPermissions as $permissionName) {
+            $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
+                'name' => $permissionName,
+                'guard_name' => 'admin'
+            ]);
+            
+            try {
+                $admin->givePermissionTo($permission);
+            } catch (\Exception $e) {
+                Log::warning('Failed to assign permission to organization admin', [
+                    'permission' => $permissionName,
+                    'admin_id' => $admin->id,
+                    'error' => $e->getMessage()
+                ]);
             }
         }
+
+        Log::info('Comprehensive organization admin permissions assigned', [
+            'organization_id' => $organization->id,
+            'admin_id' => $admin->id,
+            'permissions_assigned' => count($orgAdminPermissions)
+        ]);
+    }
+
+    /**
+     * Assign comprehensive permissions to branch admin
+     */
+    protected function assignBranchPermissions(Organization $organization, Admin $branchAdmin, Branch $branch): void
+    {
+        // Define COMPREHENSIVE branch admin permissions (all branch-level admin functions)
+        $branchAdminPermissions = [
+            // Branch Operations
+            'branches.view',
+            'branches.edit',
+            'branch.view',
+            'branch.manage',
+            'branch.update',
+            
+            // Staff Management (Branch-specific)
+            'staff.view',
+            'staff.create',
+            'staff.edit',
+            'staff.delete',
+            'staff.schedule',
+            'staff.manage',
+            'staff.performance',
+            'staff.attendance',
+            'staff.update',
+            
+            // Order Management (Branch-specific)
+            'orders.view',
+            'orders.create',
+            'orders.edit',
+            'orders.process',
+            'orders.cancel',
+            'order.view',
+            'order.create',
+            'order.manage',
+            'order.update',
+            'order.delete',
+            'order.process',
+            'order.cancel',
+            'order.refund',
+            'order.print_kot',
+            
+            // Kitchen Management (Branch-specific)
+            'kitchen.view',
+            'kitchen.manage',
+            'kitchen.stations',
+            'kitchen.orders',
+            'kitchen.production',
+            'kitchen.recipes',
+            'kitchen.status',
+            
+            // Inventory Management (Branch-specific)
+            'inventory.view',
+            'inventory.adjust',
+            'inventory.count',
+            'inventory.create',
+            'inventory.delete',
+            'inventory.manage',
+            'inventory.update',
+            'inventory.transfer',
+            'inventory.audit',
+            
+            // Menu Management (Branch-specific)
+            'menus.view',
+            'menus.edit',
+            'menus.activate',
+            'menu.view',
+            'menu.create',
+            'menu.manage',
+            'menu.update',
+            'menu.delete',
+            'menu.categories',
+            'menu.pricing',
+            'menu.publish',
+            'menu.schedule',
+            
+            // Reservation Management (Branch-specific)
+            'reservations.view',
+            'reservations.create',
+            'reservations.edit',
+            'reservations.cancel',
+            'reservation.view',
+            'reservation.create',
+            'reservation.manage',
+            'reservation.update',
+            'reservation.delete',
+            'reservation.approve',
+            'reservation.cancel',
+            'reservation.checkin',
+            
+            // Customer Management (Branch-specific)
+            'customer.view',
+            'customer.create',
+            'customer.manage',
+            'customer.update',
+            'customer.delete',
+            'customer.communications',
+            'customer.loyalty',
+            
+            // Payment Management (Branch-specific)
+            'payment.view',
+            'payment.manage',
+            'payment.process',
+            'payment.refund',
+            
+            // KOT Management (Branch-specific)
+            'kot.view',
+            'kot.create',
+            'kot.manage',
+            'kot.update',
+            'kot.print',
+            
+            // Reports (Branch-specific)
+            'reports.view',
+            'reports.branch',
+            'reports.export',
+            'report.view',
+            'report.generate',
+            'report.export',
+            'report.dashboard',
+            'report.sales',
+            'report.financial',
+            'report.inventory',
+            'report.staff',
+            
+            // User Management (Branch-level)
+            'users.view',
+            'users.create',
+            'users.edit',
+            'users.delete',
+            'users.activate',
+            'user.view',
+            'user.create',
+            'user.manage',
+            'user.update',
+            'user.delete',
+            
+            // Basic Settings (Branch-level)
+            'settings.view',
+            'settings.edit',
+            
+            // Dashboard Access
+            'dashboard.view',
+            'dashboard.manage',
+            
+            // Profile Management
+            'profile.view',
+            'profile.update'
+        ];
+
+        // Create and assign permissions
+        foreach ($branchAdminPermissions as $permissionName) {
+            $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
+                'name' => $permissionName,
+                'guard_name' => 'admin'
+            ]);
+            
+            try {
+                $branchAdmin->givePermissionTo($permission);
+            } catch (\Exception $e) {
+                Log::warning('Failed to assign permission to branch admin', [
+                    'permission' => $permissionName,
+                    'admin_id' => $branchAdmin->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        Log::info('Comprehensive branch admin permissions assigned', [
+            'organization_id' => $organization->id,
+            'branch_id' => $branch->id,
+            'admin_id' => $branchAdmin->id,
+            'permissions_assigned' => count($branchAdminPermissions)
+        ]);
     }
 
     /**
@@ -195,18 +690,44 @@ class OrganizationAutomationService
     }
 
     /**
-     * Send welcome email to organization
+     * Send welcome emails to both organization and branch admins
      */
-    protected function sendWelcomeEmail(Organization $organization, Admin $admin): void
+    protected function sendWelcomeEmail(Organization $organization, Admin $orgAdmin, Admin $branchAdmin = null): void
     {
+        // Send welcome email to organization admin
         try {
-            Mail::to($admin->email)->send(new OrganizationWelcomeMail($organization, $admin));
-        } catch (\Exception $e) {
-            Log::warning('Failed to send welcome email to organization', [
+            Mail::to($orgAdmin->email)->send(new OrganizationWelcomeMail($organization, $orgAdmin));
+            
+            Log::info('Welcome email sent to organization admin', [
                 'organization_id' => $organization->id,
-                'admin_email' => $admin->email,
+                'admin_email' => $orgAdmin->email
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Failed to send welcome email to organization admin', [
+                'organization_id' => $organization->id,
+                'admin_email' => $orgAdmin->email,
                 'error' => $e->getMessage()
             ]);
+        }
+
+        // Send welcome email to branch admin if provided
+        if ($branchAdmin) {
+            try {
+                Mail::to($branchAdmin->email)->send(new OrganizationWelcomeMail($organization, $branchAdmin));
+                
+                Log::info('Welcome email sent to branch admin', [
+                    'organization_id' => $organization->id,
+                    'branch_admin_email' => $branchAdmin->email,
+                    'branch_id' => $branchAdmin->branch_id
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to send welcome email to branch admin', [
+                    'organization_id' => $organization->id,
+                    'branch_admin_email' => $branchAdmin->email,
+                    'branch_id' => $branchAdmin->branch_id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
     }
 }

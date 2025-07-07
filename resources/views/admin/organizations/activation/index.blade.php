@@ -162,7 +162,7 @@
                                     @endif
                                     
                                     <!-- View Details Link -->
-                                    <a href="{{ route('admin.organizations.summary', $organization) }}"
+                                    <a href="{{ route('admin.organizations.show', $organization) }}"
                                        class="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                         <i class="fas fa-eye mr-2"></i>
                                         Details

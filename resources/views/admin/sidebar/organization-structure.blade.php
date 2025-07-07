@@ -1,40 +1,45 @@
 {{-- Super Admin Sidebar - Organization Structure --}}
 @if(auth('admin')->user()?->isSuperAdmin())
-<div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Organization Management</div>
+<div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">
+    <i class="fas fa-building mr-2"></i>Organization Management
+</div>
 
 <!-- Organizations List -->
-<div class="space-y-2">
+<div class="space-y-3 max-h-96 overflow-y-auto">
     @foreach(\App\Models\Organization::with(['subscriptionPlan', 'branches.kitchenStations', 'admins'])->get() as $org)
-    <div class="border-l-2 {{ $org->is_active ? 'border-green-500' : 'border-red-500' }} pl-3">
+    <div class="border-l-4 {{ $org->is_active ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50' }} pl-3 py-2 mx-2 rounded-r-lg">
         <!-- Organization Header -->
         <div class="flex items-center justify-between group">
-            <a href="{{ route('organizations.show', $org) }}" class="flex items-center space-x-2 text-sm hover:text-blue-600 transition-colors">
+            <a href="{{ route('admin.organizations.show', $org) }}" class="flex items-center space-x-2 text-sm hover:text-blue-600 transition-colors flex-1">
                 <i class="fas fa-building {{ $org->is_active ? 'text-green-500' : 'text-red-500' }}"></i>
                 <span class="font-medium">{{ Str::limit($org->name, 20) }}</span>
                 <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                     {{ $org->subscriptionPlan?->name ?? 'No Plan' }}
                 </span>
             </a>
-            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-                <span class="text-xs {{ $org->is_active ? 'text-green-600' : 'text-red-600' }}">
+            <div class="flex items-center space-x-2">
+                <span class="text-xs px-2 py-1 rounded {{ $org->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                     {{ $org->is_active ? 'Active' : 'Inactive' }}
                 </span>
+                @if($org->activation_key)
+                <i class="fas fa-key text-xs text-yellow-500" title="Has activation key"></i>
+                @endif
             </div>
         </div>
 
         <!-- Organization Stats -->
         <div class="ml-6 text-xs text-gray-500 mt-1 grid grid-cols-3 gap-2">
-            <div class="flex items-center">
+            <div class="flex items-center" title="{{ $org->branches->count() }} branches in this organization">
                 <i class="fas fa-store mr-1"></i>
-                <span>{{ $org->branches->count() }} Branches</span>
+                <span>{{ $org->branches->count() }} Branch{{ $org->branches->count() !== 1 ? 'es' : '' }}</span>
             </div>
-            <div class="flex items-center">
+            <div class="flex items-center" title="{{ $org->branches->sum(fn($b) => $b->kitchenStations->count()) }} kitchen stations across all branches">
                 <i class="fas fa-utensils mr-1"></i>
-                <span>{{ $org->branches->sum(fn($b) => $b->kitchenStations->count()) }} Kitchens</span>
+                <span>{{ $org->branches->sum(fn($b) => $b->kitchenStations->count()) }} Kitchen{{ $org->branches->sum(fn($b) => $b->kitchenStations->count()) !== 1 ? 's' : '' }}</span>
             </div>
-            <div class="flex items-center">
+            <div class="flex items-center" title="{{ $org->admins->count() }} administrators in this organization">
                 <i class="fas fa-users mr-1"></i>
-                <span>{{ $org->admins->count() }} Admins</span>
+                <span>{{ $org->admins->count() }} Admin{{ $org->admins->count() !== 1 ? 's' : '' }}</span>
             </div>
         </div>
 
@@ -117,27 +122,78 @@
         @endif
 
         <!-- Quick Actions -->
-        <div class="ml-6 mt-2 flex space-x-2">
+        <div class="ml-6 mt-2 flex flex-wrap gap-1">
             @if(!$org->is_active)
-            <form action="{{ route('organizations.activate', $org) }}" method="POST" class="inline">
-                @csrf
-                <button type="submit" class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors">
-                    Activate
-                </button>
-            </form>
-            @endif
-            <a href="{{ route('organizations.show', $org) }}" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors">
-                View Details
+            <a href="{{ route('admin.organizations.activate.form', $org) }}" 
+               class="inline-flex items-center text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105" 
+               title="Activate this organization">
+                <i class="fas fa-power-off mr-1"></i>
+                <span>Activate</span>
             </a>
+            @else
+            <a href="{{ route('admin.organizations.activate.form', $org) }}" 
+               class="inline-flex items-center text-xs bg-amber-500 text-white px-2 py-1 rounded hover:bg-amber-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105" 
+               title="Manage activation settings">
+                <i class="fas fa-cogs mr-1"></i>
+                <span>Manage</span>
+            </a>
+            @endif
+            
+            <a href="{{ route('admin.organizations.show', $org) }}" 
+               class="inline-flex items-center text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105" 
+               title="View organization details">
+                <i class="fas fa-eye mr-1"></i>
+                <span>View</span>
+            </a>
+            
+            @if(auth('admin')->user()->isSuperAdmin())
+            <a href="{{ route('admin.organizations.edit', $org) }}" 
+               class="inline-flex items-center text-xs bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105" 
+               title="Edit organization">
+                <i class="fas fa-edit mr-1"></i>
+                <span>Edit</span>
+            </a>
+            @endif
         </div>
     </div>
     @endforeach
 </div>
 
-<div class="mt-4 px-4">
-    <a href="{{ route('organizations.create') }}" class="flex items-center justify-center w-full text-sm bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
-        <i class="fas fa-plus mr-2"></i>
-        Add Organization
-    </a>
+<div class="mt-4 px-4 border-t border-gray-200 pt-4 space-y-2">
+    <!-- Quick Stats Summary -->
+    @php
+        $totalOrgs = \App\Models\Organization::count();
+        $activeOrgs = \App\Models\Organization::where('is_active', true)->count();
+        $inactiveOrgs = $totalOrgs - $activeOrgs;
+    @endphp
+    <div class="grid grid-cols-3 gap-2 text-xs mb-3">
+        <div class="text-center">
+            <div class="font-semibold text-gray-700">{{ $totalOrgs }}</div>
+            <div class="text-gray-500">Total</div>
+        </div>
+        <div class="text-center">
+            <div class="font-semibold text-green-600">{{ $activeOrgs }}</div>
+            <div class="text-gray-500">Active</div>
+        </div>
+        <div class="text-center">
+            <div class="font-semibold text-red-600">{{ $inactiveOrgs }}</div>
+            <div class="text-gray-500">Inactive</div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="space-y-2">
+        <a href="{{ route('admin.organizations.create') }}" 
+           class="flex items-center justify-center w-full text-sm bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg">
+            <i class="fas fa-plus mr-2"></i>
+            Add Organization
+        </a>
+        
+        <a href="{{ route('admin.organizations.activation.index') }}" 
+           class="flex items-center justify-center w-full text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg">
+            <i class="fas fa-key mr-2"></i>
+            Activation Center
+        </a>
+    </div>
 </div>
 @endif
