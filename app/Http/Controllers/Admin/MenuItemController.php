@@ -198,11 +198,12 @@ class MenuItemController extends Controller
     {
         $admin = Auth::guard('admin')->user();
         
-        $validated = $request->validate([
+        // Determine validation rules based on admin type
+        $validationRules = [
             'name' => 'required|string|max:255',
             'unicode_name' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'menu_category_id' => 'nullable|exists:menu_categories,id',
+            'menu_category_id' => 'required|exists:menu_categories,id',
             'item_master_id' => 'nullable|exists:item_master,id',
             'price' => 'required|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
@@ -218,9 +219,10 @@ class MenuItemController extends Controller
             'ingredients' => 'nullable|string|max:1000',
             'special_instructions' => 'nullable|string|max:1000',
             'notes' => 'nullable|string|max:1000',
-            'type' => ['required', Rule::in([MenuItem::TYPE_BUY_SELL, MenuItem::TYPE_KOT])],
+            'type' => ['required', Rule::in([MenuItem::TYPE_BUY_SELL,MenuItem::TYPE_PRODUCTION, MenuItem::TYPE_KOT])],
             'spice_level' => ['nullable', Rule::in(array_keys(MenuItem::getSpiceLevels()))],
             'display_order' => 'nullable|integer|min:0',
+            'item_code' => 'nullable|string|max:50',
             'is_available' => 'boolean',
             'is_featured' => 'boolean',
             'is_vegetarian' => 'boolean',
@@ -228,22 +230,76 @@ class MenuItemController extends Controller
             'is_spicy' => 'boolean',
             'contains_alcohol' => 'boolean',
             'requires_preparation' => 'boolean',
-        ]);
+        ];
 
-        // Set organization and branch
-        $validated['organization_id'] = $admin->is_super_admin ? 
-                                      $request->organization_id : 
-                                      $admin->organization_id;
-        
-        if (!$admin->is_super_admin && $admin->branch_id) {
-            $validated['branch_id'] = $admin->branch_id;
+        // Add organization and branch validation for super admins
+        if ($admin->is_super_admin) {
+            $validationRules['organization_id'] = 'required|exists:organizations,id';
+            $validationRules['branch_id'] = 'nullable|exists:branches,id';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        // Set organization and branch based on admin type
+        if ($admin->is_super_admin) {
+            // Super admin must provide organization_id
+            $validated['organization_id'] = $request->organization_id;
+            $validated['branch_id'] = $request->branch_id ?? null;
+        } else if ($admin->organization_id) {
+            // Organization/Branch admin uses their own org
+            $validated['organization_id'] = $admin->organization_id;
+            $validated['branch_id'] = $admin->branch_id ?? null;
         } else {
-            $validated['branch_id'] = $request->branch_id;
+            // Fallback error - this should not happen
+            return redirect()->back()
+                ->withErrors(['error' => 'Unable to determine organization context.'])
+                ->withInput();
+        }
+
+        // Verify organization_id is set
+        if (empty($validated['organization_id'])) {
+            return redirect()->back()
+                ->withErrors(['organization_id' => 'Organization must be specified.'])
+                ->withInput();
+        }
+
+        // If created from item master, inherit organization and branch from the item master
+        $itemMasterId = $validated['item_master_id'] ?? null;
+        if ($itemMasterId) {
+            $itemMaster = ItemMaster::find($itemMasterId);
+            if ($itemMaster) {
+                // For non-super admins, ensure item master belongs to their org
+                if (!$admin->is_super_admin && $itemMaster->organization_id !== $admin->organization_id) {
+                    return redirect()->back()
+                        ->withErrors(['item_master_id' => 'Selected item does not belong to your organization.'])
+                        ->withInput();
+                }
+                
+                // Inherit data from item master
+                $validated['name'] = $validated['name'] ?: $itemMaster->name;
+                $validated['description'] = $validated['description'] ?: $itemMaster->description;
+                $validated['cost_price'] = $validated['cost_price'] ?: $itemMaster->buying_price;
+                $validated['price'] = $validated['price'] ?: $itemMaster->selling_price;
+                $validated['type'] = MenuItem::TYPE_BUY_SELL;
+                
+                // Use item master's organization and branch for consistency
+                // But ensure organization_id is never null
+                if ($itemMaster->organization_id) {
+                    $validated['organization_id'] = $itemMaster->organization_id;
+                    $validated['branch_id'] = $itemMaster->branch_id;
+                }
+                // If item master has no organization, keep the current validated organization_id
+            }
         }
 
         // Generate item code if not provided
         if (empty($validated['item_code'])) {
             $validated['item_code'] = 'MI-' . str_pad(MenuItem::count() + 1, 4, '0', STR_PAD_LEFT);
+        }
+
+        // Provide default station if not provided (database constraint requires it)
+        if (empty($validated['station'])) {
+            $validated['station'] = 'Kitchen';
         }
 
         // Handle image upload
@@ -252,16 +308,18 @@ class MenuItemController extends Controller
             $validated['image_path'] = $imagePath;
         }
 
-        // If created from item master, copy relevant data
-        if ($validated['item_master_id']) {
-            $itemMaster = ItemMaster::find($validated['item_master_id']);
-            if ($itemMaster) {
-                $validated['name'] = $validated['name'] ?: $itemMaster->name;
-                $validated['description'] = $validated['description'] ?: $itemMaster->description;
-                $validated['cost_price'] = $validated['cost_price'] ?: $itemMaster->buying_price;
-                $validated['price'] = $validated['price'] ?: $itemMaster->selling_price;
-                $validated['type'] = MenuItem::TYPE_BUY_SELL;
-            }
+        // Final safety check - ensure organization_id is never null
+        if (empty($validated['organization_id'])) {
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to determine organization context. Please try again.'])
+                ->withInput();
+        }
+
+        // Ensure menu_category_id is set for database constraint
+        if (empty($validated['menu_category_id'])) {
+            return redirect()->back()
+                ->withErrors(['menu_category_id' => 'Menu category is required.'])
+                ->withInput();
         }
 
         $menuItem = MenuItem::create($validated);
@@ -475,10 +533,6 @@ class MenuItemController extends Controller
             })
         ]);
     }
-
-    /**
-     * Create menu items from item master (Auto-determine type: Buy & Sell vs KOT)
-     */
     public function createFromItemMaster(Request $request)
     {
         $admin = Auth::guard('admin')->user();
@@ -494,6 +548,7 @@ class MenuItemController extends Controller
         
         $itemMasters = ItemMaster::whereIn('id', $itemMasterIds)
                                 ->where('is_menu_item', true)
+                                ->where('selling_price', '>', 0)
                                 ->when(!$admin->is_super_admin, function($q) use ($admin) {
                                     $q->where('organization_id', $admin->organization_id);
                                 })
@@ -501,8 +556,6 @@ class MenuItemController extends Controller
 
         $created = 0;
         $skipped = 0;
-        $buyAndSellCount = 0;
-        $kotCount = 0;
         $errors = [];
 
         foreach ($itemMasters as $itemMaster) {
@@ -517,16 +570,7 @@ class MenuItemController extends Controller
                     continue;
                 }
 
-                // Validate prices
-                if (!$itemMaster->selling_price || $itemMaster->selling_price <= 0) {
-                    $errors[] = "Item '{$itemMaster->name}' has invalid selling price";
-                    continue;
-                }
-
-                // Determine menu item type using refined logic
-                $menuItemType = $this->determineMenuItemType($itemMaster);
-                $requiresPreparation = ($menuItemType === MenuItem::TYPE_KOT);
-
+                // Create Buy & Sell menu item
                 MenuItem::create([
                     'organization_id' => $itemMaster->organization_id,
                     'branch_id' => $itemMaster->branch_id,
@@ -538,36 +582,19 @@ class MenuItemController extends Controller
                     'item_code' => $itemMaster->item_code,
                     'price' => $itemMaster->selling_price,
                     'cost_price' => $itemMaster->buying_price,
-                    'type' => $menuItemType,
+                    'type' => MenuItem::TYPE_BUY_SELL, 
                     'is_available' => $itemMaster->is_active,
-                    'requires_preparation' => $requiresPreparation,
-                    // Enhanced attributes
-                    'preparation_time' => $this->extractPreparationTime($itemMaster, 15),
-                    'spice_level' => $this->extractSpiceLevel($itemMaster),
-                    'is_vegetarian' => $this->extractDietaryInfo($itemMaster, 'vegetarian'),
-                    'is_vegan' => $this->extractDietaryInfo($itemMaster, 'vegan'),
-                    'allergen_info' => $this->extractAllergenInfo($itemMaster),
-                    'kitchen_station_id' => $requiresPreparation ? 
-                                          $this->getDefaultKitchenStation($itemMaster) : null,
+                    'requires_preparation' => false, // Buy & Sell items don't require preparation
                 ]);
 
                 $created++;
-                
-                if ($menuItemType === MenuItem::TYPE_BUY_SELL) {
-                    $buyAndSellCount++;
-                } else {
-                    $kotCount++;
-                }
 
             } catch (\Exception $e) {
                 $errors[] = "Failed to create menu item for '{$itemMaster->name}': " . $e->getMessage();
             }
         }
 
-        $message = "Created {$created} menu items successfully.";
-        if ($buyAndSellCount > 0 || $kotCount > 0) {
-            $message .= " ({$buyAndSellCount} Buy & Sell, {$kotCount} KOT items)";
-        }
+        $message = "Created {$created} Buy & Sell menu items successfully.";
         if ($skipped > 0) {
             $message .= " Skipped {$skipped} items that already exist.";
         }
@@ -581,40 +608,111 @@ class MenuItemController extends Controller
     }
 
     /**
-     * Determine the appropriate menu item type based on item master characteristics
-     * REFINED LOGIC FOR BETTER TYPE CLASSIFICATION
+     * ENHANCED: Show form for KOT item creation with better filtering
+     * Only shows items suitable for KOT (production items)
+     */
+    public function createKotForm()
+    {
+        $admin = Auth::guard('admin')->user();
+        
+        // Get organizations and branches for super admin
+        $organizations = collect();
+        $branches = collect();
+        
+        if ($admin->is_super_admin) {
+            $organizations = Organization::active()->orderBy('name')->get();
+            $branches = Branch::active()->orderBy('name')->get();
+        }
+        
+        // Get menu categories
+        $menuCategories = MenuCategory::active()
+                                 ->when(!$admin->is_super_admin, function($q) use ($admin) {
+                                     $q->where('organization_id', $admin->organization_id);
+                                 })
+                                 ->orderBy('name')
+                                 ->get();
+
+        $kitchenStations = KitchenStation::active()
+                                        ->when(!$admin->is_super_admin, function($q) use ($admin) {
+                                            $q->where('organization_id', $admin->organization_id);
+                                        })
+                                        ->orderBy('name')
+                                        ->get();
+
+        // Get item master records suitable for KOT items with enhanced filtering
+        $itemMasterRecords = ItemMaster::with(['itemCategory'])
+                                      ->where('is_active', true)
+                                      ->where('is_menu_item', true)
+                                      ->when(!$admin->is_super_admin, function($q) use ($admin) {
+                                          $q->where('organization_id', $admin->organization_id);
+                                      })
+                                      // Exclude items that already have KOT menu items
+                                      ->whereDoesntHave('menuItems', function($q) {
+                                          $q->where('type', MenuItem::TYPE_KOT);
+                                      })
+                                      // Enhanced filtering for KOT suitability
+                                      ->where(function($q) {
+                                          // Items marked as KOT production type
+                                          $q->where('item_type', 'kot_production')
+                                            // OR items that require production
+                                            ->orWhere('requires_production', true)
+                                            // OR items with specific types that need preparation
+                                            ->orWhere('item_type', 'prepared')
+                                            ->orWhere('item_type', 'cooked')
+                                            ->orWhere('item_type', 'recipe')
+                                            ->orWhere('item_type', 'dish')
+                                            // OR items with preparation attributes in JSON
+                                            ->orWhere(function($subQ) {
+                                                $subQ->whereJsonContains('attributes->requires_preparation', true)
+                                                     ->orWhereNotNull('attributes->prep_time_minutes')
+                                                     ->orWhereNotNull('attributes->cooking_instructions');
+                                            });
+                                      })
+                                      ->orderBy('name')
+                                      ->get();
+
+        return view('admin.menu-items.create-kot', compact('menuCategories', 'kitchenStations', 'itemMasterRecords', 'organizations', 'branches'));
+    }
+
+    /**
+     * REFINED: Determine the appropriate menu item type based on item master characteristics
+     * Enhanced logic for better type classification with clear rules
      */
     private function determineMenuItemType(ItemMaster $itemMaster): int
     {
-        // Logic for determining menu item type - REFINED:
+        // CLEAR CLASSIFICATION RULES:
         
-        // 1. Check explicit attributes first
+        // 1. EXPLICIT TYPE CHECK: Check the item_type field first (most reliable)
+        if ($itemMaster->item_type === 'buy_sell') {
+            return MenuItem::TYPE_BUY_SELL;
+        }
+        
+        if ($itemMaster->item_type === 'kot_production') {
+            return MenuItem::TYPE_KOT;
+        }
+        
+        // 2. PRODUCTION REQUIREMENT CHECK: If requires production, it's definitely KOT
+        if ($itemMaster->requires_production === true) {
+            return MenuItem::TYPE_KOT;
+        }
+        
+        // 3. INVENTORY & STOCK CHECK: If has trackable inventory and current stock, likely Buy & Sell
+        if ($itemMaster->is_inventory_item && 
+            $itemMaster->current_stock !== null && 
+            $itemMaster->current_stock > 0 && 
+            $itemMaster->selling_price > 0) {
+            return MenuItem::TYPE_BUY_SELL;
+        }
+        
+        // 4. ATTRIBUTES CHECK: Check JSON attributes for specific indicators
         $attributes = is_array($itemMaster->attributes) ? $itemMaster->attributes : [];
+        
+        // Check for explicit menu item type in attributes
         if (isset($attributes['menu_item_type'])) {
             return $attributes['menu_item_type'] === 'buy_sell' ? MenuItem::TYPE_BUY_SELL : MenuItem::TYPE_KOT;
         }
         
-        // 2. If item has trackable stock and selling price - likely Buy & Sell
-        if ($itemMaster->current_stock !== null && 
-            $itemMaster->current_stock > 0 && 
-            $itemMaster->selling_price > 0 &&
-            $itemMaster->is_inventory_item) {
-            return MenuItem::TYPE_BUY_SELL;
-        }
-        
-        // 3. Check item type classification
-        $buyAndSellTypes = ['finished_product', 'retail', 'beverage', 'packaged_food'];
-        $kotTypes = ['prepared', 'cooked', 'recipe', 'dish'];
-        
-        if (in_array($itemMaster->item_type, $buyAndSellTypes)) {
-            return MenuItem::TYPE_BUY_SELL;
-        }
-        
-        if (in_array($itemMaster->item_type, $kotTypes)) {
-            return MenuItem::TYPE_KOT;
-        }
-        
-        // 4. If item requires preparation time or has cooking instructions -> KOT
+        // Check for preparation indicators
         if (isset($attributes['prep_time_minutes']) && $attributes['prep_time_minutes'] > 0) {
             return MenuItem::TYPE_KOT;
         }
@@ -623,30 +721,38 @@ class MenuItemController extends Controller
             return MenuItem::TYPE_KOT;
         }
         
-        // 5. If item has recipe or ingredients -> KOT
-        if (isset($attributes['recipe']) || isset($attributes['cooking_instructions'])) {
+        // Check for recipe/cooking instructions
+        if (isset($attributes['recipe']) || isset($attributes['cooking_instructions']) || isset($attributes['ingredients'])) {
             return MenuItem::TYPE_KOT;
         }
         
-        // 6. Perishable items with current stock -> Buy & Sell
+        // 5. STOCK STATUS CHECK: Items with no stock but valid selling price -> KOT
+        if ((!$itemMaster->current_stock || $itemMaster->current_stock <= 0) && 
+            $itemMaster->selling_price > 0) {
+            return MenuItem::TYPE_KOT;
+        }
+        
+        // 6. PERISHABLE ITEMS: Perishable items with stock -> Buy & Sell
         if ($itemMaster->is_perishable && $itemMaster->current_stock > 0) {
             return MenuItem::TYPE_BUY_SELL;
         }
         
-        // 7. Default for menu items -> KOT (since most restaurant items need preparation)
+        // 7. DEFAULT CLASSIFICATION: For restaurant items, default to KOT unless explicitly set otherwise
+        // This ensures items requiring preparation aren't missed
         return MenuItem::TYPE_KOT;
     }
 
     /**
-     * REFINED: Get menu eligible items with proper type classification
+     * Get menu eligible items from ItemMaster (ONLY Buy & Sell items with is_menu_item = true)
      */
     public function getMenuEligibleItems(Request $request)
     {
         $admin = Auth::guard('admin')->user();
         
-        $query = ItemMaster::with(['category'])
-                          ->where('is_menu_item', true)
-                          ->where('is_active', true);
+        $query = ItemMaster::with(['itemCategory'])
+                          ->where('is_menu_item', true)  // Only items marked for menu
+                          ->where('is_active', true)
+                          ->where('selling_price', '>', 0); // Must have selling price
 
         // Apply organization/branch filtering based on admin type
         if (!$admin->is_super_admin) {
@@ -661,40 +767,41 @@ class MenuItemController extends Controller
         }
 
         // Filter out items that already have menu items (prevent duplicates)
-        $query->whereDoesntHave('menuItems');
+        $query->whereDoesntHave('menuItems', function($q) {
+            $q->where('is_active', true);
+        });
 
         $items = $query->orderBy('name')->get();
 
         return response()->json([
             'success' => true,
             'items' => $items->map(function($item) {
-                // Enhanced item data with type classification
-                $menuItemType = $this->determineMenuItemType($item);
-                $hasValidPrices = !empty($item->buying_price) && !empty($item->selling_price) && $item->selling_price > 0;
-                
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
                     'description' => $item->description,
                     'item_code' => $item->item_code,
-                    'item_type' => $item->item_type,
                     'buying_price' => $item->buying_price,
                     'selling_price' => $item->selling_price,
                     'current_stock' => $item->current_stock,
-                    'menu_item_type' => $menuItemType === MenuItem::TYPE_BUY_SELL ? 'Buy & Sell' : 'KOT',
-                    'requires_preparation' => $menuItemType === MenuItem::TYPE_KOT,
-                    'category' => $item->category,
-                    'has_valid_prices' => $hasValidPrices,
-                    'can_create_menu_item' => $hasValidPrices,
-                    'stock_status' => $this->getItemStockStatus($item),
-                    'preparation_time' => $this->extractPreparationTime($item, 15)
+                    'unit_of_measurement' => $item->unit_of_measurement,
+                    'menu_item_type' => 'Buy & Sell', // All items from ItemMaster are Buy & Sell
+                    'category' => $item->itemCategory,
+                    'can_create_menu_item' => true,
+                    'stock_status' => $item->current_stock > 0 ? 'In Stock' : 'Out of Stock',
+                    'type_indicator' => [
+                        'type' => 'stock',
+                        'icon' => 'fas fa-boxes',
+                        'color' => 'blue',
+                        'description' => 'Ready for direct sale with stock tracking'
+                    ]
                 ];
             })
         ]);
     }
 
     /**
-     * Get item stock status for display
+     * Get item stock status for display purposes
      */
     private function getItemStockStatus(ItemMaster $item): array
     {
@@ -730,137 +837,7 @@ class MenuItemController extends Controller
     }
 
     /**
-     * Show form for bulk KOT item creation
-     */
-    /**
-     * REFINED: Show form for KOT item creation with better filtering
-     */
-    public function createKotForm()
-    {
-        $admin = Auth::guard('admin')->user();
-        
-        // Get menu categories
-        $menuCategories = MenuCategory::active()
-                                 ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                     $q->where('organization_id', $admin->organization_id);
-                                 })
-                                 ->orderBy('name')
-                                 ->get();
-
-        $kitchenStations = KitchenStation::active()
-                                        ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                            $q->where('organization_id', $admin->organization_id);
-                                        })
-                                        ->orderBy('name')
-                                        ->get();
-
-        // Get item master records suitable for KOT items with enhanced filtering
-        $itemMasterRecords = ItemMaster::with(['itemCategory'])
-                                      ->where('is_active', true)
-                                      ->where('is_menu_item', true)
-                                      ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                          $q->where('organization_id', $admin->organization_id);
-                                      })
-                                      // Exclude items that already have KOT menu items
-                                      ->whereDoesntHave('menuItems', function($q) {
-                                          $q->where('type', MenuItem::TYPE_KOT);
-                                      })
-                                      // Enhanced filtering for KOT suitability
-                                      ->where(function($q) {
-                                          $q->where('item_type', 'prepared')
-                                            ->orWhere('item_type', 'cooked')
-                                            ->orWhere('item_type', 'recipe')
-                                            ->orWhere('item_type', 'dish')
-                                            ->orWhere(function($subQ) {
-                                                // Items that need preparation
-                                                $subQ->where('item_type', 'ingredient')
-                                                     ->where(function($attr) {
-                                                         $attr->whereJsonContains('attributes->requires_preparation', true)
-                                                              ->orWhereNotNull('attributes->prep_time_minutes')
-                                                              ->orWhereNotNull('attributes->cooking_instructions');
-                                                     });
-                                            });
-                                      })
-                                      ->orderBy('name')
-                                      ->get();
-
-        return view('admin.menu-items.create-kot', compact('menuCategories', 'kitchenStations', 'itemMasterRecords'));
-    }
-
-    /**
-     * Create standalone KOT menu items (not linked to item master)
-     */
-    public function createStandaloneKotItems(Request $request)
-    {
-        $admin = Auth::guard('admin')->user();
-        
-        $validated = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.name' => 'required|string|max:255',
-            'items.*.description' => 'nullable|string|max:1000',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.preparation_time' => 'nullable|integer|min:0',
-            'items.*.kitchen_station_id' => 'nullable|exists:kitchen_stations,id',
-            'menu_category_id' => 'nullable|exists:menu_categories,id',
-        ]);
-
-        $created = 0;
-
-        foreach ($validated['items'] as $itemData) {
-            MenuItem::create([
-                'organization_id' => $admin->is_super_admin ? 
-                                  $request->organization_id : 
-                                  $admin->organization_id,
-                'branch_id' => $admin->is_super_admin ? 
-                             $request->branch_id : 
-                             $admin->branch_id,
-                'menu_category_id' => $validated['menu_category_id'],
-                'item_master_id' => null, 
-                'name' => $itemData['name'],
-                'description' => $itemData['description'] ?? null,
-                'price' => $itemData['price'],
-                'type' => MenuItem::TYPE_KOT,
-                'is_available' => true,
-                'requires_preparation' => true,
-                'preparation_time' => $itemData['preparation_time'] ?? 15,
-                'kitchen_station_id' => $itemData['kitchen_station_id'] ?? null,
-                'item_code' => $this->generateKotItemCode(),
-            ]);
-
-            $created++;
-        }
-
-        return redirect()
-            ->route('admin.menu-items.index')
-            ->with('success', "Created {$created} standalone KOT menu items successfully.");
-    }
-
-    /**
-     * Show form for standalone KOT item creation
-     */
-    public function createStandaloneKotForm()
-    {
-        $admin = Auth::guard('admin')->user();
-        
-        $menuCategories = MenuCategory::active()
-                                 ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                     $q->where('organization_id', $admin->organization_id);
-                                 })
-                                 ->orderBy('name')
-                                 ->get();
-
-        $kitchenStations = KitchenStation::active()
-                                        ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                            $q->where('organization_id', $admin->organization_id);
-                                        })
-                                        ->orderBy('name')
-                                        ->get();
-
-        return view('admin.menu-items.create-standalone-kot', compact('menuCategories', 'kitchenStations'));
-    }
-
-    /**
-     * REFINED: Create KOT items from selected Item Master records with better validation
+     * REFINED: Create KOT-specific menu items with enhanced validation and attributes
      */
     public function createKotItems(Request $request)
     {
@@ -933,6 +910,7 @@ class MenuItemController extends Controller
                     'is_active' => true,
                     'requires_preparation' => true,
                     'preparation_time' => $this->extractPreparationTime($itemMaster, $defaultPrepTime),
+                    'station' => 'Kitchen', // Default station for bulk imports
                     'kitchen_station_id' => $finalKitchenStationId,
                     
                     // Enhanced KOT-specific attributes
@@ -958,10 +936,7 @@ class MenuItemController extends Controller
             $message .= " Skipped {$skipped} items that already exist as KOT items.";
         }
         if (!empty($errors)) {
-            $message .= " Errors: " . implode(', ', array_slice($errors, 0, 3));
-            if (count($errors) > 3) {
-                $message .= " and " . (count($errors) - 3) . " more errors.";
-            }
+            $message .= " Errors: " . implode(', ');
         }
 
         return redirect()
@@ -1154,5 +1129,188 @@ class MenuItemController extends Controller
         return 'KOT-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Get activated menu items for order creation
+     * Only returns menu items from activated menus
+     */
+    public function getActivatedMenuItems(Request $request)
+    {
+        $admin = Auth::guard('admin')->user();
+        $branchId = $request->get('branch_id', $admin->branch_id);
+        
+        // Get menu items that belong to activated menus
+        $query = MenuItem::with(['menuCategory', 'itemMaster'])
+            ->where('is_active', true)
+            ->where('is_available', true)
+            // Add check for activated menus here when menu activation system is implemented
+            ->when($branchId, function($q) use ($branchId) {
+                $q->where('branch_id', $branchId);
+            })
+            ->when(!$admin->is_super_admin, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            });
+            
+        $menuItems = $query->get()->map(function($item) use ($branchId) {
+            // Determine current stock for Buy & Sell items
+            $currentStock = 0;
+            $itemType = $item->type ?? MenuItem::TYPE_KOT;
+            
+            if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id && $item->itemMaster) {
+                $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
+            }
+            
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'description' => $item->description,
+                'price' => $item->price,
+                'category' => $item->menuCategory?->name ?? 'Uncategorized',
+                'type' => $itemType,
+                'type_name' => $itemType === MenuItem::TYPE_BUY_SELL ? 'Buy & Sell' : 'KOT',
+                'requires_preparation' => $item->requires_preparation,
+                'preparation_time' => $item->preparation_time,
+                'current_stock' => $currentStock,
+                'availability' => $this->determineItemAvailability($item, $currentStock, $itemType),
+                'item_master_id' => $item->item_master_id,
+                'image_url' => $item->image_path ? asset('storage/' . $item->image_path) : null,
+                'is_vegetarian' => $item->is_vegetarian,
+                'is_vegan' => $item->is_vegan,
+                'spice_level' => $item->spice_level,
+                'allergens' => $item->allergen_info ?? [],
+            ];
+        });
+        
+        return response()->json([
+            'success' => true,
+            'items' => $menuItems
+        ]);
+    }
+    
+    /**
+     * Determine item availability based on type and stock
+     */
+    private function determineItemAvailability($item, $currentStock, $itemType): string
+    {
+        if (!$item->is_available || !$item->is_active) {
+            return 'unavailable';
+        }
+        
+        if ($itemType === MenuItem::TYPE_BUY_SELL) {
+            if ($currentStock <= 0) {
+                return 'out_of_stock';
+            } elseif ($currentStock <= 5) {
+                return 'low_stock';
+            } else {
+                return 'available';
+            }
+        } else {
+            // KOT items are always available if active (made to order)
+            return 'available';
+        }
+    }
+
+    /**
+     * Get all menu items for display - combines buy & sell items and KOT items
+     */
+    public function getAllMenuItems(Request $request)
+    {
+        $admin = Auth::guard('admin')->user();
+        $branchId = $request->get('branch_id', $admin->branch_id);
+        
+        // Get all menu items (both buy & sell and KOT types)
+        $query = MenuItem::with(['menuCategory', 'itemMaster', 'recipes.ingredient'])
+            ->where('is_active', true)
+            ->when($branchId, function($q) use ($branchId) {
+                $q->where('branch_id', $branchId);
+            })
+            ->when(!$admin->is_super_admin, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            });
+            
+        // Apply filters if provided
+        if ($request->filled('category')) {
+            if ($request->category === 'uncategorized') {
+                $query->whereNull('menu_category_id');
+            } else {
+                $query->where('menu_category_id', $request->category);
+            }
+        }
+        
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        
+        $menuItems = $query->get()->map(function($item) use ($branchId) {
+            $itemType = $item->type ?? MenuItem::TYPE_KOT;
+            $currentStock = 0;
+            $canMake = true;
+            
+            if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id && $item->itemMaster) {
+                // Buy & Sell item - check inventory stock
+                $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
+                $canMake = $currentStock > 0;
+            } elseif ($itemType === MenuItem::TYPE_KOT) {
+                // KOT item - check if all ingredients are available
+                $canMake = $this->checkKotIngredientAvailability($item, $branchId);
+            }
+            
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'description' => $item->description,
+                'price' => $item->current_price,
+                'category' => $item->menuCategory?->name ?? 'Uncategorized',
+                'category_id' => $item->menu_category_id,
+                'type' => $itemType,
+                'type_name' => $itemType === MenuItem::TYPE_BUY_SELL ? 'Buy & Sell' : 'KOT Recipe',
+                'source' => $itemType === MenuItem::TYPE_BUY_SELL ? 'Item Master' : 'KOT Recipe',
+                'requires_preparation' => $item->requires_preparation,
+                'preparation_time' => $item->preparation_time,
+                'current_stock' => $currentStock,
+                'can_make' => $canMake,
+                'availability_status' => $canMake ? 'available' : 'out_of_stock',
+                'item_master_id' => $item->item_master_id,
+                'image_url' => $item->image_path ? asset('storage/' . $item->image_path) : null,
+                'is_vegetarian' => $item->is_vegetarian,
+                'is_vegan' => $item->is_vegan,
+                'is_spicy' => $item->is_spicy,
+                'spice_level' => $item->spice_level,
+                'allergens' => $item->allergen_info ?? [],
+                'ingredient_count' => $itemType === MenuItem::TYPE_KOT ? $item->recipes->count() : 0,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Menu items retrieved successfully',
+            'items' => $menuItems,
+            'total_count' => $menuItems->count(),
+            'buy_sell_count' => $menuItems->where('type', MenuItem::TYPE_BUY_SELL)->count(),
+            'kot_count' => $menuItems->where('type', MenuItem::TYPE_KOT)->count(),
+        ]);
+    }
+    
+    /**
+     * Check if KOT item can be made based on ingredient availability
+     */
+    private function checkKotIngredientAvailability($menuItem, $branchId): bool
+    {
+        if (!$menuItem->recipes || $menuItem->recipes->isEmpty()) {
+            return true; // If no recipe defined, assume available
+        }
+        
+        foreach ($menuItem->recipes as $recipe) {
+            if (!$recipe->ingredient) continue;
+            
+            $availableStock = \App\Models\ItemTransaction::stockOnHand($recipe->ingredient_item_id, $branchId);
+            $requiredStock = $recipe->actual_quantity_needed; // This includes waste percentage
+            
+            if ($availableStock < $requiredStock) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
 
 }
