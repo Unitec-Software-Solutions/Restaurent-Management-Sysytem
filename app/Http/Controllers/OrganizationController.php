@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\Branch;
 use App\Models\User;
 use App\Models\SubscriptionPlan;
+use App\Services\OrganizationAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -16,6 +17,12 @@ use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
 {
+    protected $organizationAutomationService;
+
+    public function __construct(OrganizationAutomationService $organizationAutomationService)
+    {
+        $this->organizationAutomationService = $organizationAutomationService;
+    }
     /**
      * Display a listing of organizations
      */
@@ -65,11 +72,9 @@ class OrganizationController extends Controller
             'is_active' => 'required|boolean',
         ]);
 
-        DB::beginTransaction();
-
         try {
-            // Create organization - DEFAULT to INACTIVE but respect the form input
-            $organization = Organization::create([
+            // Prepare organization data for automation service
+            $organizationData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
@@ -81,43 +86,25 @@ class OrganizationController extends Controller
                 'discount_percentage' => $request->discount_percentage,
                 'password' => Hash::make($request->password),
                 'is_active' => $request->boolean('is_active', false), // Default to false if not provided
-            ]);
+            ];
 
-            // Create default head office branch
-            $headOfficeBranch = Branch::create([
+            // Use OrganizationAutomationService for complete setup
+            $organization = $this->organizationAutomationService->setupNewOrganization($organizationData);
+
+            Log::info('Organization created successfully using automation service', [
                 'organization_id' => $organization->id,
-                'name' => $organization->name . ' - Head Office',
-                'address' => $organization->address,
-                'phone' => $organization->phone,
-                'email' => $organization->email,
-                'is_head_office' => true,
-                'is_active' => false, // Requires activation
-                'activation_key' => Str::random(40),
-                'type' => 'restaurant',
-                'status' => 'inactive',
-                'opening_time' => '09:00:00', // Ensure opening_time is set
-                'closing_time' => '22:00:00', // Ensure closing_time is set
-                'total_capacity' => 50,
-                'reservation_fee' => 0,
-                'cancellation_fee' => 0,
-            ]);
-
-            DB::commit();
-
-            Log::info('Organization created successfully', [
-                'organization_id' => $organization->id,
-                'head_office_branch_id' => $headOfficeBranch->id,
+                'organization_name' => $organization->name,
+                'branches_count' => $organization->branches->count(),
                 'created_by' => Auth::guard('admin')->id()
             ]);
 
             return redirect()->route('admin.organizations.index')
-                ->with('success', 'Organization created successfully with head office branch.');
+                ->with('success', 'Organization created successfully with complete automated setup including default item categories.');
 
         } catch (\Exception $e) {
-            DB::rollback();
-
-            Log::error('Failed to create organization', [
+            Log::error('Failed to create organization using automation service', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'request_data' => $request->except(['password', 'password_confirmation'])
             ]);
 
