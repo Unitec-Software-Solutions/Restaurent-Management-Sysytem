@@ -262,20 +262,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
 
-            // Item categories Management
-            Route::prefix('item-categories')->name('item-categories.')->group(function () {
-                Route::get('/', [ItemCategoryController::class, 'index'])->name('index');
-                Route::get('/create', [ItemCategoryController::class, 'create'])->name('create');
-                Route::post('/', [ItemCategoryController::class, 'store'])->name('store');
-                Route::get('/{itemCategory}', [ItemCategoryController::class, 'show'])->name('show');
-                Route::get('/{itemCategory}/edit', [ItemCategoryController::class, 'edit'])->name('edit');
-                Route::put('/{itemCategory}', [ItemCategoryController::class, 'update'])->name('update');
-                Route::delete('/{itemCategory}', [ItemCategoryController::class, 'destroy'])->name('destroy');
-            });
+
 
         });
 
         // Item Categories Management
+        Route::prefix('item-categories')->name('item-categories.')->group(function () {
+            Route::get('/', [ItemCategoryController::class, 'index'])->name('index');
+            Route::get('/create', [ItemCategoryController::class, 'create'])->name('create');
+            Route::post('/', [ItemCategoryController::class, 'store'])->name('store');
+            Route::get('/{itemCategory}', [ItemCategoryController::class, 'show'])->name('show');
+            Route::get('/{itemCategory}/edit', [ItemCategoryController::class, 'edit'])->name('edit');
+            Route::put('/{itemCategory}', [ItemCategoryController::class, 'update'])->name('update');
+            Route::delete('/{itemCategory}', [ItemCategoryController::class, 'destroy'])->name('destroy');
+        });
+
         // Suppliers Management - Fix middleware conflict
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
             Route::get('/', [SupplierController::class, 'index'])->name('index');
