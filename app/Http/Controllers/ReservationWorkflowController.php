@@ -14,6 +14,7 @@ use App\Enums\OrderType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -26,7 +27,10 @@ class ReservationWorkflowController extends Controller
     {
         $reservation->load(['branch', 'customer']);
         
-        return view('reservations.summary', compact('reservation'));
+        // Calculate fees based on reservation type and restaurant config
+        $fees = $this->calculateReservationFees($reservation);
+        
+        return view('reservations.summary', compact('reservation', 'fees'));
     }
 
     /**
@@ -99,7 +103,7 @@ class ReservationWorkflowController extends Controller
                 $item->can_order = $item->current_stock > 0;
             } else {
                 $item->current_stock = null;
-                $item->can_order = true; // KOT items are always available
+                $item->can_order = true; 
             }
         }
 
@@ -624,6 +628,318 @@ class ReservationWorkflowController extends Controller
     }
 
     /**
+     * Calculate reservation fees based on type and restaurant config
+     */
+    private function calculateReservationFees(Reservation $reservation)
+    {
+        $config = \App\Models\RestaurantConfig::where('organization_id', $reservation->branch->organization_id)
+            ->where('branch_id', $reservation->branch_id)
+            ->first();
+        
+        $fees = [
+            'reservation_fee' => 0,
+            'cancellation_fee' => 0
+        ];
+        
+        if ($config) {
+            // Set reservation fee based on type
+            switch ($reservation->type ?? 'online') {
+                case 'online':
+                    $fees['reservation_fee'] = $config->online_reservation_fee ?? 0;
+                    break;
+                case 'in_call':
+                    $fees['reservation_fee'] = $config->phone_reservation_fee ?? 0;
+                    break;
+                case 'walk_in':
+                    $fees['reservation_fee'] = $config->walkin_reservation_fee ?? 0;
+                    break;
+                default:
+                    $fees['reservation_fee'] = $config->default_reservation_fee ?? 0;
+            }
+            
+            // Cancellation fee rules can be complex based on time, etc.
+            $fees['cancellation_fee'] = $config->cancellation_fee_rules['default'] ?? 0;
+        }
+        
+        return $fees;
+    }
+
+    /**
+     * Initialize reservation workflow - customer chooses reservation type
+     */
+    public function initializeReservation(Request $request)
+    {
+        $admin = auth('admin')->user();
+        $isAdmin = !is_null($admin);
+        
+        // Get organizations and branches for admin
+        $organizations = collect();
+        $branches = collect();
+        
+        if ($isAdmin) {
+            if ($admin->is_super_admin) {
+                $organizations = Organization::where('is_active', true)->get();
+            } elseif ($admin->organization_id) {
+                $organizations = Organization::where('id', $admin->organization_id)
+                    ->where('is_active', true)->get();
+            }
+        } else {
+            // For customers, show all active branches
+            $branches = Branch::with('organization')
+                ->where('is_active', true)
+                ->whereHas('organization', function($q) {
+                    $q->where('is_active', true);
+                })
+                ->get();
+        }
+        
+        // Get admin defaults
+        $defaults = $this->getAdminDefaults();
+        
+        return view('reservations.initialize', compact(
+            'organizations', 
+            'branches', 
+            'isAdmin', 
+            'defaults'
+        ));
+    }
+
+    /**
+     * Create reservation form based on type
+     */
+    public function createReservation(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:online,in_call,walk_in',
+            'organization_id' => 'nullable|exists:organizations,id',
+            'branch_id' => 'required|exists:branches,id',
+            'phone' => 'nullable|string|min:10|max:15'
+        ]);
+
+        $reservationType = ReservationType::from($validated['type']);
+        $branch = Branch::with('organization')->findOrFail($validated['branch_id']);
+        
+        // Calculate fees for this reservation type
+        $fees = $this->calculateReservationFeesForType($reservationType, $branch);
+        
+        // Find customer if phone provided
+        $customer = null;
+        if (!empty($validated['phone'])) {
+            $customer = Customer::findByPhone($validated['phone']);
+        }
+
+        // Get admin defaults
+        $admin = auth('admin')->user();
+        $defaults = [];
+        
+        if ($admin) {
+            $defaults = [
+                'phone' => $admin->phone ?? '',
+                'datetime' => now()->addHour()->format('Y-m-d\TH:i'),
+                'name' => $customer->name ?? '',
+                'email' => $customer->email ?? ''
+            ];
+        }
+
+        // Get available tables/arrangements
+        $tables = \App\Models\Table::where('branch_id', $branch->id)
+            ->where('is_active', true)
+            ->orderBy('capacity')
+            ->get();
+
+        return view('reservations.create', compact(
+            'reservationType',
+            'branch',
+            'fees', 
+            'customer',
+            'defaults',
+            'tables'
+        ));
+    }
+
+    /**
+     * Calculate fees for specific reservation type and branch
+     */
+    private function calculateReservationFeesForType(ReservationType $type, Branch $branch)
+    {
+        $config = \App\Models\RestaurantConfig::where('organization_id', $branch->organization_id)
+            ->where('branch_id', $branch->id)
+            ->first();
+        
+        $fees = [
+            'reservation_fee' => 0,
+            'cancellation_fee' => 0
+        ];
+        
+        if ($config) {
+            switch ($type) {
+                case ReservationType::ONLINE:
+                    $fees['reservation_fee'] = $config->online_reservation_fee ?? 0;
+                    break;
+                case ReservationType::IN_CALL:
+                    $fees['reservation_fee'] = $config->phone_reservation_fee ?? 0;
+                    break;
+                case ReservationType::WALK_IN:
+                    $fees['reservation_fee'] = $config->walkin_reservation_fee ?? 0;
+                    break;
+            }
+            
+            // Get cancellation fee rules
+            $cancellationRules = json_decode($config->cancellation_fee_rules ?? '{}', true);
+            $fees['cancellation_fee'] = $cancellationRules['default'] ?? 0;
+        }
+        
+        return $fees;
+    }
+
+    /**
+     * Store new reservation
+     */
+    public function storeReservation(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'required|in:online,in_call,walk_in',
+            'branch_id' => 'required|exists:branches,id',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|min:10|max:15',
+            'email' => 'nullable|email|max:255',
+            'date' => 'required|date|after_or_equal:today',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'party_size' => 'required|integer|min:1|max:50',
+            'table_id' => 'nullable|exists:tables,id',
+            'special_requirements' => 'nullable|string|max:1000',
+            'dietary_preferences' => 'nullable|array',
+            'occasion' => 'nullable|string|max:100'
+        ]);
+
+        return DB::transaction(function () use ($validated) {
+            $branch = Branch::findOrFail($validated['branch_id']);
+            
+            // Find or create customer
+            $customer = Customer::findOrCreateByPhone($validated['phone'], [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'dietary_preferences' => json_encode($validated['dietary_preferences'] ?? [])
+            ]);
+
+            // Calculate fees
+            $reservationType = ReservationType::from($validated['type']);
+            $fees = $this->calculateReservationFeesForType($reservationType, $branch);
+
+            // Create reservation
+            $reservation = Reservation::create([
+                'branch_id' => $branch->id,
+                'customer_phone_fk' => $customer->phone,
+                'name' => $validated['name'],
+                'phone' => $customer->phone,
+                'email' => $validated['email'],
+                'date' => $validated['date'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'party_size' => $validated['party_size'],
+                'table_id' => $validated['table_id'],
+                'special_requirements' => $validated['special_requirements'],
+                'type' => $reservationType,
+                'table_size' => $validated['party_size'],
+                'reservation_fee' => $fees['reservation_fee'],
+                'cancellation_fee' => $fees['cancellation_fee'],
+                'status' => 'pending',
+                'created_by' => auth('admin')->id()
+            ]);
+
+            // Send confirmation email/SMS if configured
+            $this->sendReservationConfirmation($reservation);
+
+            return redirect()->route('reservations.summary', $reservation)
+                ->with('success', 'Reservation created successfully!');
+        });
+    }
+
+    /**
+     * Send reservation confirmation
+     */
+    private function sendReservationConfirmation(Reservation $reservation)
+    {
+        try {
+            if ($reservation->email && $reservation->customer->isPreferredContactEmail()) {
+                Mail::to($reservation->email)
+                    ->send(new \App\Mail\ReservationConfirmed($reservation));
+            }
+            
+            // Add SMS notification here if needed
+            
+        } catch (\Exception $e) {
+            Log::warning('Failed to send reservation confirmation', [
+                'reservation_id' => $reservation->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Show today's orders with KOT filtering for admin dashboard
+     */
+    public function showTodaysOrders(Request $request)
+    {
+        $admin = auth('admin')->user();
+        
+        $query = Order::with(['orderItems.menuItem', 'branch', 'customer'])
+            ->whereDate('created_at', today());
+
+        // Branch scoping
+        if (!$admin->is_super_admin) {
+            if ($admin->branch_id) {
+                $query->where('branch_id', $admin->branch_id);
+            } elseif ($admin->organization_id) {
+                $query->whereHas('branch', function($q) use ($admin) {
+                    $q->where('organization_id', $admin->organization_id);
+                });
+            }
+        } else {
+            // Super admin can filter by branch
+            if ($request->filled('branch_id')) {
+                $query->where('branch_id', $request->input('branch_id'));
+            }
+        }
+
+        // Apply filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('order_type')) {
+            $query->where('order_type', $request->input('order_type'));
+        }
+
+        if ($request->filled('has_kot')) {
+            if ($request->input('has_kot') == '1') {
+                $query->whereHas('orderItems.menuItem', function($q) {
+                    $q->where('type', MenuItem::TYPE_KOT);
+                });
+            } else {
+                $query->whereDoesntHave('orderItems.menuItem', function($q) {
+                    $q->where('type', MenuItem::TYPE_KOT);
+                });
+            }
+        }
+
+        $orders = $query->paginate(20);
+
+        // Add KOT status and priority to each order
+        foreach ($orders as $order) {
+            $order->has_kot_items = $order->hasKotItems();
+            $order->can_generate_kot = $order->canGenerateKot();
+            $order->can_generate_bill = $order->canGenerateBill();
+            $order->priority = $order->getPriority();
+        }
+
+        $branches = $admin->is_super_admin ? Branch::all() : collect();
+
+        return view('admin.orders.today', compact('orders', 'branches'));
+    }
+
+    /**
      * Get admin defaults for phone and datetime
      */
     public function getAdminDefaults()
@@ -633,217 +949,19 @@ class ReservationWorkflowController extends Controller
         $defaults = [
             'phone' => '',
             'datetime' => now()->format('Y-m-d\TH:i'),
-            'branch_id' => $admin->branch_id ?? null,
+            'customer_name' => '',
+            'customer_email' => '',
+            'order_time' => now()->addMinutes(30)->format('Y-m-d\TH:i'),
+            'branch_id' => null,
+            'organization_id' => null
         ];
 
-        // For admins, try to get default phone from branch
-        if ($admin && $admin->branch_id) {
-            $branch = Branch::find($admin->branch_id);
-            $defaults['phone'] = $branch->phone ?? '';
+        if ($admin) {
+            $defaults['phone'] = $admin->phone ?? '';
+            $defaults['branch_id'] = $admin->branch_id;
+            $defaults['organization_id'] = $admin->organization_id;
         }
 
-        return response()->json($defaults);
-    }
-
-    /**
-     * Filter today's orders for admin view
-     */
-    public function getTodayOrders(Request $request)
-    {
-        $admin = auth('admin')->user();
-        $branchId = $request->input('branch_id');
-        $status = $request->input('status');
-
-        $query = Order::with(['orderItems.menuItem', 'customer', 'branch', 'reservation'])
-            ->whereDate('order_date', today())
-            ->orderBy('order_date', 'desc')
-            ->orderBy('created_at', 'desc');
-
-        // Apply admin permissions
-        if (!$admin->is_super_admin) {
-            if ($admin->branch_id) {
-                $query->where('branch_id', $admin->branch_id);
-            } elseif ($admin->organization_id) {
-                $query->whereHas('branch', function($q) use ($admin) {
-                    $q->where('organization_id', $admin->organization_id);
-                });
-            }
-        }
-
-        // Apply filters
-        if ($branchId) {
-            $query->where('branch_id', $branchId);
-        }
-
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        $orders = $query->paginate(20);
-
-        // Add KOT status to each order
-        foreach ($orders as $order) {
-            $order->has_kot_items = $order->orderItems()->whereHas('menuItem', function($q) {
-                $q->where('type', MenuItem::TYPE_KOT);
-            })->exists();
-        }
-
-        return view('admin.orders.today', compact('orders'));
-    }
-
-    /**
-     * Generate unique order number
-     */
-    private function generateOrderNumber($branchId)
-    {
-        $branch = Branch::find($branchId);
-        $branchCode = $branch ? strtoupper(substr($branch->name, 0, 3)) : 'ORD';
-        $date = now()->format('Ymd');
-        $sequence = Order::whereDate('created_at', today())
-            ->where('branch_id', $branchId)
-            ->count() + 1;
-        
-        return "{$branchCode}-{$date}-" . str_pad($sequence, 4, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Admin-specific order creation with defaults
-     */
-    public function adminCreateOrder(Request $request)
-    {
-        $admin = auth('admin')->user();
-        
-        // Get admin defaults
-        $defaultPhone = '';
-        $defaultDateTime = now()->format('Y-m-d\TH:i');
-        $defaultBranch = null;
-
-        if ($admin->branch_id) {
-            $branch = Branch::find($admin->branch_id);
-            $defaultPhone = $branch->phone ?? '';
-            $defaultBranch = $branch;
-        }
-
-        // Get available branches based on admin permissions
-        $branches = collect();
-        if ($admin->is_super_admin) {
-            $branches = Branch::where('is_active', true)->get();
-        } elseif ($admin->organization_id) {
-            $branches = Branch::where('organization_id', $admin->organization_id)
-                ->where('is_active', true)->get();
-        } elseif ($admin->branch_id) {
-            $branches = Branch::where('id', $admin->branch_id)->get();
-        }
-
-        return view('admin.orders.create-with-defaults', compact(
-            'defaultPhone', 
-            'defaultDateTime', 
-            'defaultBranch', 
-            'branches'
-        ));
-    }
-
-    /**
-     * Check if order has KOT items (AJAX)
-     */
-    public function checkKOTItems(Order $order)
-    {
-        $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
-            $q->where('type', \App\Models\MenuItem::TYPE_KOT);
-        })->exists();
-
-        return response()->json(['hasKotItems' => $hasKotItems]);
-    }
-
-    /**
-     * Submit takeaway order for final processing
-     */
-    public function submitTakeawayOrder(Request $request, Order $order)
-    {
-        return DB::transaction(function () use ($request, $order) {
-            try {
-                // Validate that order is in pending status
-                if ($order->status !== 'pending') {
-                    return redirect()->back()
-                        ->with('error', 'Order cannot be confirmed. Current status: ' . $order->status);
-                }
-
-                // Validate payment method if provided
-                if ($request->filled('payment_method')) {
-                    $request->validate([
-                        'payment_method' => 'required|string|in:cash,card,online'
-                    ]);
-                }
-
-                // Final stock validation before confirmation
-                $stockErrors = [];
-                foreach ($order->orderItems as $orderItem) {
-                    $menuItem = $orderItem->menuItem;
-                    if ($menuItem && $menuItem->item_master_id && $menuItem->itemMaster) {
-                        $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $order->branch_id);
-                        if ($currentStock < $orderItem->quantity) {
-                            $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$orderItem->quantity}";
-                        }
-                    }
-                }
-
-                if (!empty($stockErrors)) {
-                    return redirect()->back()
-                        ->with('error', 'Cannot confirm order due to stock issues: ' . implode(', ', $stockErrors));
-                }
-
-                // Deduct stock for items linked to inventory
-                foreach ($order->orderItems as $orderItem) {
-                    $menuItem = $orderItem->menuItem;
-                    if ($menuItem && $menuItem->item_master_id && $menuItem->itemMaster) {
-                        \App\Models\ItemTransaction::create([
-                            'organization_id' => $order->branch->organization_id,
-                            'branch_id' => $order->branch_id,
-                            'inventory_item_id' => $menuItem->item_master_id,
-                            'transaction_type' => 'takeaway_order',
-                            'quantity' => -$orderItem->quantity,
-                            'cost_price' => $menuItem->itemMaster->buying_price,
-                            'unit_price' => $menuItem->price,
-                            'reference_id' => $order->id,
-                            'reference_type' => 'Order',
-                            'created_by_user_id' => Auth::id(),
-                            'notes' => "Stock deducted for Takeaway Order #{$order->order_number}",
-                            'is_active' => true,
-                        ]);
-                    }
-                }
-
-                // Update order status and mark stock as deducted
-                $updateData = [
-                    'status' => 'submitted',
-                    'stock_deducted' => true,
-                    'submitted_at' => now(),
-                ];
-
-                // Add payment method if provided
-                if ($request->filled('payment_method')) {
-                    $updateData['payment_method'] = $request->payment_method;
-                }
-
-                $order->update($updateData);
-
-                // Generate KOT for kitchen
-                if (method_exists($order, 'generateKOT')) {
-                    $order->generateKOT();
-                }
-
-                return redirect()->route('orders.takeaway.summary', $order)
-                    ->with('success', 'Order confirmed successfully! Your order has been sent to the kitchen.');
-
-            } catch (\Exception $e) {
-                Log::error('Takeaway order submission failed', [
-                    'order_id' => $order->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                return redirect()->back()
-                    ->with('error', 'Failed to confirm order. Please try again.');
-            }
-        });
+        return $defaults;
     }
 }

@@ -517,4 +517,56 @@ class Order extends Model
     {
         return $this->belongsTo(Customer::class, 'customer_phone_fk', 'phone');
     }
+
+    /**
+     * Get admin defaults for order creation
+     */
+    public static function getAdminDefaults($admin): array
+    {
+        return [
+            'customer_phone' => $admin->phone ?? '',
+            'order_time' => now()->addHours(1)->format('Y-m-d\TH:i'), // 1 hour from now
+            'order_type' => OrderType::adminDefault()->value,
+            'branch_id' => $admin->branch_id,
+            'organization_id' => $admin->organization_id,
+        ];
+    }
+
+    /**
+     * Check if order has KOT items
+     */
+    public function hasKotItems(): bool
+    {
+        return $this->orderItems()->whereHas('menuItem', function($q) {
+            $q->where('type', MenuItem::TYPE_KOT);
+        })->exists();
+    }
+
+    /**
+     * Check if order can generate KOT
+     */
+    public function canGenerateKot(): bool
+    {
+        return $this->hasKotItems() && !$this->kot_generated;
+    }
+
+    /**
+     * Check if order can generate bill
+     */
+    public function canGenerateBill(): bool
+    {
+        return in_array($this->status, [self::STATUS_READY, self::STATUS_COMPLETED]) && !$this->bill_generated;
+    }
+
+    /**
+     * Get priority based on order type
+     */
+    public function getPriority(): string
+    {
+        $orderType = $this->getOrderTypeEnum();
+        if ($orderType && $orderType->isOnDemand()) {
+            return 'urgent';
+        }
+        return 'normal';
+    }
 }

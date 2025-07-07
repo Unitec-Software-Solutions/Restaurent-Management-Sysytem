@@ -62,7 +62,7 @@
                     </div>
                     <div>
                         <p class="font-semibold">Order Type:</p>
-                        <p>{{ ucwords(str_replace('_', ' ', $order->order_type)) }}</p>
+                        <p>{{ $order->order_type ? $order->order_type->getLabel() : 'Unknown' }}</p>
                         @if ($order->reservation)
                             <p class="mt-2">
                                 Reservation #{{ $order->reservation_id }}

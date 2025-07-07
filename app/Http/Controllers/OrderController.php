@@ -142,8 +142,10 @@ class OrderController extends Controller
             $reservation = \App\Models\Reservation::find($reservationId);
         }
         
-        $menuItems = \App\Models\ItemMaster::where('is_menu_item', true)
-            ->with('category')
+        $menuItems = \App\Models\MenuItem::with(['menuCategory', 'itemMaster'])
+            ->whereHas('itemMaster', function($query) {
+                $query->where('is_active', true);
+            })
             ->get();
 
         // Get available stewards
@@ -159,15 +161,31 @@ class OrderController extends Controller
     // Store new order (dine-in, under reservation)
     public function store(Request $request)
     {
+        // Debug: Log incoming request data to help diagnose validation issues
+        Log::info('Dine-in order submission attempt', [
+            'request_data' => $request->all(),
+            'items_structure' => $request->get('items', [])
+        ]);
+
         $data = $request->validate([
             'reservation_id' => 'required|exists:reservations,id',
-            'items' => 'required|array',
+            'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:menu_items,id',
             'items.*.quantity' => 'required|integer|min:1',
             'customer_name' => 'nullable|string|max:255',
             'customer_phone' => 'required|string|max:20',
             'steward_id' => 'nullable|exists:employees,id',
             'order_type' => 'nullable|string|in:' . implode(',', array_column(OrderType::cases(), 'value')),
+        ], [
+            'reservation_id.required' => 'Reservation is required for dine-in orders',
+            'reservation_id.exists' => 'Invalid reservation selected',
+            'items.required' => 'Please select at least one menu item',
+            'items.min' => 'Please select at least one menu item',
+            'items.*.item_id.required' => 'Menu item selection is required',
+            'items.*.item_id.exists' => 'Selected menu item is not valid',
+            'items.*.quantity.required' => 'Quantity is required for each item',
+            'items.*.quantity.min' => 'Quantity must be at least 1',
+            'customer_phone.required' => 'Customer phone number is required',
         ]);
 
         return DB::transaction(function () use ($data) {
@@ -260,7 +278,7 @@ class OrderController extends Controller
                     'subtotal' => $lineTotal,
                 ]);
 
-                // Deduct stock immediately upon order submission (only for inventory items)
+                
                 if ($menuItem->item_master_id && $menuItem->itemMaster) {
                     \App\Models\ItemTransaction::create([
                         'organization_id' => $reservation->organization_id ?? Auth::user()->organization_id,
@@ -465,17 +483,17 @@ class OrderController extends Controller
     public function createTakeaway()
     {
         $branches = Branch::where('is_active', true)->get();
-        $items = ItemMaster::where('is_menu_item', true)
-            ->where('is_active', true)
+        $items = MenuItem::where('is_active', true)
+            ->with(['menuCategory', 'itemMaster'])
             ->get();
 
         // Add missing fields for the view
         foreach ($items as $item) {
-            // Determine item type based on logic (you may need to adjust this)
-            $item->item_type = $item->is_perishable ? 'Buy & Sell' : 'KOT';
+            // Determine item type based on associated ItemMaster
+            $item->item_type = $item->itemMaster && $item->itemMaster->is_perishable ? 'Buy & Sell' : 'KOT';
             
             // Add current stock information
-            $item->current_stock = $this->getCurrentStock($item->id, $branches->first()?->id ?? 1);
+            $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $branches->first()?->id ?? 1) : 999;
         }
 
         return view('orders.takeaway.create', [
@@ -498,6 +516,28 @@ class OrderController extends Controller
 
     public function storeTakeaway(Request $request)
     {
+        // Debug: Log incoming request data to help diagnose validation issues
+        Log::info('Takeaway order submission attempt', [
+            'request_data' => $request->all(),
+            'items_structure' => $request->get('items', [])
+        ]);
+
+        // Pre-process items data to convert from associative array to sequential array
+        $rawItems = $request->get('items', []);
+        $processedItems = [];
+        
+        foreach ($rawItems as $itemId => $itemData) {
+            if (isset($itemData['menu_item_id']) && isset($itemData['quantity'])) {
+                $processedItems[] = [
+                    'menu_item_id' => $itemData['menu_item_id'],
+                    'quantity' => (int) $itemData['quantity']
+                ];
+            }
+        }
+        
+        // Replace items in request
+        $request->merge(['items' => $processedItems]);
+
         $data = $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'order_time' => 'required|date|after_or_equal:now',
@@ -509,6 +549,19 @@ class OrderController extends Controller
             'special_instructions' => 'nullable|string|max:1000',
             'order_type' => 'nullable|string|in:takeaway_walk_in_demand,takeaway_in_call_scheduled,takeaway_online_scheduled',
             'preferred_contact' => 'nullable|string|in:email,sms',
+        ], [
+            'items.required' => 'Please select at least one menu item',
+            'items.min' => 'Please select at least one menu item',
+            'items.*.menu_item_id.required' => 'Menu item selection is required',
+            'items.*.menu_item_id.exists' => 'Selected menu item is not valid',
+            'items.*.quantity.required' => 'Quantity is required for each item',
+            'items.*.quantity.min' => 'Quantity must be at least 1',
+            'branch_id.required' => 'Please select a branch',
+            'branch_id.exists' => 'Selected branch is not valid',
+            'order_time.required' => 'Please select pickup time',
+            'order_time.after_or_equal' => 'Pickup time must be in the future',
+            'customer_name.required' => 'Customer name is required',
+            'customer_phone.required' => 'Customer phone number is required',
         ]);
 
         return DB::transaction(function () use ($data) {
@@ -535,15 +588,16 @@ class OrderController extends Controller
                     continue;
                 }
                 
-                // Only check stock for items that track inventory (Buy & Sell items with item_master_id)
-                if ($menuItem->type === MenuItem::TYPE_BUY_SELL && $menuItem->item_master_id) {
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($menuItem->item_master_id, $data['branch_id']);
+                // Get the associated ItemMaster for stock checking if available
+                $itemMaster = $menuItem->itemMaster;
+                if ($itemMaster && $itemMaster->is_perishable) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($itemMaster->id, $data['branch_id']);
                     if ($currentStock < $item['quantity']) {
                         $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
                     }
                 }
 
-                // Calculate item total
+                // Calculate item total using MenuItem's selling price
                 $itemTotal = $menuItem->price * $item['quantity'];
                 $subtotal += $itemTotal;
 
@@ -594,8 +648,8 @@ class OrderController extends Controller
             foreach ($orderItems as $itemData) {
                 \App\Models\OrderItem::create([
                     'order_id' => $order->id,
-                    'menu_item_id' => $itemData['menu_item']->id,
-                    'inventory_item_id' => $itemData['menu_item']->item_master_id, // Use item_master_id if exists, null otherwise
+                    'menu_item_id' => $itemData['menu_item']->id, // MenuItem ID
+                    'inventory_item_id' => $itemData['menu_item']->itemMaster ? $itemData['menu_item']->itemMaster->id : null, // ItemMaster ID if available
                     'item_name' => $itemData['menu_item']->name,
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $itemData['unit_price'],
@@ -603,12 +657,12 @@ class OrderController extends Controller
                     'subtotal' => $itemData['total_price'], 
                 ]);
 
-                // Deduct stock for Buy & Sell items that have item_master_id
-                if ($itemData['menu_item']->type === MenuItem::TYPE_BUY_SELL && $itemData['menu_item']->item_master_id) {
+                // Deduct stock for perishable items (Buy & Sell items)
+                if ($itemData['menu_item']->is_perishable) {
                     \App\Models\ItemTransaction::create([
                         'organization_id' => $branch->organization_id,
                         'branch_id' => $data['branch_id'],
-                        'inventory_item_id' => $itemData['menu_item']->item_master_id,
+                        'inventory_item_id' => $itemData['menu_item']->id,
                         'transaction_type' => 'order_deduction',
                         'quantity' => -$itemData['quantity'],
                         'reference_type' => 'order',
@@ -1316,14 +1370,13 @@ class OrderController extends Controller
         }
         
         // Get available menu items
-        $menuItems = ItemMaster::where('is_menu_item', true)
-            ->where('is_active', true)
-            ->where('branch_id', $reservation->branch_id)
-            ->with(['category'])
-            ->orderBy('category_id')
-            ->orderBy('name')
+        $menuItems = MenuItem::whereHas('itemMaster', function($query) use ($reservation) {
+                $query->where('is_active', true)
+                      ->where('branch_id', $reservation->branch_id);
+            })
+            ->with(['menuCategory', 'itemMaster'])
             ->get()
-            ->groupBy('category.name');
+            ->groupBy('menuCategory.name');
         
         // Get available stewards for the branch
         $stewards = Employee::whereHas('roles', function($query) {

@@ -315,28 +315,54 @@ class Reservation extends Model
     }
 
     /**
+     * Get reservation fee amount
+     */
+    public function getReservationFeeAmount(): float
+    {
+        return $this->branch?->reservation_fee ?? 0;
+    }
+
+    /**
+     * Get cancellation fee amount
+     */
+    public function getCancellationFeeAmount(): float
+    {
+        return $this->branch?->cancellation_fee ?? 0;
+    }
+
+    /**
+     * Apply reservation charge
+     */
+    public function chargeReservationFee(): void
+    {
+        $amount = $this->getReservationFeeAmount();
+        if ($amount > 0) {
+            \App\Models\Payment::create([
+                'payable_type' => get_class($this),
+                'payable_id' => $this->id,
+                'amount' => $amount,
+                'type' => 'reservation_fee',
+                'status' => 'pending',
+                'customer_phone' => $this->phone,
+                'customer_name' => $this->name,
+            ]);
+        }
+    }
+
+    /**
      * Get admin defaults for reservation creation
      */
-    public static function getAdminDefaults($adminUser): array
+    public static function getAdminDefaults($admin): array
     {
-        $defaults = [
-            'type' => ReservationType::WALK_IN,
-            'date' => now()->addHours(1)->toDateString(),
-            'start_time' => now()->addHours(1)->format('H:i'),
-            'end_time' => now()->addHours(3)->format('H:i'),
-            'status' => 'pending',
-            'branch_id' => $adminUser->branch_id,
-            'created_by_admin_id' => $adminUser->id,
-            'send_notification' => false,
+        return [
+            'phone' => $admin->phone ?? '',
+            'date' => now()->addDays(1)->format('Y-m-d'), // Tomorrow
+            'start_time' => '19:00', // 7 PM default
+            'duration' => 120, // 2 hours default
+            'number_of_people' => 2,
+            'type' => ReservationType::WALK_IN->value,
+            'branch_id' => $admin->branch_id,
         ];
-
-        // Get admin's default phone if configured
-        $defaultPhone = RestaurantConfig::get('admin_default_phone', null, $adminUser->branch_id, $adminUser->organization_id);
-        if ($defaultPhone) {
-            $defaults['phone'] = $defaultPhone;
-        }
-
-        return $defaults;
     }
 
     /**

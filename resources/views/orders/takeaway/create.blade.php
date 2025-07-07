@@ -13,6 +13,43 @@
             <form method="POST" action="{{ route('orders.takeaway.store') }}" class="space-y-6">
                 @csrf
 
+                <!-- Display Validation Errors -->
+                @if($errors->any())
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if(session('error'))
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Error</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <p>{{ session('error') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Left Column - Order Details -->
                     <div class="space-y-6">
@@ -155,7 +192,7 @@
                                                         <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>
                                                     @endif
                                                 </div>
-                                                <span class="text-blue-600 font-semibold">LKR {{ number_format($item->selling_price ?? $item->price, 2) }}</span>
+                                                <span class="text-blue-600 font-semibold">LKR {{ number_format($item->price, 2) }}</span>
                                             </div>
                                             @if($item->item_type === 'KOT')
                                                 <div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>

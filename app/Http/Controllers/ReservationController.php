@@ -67,6 +67,11 @@ class ReservationController extends Controller
     {
         DB::beginTransaction();
         try {
+            // Debug: Log incoming request data to help diagnose validation issues
+            Log::info('Reservation creation attempt', [
+                'request_data' => $request->all()
+            ]);
+
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'nullable|email|max:255',
@@ -79,6 +84,21 @@ class ReservationController extends Controller
                 'comments' => 'nullable|string|max:1000',
                 'type' => 'nullable|string|in:' . implode(',', ReservationType::values()),
                 'preferred_contact' => 'nullable|string|in:email,sms',
+            ], [
+                'name.required' => 'Name is required',
+                'phone.required' => 'Phone number is required',
+                'phone.min' => 'Phone number must be at least 10 digits',
+                'branch_id.required' => 'Please select a restaurant branch',
+                'branch_id.exists' => 'Selected branch is not valid',
+                'date.required' => 'Reservation date is required',
+                'date.after_or_equal' => 'Reservation date must be today or a future date',
+                'start_time.required' => 'Start time is required',
+                'start_time.date_format' => 'Invalid start time format',
+                'end_time.required' => 'End time is required',
+                'end_time.date_format' => 'Invalid end time format',
+                'end_time.after' => 'End time must be after start time',
+                'number_of_people.required' => 'Number of people is required',
+                'number_of_people.min' => 'Number of people must be at least 1',
             ]);
 
             $branch = Branch::with('organization')->findOrFail($validated['branch_id']);
@@ -168,14 +188,24 @@ class ReservationController extends Controller
             return redirect()->route('reservations.show', $reservation)
                            ->with('success', 'Reservation created successfully! You will receive a confirmation notification shortly.');
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            Log::error('Reservation validation failed', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
+            ]);
+            
+            return back()->withErrors($e->errors())->withInput()
+                ->with('error', 'Please check the form and correct the highlighted errors.');
+                
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Reservation creation failed', [
                 'error' => $e->getMessage(),
-                'data' => $validated ?? []
+                'request_data' => $request->all()
             ]);
 
-            return back()->withErrors(['error' => 'Failed to create reservation. Please try again.'])
+            return back()->withErrors(['error' => 'Failed to create reservation: ' . $e->getMessage()])
                        ->withInput();
         }
     }

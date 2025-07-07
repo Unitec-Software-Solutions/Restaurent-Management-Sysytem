@@ -107,8 +107,8 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {{ str_contains($order->order_type, 'takeaway') ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
-                                    {{ ucfirst(str_replace('_', ' ', $order->order_type)) }}
+                                    {{ $order->order_type && $order->order_type->isTakeaway() ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
+                                    {{ $order->order_type ? $order->order_type->getLabel() : 'Unknown' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -147,14 +147,53 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <div class="flex space-x-2">
+                                    <!-- View Order -->
                                     <a href="{{ route('admin.orders.show', $order) }}" 
-                                       class="text-indigo-600 hover:text-indigo-900">
-                                        View
+                                       class="text-indigo-600 hover:text-indigo-900" title="View Details">
+                                        <i class="fas fa-eye"></i>
                                     </a>
+
+                                    <!-- Edit Order -->
                                     @if(in_array($order->status, ['pending', 'preparing']))
                                         <a href="{{ route('admin.orders.edit', $order) }}" 
-                                           class="text-blue-600 hover:text-blue-900">
-                                            Edit
+                                           class="text-blue-600 hover:text-blue-900" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    @endif
+
+                                    <!-- Print KOT if order has KOT items and not generated -->
+                                    @if($order->has_kot_items && $order->can_generate_kot)
+                                        <button onclick="printKOT({{ $order->id }})" 
+                                                class="text-orange-600 hover:text-orange-900 bg-none border-none cursor-pointer" title="Print KOT">
+                                            <i class="fas fa-print"></i> KOT
+                                        </button>
+                                    @elseif($order->has_kot_items && $order->kot_generated)
+                                        <span class="text-green-600" title="KOT Already Generated">
+                                            <i class="fas fa-check-circle"></i> KOT ✓
+                                        </span>
+                                    @endif
+
+                                    <!-- Mark as Ready (if preparing) -->
+                                    @if($order->status === 'preparing')
+                                        <button onclick="updateOrderStatus({{ $order->id }}, 'ready')" 
+                                                class="text-green-600 hover:text-green-900 bg-none border-none cursor-pointer" title="Mark as Ready">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    @endif
+
+                                    <!-- Mark as Completed (if ready) -->
+                                    @if($order->status === 'ready')
+                                        <button onclick="updateOrderStatus({{ $order->id }}, 'completed')" 
+                                                class="text-purple-600 hover:text-purple-900 bg-none border-none cursor-pointer" title="Complete Order">
+                                            <i class="fas fa-flag-checkered"></i>
+                                        </button>
+                                    @endif
+
+                                    <!-- Print Bill (if can generate bill) -->
+                                    @if($order->can_generate_bill)
+                                        <a href="{{ route('admin.orders.print-bill', $order) }}" 
+                                           class="text-gray-600 hover:text-gray-900" title="Print Bill">
+                                            <i class="fas fa-receipt"></i>
                                         </a>
                                     @endif
                                 </div>
@@ -177,5 +216,77 @@
 function refreshOrders() {
     location.reload();
 }
+
+function printKOT(orderId) {
+    // Check if order has KOT items before printing
+    fetch(`/admin/orders/${orderId}/check-kot`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.hasKotItems) {
+            // Open KOT print window
+            const kotWindow = window.open(`/admin/orders/${orderId}/print-kot`, '_blank', 'width=800,height=600');
+            
+            // Update order status to preparing after KOT is printed
+            fetch(`/admin/orders/${orderId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ status: 'preparing' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Refresh the page to show updated status
+                    setTimeout(() => location.reload(), 2000);
+                }
+            });
+        } else {
+            alert('This order has no items that require kitchen preparation (KOT items).');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to check KOT items');
+    });
+}
+
+function updateOrderStatus(orderId, status) {
+    if (confirm(`Are you sure you want to mark this order as ${status}?`)) {
+        fetch(`/admin/orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Failed to update order status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the order');
+        });
+    }
+}
+
+// Auto-refresh every 30 seconds for real-time updates
+setInterval(function() {
+    if (!document.hidden) {
+        location.reload();
+    }
+}, 30000);
 </script>
 @endsection

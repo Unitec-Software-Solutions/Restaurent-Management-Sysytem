@@ -21,10 +21,10 @@
                     <td class="py-2">{{ $order->customer_name ?? 'N/A' }}</td>
                     <td class="py-2">
                         <span class="px-2 py-1 text-xs rounded-full 
-                            {{ $order->order_type === 'delivery' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $order->order_type === 'dine_in' ? 'bg-blue-100 text-blue-800' : '' }}
-                            {{ $order->order_type === 'takeaway' ? 'bg-purple-100 text-purple-800' : '' }}">
-                            {{ ucfirst(str_replace('_', ' ', $order->order_type)) }}
+                            {{ $order->order_type && $order->order_type->value === 'delivery' ? 'bg-green-100 text-green-800' : '' }}
+                            {{ $order->order_type && $order->order_type->isDineIn() ? 'bg-blue-100 text-blue-800' : '' }}
+                            {{ $order->order_type && $order->order_type->isTakeaway() ? 'bg-purple-100 text-purple-800' : '' }}">
+                            {{ $order->order_type ? $order->order_type->getLabel() : 'Unknown' }}
                         </span>
                     </td>
                     <td class="py-2">
