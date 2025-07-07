@@ -4,22 +4,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    
+
     <title>{{ config('app.name', 'Restaurant Management') }} - @yield('title', 'Welcome')</title>
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
+
     <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
+    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+
+
     <!-- Additional Styles -->
     @stack('styles')
-    
+
     <style>
         /* Custom scrollbar */
         ::-webkit-scrollbar {
@@ -50,7 +51,7 @@
                             <span class="text-xl font-bold text-gray-900">{{ config('app.name', 'Restaurant') }}</span>
                         </a>
                     </div>
-                    
+
                     <!-- Navigation Links -->
                     <div class="hidden md:flex items-center space-x-8">
                         <a href="{{ route('guest.menu.view') }}" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
@@ -66,7 +67,7 @@
                             <i class="fas fa-user mr-2"></i>My Orders
                         </a>
                     </div>
-                    
+
                     <!-- Auth Links -->
                     <div class="flex items-center space-x-4">
                         @guest
@@ -93,7 +94,7 @@
                                 </div>
                             </div>
                         @endguest
-                        
+
                         <!-- Cart Icon -->
                         <div class="relative">
                             <button onclick="toggleCart()" class="text-gray-600 hover:text-indigo-600 p-2 rounded-lg transition-colors">
@@ -101,14 +102,14 @@
                                 <span id="cart-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                             </button>
                         </div>
-                        
+
                         <!-- Mobile Menu Button -->
                         <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-gray-600 hover:text-indigo-600">
                             <i class="fas fa-bars"></i>
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Mobile Menu -->
                 <div id="mobile-menu" class="hidden md:hidden pb-3 pt-2">
                     <div class="space-y-1">
@@ -128,7 +129,7 @@
                 </div>
             </div>
         </nav>
-        
+
         <!-- Session Messages -->
         @if (session('success'))
             <div class="bg-green-50 border-l-4 border-green-400 p-4">
@@ -147,7 +148,7 @@
                 </div>
             </div>
         @endif
-        
+
         @if (session('error'))
             <div class="bg-red-50 border-l-4 border-red-400 p-4">
                 <div class="flex">
@@ -165,7 +166,7 @@
                 </div>
             </div>
         @endif
-        
+
         @if (session('warning'))
             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
                 <div class="flex">
@@ -183,12 +184,12 @@
                 </div>
             </div>
         @endif
-        
+
         <!-- Main Content -->
         <main>
             @yield('content')
         </main>
-        
+
         <!-- Footer -->
         <footer class="bg-gray-900 text-white mt-12">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -200,7 +201,7 @@
                             <span class="text-xl font-bold">{{ config('app.name', 'Restaurant') }}</span>
                         </div>
                         <p class="text-gray-300 mb-4">
-                            Experience the finest dining with our carefully crafted menu and exceptional service. 
+                            Experience the finest dining with our carefully crafted menu and exceptional service.
                             Fresh ingredients, skilled chefs, and a passion for culinary excellence.
                         </p>
                         <div class="flex space-x-4">
@@ -218,7 +219,7 @@
                             </a>
                         </div>
                     </div>
-                    
+
                     <!-- Quick Links -->
                     <div>
                         <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
@@ -229,7 +230,7 @@
                             <li><a href="{{ route('customer.dashboard') }}" class="text-gray-300 hover:text-indigo-400 transition-colors">Order Status</a></li>
                         </ul>
                     </div>
-                    
+
                     <!-- Contact Info -->
                     <div>
                         <h3 class="text-lg font-semibold mb-4">Contact</h3>
@@ -253,14 +254,14 @@
                         </ul>
                     </div>
                 </div>
-                
+
                 <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
                     <p>&copy; {{ date('Y') }} {{ config('app.name', 'Restaurant') }}. All rights reserved.</p>
                 </div>
             </div>
         </footer>
     </div>
-    
+
     <!-- Cart Sidebar -->
     <div id="cart-sidebar" class="fixed inset-y-0 right-0 w-80 bg-white shadow-xl transform translate-x-full transition-transform duration-300 ease-in-out z-50">
         <div class="flex flex-col h-full">
@@ -290,10 +291,10 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Cart Overlay -->
     <div id="cart-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40" onclick="toggleCart()"></div>
-    
+
     <!-- Scripts -->
     <script>
         // Mobile menu toggle
@@ -301,12 +302,12 @@
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
         }
-        
+
         // User dropdown toggle
         function toggleDropdown(id) {
             const dropdown = document.getElementById(id);
             dropdown.classList.toggle('hidden');
-            
+
             // Close dropdown when clicking outside
             document.addEventListener('click', function(event) {
                 if (!event.target.closest('#' + id) && !event.target.closest('button')) {
@@ -314,24 +315,24 @@
                 }
             });
         }
-        
+
         // Cart functionality
         function toggleCart() {
             const sidebar = document.getElementById('cart-sidebar');
             const overlay = document.getElementById('cart-overlay');
-            
+
             sidebar.classList.toggle('translate-x-full');
             overlay.classList.toggle('hidden');
         }
-        
+
         // Cart management
         let cart = JSON.parse(localStorage.getItem('restaurant_cart') || '[]');
-        
+
         function updateCartUI() {
             const cartCount = document.getElementById('cart-count');
             const cartItems = document.getElementById('cart-items');
             const cartTotal = document.getElementById('cart-total');
-            
+
             if (cart.length === 0) {
                 cartCount.classList.add('hidden');
                 cartItems.innerHTML = `
@@ -344,10 +345,10 @@
             } else {
                 cartCount.classList.remove('hidden');
                 cartCount.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
-                
+
                 const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                 cartTotal.textContent = '$' + total.toFixed(2);
-                
+
                 cartItems.innerHTML = cart.map(item => `
                     <div class="flex items-center justify-between py-3 border-b">
                         <div class="flex-1">
@@ -370,7 +371,7 @@
                 `).join('');
             }
         }
-        
+
         function addToCart(id, name, price) {
             const existingItem = cart.find(item => item.id === id);
             if (existingItem) {
@@ -381,13 +382,13 @@
             localStorage.setItem('restaurant_cart', JSON.stringify(cart));
             updateCartUI();
         }
-        
+
         function updateCartItem(id, quantity) {
             if (quantity <= 0) {
                 removeFromCart(id);
                 return;
             }
-            
+
             const item = cart.find(item => item.id === id);
             if (item) {
                 item.quantity = quantity;
@@ -395,13 +396,13 @@
                 updateCartUI();
             }
         }
-        
+
         function removeFromCart(id) {
             cart = cart.filter(item => item.id !== id);
             localStorage.setItem('restaurant_cart', JSON.stringify(cart));
             updateCartUI();
         }
-        
+
         function proceedToCheckout() {
             if (cart.length === 0) {
                 alert('Your cart is empty!');
@@ -410,11 +411,11 @@
             // Redirect to checkout or show checkout modal
             window.location.href = '{{ route("orders.create") }}';
         }
-        
+
         // Initialize cart UI on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateCartUI();
-            
+
             // Auto-hide messages after 5 seconds
             const messages = document.querySelectorAll('[class*="bg-green-50"], [class*="bg-red-50"], [class*="bg-yellow-50"]');
             messages.forEach(message => {
@@ -425,7 +426,7 @@
             });
         });
     </script>
-    
+
     <!-- Additional Scripts -->
     @stack('scripts')
 </body>

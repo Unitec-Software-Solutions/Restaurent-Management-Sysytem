@@ -215,7 +215,8 @@
 
                     // Show user-friendly error message
                     alert(
-                        `Failed to load categories for the selected organization.\n\nError: ${error.message}\n\nPlease try selecting the organization again or contact support if the problem persists.`);
+                        `Failed to load categories for the selected organization.\n\nError: ${error.message}\n\nPlease try selecting the organization again or contact support if the problem persists.`
+                        );
                 }
             }
 
@@ -230,16 +231,16 @@
 
                 try {
                     const response = await fetch(
-                    `/admin/inventory/items/create-template/${itemCount}`, {
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'text/html',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
-                                ?.getAttribute('content') || ''
-                        },
-                        credentials: 'same-origin'
-                    });
+                        `/admin/inventory/items/create-template/${itemCount}`, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'text/html',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                                    ?.getAttribute('content') || ''
+                            },
+                            credentials: 'same-origin'
+                        });
 
                     if (!response.ok) {
                         throw new Error(`Failed to fetch item form template: HTTP ${response.status}`);

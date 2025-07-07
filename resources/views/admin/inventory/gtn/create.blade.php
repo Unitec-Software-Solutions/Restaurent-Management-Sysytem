@@ -24,9 +24,9 @@
             <form action="{{ route('admin.inventory.gtn.store') }}" method="POST" class="p-6" id="gtnForm">
                 @csrf
 
-                @if (isset($organizations) && $organizations->count() > 0)
+                @if (isset($isSuperAdmin) && $isSuperAdmin)
                     <!-- Pass organization_id for super admin -->
-                    <input type="hidden" name="organization_id" value="{{ request('organization_id') }}">
+                    <input type="hidden" name="organization_id" value="{{ $targetOrgId ?? request('organization_id') }}">
                 @endif
 
                 @if ($errors->any())
@@ -410,12 +410,12 @@
                             <option value="">Select Item</option>
                             ${availableItems.map(item =>
                                 `<option value="${item.id}"
-                                                                              data-code="${item.item_code}"
-                                                                              data-stock="${item.stock_on_hand}"
-                                                                              data-price="${item.buying_price}"
-                                                                              data-max="${item.max_transfer}">
-                                                                             ${item.item_code} - ${item.name}
-                                                                        </option>`
+                                                                                  data-code="${item.item_code}"
+                                                                                  data-stock="${item.stock_on_hand}"
+                                                                                  data-price="${item.buying_price}"
+                                                                                  data-max="${item.max_transfer}">
+                                                                                 ${item.item_code} - ${item.name}
+                                                                            </option>`
                             ).join('')}
                         </select>
                         <!-- Hidden field for transfer_price, auto-populated from item buying_price -->

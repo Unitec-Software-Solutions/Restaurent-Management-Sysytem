@@ -63,23 +63,38 @@ class GTNService
     {
         return DB::transaction(function () use ($data) {
             $user = Auth::user();
-            if (!$user || !$user->organization_id) {
-                throw new Exception('Unauthorized access - organization not set');
+            if (!$user) {
+                throw new Exception('Unauthorized access - user not authenticated');
+            }
+
+            // Handle super admin organization ID
+            if ($user->is_super_admin) {
+                // For super admin, organization_id should be provided in data
+                if (!isset($data['organization_id']) || !$data['organization_id']) {
+                    throw new Exception('Organization ID is required for super admin GTN creation');
+                }
+                $organizationId = $data['organization_id'];
+            } else {
+                // For regular admin, use their organization_id
+                if (!$user->organization_id) {
+                    throw new Exception('Unauthorized access - organization not set');
+                }
+                $organizationId = $user->organization_id;
             }
 
             // Validate cumulative stock for all items
             $this->validateCumulativeItemStock($data['items'], $data['from_branch_id']);
 
             // Get or create employee record
-            $employee = $this->employeeRepository->findOrCreateForUser($user, $data['from_branch_id']);
+            $employee = $this->employeeRepository->findOrCreateForUser($user, $data['from_branch_id'], $organizationId);
 
             // Create the GTN record
             $gtn = GoodsTransferNote::create([
-                'gtn_number' => $data['gtn_number'] ?? $this->generateGTNNumber(),
+                'gtn_number' => $data['gtn_number'] ?? $this->generateGTNNumber($organizationId),
                 'from_branch_id' => $data['from_branch_id'],
                 'to_branch_id' => $data['to_branch_id'],
                 'created_by' => $employee->id,
-                'organization_id' => $user->organization_id,
+                'organization_id' => $organizationId,
                 'transfer_date' => $data['transfer_date'] ?? now(),
                 'origin_status' => GoodsTransferNote::ORIGIN_STATUS_DRAFT,
                 'receiver_status' => GoodsTransferNote::RECEIVER_STATUS_PENDING,
@@ -140,12 +155,22 @@ class GTNService
         return DB::transaction(function () use ($gtnId, $data) {
             $admin = Auth::user();
 
-            if (!$admin || !$admin->organization_id) {
-                throw new Exception('Unauthorized access - organization not set');
+            if (!$admin) {
+                throw new Exception('Unauthorized access - user not authenticated');
             }
 
-            $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
-                ->findOrFail($gtnId);
+            // Handle super admin organization ID
+            if ($admin->is_super_admin) {
+                // For super admin, they can update any GTN
+                $gtn = GoodsTransferNote::findOrFail($gtnId);
+            } else {
+                // For regular admin, use their organization_id
+                if (!$admin->organization_id) {
+                    throw new Exception('Unauthorized access - organization not set');
+                }
+                $gtn = GoodsTransferNote::where('organization_id', $admin->organization_id)
+                    ->findOrFail($gtnId);
+            }
 
             if (!$gtn->isDraft()) {
                 throw new Exception('GTN can only be updated in draft status');
@@ -493,13 +518,15 @@ class GTNService
     /**
      * Generate unique GTN number
      */
-    protected function generateGTNNumber()
+    protected function generateGTNNumber($orgId = null)
     {
-        $user = Auth::user();
-        $orgId = $user ? $user->organization_id : null;
+        if (!$orgId) {
+            $user = Auth::user();
+            $orgId = $user ? $user->organization_id : null;
+        }
 
         if (!$orgId) {
-            throw new Exception('Organization ID not found');
+            throw new Exception('Organization ID not found for GTN number generation');
         }
 
         $datePrefix = now()->format('Ymd');

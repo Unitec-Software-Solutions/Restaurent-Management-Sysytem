@@ -23,6 +23,7 @@ class GTNStoreRequest extends FormRequest
     {
         return [
             'gtn_number' => 'required|string|unique:gtn_master,gtn_number',
+            'organization_id' => 'nullable|exists:organizations,id', // For super admin
             'from_branch_id' => 'required|exists:branches,id',
             'to_branch_id' => 'required|exists:branches,id|different:from_branch_id',
             'transfer_date' => 'required|date|after_or_equal:today',
