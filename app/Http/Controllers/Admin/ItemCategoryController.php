@@ -40,7 +40,7 @@ class ItemCategoryController extends Controller
             return response()->json($categories);
         }
 
-        return view('admin.item-categories.index', compact('categories'));
+        return view('admin.inventory.item-categories.index', compact('categories'));
     }
 
     /**
@@ -56,7 +56,7 @@ class ItemCategoryController extends Controller
             $organizations = Organization::active()->orderBy('name')->get();
         }
 
-        return view('admin.item-categories.create', compact('organizations'));
+        return view('admin.inventory.item-categories.create', compact('organizations'));
     }
 
     /**
@@ -95,7 +95,7 @@ class ItemCategoryController extends Controller
                 return response()->json($category, 201);
             }
 
-            return redirect()->route('admin.item-categories.index')
+            return redirect()->route('admin.inventory.item-categories.index')
                 ->with('success', 'Item Category created successfully.');
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
@@ -137,7 +137,7 @@ class ItemCategoryController extends Controller
             return response()->json($category);
         }
 
-        return view('admin.item-categories.show', compact('category'));
+        return view('admin.inventory.item-categories.show', compact('category'));
     }
 
     /**
@@ -163,7 +163,7 @@ class ItemCategoryController extends Controller
             $organizations = Organization::active()->orderBy('name')->get();
         }
 
-        return view('admin.item-categories.edit', compact('category', 'organizations'));
+        return view('admin.inventory.item-categories.edit', compact('category', 'organizations'));
     }
 
     /**
