@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Admin;
 use App\Models\Role;
 use App\Models\KitchenStation;
+use App\Models\ItemCategory;
 use App\Mail\OrganizationWelcomeMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -45,10 +46,14 @@ class OrganizationAutomationService
             // 5. Create default kitchen stations (disabled for now to debug other issues)
             // $this->createDefaultKitchenStations($headOffice);
 
-            // 6. Send welcome email
+            // 6. Create default item categories
+            Log::info('About to create default item categories', ['organization_id' => $organization->id]);
+            $this->createDefaultItemCategories($organization);
+
+            // 7. Send welcome email
             $this->sendWelcomeEmail($organization, $orgAdmin);
 
-            // 7. Log organization creation
+            // 8. Log organization creation
 
 
             return $organization->load(['branches', 'admins']);
@@ -192,6 +197,102 @@ class OrganizationAutomationService
         $sequenceCode = str_pad($sequence, 3, '0', STR_PAD_LEFT);
 
         return $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
+    }
+
+    /**
+     * Create default item categories for organization
+     */
+    protected function createDefaultItemCategories(Organization $organization): void
+    {
+        Log::info('Creating default item categories for organization', [
+            'organization_id' => $organization->id,
+            'organization_name' => $organization->name
+        ]);
+
+        $defaultCategories = [
+            [
+                'name' => 'Production Items',
+                'code' => 'PI' . $organization->id,
+                'description' => 'Items that are produced in-house like buns, bread, etc.',
+            ],
+            [
+                'name' => 'Buy & Sell',
+                'code' => 'BS' . $organization->id,
+                'description' => 'Items that are bought and sold directly',
+            ],
+            [
+                'name' => 'Ingredients',
+                'code' => 'IG' . $organization->id,
+                'description' => 'Raw cooking ingredients and supplies',
+            ],
+            // [
+            //     'name' => 'Beverages',
+            //     'code' => 'BV' . $organization->id,
+            //     'description' => 'Drinks and beverage items',
+            // ],
+            // [
+            //     'name' => 'Kitchen Supplies',
+            //     'code' => 'KS' . $organization->id,
+            //     'description' => 'Kitchen equipment and supplies',
+            // ],
+        ];
+
+        $categoriesCreated = 0;
+        $categoriesSkipped = 0;
+
+        foreach ($defaultCategories as $categoryData) {
+            try {
+                // Check if category already exists
+                $exists = ItemCategory::where('organization_id', $organization->id)
+                    ->where(function ($query) use ($categoryData) {
+                        $query->where('name', $categoryData['name'])
+                            ->orWhere('code', $categoryData['code']);
+                    })
+                    ->exists();
+
+                if (!$exists) {
+                    $category = ItemCategory::create([
+                        'name' => $categoryData['name'],
+                        'code' => $categoryData['code'],
+                        'description' => $categoryData['description'],
+                        'is_active' => true,
+                        'organization_id' => $organization->id,
+                    ]);
+
+                    Log::info('Item category created successfully', [
+                        'category_id' => $category->id,
+                        'category_name' => $category->name,
+                        'category_code' => $category->code,
+                        'organization_id' => $organization->id
+                    ]);
+
+                    $categoriesCreated++;
+                } else {
+                    Log::info('Item category already exists, skipping', [
+                        'category_name' => $categoryData['name'],
+                        'category_code' => $categoryData['code'],
+                        'organization_id' => $organization->id
+                    ]);
+
+                    $categoriesSkipped++;
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to create item category', [
+                    'category_name' => $categoryData['name'],
+                    'category_code' => $categoryData['code'],
+                    'organization_id' => $organization->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        }
+
+        Log::info('Item category creation completed', [
+            'organization_id' => $organization->id,
+            'categories_created' => $categoriesCreated,
+            'categories_skipped' => $categoriesSkipped,
+            'total_categories' => count($defaultCategories)
+        ]);
     }
 
     /**
