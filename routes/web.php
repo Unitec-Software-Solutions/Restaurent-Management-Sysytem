@@ -261,7 +261,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/search-items-ajax', [GoodsTransferNoteController::class, 'searchItems'])->name('search-items-ajax');
                 Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
+
+            // Item categories Management
+            Route::prefix('item-categories')->name('item-categories.')->group(function () {
+                Route::get('/', [ItemCategoryController::class, 'index'])->name('index');
+                Route::get('/create', [ItemCategoryController::class, 'create'])->name('create');
+                Route::post('/', [ItemCategoryController::class, 'store'])->name('store');
+                Route::get('/{itemCategory}', [ItemCategoryController::class, 'show'])->name('show');
+                Route::get('/{itemCategory}/edit', [ItemCategoryController::class, 'edit'])->name('edit');
+                Route::put('/{itemCategory}', [ItemCategoryController::class, 'update'])->name('update');
+                Route::delete('/{itemCategory}', [ItemCategoryController::class, 'destroy'])->name('destroy');
+            });
+
         });
+
+        // Item Categories Management
+        Route::resource('item-categories', ItemCategoryController::class);
 
         // Suppliers Management - Fix middleware conflict
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
@@ -937,13 +952,13 @@ Route::prefix('admin/menu-items')->name('admin.menu-items.')->middleware(['auth:
     Route::get('/{menuItem}/edit', [MenuItemController::class, 'edit'])->name('edit');
     Route::patch('/{menuItem}', [MenuItemController::class, 'update'])->name('update');
     Route::delete('/{menuItem}', [MenuItemController::class, 'destroy'])->name('destroy');
-    
+
     // AJAX routes
     Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
-    
+
     // Bulk operations
     Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');
-    
+
     // KOT specific routes
     Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
     Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('create-kot.store');
@@ -961,7 +976,7 @@ Route::prefix('admin/menu-categories')->name('admin.menu-categories.')->middlewa
     Route::get('/{menuCategory}/edit', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'edit'])->name('edit');
     Route::put('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'update'])->name('update');
     Route::delete('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'destroy'])->name('destroy');
-    
+
     // AJAX routes
     Route::get('/api/branches/{branch}/categories', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'getCategoriesForBranch'])->name('api.branch-categories');
     Route::post('/api/sort-order', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'updateSortOrder'])->name('api.sort-order');
