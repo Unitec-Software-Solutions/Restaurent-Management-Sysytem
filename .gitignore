@@ -31,3 +31,5 @@ yarn-error.log
 *.idx
 *.vercel
 
+pnpm-lock.yaml
+.rnd

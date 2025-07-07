@@ -11,9 +11,18 @@ class EmployeeRepository
     /**
      * Find existing employee by email or create new one
      */
-    public function findOrCreateForUser(object $user, int $branchId): Employee
+    public function findOrCreateForUser(object $user, int $branchId, int $organizationId = null): Employee
     {
-        $organizationId = $user->organization_id;
+        // For super admin users, organization_id is null, so we need to get it from parameter or branch
+        if ($user->is_super_admin && $organizationId === null) {
+            // Get organization from the branch if not provided
+            $branch = Branch::findOrFail($branchId);
+            $organizationId = $branch->organization_id;
+        } elseif ($organizationId === null) {
+            // For regular users, use their organization_id
+            $organizationId = $user->organization_id;
+        }
+
         $employee = Employee::where('email', $user->email)
             ->where('organization_id', $organizationId)
             ->first();

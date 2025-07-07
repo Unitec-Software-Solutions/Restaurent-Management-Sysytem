@@ -309,6 +309,10 @@
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-3">
+                        <a href="{{ route('admin.item-categories.create') }}"
+                            class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-plus mr-2"></i> New Item Category
+                        </a>
                         <a href="{{ route('admin.inventory.items.create') }}"
                             class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                             <i class="fas fa-plus mr-2"></i> New Item

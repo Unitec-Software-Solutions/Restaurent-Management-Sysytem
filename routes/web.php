@@ -261,7 +261,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/search-items-ajax', [GoodsTransferNoteController::class, 'searchItems'])->name('search-items-ajax');
                 Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
+
+            // Item categories Management
+            Route::prefix('item-categories')->name('item-categories.')->group(function () {
+                Route::get('/', [ItemCategoryController::class, 'index'])->name('index');
+                Route::get('/create', [ItemCategoryController::class, 'create'])->name('create');
+                Route::post('/', [ItemCategoryController::class, 'store'])->name('store');
+                Route::get('/{itemCategory}', [ItemCategoryController::class, 'show'])->name('show');
+                Route::get('/{itemCategory}/edit', [ItemCategoryController::class, 'edit'])->name('edit');
+                Route::put('/{itemCategory}', [ItemCategoryController::class, 'update'])->name('update');
+                Route::delete('/{itemCategory}', [ItemCategoryController::class, 'destroy'])->name('destroy');
+            });
+
         });
+
+        // Item Categories Management
+        Route::resource('item-categories', ItemCategoryController::class);
 
         // Suppliers Management - Fix middleware conflict
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
@@ -441,13 +456,13 @@ Route::middleware(['auth:admin'])->group(function () {
         \App\Http\Controllers\Admin\ItemCategoryController::class,
         'getByOrganization'
     ])->name('admin.api.organizations.categories');
-    
+
     // Universal admin API route for getting branches by organization
     Route::get('/admin/api/organizations/{organization}/branches', [
         \App\Http\Controllers\BranchController::class,
         'getBranchesByOrganization'
     ])->name('admin.api.organizations.branches');
-    
+
     // Menu categories API route for getting branches by organization
     Route::get('/admin/api/menu-categories/organizations/{organization}/branches', [
         \App\Http\Controllers\Admin\MenuCategoryController::class,
@@ -645,7 +660,7 @@ Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     Route::get('/menu-items/{branch}', [AdminOrderController::class, 'getMenuItems']);
     Route::get('/inventory-items/{branch}', [AdminOrderController::class, 'getInventoryItems']);
     Route::post('/update-menu-availability/{branch}', [AdminOrderController::class, 'updateMenuAvailability']);
-    
+
     // Organization branches API for admin orders
     Route::get('/organization-branches', [AdminOrderController::class, 'getBranchesForOrganization']);
 });
@@ -773,7 +788,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
     // Organization branches (Public - for guests)
     Route::get('/organizations/{organization}/branches', [ReservationController::class, 'getBranches'])
         ->name('api.organizations.branches');
-    
+
     // Organization branches (Public - alternative endpoint)
     Route::get('/public/organizations/{organization}/branches', [BranchController::class, 'getBranchesPublic'])
         ->name('api.public.organizations.branches');
@@ -955,25 +970,25 @@ Route::prefix('admin/menu-items')->name('admin.menu-items.')->middleware(['auth:
     Route::get('/', [MenuItemController::class, 'index'])->name('index');
     Route::get('/enhanced', [MenuItemController::class, 'enhancedIndex'])->name('enhanced.index');
     Route::get('/create', [MenuItemController::class, 'create'])->name('create');
-    
+
     // Enhanced KOT specific routes (MUST be before dynamic routes)
     Route::get('/create-kot', [MenuItemController::class, 'createKotForm'])->name('create-kot');
     Route::post('/create-kot', [MenuItemController::class, 'createKotItems'])->name('store-kot');
-    
+
     // Standalone KOT creation routes
     Route::get('/create-standalone-kot', [MenuItemController::class, 'createStandaloneKotForm'])->name('standalone-kot.create');
     Route::post('/create-standalone-kot', [MenuItemController::class, 'createStandaloneKotItems'])->name('standalone-kot.store');
-    
+
     // AJAX routes
     Route::get('/api/items', [MenuItemController::class, 'getItems'])->name('api.items');
     Route::get('/all-items', [MenuItemController::class, 'getAllMenuItems'])->name('all-items');
     Route::get('/by-branch', [AdminOrderController::class, 'getMenuItems'])->name('by-branch');
     Route::get('/menu-eligible-items', [MenuItemController::class, 'getMenuEligibleItems'])->name('menu-eligible-items');
     Route::get('/activated-items', [MenuItemController::class, 'getActivatedMenuItems'])->name('activated-items');
-    
+
     // Bulk operations with enhanced validation
     Route::post('/create-from-item-master', [MenuItemController::class, 'createFromItemMaster'])->name('create-from-item-master');
-    
+
     // Dynamic routes (MUST be after specific routes)
     Route::post('/', [MenuItemController::class, 'store'])->name('store');
     Route::get('/{menuItem}', [MenuItemController::class, 'show'])->name('show');
@@ -994,7 +1009,7 @@ Route::prefix('admin/menu-categories')->name('admin.menu-categories.')->middlewa
     Route::get('/{menuCategory}/edit', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'edit'])->name('edit');
     Route::put('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'update'])->name('update');
     Route::delete('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'destroy'])->name('destroy');
-    
+
     // AJAX routes
     Route::get('/api/branches/{branch}/categories', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'getCategoriesForBranch'])->name('api.branch-categories');
     Route::post('/api/sort-order', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'updateSortOrder'])->name('api.sort-order');
@@ -1037,7 +1052,7 @@ Route::get('/debug/branch-loading', function () {
                 'name' => $org->trading_name ?: $org->name
             ];
         });
-    
+
     return view('debug_reservation_branch_loading', compact('organizations'));
 })->name('debug.branch-loading');
 

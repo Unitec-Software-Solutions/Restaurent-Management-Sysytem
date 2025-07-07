@@ -73,8 +73,8 @@ class OrganizationController extends Controller
         ]);
 
         try {
-            // Use automation service for complete organization setup
-            $organization = $this->organizationAutomationService->setupNewOrganization([
+            // Prepare organization data for automation service
+            $organizationData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
@@ -89,8 +89,13 @@ class OrganizationController extends Controller
                 'is_active' => $request->boolean('is_active', false),
             ]);
 
-            Log::info('Organization created successfully via automation service', [
+            // Use OrganizationAutomationService for complete setup
+            $organization = $this->organizationAutomationService->setupNewOrganization($organizationData);
+
+            Log::info('Organization created successfully using automation service', [
                 'organization_id' => $organization->id,
+                'organization_name' => $organization->name,
+                'branches_count' => $organization->branches->count(),
                 'created_by' => Auth::guard('admin')->id()
             ]);
 
@@ -98,8 +103,9 @@ class OrganizationController extends Controller
                 ->with('success', 'Organization created successfully with head office, admin, and all default resources.');
 
         } catch (\Exception $e) {
-            Log::error('Failed to create organization', [
+            Log::error('Failed to create organization using automation service', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->except(['password', 'password_confirmation'])
             ]);
@@ -119,7 +125,7 @@ class OrganizationController extends Controller
             'branches.kitchenStations',
             'branches.admins.roles',
             'branches.users.userRole',
-            'branches.users.roles', 
+            'branches.users.roles',
             'branches.users.branch',
             'admins.roles',
             'users.userRole',
@@ -163,7 +169,7 @@ class OrganizationController extends Controller
     protected function getSubscriptionStatus(Organization $organization): array
     {
         $currentSubscription = $organization->subscriptions()->where('status', 'active')->first();
-        
+
         return [
             'is_active' => $currentSubscription ? true : false,
             'plan_name' => $organization->subscriptionPlan?->name ?? 'No Plan',
@@ -207,10 +213,10 @@ class OrganizationController extends Controller
     public function update(Request $request, Organization $organization)
     {
         $this->authorize('update', $organization);
-        
+
         $admin = auth('admin')->user();
         $isOrgAdmin = $admin->isOrganizationAdmin() && $admin->organization_id === $organization->id;
-        
+
         // Define validation rules based on user permissions
         if ($admin->isSuperAdmin()) {
             // Super admin can edit all fields
@@ -363,7 +369,7 @@ class OrganizationController extends Controller
             ]);
 
             return redirect()->route('admin.organizations.index')
-                ->with('success', "Organization '{$organizationName}' and all related data soft deleted successfully.");
+                ->with('success', 'Organization created successfully with complete automated setup including default item categories.');
 
         } catch (\Exception $e) {
             Log::error('Failed to delete organization', [
@@ -384,7 +390,7 @@ class OrganizationController extends Controller
     {
         $organization->load([
             'branches.users.userRole',
-            'branches.users.roles', 
+            'branches.users.roles',
             'branches.users.branch',
             'users.userRole',
             'users.roles',
@@ -522,7 +528,7 @@ class OrganizationController extends Controller
     public function activateByKey(Request $request, Organization $organization)
     {
         $this->authorize('activate', $organization);
-        
+
         $admin = Auth::guard('admin')->user();
 
         $request->validate([
@@ -695,7 +701,7 @@ class OrganizationController extends Controller
     public function showActivateForm(Organization $organization)
     {
         $this->authorize('activate', $organization);
-        
+
         return view('admin.organizations.activate', compact('organization'));
     }
 

@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Admin;
 use App\Models\Role;
 use App\Models\KitchenStation;
+use App\Models\ItemCategory;
 use App\Mail\OrganizationWelcomeMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -27,12 +28,12 @@ class OrganizationAutomationService
     public function setupNewOrganization(array $organizationData): Organization
     {
         return DB::transaction(function () use ($organizationData) {
-            
+
             $organization = Organization::create($organizationData);
 
             // Check if head office already exists (created by OrganizationObserver)
             $headOffice = $organization->branches()->where('is_head_office', true)->first();
-            
+
             if (!$headOffice) {
                 // Create head office only if it doesn't exist
                 $headOffice = $this->createHeadOfficeBranch($organization);
@@ -60,21 +61,17 @@ class OrganizationAutomationService
             $this->assignSubscriptionPermissions($organization, $orgAdmin);
             $this->assignBranchPermissions($organization, $branchAdmin, $headOffice);
 
-            // 8. Send welcome email with credentials (skip branch automation as it's already done above)
-            $this->sendWelcomeEmail($organization, $orgAdmin, $branchAdmin);
+            // 6. Create default item categories
+            Log::info('About to create default item categories', ['organization_id' => $organization->id]);
+            $this->createDefaultItemCategories($organization);
 
-            // 10. Log organization creation
-            Log::info('Organization created successfully with complete automation', [
-                'organization_id' => $organization->id,
-                'name' => $organization->name,
-                'subscription_plan_id' => $organization->subscription_plan_id,
-                'head_office_id' => $headOffice->id,
-                'org_admin_id' => $orgAdmin->id,
-                'branch_admin_id' => $branchAdmin->id,
-                'kitchen_stations_count' => $headOffice->kitchenStations()->count()
-            ]);
+            // 7. Send welcome email
+            $this->sendWelcomeEmail($organization, $orgAdmin);
 
-            return $organization->load(['branches.kitchenStations', 'admins.roles', 'subscriptionPlan']);
+            // 8. Log organization creation
+
+
+            return $organization->load(['branches', 'admins']);
         });
     }
 
@@ -112,7 +109,7 @@ class OrganizationAutomationService
     {
         // Use the default admin password for organization admins
         $defaultPassword = config('auto_system_settings.default_org_admin_password', 'AdminPassword123!');
-        
+
         $adminData = [
             'organization_id' => $organization->id,
             'branch_id' => null, // Organization admin is not tied to specific branch
@@ -218,7 +215,7 @@ class OrganizationAutomationService
                 'is_system_role' => true
             ],
             [
-                'name' => 'Branch Administrator', 
+                'name' => 'Branch Administrator',
                 'scope' => 'branch',
                 'description' => 'Full administrative access to branch operations',
                 'is_system_role' => true
@@ -261,7 +258,7 @@ class OrganizationAutomationService
             'organization.manage',
             'organization.update',
             'organization.create',
-            
+
             // Branch Management
             'branches.view',
             'branches.create',
@@ -272,7 +269,7 @@ class OrganizationAutomationService
             'branch.create',
             'branch.manage',
             'branch.update',
-            
+
             // User Management
             'users.view',
             'users.create',
@@ -284,7 +281,7 @@ class OrganizationAutomationService
             'user.manage',
             'user.update',
             'user.delete',
-            
+
             // Role & Permission Management
             'roles.view',
             'roles.create',
@@ -297,14 +294,14 @@ class OrganizationAutomationService
             'role.delete',
             'permission.view',
             'permission.manage',
-            
+
             // Subscription & Billing Management
             'subscription.view',
             'subscription.manage',
             'billing.view',
             'billing.manage',
             'billing.create',
-            
+
             // Staff Management (Organization-wide)
             'staff.view',
             'staff.create',
@@ -315,7 +312,7 @@ class OrganizationAutomationService
             'staff.performance',
             'staff.attendance',
             'staff.update',
-            
+
             // Reports and Analytics (All levels)
             'reports.view',
             'reports.export',
@@ -329,7 +326,7 @@ class OrganizationAutomationService
             'report.financial',
             'report.inventory',
             'report.staff',
-            
+
             // Menu Management (Organization-wide)
             'menus.view',
             'menus.edit',
@@ -343,7 +340,7 @@ class OrganizationAutomationService
             'menu.pricing',
             'menu.publish',
             'menu.schedule',
-            
+
             // Order Management (Organization-wide)
             'orders.view',
             'orders.create',
@@ -359,7 +356,7 @@ class OrganizationAutomationService
             'order.cancel',
             'order.refund',
             'order.print_kot',
-            
+
             // Kitchen Management (Organization-wide)
             'kitchen.view',
             'kitchen.manage',
@@ -368,7 +365,7 @@ class OrganizationAutomationService
             'kitchen.production',
             'kitchen.recipes',
             'kitchen.status',
-            
+
             // Inventory Management (Organization-wide)
             'inventory.view',
             'inventory.adjust',
@@ -379,7 +376,7 @@ class OrganizationAutomationService
             'inventory.update',
             'inventory.transfer',
             'inventory.audit',
-            
+
             // Reservation Management (Organization-wide)
             'reservations.view',
             'reservations.create',
@@ -393,7 +390,7 @@ class OrganizationAutomationService
             'reservation.approve',
             'reservation.cancel',
             'reservation.checkin',
-            
+
             // Customer Management
             'customer.view',
             'customer.create',
@@ -402,20 +399,20 @@ class OrganizationAutomationService
             'customer.delete',
             'customer.communications',
             'customer.loyalty',
-            
+
             // Payment Management
             'payment.view',
             'payment.manage',
             'payment.process',
             'payment.refund',
-            
+
             // KOT Management
             'kot.view',
             'kot.create',
             'kot.manage',
             'kot.update',
             'kot.print',
-            
+
             // System Settings
             'settings.view',
             'settings.edit',
@@ -423,11 +420,11 @@ class OrganizationAutomationService
             'system.settings',
             'system.backup',
             'system.logs',
-            
+
             // Dashboard Access
             'dashboard.view',
             'dashboard.manage',
-            
+
             // Profile Management
             'profile.view',
             'profile.update'
@@ -439,7 +436,7 @@ class OrganizationAutomationService
                 'name' => $permissionName,
                 'guard_name' => 'admin'
             ]);
-            
+
             try {
                 $admin->givePermissionTo($permission);
             } catch (\Exception $e) {
@@ -471,7 +468,7 @@ class OrganizationAutomationService
             'branch.view',
             'branch.manage',
             'branch.update',
-            
+
             // Staff Management (Branch-specific)
             'staff.view',
             'staff.create',
@@ -482,7 +479,7 @@ class OrganizationAutomationService
             'staff.performance',
             'staff.attendance',
             'staff.update',
-            
+
             // Order Management (Branch-specific)
             'orders.view',
             'orders.create',
@@ -498,7 +495,7 @@ class OrganizationAutomationService
             'order.cancel',
             'order.refund',
             'order.print_kot',
-            
+
             // Kitchen Management (Branch-specific)
             'kitchen.view',
             'kitchen.manage',
@@ -507,7 +504,7 @@ class OrganizationAutomationService
             'kitchen.production',
             'kitchen.recipes',
             'kitchen.status',
-            
+
             // Inventory Management (Branch-specific)
             'inventory.view',
             'inventory.adjust',
@@ -518,7 +515,7 @@ class OrganizationAutomationService
             'inventory.update',
             'inventory.transfer',
             'inventory.audit',
-            
+
             // Menu Management (Branch-specific)
             'menus.view',
             'menus.edit',
@@ -532,7 +529,7 @@ class OrganizationAutomationService
             'menu.pricing',
             'menu.publish',
             'menu.schedule',
-            
+
             // Reservation Management (Branch-specific)
             'reservations.view',
             'reservations.create',
@@ -546,7 +543,7 @@ class OrganizationAutomationService
             'reservation.approve',
             'reservation.cancel',
             'reservation.checkin',
-            
+
             // Customer Management (Branch-specific)
             'customer.view',
             'customer.create',
@@ -555,20 +552,20 @@ class OrganizationAutomationService
             'customer.delete',
             'customer.communications',
             'customer.loyalty',
-            
+
             // Payment Management (Branch-specific)
             'payment.view',
             'payment.manage',
             'payment.process',
             'payment.refund',
-            
+
             // KOT Management (Branch-specific)
             'kot.view',
             'kot.create',
             'kot.manage',
             'kot.update',
             'kot.print',
-            
+
             // Reports (Branch-specific)
             'reports.view',
             'reports.branch',
@@ -581,7 +578,7 @@ class OrganizationAutomationService
             'report.financial',
             'report.inventory',
             'report.staff',
-            
+
             // User Management (Branch-level)
             'users.view',
             'users.create',
@@ -593,15 +590,15 @@ class OrganizationAutomationService
             'user.manage',
             'user.update',
             'user.delete',
-            
+
             // Basic Settings (Branch-level)
             'settings.view',
             'settings.edit',
-            
+
             // Dashboard Access
             'dashboard.view',
             'dashboard.manage',
-            
+
             // Profile Management
             'profile.view',
             'profile.update'
@@ -613,7 +610,7 @@ class OrganizationAutomationService
                 'name' => $permissionName,
                 'guard_name' => 'admin'
             ]);
-            
+
             try {
                 $branchAdmin->givePermissionTo($permission);
             } catch (\Exception $e) {
@@ -690,6 +687,102 @@ class OrganizationAutomationService
     }
 
     /**
+     * Create default item categories for organization
+     */
+    protected function createDefaultItemCategories(Organization $organization): void
+    {
+        Log::info('Creating default item categories for organization', [
+            'organization_id' => $organization->id,
+            'organization_name' => $organization->name
+        ]);
+
+        $defaultCategories = [
+            [
+                'name' => 'Production Items',
+                'code' => 'PI' . $organization->id,
+                'description' => 'Items that are produced in-house like buns, bread, etc.',
+            ],
+            [
+                'name' => 'Buy & Sell',
+                'code' => 'BS' . $organization->id,
+                'description' => 'Items that are bought and sold directly',
+            ],
+            [
+                'name' => 'Ingredients',
+                'code' => 'IG' . $organization->id,
+                'description' => 'Raw cooking ingredients and supplies',
+            ],
+            // [
+            //     'name' => 'Beverages',
+            //     'code' => 'BV' . $organization->id,
+            //     'description' => 'Drinks and beverage items',
+            // ],
+            // [
+            //     'name' => 'Kitchen Supplies',
+            //     'code' => 'KS' . $organization->id,
+            //     'description' => 'Kitchen equipment and supplies',
+            // ],
+        ];
+
+        $categoriesCreated = 0;
+        $categoriesSkipped = 0;
+
+        foreach ($defaultCategories as $categoryData) {
+            try {
+                // Check if category already exists
+                $exists = ItemCategory::where('organization_id', $organization->id)
+                    ->where(function ($query) use ($categoryData) {
+                        $query->where('name', $categoryData['name'])
+                            ->orWhere('code', $categoryData['code']);
+                    })
+                    ->exists();
+
+                if (!$exists) {
+                    $category = ItemCategory::create([
+                        'name' => $categoryData['name'],
+                        'code' => $categoryData['code'],
+                        'description' => $categoryData['description'],
+                        'is_active' => true,
+                        'organization_id' => $organization->id,
+                    ]);
+
+                    Log::info('Item category created successfully', [
+                        'category_id' => $category->id,
+                        'category_name' => $category->name,
+                        'category_code' => $category->code,
+                        'organization_id' => $organization->id
+                    ]);
+
+                    $categoriesCreated++;
+                } else {
+                    Log::info('Item category already exists, skipping', [
+                        'category_name' => $categoryData['name'],
+                        'category_code' => $categoryData['code'],
+                        'organization_id' => $organization->id
+                    ]);
+
+                    $categoriesSkipped++;
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to create item category', [
+                    'category_name' => $categoryData['name'],
+                    'category_code' => $categoryData['code'],
+                    'organization_id' => $organization->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        }
+
+        Log::info('Item category creation completed', [
+            'organization_id' => $organization->id,
+            'categories_created' => $categoriesCreated,
+            'categories_skipped' => $categoriesSkipped,
+            'total_categories' => count($defaultCategories)
+        ]);
+    }
+
+    /**
      * Send welcome emails to both organization and branch admins
      */
     protected function sendWelcomeEmail(Organization $organization, Admin $orgAdmin, Admin $branchAdmin = null): void
@@ -697,7 +790,7 @@ class OrganizationAutomationService
         // Send welcome email to organization admin
         try {
             Mail::to($orgAdmin->email)->send(new OrganizationWelcomeMail($organization, $orgAdmin));
-            
+
             Log::info('Welcome email sent to organization admin', [
                 'organization_id' => $organization->id,
                 'admin_email' => $orgAdmin->email
@@ -714,7 +807,7 @@ class OrganizationAutomationService
         if ($branchAdmin) {
             try {
                 Mail::to($branchAdmin->email)->send(new OrganizationWelcomeMail($organization, $branchAdmin));
-                
+
                 Log::info('Welcome email sent to branch admin', [
                     'organization_id' => $organization->id,
                     'branch_admin_email' => $branchAdmin->email,

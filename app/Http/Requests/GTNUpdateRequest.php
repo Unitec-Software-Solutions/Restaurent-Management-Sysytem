@@ -26,6 +26,7 @@ class GTNUpdateRequest extends FormRequest
 
         return [
             // Remove gtn_number validation since it's not editable
+            'organization_id' => 'nullable|exists:organizations,id', // For super admin
             'from_branch_id' => 'required|exists:branches,id',
             'to_branch_id' => 'required|exists:branches,id|different:from_branch_id',
             'transfer_date' => 'required|date',
