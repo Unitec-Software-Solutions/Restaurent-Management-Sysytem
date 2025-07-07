@@ -655,8 +655,9 @@ class OrderController extends Controller
             $tax = $subtotal * $taxRate;
             $total = $subtotal + $tax;
 
-            // Generate order number
+            // Generate order number and takeaway ID
             $orderNumber = OrderNumberService::generate($data['branch_id']);
+            $takeawayId = OrderNumberService::generateTakeawayId($data['branch_id']);
 
             // Create takeaway order with all required fields
             $order = Order::create([
@@ -678,7 +679,7 @@ class OrderController extends Controller
                 'currency' => 'LKR',
                 'payment_status' => 'pending',
                 'special_instructions' => $data['special_instructions'] ?? null,
-                'takeaway_id' => 'TW' . str_pad(Order::where('branch_id', $data['branch_id'])->whereDate('created_at', today())->count() + 1, 6, '0', STR_PAD_LEFT),
+                'takeaway_id' => $takeawayId,
             ]);
 
             // Create order items

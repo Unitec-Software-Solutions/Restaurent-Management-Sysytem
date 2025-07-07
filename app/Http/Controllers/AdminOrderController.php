@@ -680,6 +680,10 @@ class AdminOrderController extends Controller
                 $data['customer_name'] = 'Not Provided';
             }
 
+            // Generate order number and takeaway ID
+            $orderNumber = OrderNumberService::generate($data['branch_id']);
+            $takeawayId = OrderNumberService::generateTakeawayId($data['branch_id']);
+
             // Create order
             $order = Order::create([
                 'order_type' => $data['order_type'],
@@ -690,7 +694,8 @@ class AdminOrderController extends Controller
                 'status' => 'active',
                 'placed_by_admin' => true,
                 'created_by_admin_id' => $admin->id,
-                'takeaway_id' => 'TW' . now()->format('YmdHis') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT)
+                'order_number' => $orderNumber,
+                'takeaway_id' => $takeawayId
             ]);
 
             // Add order items

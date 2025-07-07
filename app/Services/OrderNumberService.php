@@ -9,35 +9,79 @@ use Illuminate\Support\Facades\DB;
 
 class OrderNumberService
 {
-    /**
-     * Generate a unique order number for the given branch
-     */
+
     public static function generate(int $branchId): string
     {
-        $prefix = 'ORD' . str_pad($branchId, 2, '0', STR_PAD_LEFT);
-        $date = now()->format('Ymd');
+        // Use a cache-based lock to prevent race conditions across all database types
+        $lockKey = "order_number_generation_branch_{$branchId}";
         
-        // Try up to 100 times to generate a unique order number
-        for ($attempt = 1; $attempt <= 100; $attempt++) {
-            $orderNumber = self::generateCandidate($prefix, $date, $branchId, $attempt);
+        return Cache::lock($lockKey, 10)->block(5, function () use ($branchId) {
+            $prefix = 'ORD' . str_pad($branchId, 2, '0', STR_PAD_LEFT);
+            $date = now()->format('Ymd');
+            $basePattern = $prefix . $date;
             
-            // Check if this order number exists using a database query
-            if (!Order::where('order_number', $orderNumber)->exists()) {
-                return $orderNumber;
+            // Get all today's order numbers for this branch that match our pattern
+            $todayOrders = Order::where('branch_id', $branchId)
+                ->whereDate('created_at', today())
+                ->where('order_number', 'LIKE', $basePattern . '%')
+                ->pluck('order_number')
+                ->toArray();
+            
+            // Extract sequence numbers and find the highest
+            $maxSequence = 0;
+            foreach ($todayOrders as $orderNumber) {
+                if (strlen($orderNumber) >= strlen($basePattern) + 3) {
+                    $sequencePart = substr($orderNumber, strlen($basePattern), 3);
+                    if (is_numeric($sequencePart) && strlen($sequencePart) === 3) {
+                        $maxSequence = max($maxSequence, (int) $sequencePart);
+                    }
+                }
             }
             
-            // Log collision for the first few attempts
-            if ($attempt <= 5) {
-                Log::warning('Order number collision detected', [
-                    'order_number' => $orderNumber,
-                    'attempt' => $attempt,
+            // Generate next sequence number
+            $nextSequence = $maxSequence + 1;
+            $candidateNumber = $basePattern . str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
+            
+            // Ensure uniqueness by checking if candidate exists
+            $attempts = 0;
+            while (Order::where('order_number', $candidateNumber)->exists() && $attempts < 100) {
+                $nextSequence++;
+                $candidateNumber = $basePattern . str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
+                $attempts++;
+                
+                // Safety check to prevent infinite loop
+                if ($nextSequence > 999) {
+                    // Fallback to microsecond-based number
+                    $microseconds = substr(microtime(), 2, 6);
+                    $candidateNumber = $basePattern . $microseconds;
+                    
+                    Log::warning('Order number sequence exceeded 999, using microsecond fallback', [
+                        'order_number' => $candidateNumber,
+                        'branch_id' => $branchId
+                    ]);
+                    break;
+                }
+            }
+            
+            // Final safety check
+            if (Order::where('order_number', $candidateNumber)->exists()) {
+                $timestamp = now()->format('His');
+                $candidateNumber = $basePattern . $timestamp;
+                
+                Log::error('Could not generate unique order number, using timestamp fallback', [
+                    'order_number' => $candidateNumber,
                     'branch_id' => $branchId
                 ]);
             }
-        }
-        
-        // Ultimate fallback: use timestamp + random suffix to ensure uniqueness
-        return self::generateFallbackNumber($prefix, $date);
+            
+            Log::info('Generated order number', [
+                'order_number' => $candidateNumber,
+                'branch_id' => $branchId,
+                'sequence' => $nextSequence
+            ]);
+            
+            return $candidateNumber;
+        });
     }
     
     /**
@@ -133,5 +177,74 @@ class OrderNumberService
     {
         // Order numbers should match pattern: ORD[BB][YYYYMMDD][SSS]
         return preg_match('/^ORD\d{2}\d{8}\d{3,6}$/', $orderNumber);
+    }
+    
+    /**
+     * Generate a unique takeaway ID for the given branch
+     */
+    public static function generateTakeawayId(int $branchId): string
+    {
+        // Use a cache-based lock to prevent race conditions
+        $lockKey = "takeaway_id_generation_branch_{$branchId}";
+        
+        return Cache::lock($lockKey, 10)->block(5, function () use ($branchId) {
+            $prefix = 'TW';
+            $date = now()->format('Ymd');
+            $basePattern = $prefix . $date . str_pad($branchId, 2, '0', STR_PAD_LEFT);
+            
+            // Get all today's takeaway IDs for this branch that match our pattern
+            $todayTakeawayIds = Order::where('branch_id', $branchId)
+                ->whereDate('created_at', today())
+                ->where('takeaway_id', 'LIKE', $basePattern . '%')
+                ->pluck('takeaway_id')
+                ->toArray();
+            
+            // Extract sequence numbers and find the highest
+            $maxSequence = 0;
+            foreach ($todayTakeawayIds as $takeawayId) {
+                if (strlen($takeawayId) >= strlen($basePattern) + 3) {
+                    $sequencePart = substr($takeawayId, strlen($basePattern), 3);
+                    if (is_numeric($sequencePart) && strlen($sequencePart) === 3) {
+                        $maxSequence = max($maxSequence, (int) $sequencePart);
+                    }
+                }
+            }
+            
+            // Generate next sequence number
+            $nextSequence = $maxSequence + 1;
+            $candidateId = $basePattern . str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
+            
+            // Ensure uniqueness
+            $attempts = 0;
+            while (Order::where('takeaway_id', $candidateId)->exists() && $attempts < 100) {
+                $nextSequence++;
+                $candidateId = $basePattern . str_pad($nextSequence, 3, '0', STR_PAD_LEFT);
+                $attempts++;
+                
+                if ($nextSequence > 999) {
+                    // Fallback to timestamp-based ID
+                    $timestamp = now()->format('His');
+                    $candidateId = $prefix . $timestamp . str_pad($branchId, 2, '0', STR_PAD_LEFT);
+                    
+                    Log::warning('Takeaway ID sequence exceeded 999, using timestamp fallback', [
+                        'takeaway_id' => $candidateId,
+                        'branch_id' => $branchId
+                    ]);
+                    break;
+                }
+            }
+            
+            // Final safety check
+            if (Order::where('takeaway_id', $candidateId)->exists()) {
+                $candidateId = $prefix . now()->format('YmdHis') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+                
+                Log::error('Could not generate unique takeaway ID, using timestamp+random fallback', [
+                    'takeaway_id' => $candidateId,
+                    'branch_id' => $branchId
+                ]);
+            }
+            
+            return $candidateId;
+        });
     }
 }
