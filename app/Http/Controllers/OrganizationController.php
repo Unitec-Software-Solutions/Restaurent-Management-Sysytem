@@ -87,7 +87,7 @@ class OrganizationController extends Controller
                 'password' => Hash::make($request->password),
                 'password_plain' => $request->password, // Pass plain text password for admin creation
                 'is_active' => $request->boolean('is_active', false),
-            ]);
+            ];
 
             // Use OrganizationAutomationService for complete setup
             $organization = $this->organizationAutomationService->setupNewOrganization($organizationData);
