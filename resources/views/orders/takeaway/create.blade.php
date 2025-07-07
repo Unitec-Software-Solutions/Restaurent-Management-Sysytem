@@ -114,7 +114,7 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
                                 <input type="datetime-local" name="order_time" 
-                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? now()->format('Y-m-d\TH:i') : '' }}"
+                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? now()->addMinutes(30)->format('Y-m-d\TH:i') : old('order_time', '') }}"
                                     min="{{ now()->format('Y-m-d\TH:i') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
                                     required>
@@ -137,7 +137,7 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
                                 <input type="text" name="customer_name" 
-                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? 'Walk-in Customer' : '' }}"
+                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? 'Walk-in Customer' : old('customer_name', '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
                                     placeholder="{{ (auth()->check() && auth()->user()->isAdmin()) ? 'Walk-in Customer' : 'Enter your full name' }}"
                                     required>
@@ -146,11 +146,11 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
                                 <input type="tel" name="customer_phone" 
-                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? '0000000000' : '' }}"
+                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? '+94000000000' : old('customer_phone', '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
-                                    placeholder="{{ (auth()->check() && auth()->user()->isAdmin()) ? '0000000000' : 'Enter your phone number' }}"
+                                    placeholder="{{ (auth()->check() && auth()->user()->isAdmin()) ? '+94000000000' : 'Enter your phone number' }}"
                                     required
-                                    pattern="[0-9]{10,15}" 
+                                    pattern="[0-9+]{10,15}" 
                                     title="Please enter a valid 10-15 digit phone number">
                                 <p class="mt-1 text-sm text-gray-500">We'll notify you about your order status</p>
                             </div>
@@ -280,8 +280,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Initial time setting
-    setDefaultTime(15);
+    // Initial time setting (30 minutes from now for admin, empty for customers)
+    @if(isset($isAdmin) && $isAdmin)
+    setDefaultTime(30);
+    @endif
 
     // Handle order type changes
     const orderTypeSelect = document.querySelector('select[name="order_type"]');

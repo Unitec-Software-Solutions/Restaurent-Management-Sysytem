@@ -4,7 +4,11 @@
 <div class="container mx-auto px-4 py-6">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <div class="bg-blue-600 px-6 py-4 text-white">
-            <h2 class="text-2xl font-bold">Edit Takeaway Order #{{ $order->takeaway_id }}</h2>
+            <h2 class="text-2xl font-bold">Edit Takeaway Order #{{ $order->order_number ?? $order->id }}</h2>
+            <p class="text-blue-100 mt-1">
+                Status: <span class="font-semibold">{{ ucfirst($order->status) }}</span> | 
+                Total: <span class="font-semibold">LKR {{ number_format($order->total_amount ?? $order->total, 2) }}</span>
+            </p>
         </div>
 
         <div class="p-6">
@@ -28,7 +32,7 @@
                         <label for="order_time" class="block text-sm font-medium text-gray-700">Pickup Time</label>
                         <input type="datetime-local" name="order_time" id="order_time" 
                                class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                               value="{{ old('order_time', $order->order_time->format('Y-m-d\TH:i')) }}" 
+                               value="{{ old('order_time', $order->order_time ? (is_string($order->order_time) ? $order->order_time : $order->order_time->format('Y-m-d\TH:i')) : '') }}" 
                                required>
                     </div>
                 </div>
@@ -61,7 +65,7 @@
                                         @foreach($items as $menuItem)
                                             <option value="{{ $menuItem->id }}"
                                                 {{ $item['item_id'] == $menuItem->id ? 'selected' : '' }}>
-                                                {{ $menuItem->name }} - LKR {{ number_format($menuItem->selling_price, 2) }}
+                                                {{ $menuItem->name }} - LKR {{ number_format($menuItem->price, 2) }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -147,7 +151,7 @@
                             <option value="">Select Item</option>
                             @foreach($items as $menuItem)
                                 <option value="{{ $menuItem->id }}">
-                                    {{ $menuItem->name }} - LKR {{ number_format($menuItem->selling_price, 2) }}
+                                    {{ $menuItem->name }} - LKR {{ number_format($menuItem->price, 2) }}
                                 </option>
                             @endforeach
                         </select>

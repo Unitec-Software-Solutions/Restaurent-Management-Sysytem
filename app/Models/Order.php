@@ -86,6 +86,7 @@ class Order extends Model
         'payment_reference',
         'notes',
         'order_date',
+        'order_time',
         'reservation_id',
         'reservation_required',
         'branch_id',
@@ -115,6 +116,7 @@ class Order extends Model
     protected $casts = [
         'order_type' => OrderType::class,
         'order_date' => 'datetime',
+        'order_time' => 'datetime',
         'requested_time' => 'datetime',
         'pickup_time' => 'datetime',
         'confirmed_at' => 'datetime',

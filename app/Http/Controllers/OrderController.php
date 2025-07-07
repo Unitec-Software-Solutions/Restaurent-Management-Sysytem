@@ -712,19 +712,21 @@ class OrderController extends Controller
     // Edit takeaway order
     public function editTakeaway($id)
     {
-        $order = Order::with('items.menuItem')->findOrFail($id);
-        $items = ItemMaster::where('is_menu_item', true)->get();
+        $order = Order::with(['orderItems.menuItem', 'branch'])->findOrFail($id);
+        $items = MenuItem::where('is_active', true)
+            ->with(['menuCategory', 'itemMaster'])
+            ->get();
         $branches = Branch::all();
 
         // Prepare cart data for pre-filling
         $cart = [
             'items' => [],
             'subtotal' => $order->subtotal,
-            'tax' => $order->tax,
-            'total' => $order->total
+            'tax' => $order->tax_amount ?? $order->tax,
+            'total' => $order->total_amount ?? $order->total
         ];
 
-        foreach ($order->items as $item) {
+        foreach ($order->orderItems as $item) {
             $cart['items'][] = [
                 'item_id' => $item->menu_item_id,
                 'quantity' => $item->quantity
@@ -818,7 +820,7 @@ class OrderController extends Controller
         ]);
 
         // Remove old items
-        $order->items()->delete();
+        $order->orderItems()->delete();
         $subtotal = 0;
         foreach ($data['items'] as $item) {
             $menuItem = MenuItem::find($item['item_id']);
@@ -832,7 +834,7 @@ class OrderController extends Controller
                 'item_name' => $menuItem->name,
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->price,
-                'subtotal' => $lineTotal,
+                'total_price' => $lineTotal,
             ]);
         }
         $tax = $subtotal * 0.10;
@@ -842,8 +844,8 @@ class OrderController extends Controller
             'customer_name' => $data['customer_name'],
             'customer_phone' => $data['customer_phone'],
             'subtotal' => $subtotal,
-            'tax' => $tax,
-            'total' => $subtotal + $tax,
+            'tax_amount' => $tax,
+            'total_amount' => $subtotal + $tax,
         ]);
         return redirect()->route('orders.summary', $order->id)
             ->with('success', 'Takeaway order updated successfully!');

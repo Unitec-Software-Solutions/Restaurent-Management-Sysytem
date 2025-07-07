@@ -38,10 +38,17 @@
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-2xl font-bold">Order #{{ $order->id }}</h1>
                 <div class="flex gap-2">
-                    <a href="{{ route('orders.edit', $order->id) }}"
+                    <a href="{{ route('orders.takeaway.edit', $order->id) }}"
                         class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
                         Edit Order
                     </a>
+                    {{-- Show edit take away order view if order type is take away --}}
+                    @if ($order->order_type && $order->order_type->value === 'take_away')
+                        <a href="{{ route('orders.takeaway.edit', $order->id) }}"
+                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Edit Take Away Details
+                        </a>
+                    @endif
                     <form action="{{ route('orders.destroy', $order->id) }}" method="POST">
                         @csrf @method('DELETE')
                         <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
@@ -126,20 +133,6 @@
 
             <!-- Action Buttons -->
             <div class="flex justify-between items-center border-t pt-4">
-                <div class="flex gap-2">
-                    @if ($order->reservation_id)
-                        <a href="{{ route('orders.create', ['reservation_id' => $order->reservation_id]) }}"
-                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            Add Another Order to Reservation
-                        </a>
-                    @else
-                        <a href="{{ route('orders.create') }}"
-                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            Create New Order
-                        </a>
-                    @endif
-                </div>
-
                 <div class="flex gap-2">
                     @if ($order->reservation_id)
                         <a href="{{ route('reservations.payment', ['reservation' => $order->reservation_id]) }}"
