@@ -276,8 +276,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
 
         // Item Categories Management
-        Route::resource('item-categories', ItemCategoryController::class);
-
         // Suppliers Management - Fix middleware conflict
         Route::prefix('suppliers')->name('suppliers.')->group(function () {
             Route::get('/', [SupplierController::class, 'index'])->name('index');
