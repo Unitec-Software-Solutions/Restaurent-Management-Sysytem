@@ -1,52 +1,290 @@
 @extends('layouts.app')
 
+@section('title', 'Reservation Summary')
+
 @section('content')
-<div class="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-    <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8 w-full max-w-2xl animate-fadeIn">
-
-
-        <div class="flex justify-center my-6 relative">
-            <div class="w-20 h-20 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center z-10 relative">
-                <svg class="w-10 h-10 text-white absolute animate-scaleCheck" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                </svg>
-            </div>
-            <div class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 w-24 h-24 rounded-full bg-green-500/20 animate-pulse"></div>
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Reservation Summary</h1>
+            <p class="text-gray-600">Review your reservation details and choose your next step</p>
         </div>
 
-        <h2 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-2">Reservation Confirmed!</h2>
-        <p class="text-gray-500 text-center mb-8">Your reservation has been successfully updated</p>
-
-        <div class="bg-blue-50 rounded-lg p-5 mb-8 border border-blue-100">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <p class="text-sm font-medium text-blue-600 flex items-center">
-                        <i class="fas fa-store mr-2"></i> Branch
-                    </p>
-                    <p class="font-semibold text-gray-800 mt-1">{{ $reservation->branch->name }}</p>
-                </div>
-                <div>
-                    <p class="text-sm font-medium text-blue-600 flex items-center">
-                        <i class="fas fa-calendar-alt mr-2"></i> Date & Time
-                    </p>
-                    <p class="font-semibold text-gray-800 mt-1">
-                        {{ \Carbon\Carbon::parse($reservation->date)->format('l, F j, Y') }}<br>
-                        {{ \Carbon\Carbon::parse($reservation->start_time)->format('g:i A') }} - {{ \Carbon\Carbon::parse($reservation->end_time)->format('g:i A') }}
-                    </p>
-                </div>
-                <div>
-                    <p class="text-sm font-medium text-blue-600 flex items-center">
-                        <i class="fas fa-user-friends mr-2"></i> Guests
-                    </p>
-                    <p class="font-semibold text-gray-800 mt-1">{{ $reservation->guest_count }} person(s)</p>
-                </div>
-                <div>
-                    <p class="text-sm font-medium text-blue-600 flex items-center">
-                        <i class="fas fa-hashtag mr-2"></i> Reservation ID
-                    </p>
-                    <p class="font-semibold text-gray-800 mt-1">#{{ $reservation->code }}</p>
-                </div>
+        <!-- Reservation Details Card -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                <h2 class="text-xl font-semibold text-white flex items-center">
+                    <i class="fas fa-calendar-check mr-3"></i>
+                    Reservation Details
+                </h2>
             </div>
+            
+            <div class="p-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Customer Information -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                            Customer Information
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <i class="fas fa-user text-gray-400 w-5 mr-3"></i>
+                                <div>
+                                    <span class="text-sm text-gray-500">Name</span>
+                                    <p class="font-medium text-gray-900">{{ $reservation->name }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <i class="fas fa-phone text-gray-400 w-5 mr-3"></i>
+                                <div>
+                                    <span class="text-sm text-gray-500">Phone</span>
+                                    <p class="font-medium text-gray-900">{{ $reservation->phone }}</p>
+                                </div>
+                            </div>
+                            
+                            @if($reservation->email)
+                            <div class="flex items-center">
+                                <i class="fas fa-envelope text-gray-400 w-5 mr-3"></i>
+                                <div>
+                                    <span class="text-sm text-gray-500">Email</span>
+                                    <p class="font-medium text-gray-900">{{ $reservation->email }}</p>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Reservation Information -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+                            Reservation Information
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar text-gray-400 w-5 mr-3"></i>
+                                <div>
+                                    <span class="text-sm text-gray-500">Date</span>
+                                    <p class="font-medium text-gray-900">{{ $reservation->date->format('F d, Y') }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <i class="fas fa-clock text-gray-400 w-5 mr-3"></i>
+                                <div>
+                                    <span class="text-sm text-gray-500">Time</span>
+                                    <p class="font-medium text-gray-900">
+                                        {{ $reservation->start_time->format('h:i A') }} - {{ $reservation->end_time->format('h:i A') }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <i class="fas fa-users text-gray-400 w-5 mr-3"></i>
+                                <div>
+                                    <span class="text-sm text-gray-500">Number of People</span>
+                                    <p class="font-medium text-gray-900">{{ $reservation->number_of_people }} guests</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <i class="fas fa-store text-gray-400 w-5 mr-3"></i>
+                                <div>
+                                    <span class="text-sm text-gray-500">Branch</span>
+                                    <p class="font-medium text-gray-900">{{ $reservation->branch->name }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special Instructions -->
+                @if($reservation->comments)
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Special Instructions</h3>
+                    <p class="text-gray-700 bg-gray-50 p-4 rounded-lg">{{ $reservation->comments }}</p>
+                </div>
+                @endif
+
+                <!-- Reservation Fee -->
+                @if($reservation->reservation_fee > 0)
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-blue-900">Reservation Fee</h3>
+                                <p class="text-sm text-blue-700">A reservation fee is required to confirm your booking</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold text-blue-900">LKR {{ number_format($reservation->reservation_fee, 2) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- Action Selection -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+                <h2 class="text-xl font-semibold text-white flex items-center">
+                    <i class="fas fa-question-circle mr-3"></i>
+                    What would you like to do next?
+                </h2>
+            </div>
+            
+            <div class="p-6">
+                <form action="{{ route('reservations.confirm', $reservation) }}" method="POST">
+                    @csrf
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Make Order Option -->
+                        <div class="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 transition-colors cursor-pointer order-option" 
+                             onclick="selectOption('make_order')">
+                            <input type="radio" name="action" value="make_order" id="make_order" class="hidden">
+                            <label for="make_order" class="cursor-pointer block">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-utensils text-2xl text-blue-600"></i>
+                                    </div>
+                                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Make an Order</h3>
+                                    <p class="text-gray-600 mb-4">Browse our menu and place your order now. You can pre-order your meals for a seamless dining experience.</p>
+                                    
+                                    <div class="bg-blue-50 rounded-lg p-3">
+                                        <p class="text-sm text-blue-800">
+                                            <i class="fas fa-check-circle mr-2"></i>
+                                            Pre-order your favorite dishes
+                                        </p>
+                                        <p class="text-sm text-blue-800">
+                                            <i class="fas fa-clock mr-2"></i>
+                                            Faster service when you arrive
+                                        </p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Payment Only Option -->
+                        <div class="border-2 border-gray-200 rounded-xl p-6 hover:border-green-500 transition-colors cursor-pointer order-option" 
+                             onclick="selectOption('payment_only')">
+                            <input type="radio" name="action" value="payment_only" id="payment_only" class="hidden">
+                            <label for="payment_only" class="cursor-pointer block">
+                                <div class="text-center">
+                                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <i class="fas fa-credit-card text-2xl text-green-600"></i>
+                                    </div>
+                                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Payment Only</h3>
+                                    <p class="text-gray-600 mb-4">Just pay the reservation fee now and order when you arrive at the restaurant.</p>
+                                    
+                                    <div class="bg-green-50 rounded-lg p-3">
+                                        <p class="text-sm text-green-800">
+                                            <i class="fas fa-check-circle mr-2"></i>
+                                            Quick reservation confirmation
+                                        </p>
+                                        <p class="text-sm text-green-800">
+                                            <i class="fas fa-menu mr-2"></i>
+                                            Order when you arrive
+                                        </p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="mt-8 text-center">
+                        <button type="submit" id="confirmBtn" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed" 
+                                disabled>
+                            <i class="fas fa-arrow-right mr-2"></i>
+                            Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Back Link -->
+        <div class="text-center mt-6">
+            <a href="{{ route('reservations.index') }}" 
+               class="text-gray-600 hover:text-gray-800 inline-flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Reservations
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectOption(value) {
+    // Remove selected class from all options
+    document.querySelectorAll('.order-option').forEach(option => {
+        option.classList.remove('border-blue-500', 'border-green-500', 'ring-2', 'ring-blue-200', 'ring-green-200');
+        option.classList.add('border-gray-200');
+    });
+    
+    // Clear all radio buttons
+    document.querySelectorAll('input[name="action"]').forEach(radio => {
+        radio.checked = false;
+    });
+    
+    // Select the clicked option
+    const selectedOption = document.querySelector(`input[value="${value}"]`);
+    const selectedContainer = selectedOption.closest('.order-option');
+    
+    selectedOption.checked = true;
+    selectedContainer.classList.remove('border-gray-200');
+    
+    if (value === 'make_order') {
+        selectedContainer.classList.add('border-blue-500', 'ring-2', 'ring-blue-200');
+    } else {
+        selectedContainer.classList.add('border-green-500', 'ring-2', 'ring-green-200');
+    }
+    
+    // Enable confirm button
+    document.getElementById('confirmBtn').disabled = false;
+}
+
+// Handle form submission
+document.querySelector('form').addEventListener('submit', function(e) {
+    const selectedAction = document.querySelector('input[name="action"]:checked');
+    if (!selectedAction) {
+        e.preventDefault();
+        alert('Please select an option to continue.');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+});
+</script>
+@endsection
+                        <button type="submit" id="confirmBtn" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed" 
+                                disabled>
+                            <i class="fas fa-arrow-right mr-2"></i>
+                            Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Back Link -->
+        <div class="text-center mt-6">
+            <a href="{{ route('reservations.index') }}" 
+               class="text-gray-600 hover:text-gray-800 inline-flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back to Reservations
+            </a>
+        </div>
+    </div>
 
             @if($reservation->special_requests)
             <div class="mt-5 pt-4 border-t border-blue-100">

@@ -639,4 +639,57 @@ class InventoryService
 
         return $outOfStockItems;
     }
+
+    /**
+     * Check availability for a menu item (wrapper method)
+     */
+    public function checkAvailability(MenuItem $menuItem, int $quantity = 1): bool
+    {
+        $availability = $menuItem->checkAvailability($menuItem->itemMaster->branch_id ?? 1, $quantity);
+        return $availability['available'] ?? false;
+    }
+
+    /**
+     * Reserve inventory for an order
+     */
+    public function reserveItem(MenuItem $menuItem, int $quantity, int $orderId): bool
+    {
+        try {
+            DB::beginTransaction();
+            
+            // Get the item master and branch
+            $itemMaster = $menuItem->itemMaster;
+            if (!$itemMaster) {
+                Log::warning("MenuItem {$menuItem->id} has no associated ItemMaster");
+                return false;
+            }
+            
+            $branchId = $itemMaster->branch_id;
+            
+            // Check availability first
+            if (!$this->checkAvailability($menuItem, $quantity)) {
+                DB::rollBack();
+                return false;
+            }
+            
+            // Create reservation transaction
+            ItemTransaction::create([
+                'inventory_item_id' => $itemMaster->id,
+                'branch_id' => $branchId,
+                'transaction_type' => 'reservation',
+                'quantity' => -$quantity, // Negative for reservation
+                'reference_type' => 'order',
+                'reference_id' => $orderId,
+                'notes' => "Reserved for order #{$orderId}",
+                'created_by' => Auth::id() ?? 1
+            ]);
+            
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Failed to reserve item: " . $e->getMessage());
+            return false;
+        }
+    }
 }

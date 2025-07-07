@@ -176,11 +176,11 @@
                 <div class="order-info-value">{{ $order->order_number ?? $order->id }}</div>
             </div>
             <div class="order-info-item">
-                <div class="order-info-label">{{ strtoupper($order->order_type ?? 'DINE IN') }}</div>
+                <div class="order-info-label">{{ $order->order_type ? strtoupper($order->order_type->getLabel()) : 'DINE IN' }}</div>
                 <div class="order-info-value">
                     @if($order->table)
                         TABLE {{ $order->table->table_number }}
-                    @elseif($order->order_type === 'takeaway')
+                    @elseif($order->order_type && $order->order_type->isTakeaway())
                         TAKEAWAY
                     @else
                         COUNTER

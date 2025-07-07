@@ -33,8 +33,8 @@ class Reservation extends Model
         'check_in_time',
         'check_out_time',
         'send_notification',
-        'created_by_admin_id', // Track which admin created the reservation
-        'assigned_table_ids', // Store assigned table IDs as JSON
+        'created_by_admin_id', 
+        'assigned_table_ids', 
     ];
 
     protected $casts = [
@@ -263,6 +263,144 @@ class Reservation extends Model
     public function getTypeLabel(): string
     {
         return $this->type ? $this->type->getLabel() : 'Unknown';
+    }
+
+    /**
+     * Generate reservation summary for confirmation
+     */
+    public function getReservationSummary(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'phone' => $this->phone,
+            'date' => $this->date->format('Y-m-d'),
+            'start_time' => $this->start_time->format('H:i'),
+            'end_time' => $this->end_time->format('H:i'),
+            'number_of_people' => $this->number_of_people,
+            'type' => $this->getTypeLabel(),
+            'reservation_fee' => $this->reservation_fee,
+            'status' => $this->status,
+            'table_size' => $this->table_size,
+            'tables_assigned' => $this->assigned_table_ids ?? [],
+        ];
+    }
+
+    /**
+     * Confirm reservation and prepare for order workflow
+     */
+    public function confirmReservation(): bool
+    {
+        if ($this->status !== 'pending') {
+            throw new \Exception('Only pending reservations can be confirmed');
+        }
+
+        $this->status = 'confirmed';
+        $this->save();
+
+        // Send confirmation notification if enabled
+        if ($this->send_notification) {
+            // NotificationService::sendReservationConfirmation($this);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if reservation has any orders
+     */
+    public function hasOrders(): bool
+    {
+        return $this->orders()->exists();
+    }
+
+    /**
+     * Get reservation fee amount
+     */
+    public function getReservationFeeAmount(): float
+    {
+        return $this->branch?->reservation_fee ?? 0;
+    }
+
+    /**
+     * Get cancellation fee amount
+     */
+    public function getCancellationFeeAmount(): float
+    {
+        return $this->branch?->cancellation_fee ?? 0;
+    }
+
+    /**
+     * Apply reservation charge
+     */
+    public function chargeReservationFee(): void
+    {
+        $amount = $this->getReservationFeeAmount();
+        if ($amount > 0) {
+            \App\Models\Payment::create([
+                'payable_type' => get_class($this),
+                'payable_id' => $this->id,
+                'amount' => $amount,
+                'type' => 'reservation_fee',
+                'status' => 'pending',
+                'customer_phone' => $this->phone,
+                'customer_name' => $this->name,
+            ]);
+        }
+    }
+
+    /**
+     * Get admin defaults for reservation creation
+     */
+    public static function getAdminDefaults($admin): array
+    {
+        return [
+            'phone' => $admin->phone ?? '',
+            'date' => now()->addDays(1)->format('Y-m-d'), // Tomorrow
+            'start_time' => '19:00', // 7 PM default
+            'duration' => 120, // 2 hours default
+            'number_of_people' => 2,
+            'type' => ReservationType::WALK_IN->value,
+            'branch_id' => $admin->branch_id,
+        ];
+    }
+
+    /**
+     * Arrange tables based on reservation size
+     */
+    public function arrangeTables(): array
+    {
+        $tableSize = $this->table_size ?? $this->number_of_people;
+        
+        // Get available tables that can accommodate the party size
+        $availableTables = Table::where('branch_id', $this->branch_id)
+            ->where('capacity', '>=', $tableSize)
+            ->whereDoesntHave('reservations', function($query) {
+                $query->forDate($this->date)
+                      ->forTimeSlot($this->start_time, $this->end_time)
+                      ->whereIn('status', ['confirmed', 'checked_in']);
+            })
+            ->orderBy('capacity')
+            ->get();
+
+        $selectedTables = [];
+        $remainingSeats = $tableSize;
+
+        foreach ($availableTables as $table) {
+            if ($remainingSeats <= 0) break;
+            
+            $selectedTables[] = $table->id;
+            $remainingSeats -= $table->capacity;
+        }
+
+        if ($remainingSeats > 0) {
+            throw new \Exception('Not enough table capacity available for this reservation');
+        }
+
+        $this->assigned_table_ids = $selectedTables;
+        $this->save();
+
+        return $selectedTables;
     }
 }
 

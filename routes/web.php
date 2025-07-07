@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\{
     CustomerDashboardController,
     ReservationController,
@@ -60,6 +59,7 @@ use App\Http\Controllers\Admin\
 
 use App\Http\Controllers\PaymentController as MainPaymentController;
 use App\Http\Middleware\SuperAdmin;
+use App\Http\Controllers\ReservationWorkflowController;
 
 /*-------------------------------------------------------------------------
 | Debug Routes - Removed in production refactoring
@@ -135,6 +135,7 @@ Route::middleware(['web'])->group(function () {
         Route::get('/all', [OrderController::class, 'allOrders'])->name('all');
         Route::post('/update-cart', [OrderController::class, 'updateCart'])->name('update-cart');
         Route::get('/create', [OrderController::class, 'create'])->name('create');
+        Route::get('/create-from-reservation/{reservation}', [OrderController::class, 'createFromReservation'])->name('create-from-reservation');
         Route::post('/store', [OrderController::class, 'store'])->name('store');
         Route::get('/{order}/summary', [OrderController::class, 'summary'])->whereNumber('order')->name('summary');
         Route::get('/{order}/edit', [OrderController::class, 'edit'])->whereNumber('order')->name('edit');
@@ -149,18 +150,6 @@ Route::middleware(['web'])->group(function () {
         Route::post('/{order}/mark-ready', [OrderController::class, 'markAsReady'])->name('mark-ready');
         Route::post('/{order}/complete', [OrderController::class, 'completeOrder'])->name('complete');
 
-        // Takeaway Orders
-        Route::prefix('takeaway')->name('takeaway.')->group(function () {
-            Route::get('/', [OrderController::class, 'indexTakeaway'])->name('index');
-            Route::get('/create', [OrderController::class, 'createTakeaway'])->name('create');
-            Route::post('/store', [OrderController::class, 'storeTakeaway'])->name('store');
-            Route::get('/{order}/edit', [OrderController::class, 'editTakeaway'])->whereNumber('order')->name('edit');
-            Route::get('/{order}/summary', [OrderController::class, 'summary'])->whereNumber('order')->name('summary');
-            Route::delete('/{order}/delete', [OrderController::class, 'destroyTakeaway'])->whereNumber('order')->name('destroy');
-            Route::put('/{order}', [OrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
-            Route::post('/{order}/submit', [OrderController::class, 'submitTakeaway'])->whereNumber('order')->name('submit');
-            Route::get('/{order}', [OrderController::class, 'showTakeaway'])->whereNumber('order')->name('show');
-        });
     });
 });
 
@@ -316,21 +305,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [AdminOrderController::class, 'index'])->name('index');
             Route::get('/create', [AdminOrderController::class, 'create'])->name('create');
             Route::post('/', [AdminOrderController::class, 'store'])->name('store');
+            Route::get('/today', [ReservationWorkflowController::class, 'showTodaysOrders'])->name('today');
             Route::get('/{order}', [AdminOrderController::class, 'show'])->whereNumber('order')->name('show');
             Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->whereNumber('order')->name('edit');
             Route::put('/{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
             Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
+            
+            // KOT and Printing routes
+            Route::post('/{order}/print-kot', [AdminOrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
+            Route::post('/{order}/print-bill', [AdminOrderController::class, 'printBill'])->whereNumber('order')->name('print-bill');
+            
+            // AJAX endpoints for KOT and status management
+            Route::get('/{order}/check-kot', [AdminOrderController::class, 'checkKotItems'])->whereNumber('order')->name('check-kot');
+            Route::post('/{order}/update-status', [AdminOrderController::class, 'updateStatus'])->whereNumber('order')->name('update-status');
 
             // AJAX endpoints for OrderManagementController
             Route::get('/ajax/items-with-stock', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getItemsWithStock'])->name('ajax.items-with-stock');
             Route::get('/ajax/stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStewards'])->name('ajax.stewards');
             Route::get('/ajax/available-stewards', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getAvailableStewards'])->name('ajax.available-stewards');
             Route::get('/ajax/stock-alerts', [\App\Http\Controllers\Admin\OrderManagementController::class, 'getStockAlerts'])->name('ajax.stock-alerts');
-
-
-            // Takeaway Orders - redirect to unified create with type parameter
-
-
 
             Route::prefix('takeaway')->name('takeaway.')->group(function () {
                 Route::get('/', [AdminOrderController::class, 'indexTakeaway'])->name('index');
@@ -343,6 +336,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('/{order}', [AdminOrderController::class, 'updateTakeaway'])->whereNumber('order')->name('update');
                 Route::delete('/{order}', [AdminOrderController::class, 'destroyTakeaway'])->whereNumber('order')->name('destroy');
             });
+        });
+
+        // Reservation Workflow Management
+        Route::prefix('reservation-workflow')->name('reservation-workflow.')->group(function () {
+            Route::get('/initialize', [ReservationWorkflowController::class, 'initializeReservation'])->name('initialize');
+            Route::post('/initialize', [ReservationWorkflowController::class, 'initializeReservation'])->name('initialize.post');
+            Route::get('/create', [ReservationWorkflowController::class, 'createReservation'])->name('create');
+            Route::post('/create', [ReservationWorkflowController::class, 'storeReservation'])->name('store');
+            Route::get('/reservation/{reservation}/summary', [ReservationWorkflowController::class, 'showReservationSummary'])->name('reservation.summary');
+            Route::get('/reservation/{reservation}/order/create', [ReservationWorkflowController::class, 'showOrderCreation'])->name('order.create');
+            Route::post('/reservation/{reservation}/order/store', [ReservationWorkflowController::class, 'storeOrder'])->name('order.store');
+            Route::get('/fees/calculate', [ReservationWorkflowController::class, 'calculateFees'])->name('fees.calculate');
+            
+            // API routes for dynamic loading
+            Route::get('/api/organizations/{organization}/branches', [ReservationWorkflowController::class, 'getBranchesForOrganization'])->name('api.branches');
+            Route::get('/api/branches/{branch}/menu-items', [ReservationWorkflowController::class, 'getMenuItemsForBranch'])->name('api.menu-items');
+        });
+
+        // Global API routes
+        Route::prefix('api')->name('api.')->group(function () {
+            Route::get('/organizations/{organization}/branches', [ReservationWorkflowController::class, 'getBranchesForOrganization'])->name('organizations.branches');
+            Route::get('/menu-items/branch/{branch}', [ReservationWorkflowController::class, 'getMenuItemsForBranch'])->name('menu-items.branch');
+            Route::get('/menu-items/branch/{branch}/active', [OrderController::class, 'getMenuItemsFromActiveMenus'])->name('menu-items.active');
         });
 
         // Payments
@@ -749,10 +765,7 @@ Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationContr
 Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'checkOut'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
 Route::get('orders/orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.create');
 Route::get('roles/assign', [App\Http\Controllers\RoleController::class, 'assign'])->name('roles.assign');
-// Route::put('grn/update', [GrnDashboardController::class, 'update'])->middleware(['auth:admin'])->name('admin.grn.update');
-// Route::get('grn/print', [GrnDashboardController::class, 'print'])->middleware(['auth:admin'])->name('admin.grn.print');
-// Route::get('grn/edit', [GrnDashboardController::class, 'edit'])->middleware(['auth:admin'])->name('admin.grn.edit');
-// Route::get('grn/verify', [GrnDashboardController::class, 'verify'])->middleware(['auth:admin'])->name('admin.grn.verify');
+
 Route::get('purchase-orders/show', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'show'])->middleware(['auth:admin'])->name('admin.purchase-orders.show');
 Route::get('purchase-orders/index', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'index'])->middleware(['auth:admin'])->name('admin.purchase-orders.index');
 Route::post('purchase-orders/store', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'store'])->middleware(['auth:admin'])->name('admin.purchase-orders.store');
@@ -771,7 +784,7 @@ Route::get('orders/reservations/summary', [App\Http\Controllers\Admin\OrderContr
 Route::get('orders/takeaway/summary', [App\Http\Controllers\Admin\OrderController::class, 'takeaway'])->middleware(['auth:admin'])->name('admin.orders.takeaway.summary');
 Route::get('orders/summary', [App\Http\Controllers\Admin\OrderController::class, 'summary'])->middleware(['auth:admin'])->name('admin.orders.summary');
 Route::get('bills/show', [App\Http\Controllers\Admin\BillController::class, 'show'])->middleware(['auth:admin'])->name('admin.bills.show');
-// Route::get('inventory/items/added-items', [InventoryController::class, 'items'])->middleware(['auth:admin'])->name('admin.inventory.items.added-items');
+
 Route::get('payments/create', [App\Http\Controllers\PaymentController::class, 'create'])->name('payments.create');
 Route::get('branch', [App\Http\Controllers\BranchController::class, 'index'])->name('branch');
 
@@ -811,7 +824,7 @@ Route::get('/test-branches/{organization}', function($organizationId) {
     }
 })->name('test.branches');
 
-// Test route for debugging ItemMaster issue - Remove this after debugging
+
 Route::get('/test-item-master', function () {
     try {
         echo "Testing ItemMaster in web context...<br>";
@@ -929,7 +942,7 @@ Route::prefix('menus')->name('menus.')->group(function () {
 });
 
 Route::prefix('orders')->name('orders.')->group(function () {
-    Route::post('/takeaway', [OrderController::class, 'createTakeawayOrder'])->name('takeaway.store');
+    // Route::post('/takeaway', [OrderController::class, 'createTakeawayOrder'])->name('takeaway.store');
 });
 
 Route::prefix('reservations')->name('reservations.')->group(function () {
@@ -1059,3 +1072,13 @@ Route::get('/debug/branch-loading', function () {
 Route::get('/test/simple-branch', function () {
     return view('simple_branch_test');
 })->name('test.simple-branch');
+
+// Include reservation workflow routes
+require __DIR__.'/reservation_workflow.php';
+
+// Include public route groups
+require __DIR__.'/groups/public.php';
+
+// API route for getting menu items from active menus
+Route::get('/api/menu-items/branch/{branch}/active', [OrderController::class, 'getMenuItemsFromActiveMenus'])->name('api.menu-items.active');
+

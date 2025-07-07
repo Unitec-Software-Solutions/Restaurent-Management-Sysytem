@@ -242,32 +242,6 @@
             </form>
         </div>
 
-        <!-- Info Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-                <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-clock text-indigo-600"></i>
-                </div>
-                <h3 class="font-medium text-gray-900 mb-2">Quick Confirmation</h3>
-                <p class="text-sm text-gray-600">You'll receive confirmation within 15 minutes</p>
-            </div>
-
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-utensils text-green-600"></i>
-                </div>
-                <h3 class="font-medium text-gray-900 mb-2">Great Experience</h3>
-                <p class="text-sm text-gray-600">Enjoy our carefully crafted dishes and ambiance</p>
-            </div>
-
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-phone text-blue-600"></i>
-                </div>
-                <h3 class="font-medium text-gray-900 mb-2">Easy Changes</h3>
-                <p class="text-sm text-gray-600">Call us anytime to modify your reservation</p>
-            </div>
-        </div>
     </div>
 </div>
 @endsection

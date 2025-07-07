@@ -121,7 +121,7 @@
             </div>
             <div class="flex justify-between mb-1">
                 <span class="font-bold">Order Type:</span>
-                <span class="capitalize">{{ str_replace('_', ' ', $order->order_type) }}</span>
+                <span class="capitalize">{{ $order->order_type ? $order->order_type->getLabel() : 'Unknown' }}</span>
             </div>
             @if($order->steward)
             <div class="flex justify-between mb-1">
@@ -177,7 +177,7 @@
         <div class="flex justify-between items-center mb-3">
             <div class="text-xs">
                 <span class="font-bold">Priority:</span>
-                @if($order->order_type === 'dine_in_walk_in_demand' || $order->order_type === 'takeaway_walk_in_demand')
+                @if($order->order_type && ($order->order_type->value === 'dine_in_walk_in_demand' || $order->order_type->value === 'takeaway_walk_in_demand'))
                     <span class="bg-red-100 text-red-800 px-1 rounded">URGENT</span>
                 @else
                     <span class="bg-green-100 text-green-800 px-1 rounded">NORMAL</span>

@@ -67,6 +67,21 @@
                 </button>
             </div>
         </form>
+
+        <!-- Today's Orders Filter -->
+        <div class="mb-4">
+            <div class="flex items-center space-x-4">
+                <button onclick="filterTodayOrders()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-calendar-day mr-2"></i> Today's Orders
+                </button>
+                <button onclick="filterKOTOrders()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-fire mr-2"></i> KOT Orders
+                </button>
+                <button onclick="clearFilters()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-times mr-2"></i> Clear Filters
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Orders Table -->
@@ -241,11 +256,17 @@
                                         </button>
                                     @endif
 
-                                    <!-- Print KOT if order has items -->
-                                    @if($order->orderItems && $order->orderItems->count() > 0)
+                                    <!-- Print KOT if order has KOT items -->
+                                    @php
+                                        $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
+                                            $q->where('type', \App\Models\MenuItem::TYPE_KOT);
+                                        })->exists();
+                                    @endphp
+                                    
+                                    @if($hasKotItems)
                                         <button onclick="printKOT({{ $order->id }})" 
-                                                class="text-green-600 hover:text-green-900" title="Print KOT">
-                                            <i class="fas fa-print"></i>
+                                                class="text-orange-600 hover:text-orange-900" title="Print KOT">
+                                            <i class="fas fa-print"></i> KOT
                                         </button>
                                     @endif
                                 </div>
@@ -307,13 +328,45 @@ function updateOrderStatus(orderId, status) {
 }
 
 function printKOT(orderId) {
-    window.open(`/admin/orders/${orderId}/print-kot`, '_blank');
+    // Check if order has KOT items before printing
+    fetch(`/admin/orders/${orderId}/check-kot`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.hasKotItems) {
+            // Open KOT print window
+            window.open(`/admin/orders/${orderId}/print-kot`, '_blank', 'width=800,height=600');
+        } else {
+            alert('This order has no items that require kitchen preparation (KOT items).');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to check KOT items');
+    });
 }
 
 function exportOrders() {
     const params = new URLSearchParams(window.location.search);
     params.set('export', 'excel');
     window.location.href = `${window.location.pathname}?${params.toString()}`;
+}
+
+function filterTodayOrders() {
+    const today = new Date().toISOString().split('T')[0];
+    window.location.href = `${window.location.pathname}?date_from=${today}&date_to=${today}`;
+}
+
+function filterKOTOrders() {
+    window.location.href = `${window.location.pathname}?has_kot=1`;
+}
+
+function clearFilters() {
+    window.location.href = window.location.pathname;
 }
 </script>
 @endpush

@@ -13,6 +13,43 @@
             <form method="POST" action="{{ route('orders.takeaway.store') }}" class="space-y-6">
                 @csrf
 
+                <!-- Display Validation Errors -->
+                @if($errors->any())
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Please correct the following errors:</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <ul class="list-disc pl-5 space-y-1">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if(session('error'))
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Error</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <p>{{ session('error') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Left Column - Order Details -->
                     <div class="space-y-6">
@@ -30,21 +67,54 @@
                                 <input type="hidden" name="order_type" value="takeaway_walk_in_demand">
                             </div>
 
-                            <div class="mb-4" @if(auth()->check() && auth()->user()->isAdmin()) style="display:none" @endif>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Select Outlet</label>
-                                <select name="branch_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" required>
-                                    @foreach($branches as $branch)
-                                        <option value="{{ $branch->id }}" {{ $defaultBranch == $branch->id ? 'selected' : '' }}>
-                                            {{ $branch->name }}
+                            <!-- Organization Selection (Admin Only) -->
+                            @if(isset($isAdmin) && $isAdmin && isset($organizations) && $organizations->count() > 1)
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Select Organization</label>
+                                <select name="organization_id" id="organization_select" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border">
+                                    <option value="">Choose Organization...</option>
+                                    @foreach($organizations as $organization)
+                                        <option value="{{ $organization->id }}" 
+                                            {{ (isset($organizationId) && $organizationId == $organization->id) || (isset($defaultOrganization) && $defaultOrganization == $organization->id) ? 'selected' : '' }}>
+                                            {{ $organization->name }}
                                         </option>
                                     @endforeach
                                 </select>
+                            </div>
+                            @endif
+
+                            <!-- Branch Selection -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Select {{ (isset($isAdmin) && $isAdmin) ? 'Branch' : 'Restaurant Location' }}
+                                </label>
+                                <select name="branch_id" id="branch_select" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" required>
+                                    <option value="">Choose {{ (isset($isAdmin) && $isAdmin) ? 'Branch' : 'Location' }}...</option>
+                                    @if(isset($branches))
+                                        @foreach($branches as $branch)
+                                            <option value="{{ $branch->id }}" 
+                                                data-organization="{{ $branch->organization_id ?? $branch->organization->id ?? '' }}"
+                                                {{ (isset($branchId) && $branchId == $branch->id) || (isset($defaultBranch) && $defaultBranch == $branch->id) ? 'selected' : '' }}>
+                                                {{ $branch->name }}
+                                                @if(!(isset($isAdmin) && $isAdmin) && isset($branch->organization))
+                                                    ({{ $branch->organization->name }})
+                                                @endif
+                                            </option>
+                                        @endforeach
+                                    @endif
+                                </select>
+                                @if(isset($isAdmin) && $isAdmin && isset($defaultBranch))
+                                    <input type="hidden" id="admin_default_branch" value="{{ $defaultBranch }}">
+                                @endif
+                                @if(isset($isAdmin) && $isAdmin && isset($defaultOrganization))
+                                    <input type="hidden" id="admin_default_organization" value="{{ $defaultOrganization }}">
+                                @endif
                             </div>
 
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
                                 <input type="datetime-local" name="order_time" 
-                                    value="{{ auth()->check() && auth()->user()->isAdmin() ? now()->format('Y-m-d\TH:i') : '' }}"
+                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? now()->addMinutes(30)->format('Y-m-d\TH:i') : old('order_time', '') }}"
                                     min="{{ now()->format('Y-m-d\TH:i') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
                                     required>
@@ -67,16 +137,20 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
                                 <input type="text" name="customer_name" 
+                                    value="{{ old('customer_name', '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    placeholder="Enter your full name"
                                     required>
                             </div>
 
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
                                 <input type="tel" name="customer_phone" 
+                                    value="{{ old('customer_phone', '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    placeholder="Enter your phone number"
                                     required
-                                    pattern="[0-9]{10,15}" 
+                                    pattern="[0-9+]{10,15}" 
                                     title="Please enter a valid 10-15 digit phone number">
                                 <p class="mt-1 text-sm text-gray-500">We'll notify you about your order status</p>
                             </div>
@@ -87,58 +161,83 @@
                     <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 h-fit">
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Menu Items</h3>
                         
-                        <div class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                            @foreach($items as $item)
-                            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150">
-                                <div class="flex items-center">
-                                    <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
-                                        type="checkbox" 
-                                        value="{{ $item->id }}" 
-                                        id="item_{{ $item->id }}" 
-                                        data-item-id="{{ $item->id }}">
-                                    
-                                    <label for="item_{{ $item->id }}" class="ml-3 flex-1">
-                                        <div class="flex justify-between items-center">
-                                            <div class="flex items-center space-x-2">
-                                                <span class="font-medium text-gray-800">{{ $item->name }}</span>
-                                                @if($item->item_type === 'KOT')
-                                                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>
-                                                @endif
+                        <div id="menu-loading" class="hidden text-center py-8">
+                            <div class="inline-flex items-center">
+                                <svg class="animate-spin h-6 w-6 text-blue-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Loading menu items...
+                            </div>
+                        </div>
+
+                        <div id="menu-items-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                            @if(isset($items) && $items->count() > 0)
+                                @foreach($items as $item)
+                                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150 cursor-pointer {{ ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) ? 'opacity-50 cursor-not-allowed' : '' }}" onclick="toggleItemSelection('{{ $item->id }}')">
+                                    <div class="flex items-center">
+                                        <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
+                                            type="checkbox" 
+                                            value="{{ $item->id }}" 
+                                            id="item_{{ $item->id }}" 
+                                            data-item-id="{{ $item->id }}"
+                                            {{ ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) ? 'disabled' : '' }}
+                                            onclick="event.stopPropagation();">
+                                        
+                                        <label for="item_{{ $item->id }}" class="ml-3 flex-1 cursor-pointer">
+                                            <div class="flex justify-between items-center">
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="font-medium text-gray-800">{{ $item->name }}</span>
+                                                    @if($item->item_type === 'KOT')
+                                                        <span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>
+                                                    @endif
+                                                </div>
+                                                <span class="text-blue-600 font-semibold">LKR {{ number_format($item->price, 2) }}</span>
                                             </div>
-                                            <span class="text-blue-600 font-semibold">LKR {{ number_format($item->selling_price, 2) }}</span>
-                                        </div>
-                                        @if($item->item_type === 'KOT')
-                                            <div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>
-                                        @elseif($item->item_type === 'Buy & Sell')
-                                            @if($item->current_stock > 0)
-                                                <div class="text-xs text-green-600 font-medium mt-1">In Stock ({{ $item->current_stock }})</div>
-                                            @else
-                                                <div class="text-xs text-red-600 font-medium mt-1">Out of Stock</div>
+                                            @if($item->item_type === 'KOT')
+                                                <div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>
+                                            @elseif($item->item_type === 'Buy & Sell')
+                                                @if($item->current_stock > 0)
+                                                    <div class="text-xs text-green-600 font-medium mt-1">In Stock ({{ $item->current_stock }})</div>
+                                                @else
+                                                    <div class="text-xs text-red-600 font-medium mt-1 bg-red-50 px-2 py-1 rounded">❌ Out of Stock</div>
+                                                @endif
                                             @endif
-                                        @endif
-                                    </label>
-                                    
-                                    <div class="flex items-center border border-gray-300 rounded overflow-hidden touch-friendly-controls">
-                                        <button type="button"
-                                            class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
-                                            data-item-id="{{ $item->id }}"
-                                            disabled>−</button>
-                                        <input type="number"
-                                            min="1"
-                                            max="99"
-                                            value="1"
-                                            class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
-                                            data-item-id="{{ $item->id }}"
-                                            disabled
-                                            readonly>
-                                        <button type="button"
-                                            class="qty-increase w-12 h-12 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-l border-gray-300"
-                                            data-item-id="{{ $item->id }}"
-                                            disabled>+</button>
+                                        </label>
+                                        
+                                        <div class="flex items-center border border-gray-300 rounded overflow-hidden touch-friendly-controls">
+                                            <button type="button"
+                                                class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
+                                                data-item-id="{{ $item->id }}"
+                                                onclick="event.stopPropagation();"
+                                                disabled>−</button>
+                                            <input type="number"
+                                                min="1"
+                                                max="{{ ($item->item_type === 'Buy & Sell') ? $item->current_stock : 99 }}"
+                                                value="1"
+                                                class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
+                                                data-item-id="{{ $item->id }}"
+                                                onclick="event.stopPropagation();"
+                                                disabled
+                                                readonly>
+                                            <button type="button"
+                                                class="qty-increase w-12 h-12 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-l border-gray-300"
+                                                data-item-id="{{ $item->id }}"
+                                                onclick="event.stopPropagation();"
+                                                disabled>+</button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            @endforeach
+                                @endforeach
+                            @else
+                                <div id="no-menu-message" class="text-center py-8 text-gray-500">
+                                    @if(isset($isAdmin) && $isAdmin)
+                                        Please select an organization and branch to view menu items.
+                                    @else
+                                        Please select a restaurant location to view menu items.
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -156,7 +255,7 @@
                 </div>
 
                 <div class="flex justify-end mt-6">
-                    <button type="submit" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 border border-transparent rounded-lg font-bold text-white text-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all shadow-lg transform hover:scale-105 touch-manipulation">
+                    <button type="submit" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 border border-transparent rounded-lg font-bold text-black text-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all shadow-lg transform hover:scale-105 touch-manipulation">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                         </svg>
@@ -171,7 +270,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Admin-specific time handling
-    @if(auth()->check() && auth()->user()->isAdmin())
+    @if(isset($isAdmin) && $isAdmin)
     const setDefaultTime = (minutesToAdd) => {
         const time = new Date();
         time.setMinutes(time.getMinutes() + minutesToAdd);
@@ -181,8 +280,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Initial time setting
-    setDefaultTime(15);
+    // Initial time setting (30 minutes from now for admin, empty for customers)
+    @if(isset($isAdmin) && $isAdmin)
+    setDefaultTime(30);
+    @endif
 
     // Handle order type changes
     const orderTypeSelect = document.querySelector('select[name="order_type"]');
@@ -192,6 +293,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     @endif
+
+    // Initialize organization/branch handling
+    initializeLocationHandling();
 
     // Initialize quantity controls first
     initializeQuantityControls();
@@ -210,21 +314,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 qtyInput.disabled = false;
                 qtyInput.removeAttribute('readonly');
                 plusBtn.disabled = false;
-                minusBtn.disabled = false;
-                
-                // Set proper form field names for Laravel validation
-                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-                
-                // Create hidden input for item_id to ensure it's submitted with form
-                let hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
-                if (!hiddenInput) {
-                    hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.name = 'items[' + itemId + '][item_id]';
-                    hiddenInput.value = itemId;
-                    hiddenInput.className = 'item-hidden-' + itemId;
-                    itemContainer.appendChild(hiddenInput);
-                }
+                minusBtn.disabled = false;                                // Set proper form field names for Laravel validation
+                                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+                                
+                                // Create hidden input for menu_item_id to ensure it's submitted with form
+                                let hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
+                                if (!hiddenInput) {
+                                    hiddenInput = document.createElement('input');
+                                    hiddenInput.type = 'hidden';
+                                    hiddenInput.name = 'items[' + itemId + '][menu_item_id]';
+                                    hiddenInput.value = itemId;
+                                    hiddenInput.className = 'item-hidden-' + itemId;
+                                    itemContainer.appendChild(hiddenInput);
+                                }
                 
                 // Visual feedback - highlight selected item
                 itemContainer.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
@@ -291,6 +393,306 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+/**
+ * Toggle item selection when clicking on the item container
+ */
+function toggleItemSelection(itemId) {
+    const checkbox = document.getElementById('item_' + itemId);
+    if (checkbox && !checkbox.disabled) {
+        checkbox.checked = !checkbox.checked;
+        // Trigger the change event manually
+        checkbox.dispatchEvent(new Event('change'));
+    }
+}
+
+/**
+ * Initialize organization and branch handling
+ */
+function initializeLocationHandling() {
+    const organizationSelect = document.getElementById('organization_select');
+    const branchSelect = document.getElementById('branch_select');
+    const isAdmin = {{ isset($isAdmin) ? ($isAdmin ? 'true' : 'false') : 'false' }};
+
+    // Handle organization change
+    if (organizationSelect) {
+        organizationSelect.addEventListener('change', function() {
+            const organizationId = this.value;
+            updateBranchOptions(organizationId);
+        });
+    }
+
+    // Handle branch change
+    if (branchSelect) {
+        branchSelect.addEventListener('change', function() {
+            const branchId = this.value;
+            const organizationId = organizationSelect ? organizationSelect.value : null;
+            loadMenuItems(branchId, organizationId);
+        });
+    }
+
+    // Auto-load menu items if branch is pre-selected
+    const selectedBranchId = branchSelect ? branchSelect.value : null;
+    if (selectedBranchId) {
+        const organizationId = organizationSelect ? organizationSelect.value : null;
+        loadMenuItems(selectedBranchId, organizationId);
+    }
+}
+
+/**
+ * Update branch options based on selected organization
+ */
+function updateBranchOptions(organizationId) {
+    const branchSelect = document.getElementById('branch_select');
+    
+    if (!organizationId) {
+        // Clear branches except default option
+        branchSelect.innerHTML = '<option value="">Choose Branch...</option>';
+        clearMenuItems();
+        return;
+    }
+
+    // Show loading state
+    branchSelect.innerHTML = '<option value="">Loading branches...</option>';
+    branchSelect.disabled = true;
+
+    fetch(`/api/branches/organization/${organizationId}`)
+        .then(response => response.json())
+        .then(data => {
+            branchSelect.innerHTML = '<option value="">Choose Branch...</option>';
+            
+            data.branches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch.id;
+                option.textContent = branch.name;
+                branchSelect.appendChild(option);
+            });
+            
+            branchSelect.disabled = false;
+            clearMenuItems();
+        })
+        .catch(error => {
+            console.error('Error loading branches:', error);
+            branchSelect.innerHTML = '<option value="">Error loading branches</option>';
+            branchSelect.disabled = false;
+        });
+}
+
+/**
+ * Load menu items for selected branch
+ */
+function loadMenuItems(branchId, organizationId = null) {
+    if (!branchId) {
+        clearMenuItems();
+        return;
+    }
+
+    showMenuLoading();
+
+    // Use new API endpoint that loads from active menus only
+    const url = `/api/menu-items/branch/${branchId}/active`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayMenuItems(data.items || []);
+                if (data.menu) {
+                    console.log('Loaded items from active menu:', data.menu.name);
+                }
+            } else {
+                showMenuError(data.message || 'No active menu found for this branch');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading menu items:', error);
+            showMenuError();
+        });
+}
+
+/**
+ * Show loading state for menu items
+ */
+function showMenuLoading() {
+    const container = document.getElementById('menu-items-container');
+    const loading = document.getElementById('menu-loading');
+    
+    container.style.display = 'none';
+    loading.classList.remove('hidden');
+}
+
+/**
+ * Display menu items
+ */
+function displayMenuItems(items) {
+    const container = document.getElementById('menu-items-container');
+    const loading = document.getElementById('menu-loading');
+    
+    loading.classList.add('hidden');
+    container.style.display = 'block';
+    
+    if (items.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-500">No menu items available for this location.</div>';
+        return;
+    }
+
+    let html = '';
+    items.forEach(item => {
+        const stockDisplay = item.item_type === 'KOT' 
+            ? '<div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>'
+            : item.current_stock > 0 
+                ? `<div class="text-xs text-green-600 font-medium mt-1">In Stock (${item.current_stock})</div>`
+                : '<div class="text-xs text-red-600 font-medium mt-1">Out of Stock</div>';
+
+        const kotBadge = item.item_type === 'KOT' 
+            ? '<span class="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">KOT Available</span>'
+            : '';
+
+        html += `
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150">
+                <div class="flex items-center">
+                    <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
+                        type="checkbox" 
+                        value="${item.id}" 
+                        id="item_${item.id}" 
+                        data-item-id="${item.id}">
+                    
+                    <label for="item_${item.id}" class="ml-3 flex-1">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-medium text-gray-800">${item.name}</span>
+                                ${kotBadge}
+                            </div>
+                            <span class="text-blue-600 font-semibold">LKR ${parseFloat(item.selling_price || item.price).toFixed(2)}</span>
+                        </div>
+                        ${stockDisplay}
+                    </label>
+                    
+                    <div class="flex items-center border border-gray-300 rounded overflow-hidden touch-friendly-controls">
+                        <button type="button"
+                            class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
+                            data-item-id="${item.id}"
+                            disabled>−</button>
+                        <input type="number"
+                            min="1"
+                            max="99"
+                            value="1"
+                            class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
+                            data-item-id="${item.id}"
+                            disabled
+                            readonly>
+                        <button type="button"
+                            class="qty-increase w-12 h-12 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-l border-gray-300"
+                            data-item-id="${item.id}"
+                            disabled>+</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    
+    // Reinitialize event handlers for new items
+    initializeQuantityControls();
+    initializeItemCheckboxes();
+}
+
+/**
+ * Clear menu items display
+ */
+function clearMenuItems() {
+    const container = document.getElementById('menu-items-container');
+    const loading = document.getElementById('menu-loading');
+    const isAdmin = {{ isset($isAdmin) ? ($isAdmin ? 'true' : 'false') : 'false' }};
+    
+    if (loading) loading.classList.add('hidden');
+    if (container) {
+        container.style.display = 'block';
+        
+        const message = isAdmin 
+            ? 'Please select an organization and branch to view menu items.'
+            : 'Please select a restaurant location to view menu items.';
+        
+        container.innerHTML = `<div class="text-center py-8 text-gray-500">${message}</div>`;
+    }
+}
+
+/**
+ * Show menu error state
+ */
+function showMenuError(message = 'Error loading menu items. Please try again.') {
+    const container = document.getElementById('menu-items-container');
+    const loading = document.getElementById('menu-loading');
+    
+    loading.classList.add('hidden');
+    container.style.display = 'block';
+    container.innerHTML = `<div class="text-center py-8 text-red-500">${message}</div>`;
+}
+
+/**
+ * Initialize item checkbox event handlers
+ */
+function initializeItemCheckboxes() {
+    document.querySelectorAll('.item-check').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const itemId = this.getAttribute('data-item-id');
+            const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+            const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
+            const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
+            const itemContainer = this.closest('.bg-white');
+            
+            if (this.checked) {
+                // Enable controls
+                qtyInput.disabled = false;
+                qtyInput.removeAttribute('readonly');
+                plusBtn.disabled = false;
+                minusBtn.disabled = false;                                // Set proper form field names for Laravel validation
+                                qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+                                
+                                // Create hidden input for menu_item_id to ensure it's submitted with form
+                                let hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
+                                if (!hiddenInput) {
+                                    hiddenInput = document.createElement('input');
+                                    hiddenInput.type = 'hidden';
+                                    hiddenInput.name = 'items[' + itemId + '][menu_item_id]';
+                                    hiddenInput.value = itemId;
+                                    hiddenInput.className = 'item-hidden-' + itemId;
+                                    itemContainer.appendChild(hiddenInput);
+                                }
+                
+                // Visual feedback - highlight selected item
+                itemContainer.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+                
+                updateButtonStates(itemId, qtyInput.value);
+                console.log('✅ Item selected:', itemId, 'Quantity:', qtyInput.value);
+                updateOrderSummary();
+            } else {
+                // Disable controls
+                qtyInput.disabled = true;
+                qtyInput.setAttribute('readonly', 'readonly');
+                plusBtn.disabled = true;
+                minusBtn.disabled = true;
+                
+                // Remove form field names
+                qtyInput.removeAttribute('name');
+                qtyInput.value = 1;
+                
+                // Remove hidden input
+                const hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
+                if (hiddenInput) {
+                    hiddenInput.remove();
+                }
+                
+                // Remove visual feedback
+                itemContainer.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+                
+                console.log('❌ Item deselected:', itemId);
+                updateOrderSummary();
+            }
+        });
+    });
+}
 
 /**
  * Initialize quantity controls for takeaway orders with enhanced touch support

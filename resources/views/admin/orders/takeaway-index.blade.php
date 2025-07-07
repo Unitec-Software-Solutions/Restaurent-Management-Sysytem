@@ -38,11 +38,33 @@
                             <span class="text-sm text-gray-500">{{ $order->customer_phone }}</span>
                         </td>
                         <td class="px-4 py-3">
-                            @switch($order->order_type)
-                                @case('takeaway_online_scheduled') Online @break
-                                @case('takeaway_walk_in_demand') Walk-in @break
-                                @case('takeaway_in_call_scheduled') Phone @break
-                            @endswitch
+                            @if($order->order_type)
+                                @switch($order->order_type->value)
+                                    @case('takeaway_online_scheduled') 
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                            <i class="fas fa-globe mr-1"></i>Online
+                                        </span>
+                                        @break
+                                    @case('takeaway_walk_in_demand') 
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                            <i class="fas fa-bolt mr-1"></i>Walk-in
+                                        </span>
+                                        @break
+                                    @case('takeaway_in_call_scheduled') 
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <i class="fas fa-phone mr-1"></i>Phone
+                                        </span>
+                                        @break
+                                    @default
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            {{ $order->order_type->getLabel() }}
+                                        </span>
+                                @endswitch
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Unknown
+                                </span>
+                            @endif
                         </td>
                         <td class="px-4 py-3">
                             {{ $order->order_time ? $order->order_time->format('M j, Y H:i') : '-' }}

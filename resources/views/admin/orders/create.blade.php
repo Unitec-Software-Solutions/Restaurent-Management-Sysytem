@@ -58,7 +58,7 @@
                             @if(isset($reservation) && $reservation)
                             <input type="hidden" name="reservation_id" value="{{ $reservation->id }}">
                             @else
-                            <input type="hidden" name="order_type" value="{{ $orderType ?? 'in_house' }}">
+                            <input type="hidden" name="order_type" value="{{ $orderType ?? 'dine_in_walk_in_demand' }}">
                             
                             <!-- Order Type and Customer Information (for non-reservation orders) -->
                             @if(!isset($reservation) || !$reservation)
@@ -72,20 +72,20 @@
                                     </h3>
                                     <div class="space-y-2">
                                         <label class="flex items-center">
-                                            <input type="radio" name="order_type" value="in_house" 
-                                                {{ ($orderType ?? 'in_house') === 'in_house' ? 'checked' : '' }}
+                                            <input type="radio" name="order_type" value="dine_in_walk_in_demand" 
+                                                {{ ($orderType ?? 'dine_in_walk_in_demand') === 'dine_in_walk_in_demand' ? 'checked' : '' }}
                                                 class="mr-2 text-blue-600">
                                             <span class="text-gray-700">Dine In</span>
                                         </label>
                                         <label class="flex items-center">
-                                            <input type="radio" name="order_type" value="takeaway" 
-                                                {{ ($orderType ?? '') === 'takeaway' ? 'checked' : '' }}
+                                            <input type="radio" name="order_type" value="takeaway_walk_in_demand" 
+                                                {{ ($orderType ?? '') === 'takeaway_walk_in_demand' ? 'checked' : '' }}
                                                 class="mr-2 text-blue-600">
                                             <span class="text-gray-700">Takeaway</span>
                                         </label>
                                     </div>
                                 </div>
-                                @elseif(($orderType ?? '') === 'takeaway' || request()->has('type') && request()->get('type') === 'takeaway')
+                                @elseif(($orderType ?? '') === 'takeaway_walk_in_demand' || request()->has('type') && request()->get('type') === 'takeaway')
                                 <!-- For takeaway orders, show confirmation but don't allow changing -->
                                 <div class="bg-blue-50 rounded-xl p-4 border border-blue-200">
                                     <h3 class="text-lg font-semibold text-blue-800 mb-3 flex items-center">
@@ -93,7 +93,7 @@
                                         Takeaway Order
                                     </h3>
                                     <p class="text-blue-700">This order is set for takeaway</p>
-                                    <input type="hidden" name="order_type" value="takeaway">
+                                    <input type="hidden" name="order_type" value="takeaway_walk_in_demand">
                                 </div>
                                 @else
                                 <!-- Default to in-house if no specific type is set -->
@@ -108,8 +108,10 @@
                                         Branch
                                     </h3>
                                     <select name="branch_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                                        @foreach($branches as $branch)
-                                            <option value="{{ $branch->id }}" {{ $defaultBranch == $branch->id ? 'selected' : '' }}>
+                                        <option value="">Select Branch...</option>
+                                        @foreach($branches ?? [] as $branch)
+                                            <option value="{{ $branch->id }}" 
+                                                {{ (old('branch_id', $defaultData['branch_id'] ?? $defaultBranch ?? '') == $branch->id) ? 'selected' : '' }}>
                                                 {{ $branch->name }}
                                             </option>
                                         @endforeach
@@ -129,16 +131,22 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                                        <input type="text" name="customer_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter customer name">
+                                        <input type="text" name="customer_name" 
+                                            value="{{ old('customer_name', $defaultData['customer_name'] ?? '') }}"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                            placeholder="Enter customer name">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                                        <input type="tel" name="customer_phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter phone number" required>
+                                        <input type="tel" name="customer_phone" 
+                                            value="{{ old('customer_phone', $defaultData['customer_phone'] ?? '') }}"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                            placeholder="Enter phone number" required>
                                     </div>
                                     <div class="md:col-span-2">
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
                                         <input type="datetime-local" name="order_time" 
-                                            value="{{ old('order_time', now()->format('Y-m-d\TH:i')) }}"
+                                            value="{{ old('order_time', $defaultData['order_time'] ?? now()->format('Y-m-d\TH:i')) }}"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
                                 </div>

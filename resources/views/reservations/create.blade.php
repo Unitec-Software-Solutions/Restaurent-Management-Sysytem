@@ -292,7 +292,7 @@
                             <i class="fas fa-arrow-left mr-2"></i> Cancel
                         </button>
                         <button type="submit" id="submitButton" 
-                                class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-100 flex items-center">
+                                class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-black font-semibold py-3 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-100 flex items-center">
                             <i class="fas fa-search mr-2"></i> Review Reservation
                         </button>
                     </div>
@@ -300,32 +300,7 @@
             </div>
         </div>
 
-        <!-- Features Section -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div class="bg-white rounded-xl p-6 shadow-md border border-gray-100 text-center hover:shadow-lg transition-shadow duration-300">
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-bolt text-blue-600 text-xl"></i>
-                </div>
-                <h3 class="font-semibold text-gray-900 mb-2">Quick Confirmation</h3>
-                <p class="text-sm text-gray-600">Get instant confirmation for your reservation</p>
-            </div>
-            
-            <div class="bg-white rounded-xl p-6 shadow-md border border-gray-100 text-center hover:shadow-lg transition-shadow duration-300">
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-star text-green-600 text-xl"></i>
-                </div>
-                <h3 class="font-semibold text-gray-900 mb-2">Premium Experience</h3>
-                <p class="text-sm text-gray-600">Enjoy exceptional dining with top-quality service</p>
-            </div>
-            
-            <div class="bg-white rounded-xl p-6 shadow-md border border-gray-100 text-center hover:shadow-lg transition-shadow duration-300">
-                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-edit text-purple-600 text-xl"></i>
-                </div>
-                <h3 class="font-semibold text-gray-900 mb-2">Easy Modifications</h3>
-                <p class="text-sm text-gray-600">Call us anytime to modify your reservation</p>
-            </div>
-        </div>
+
     </div>
 </div>
 @endsection

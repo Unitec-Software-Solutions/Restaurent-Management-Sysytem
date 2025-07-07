@@ -13,6 +13,7 @@ use App\Models\MenuItem;
 use App\Traits\Exportable;
 use App\Enums\OrderType;
 use App\Services\NotificationService;
+use App\Services\OrderNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -117,6 +118,29 @@ class AdminOrderController extends Controller
         return redirect()->route('admin.orders.index')->with('success', 'Order updated successfully!');
     }
 
+    /**
+     * Check if order has KOT items for today's orders view
+     */
+    public function checkKotItems(Order $order)
+    {
+        try {
+            $hasKotItems = $order->hasKotItems();
+            $canGenerateKot = $order->canGenerateKot();
+            
+            return response()->json([
+                'success' => true,
+                'hasKotItems' => $hasKotItems,
+                'canGenerateKot' => $canGenerateKot,
+                'kotPrintUrl' => $hasKotItems ? route('admin.orders.print-kot', $order->id) : null
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error checking KOT items: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function branchOrders(Branch $branch)
     {
         $orders = $branch->orders()
@@ -154,7 +178,7 @@ class AdminOrderController extends Controller
             ->get();
         
         // Get menus
-        $menus = Menu::with(['menuItems.category'])
+        $menus = Menu::with(['menuItems.menuCategory'])
             ->where('is_active', true)
             ->when(!$admin->is_super_admin && $admin->branch_id, 
                 fn($q) => $q->where('branch_id', $admin->branch_id)
@@ -262,7 +286,11 @@ class AdminOrderController extends Controller
             'organization_id' => $admin->organization_id,
             'order_type' => $orderType,
             'created_by' => $admin->id,
-            'placed_by_admin' => true
+            'placed_by_admin' => true,
+            'customer_name' => '',
+            'customer_phone' => $admin->phone ?? '',
+            'customer_email' => '',
+            'order_time' => now()->addMinutes(30)->format('Y-m-d\TH:i')
         ];
         
         $branches = $this->getAdminAccessibleBranches($admin);
@@ -292,6 +320,7 @@ class AdminOrderController extends Controller
                 // Add type and availability information for frontend display
                 $item->display_type = $itemType == MenuItem::TYPE_BUY_SELL ? 'stock' : 'kot';
                 $item->current_stock = $currentStock;
+                $item->stock = $currentStock; // For view compatibility
                 $item->item_type = $itemType;
                 $item->type_name = $itemType == MenuItem::TYPE_BUY_SELL ? 'Buy & Sell' : 'KOT';
                 $item->availability_info = $this->getItemAvailabilityInfo($item, $currentStock, $itemType);
@@ -400,7 +429,7 @@ class AdminOrderController extends Controller
 
             // Create order with admin defaults
             $order = Order::create([
-                'order_number' => $this->generateOrderNumber(),
+                'order_number' => OrderNumberService::generate($validated['branch_id']),
                 'customer_name' => $customer->name,
                 'customer_phone' => $customer->phone,
                 'customer_phone_fk' => $customer->phone,
@@ -466,7 +495,7 @@ class AdminOrderController extends Controller
      */
     public function show(Order $order)
     {
-        $order->load(['orderItems.menuItem.category', 'branch', 'reservation']);
+        $order->load(['orderItems.menuItem.menuCategory', 'branch', 'reservation']);
         
         return view('admin.orders.show', compact('order'));
     }
@@ -651,6 +680,10 @@ class AdminOrderController extends Controller
                 $data['customer_name'] = 'Not Provided';
             }
 
+            // Generate order number and takeaway ID
+            $orderNumber = OrderNumberService::generate($data['branch_id']);
+            $takeawayId = OrderNumberService::generateTakeawayId($data['branch_id']);
+
             // Create order
             $order = Order::create([
                 'order_type' => $data['order_type'],
@@ -661,7 +694,8 @@ class AdminOrderController extends Controller
                 'status' => 'active',
                 'placed_by_admin' => true,
                 'created_by_admin_id' => $admin->id,
-                'takeaway_id' => 'TW' . now()->format('YmdHis') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT)
+                'order_number' => $orderNumber,
+                'takeaway_id' => $takeawayId
             ]);
 
             // Add order items
@@ -773,7 +807,7 @@ class AdminOrderController extends Controller
 
         // Get menu items with availability checks
         $menuItems = $activeMenu->menuItems()
-            ->with(['category'])
+            ->with(['menuCategory'])
             ->get()
             ->map(function ($item) {
                 return [
@@ -781,8 +815,8 @@ class AdminOrderController extends Controller
                     'name' => $item->name,
                     'description' => $item->description,
                     'price' => $item->price,
-                    'category_id' => $item->category_id,
-                    'category_name' => $item->category?->name,
+                    'category_id' => $item->menu_category_id,
+                    'category_name' => $item->menuCategory?->name,
                     'current_stock' => $item->current_stock,
                     'is_available' => $item->getMenuAvailability(),
                     'prep_time' => $item->prep_time,
@@ -1239,6 +1273,32 @@ class AdminOrderController extends Controller
     }
 
     /**
+     * Print KOT for an order
+     */
+    public function printKOT(Order $order)
+    {
+        // Update order to mark KOT as generated
+        $order->update(['kot_generated' => true]);
+        
+        return view('orders.kot-print', compact('order'));
+    }
+
+    /**
+     * Generate and print bill
+     */
+    public function printBill(Order $order)
+    {
+        // Mark order as completed and bill generated
+        $order->update([
+            'bill_generated' => true,
+            'status' => Order::STATUS_COMPLETED,
+            'completed_at' => now()
+        ]);
+        
+        return view('orders.bill-print', compact('order'));
+    }
+
+    /**
      * Validate stock availability for order items
      */
     private function validateStockForItems(array $items)
@@ -1264,18 +1324,6 @@ class AdminOrderController extends Controller
         if (class_exists('App\Models\StockReservation')) {
             \App\Models\StockReservation::createReservation($itemId, $orderId, $quantity);
         }
-    }
-
-    /**
-     * Generate unique order number
-     */
-    private function generateOrderNumber(): string
-    {
-        $prefix = 'ORD';
-        $timestamp = now()->format('Ymd');
-        $sequence = str_pad(Order::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
-        
-        return "{$prefix}-{$timestamp}-{$sequence}";
     }
 
     /**
@@ -1500,9 +1548,8 @@ class AdminOrderController extends Controller
             $branchId = $request->get('branch_id');
             
             // Find alternatives based on category and availability
-            $alternatives = MenuItem::where('menu_id', $menuItem->menu_id)
+            $alternatives = MenuItem::where('menu_category_id', $menuItem->menu_category_id)
                 ->where('id', '!=', $itemId)
-                ->where('category', $menuItem->category)
                 ->where('is_available', true)
                 ->limit(5)
                 ->get()
@@ -1512,7 +1559,7 @@ class AdminOrderController extends Controller
                         'id' => $item->id,
                         'name' => $item->name,
                         'price' => $item->price,
-                        'category' => $item->category,
+                        'category' => $item->menuCategory?->name,
                         'available' => $stockCheck['available']
                     ];
                 });
