@@ -13,6 +13,7 @@ use App\Models\MenuItem;
 use App\Traits\Exportable;
 use App\Enums\OrderType;
 use App\Services\NotificationService;
+use App\Services\OrderNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -428,7 +429,7 @@ class AdminOrderController extends Controller
 
             // Create order with admin defaults
             $order = Order::create([
-                'order_number' => $this->generateOrderNumber(),
+                'order_number' => OrderNumberService::generate($validated['branch_id']),
                 'customer_name' => $customer->name,
                 'customer_phone' => $customer->phone,
                 'customer_phone_fk' => $customer->phone,
@@ -1318,18 +1319,6 @@ class AdminOrderController extends Controller
         if (class_exists('App\Models\StockReservation')) {
             \App\Models\StockReservation::createReservation($itemId, $orderId, $quantity);
         }
-    }
-
-    /**
-     * Generate unique order number
-     */
-    private function generateOrderNumber(): string
-    {
-        $prefix = 'ORD';
-        $timestamp = now()->format('Ymd');
-        $sequence = str_pad(Order::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
-        
-        return "{$prefix}-{$timestamp}-{$sequence}";
     }
 
     /**

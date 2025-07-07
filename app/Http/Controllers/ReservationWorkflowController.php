@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use App\Services\OrderNumberService;
 
 class ReservationWorkflowController extends Controller
 {
@@ -183,7 +184,7 @@ class ReservationWorkflowController extends Controller
                 'customer_phone_fk' => $customer->phone,
                 'customer_email' => $customer->email,
                 'order_type' => OrderType::from($validated['order_type']),
-                'order_number' => $this->generateOrderNumber($reservation->branch_id),
+                'order_number' => OrderNumberService::generate($reservation->branch_id),
                 'status' => 'pending',
                 'order_date' => now(),
                 'special_instructions' => $validated['special_instructions'],
@@ -526,7 +527,7 @@ class ReservationWorkflowController extends Controller
             }
 
             // Create order
-            $orderNumber = $this->generateOrderNumber($validated['branch_id']);
+            $orderNumber = OrderNumberService::generate($validated['branch_id']);
             $taxRate = 0.1; // 10% tax
             $tax = $subtotal * $taxRate;
             $total = $subtotal + $tax;

@@ -15,10 +15,13 @@ use App\Services\InventoryService;
 use App\Services\ProductCatalogService;
 use App\Services\OrderService;
 use App\Services\NotificationService;
+use App\Services\OrderNumberService;
 use App\Enums\OrderType;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -142,11 +145,27 @@ class OrderController extends Controller
             $reservation = \App\Models\Reservation::find($reservationId);
         }
         
-        $menuItems = \App\Models\MenuItem::with(['menuCategory', 'itemMaster'])
-            ->whereHas('itemMaster', function($query) {
-                $query->where('is_active', true);
-            })
-            ->get();
+        // Get menu items from active menus only
+        $branchId = $reservation ? $reservation->branch_id : null;
+        $menuItems = collect();
+        
+        if ($branchId) {
+            $activeMenu = \App\Models\Menu::getActiveMenuForBranch($branchId);
+            if ($activeMenu) {
+                $menuItems = $activeMenu->menuItems()
+                    ->with(['menuCategory', 'itemMaster'])
+                    ->where('is_active', true)
+                    ->get();
+            }
+        } else {
+            // Fallback: get all active menu items if no specific branch
+            $menuItems = \App\Models\MenuItem::with(['menuCategory', 'itemMaster'])
+                ->where('is_active', true)
+                ->whereHas('itemMaster', function($query) {
+                    $query->where('is_active', true);
+                })
+                ->get();
+        }
 
         // Get available stewards
         $stewards = Employee::whereHas('roles', function($query) {
@@ -483,9 +502,27 @@ class OrderController extends Controller
     public function createTakeaway()
     {
         $branches = Branch::where('is_active', true)->get();
-        $items = MenuItem::where('is_active', true)
-            ->with(['menuCategory', 'itemMaster'])
-            ->get();
+        
+        // Get items from active menus only for the first active branch (or specified branch)
+        $defaultBranch = $branches->first();
+        $items = collect();
+        
+        if ($defaultBranch) {
+            $activeMenu = \App\Models\Menu::getActiveMenuForBranch($defaultBranch->id);
+            if ($activeMenu) {
+                $items = $activeMenu->menuItems()
+                    ->with(['menuCategory', 'itemMaster'])
+                    ->where('is_active', true)
+                    ->wherePivot('is_available', true)
+                    ->get();
+            } else {
+                // Fallback: get all active menu items if no active menu
+                $items = MenuItem::where('is_active', true)
+                    ->where('branch_id', $defaultBranch->id)
+                    ->with(['menuCategory', 'itemMaster'])
+                    ->get();
+            }
+        }
 
         // Add missing fields for the view
         foreach ($items as $item) {
@@ -619,7 +656,7 @@ class OrderController extends Controller
             $total = $subtotal + $tax;
 
             // Generate order number
-            $orderNumber = $this->generateOrderNumber($data['branch_id']);
+            $orderNumber = OrderNumberService::generate($data['branch_id']);
 
             // Create takeaway order with all required fields
             $order = Order::create([
@@ -713,10 +750,35 @@ class OrderController extends Controller
     public function editTakeaway($id)
     {
         $order = Order::with(['orderItems.menuItem', 'branch'])->findOrFail($id);
-        $items = MenuItem::where('is_active', true)
-            ->with(['menuCategory', 'itemMaster'])
-            ->get();
-        $branches = Branch::all();
+        
+        // Get only active menu items for the order's branch from active menus
+        $activeMenu = \App\Models\Menu::getActiveMenuForBranch($order->branch_id);
+        
+        if ($activeMenu) {
+            // Get items from the active menu
+            $items = $activeMenu->menuItems()
+                ->with(['menuCategory', 'itemMaster'])
+                ->where('is_active', true)
+                ->wherePivot('is_available', true)
+                ->get();
+        } else {
+            // Fallback: get all active menu items if no active menu (shouldn't normally happen)
+            $items = MenuItem::where('is_active', true)
+                ->where('branch_id', $order->branch_id)
+                ->with(['menuCategory', 'itemMaster'])
+                ->get();
+        }
+            
+        // Add missing fields for the view
+        foreach ($items as $item) {
+            // Determine item type based on associated ItemMaster
+            $item->item_type = $item->itemMaster && $item->itemMaster->is_perishable ? 'Buy & Sell' : 'KOT';
+            
+            // Add current stock information
+            $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $order->branch_id) : 999;
+        }
+        
+        $branches = Branch::where('is_active', true)->get();
 
         // Prepare cart data for pre-filling
         $cart = [
@@ -809,6 +871,11 @@ class OrderController extends Controller
     // Update takeaway order (customer)
     public function updateTakeaway(Request $request, Order $order)
     {
+        Log::info('Update takeaway order attempt', [
+            'order_id' => $order->id,
+            'request_data' => $request->all()
+        ]);
+
         $data = $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'order_time' => 'required|date|after_or_equal:now',
@@ -819,36 +886,84 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        // Remove old items
-        $order->orderItems()->delete();
-        $subtotal = 0;
-        foreach ($data['items'] as $item) {
-            $menuItem = MenuItem::find($item['item_id']);
-            if (!$menuItem) continue;
+        DB::beginTransaction();
+        try {
+            // Remove old items
+            $order->orderItems()->delete();
             
-            $lineTotal = $menuItem->price * $item['quantity'];
-            $subtotal += $lineTotal;
-            OrderItem::create([
-                'order_id' => $order->id,
-                'menu_item_id' => $item['item_id'],
-                'item_name' => $menuItem->name,
-                'quantity' => $item['quantity'],
-                'unit_price' => $menuItem->price,
-                'total_price' => $lineTotal,
+            $subtotal = 0;
+            $orderItems = [];
+            
+            foreach ($data['items'] as $itemData) {
+                $menuItem = MenuItem::find($itemData['item_id']);
+                if (!$menuItem) {
+                    Log::warning('Menu item not found', ['item_id' => $itemData['item_id']]);
+                    continue;
+                }
+                
+                $quantity = (int) $itemData['quantity'];
+                $unitPrice = $menuItem->price;
+                $lineTotal = $unitPrice * $quantity;
+                $subtotal += $lineTotal;
+                
+                $orderItems[] = [
+                    'order_id' => $order->id,
+                    'menu_item_id' => $itemData['item_id'],
+                    'item_name' => $menuItem->name,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $lineTotal,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+            
+            // Bulk insert order items
+            if (!empty($orderItems)) {
+                \App\Models\OrderItem::insert($orderItems);
+            }
+            
+            $tax = $subtotal * 0.10;
+            $total = $subtotal + $tax;
+            
+            // Update order details
+            $order->update([
+                'branch_id' => $data['branch_id'],
+                'order_time' => Carbon::parse($data['order_time']),
+                'customer_name' => $data['customer_name'],
+                'customer_phone' => $data['customer_phone'],
+                'subtotal' => $subtotal,
+                'tax_amount' => $tax,
+                'total_amount' => $total,
+                'tax' => $tax, // For compatibility
+                'total' => $total, // For compatibility
+                'updated_at' => now(),
             ]);
+            
+            DB::commit();
+            
+            Log::info('Takeaway order updated successfully', [
+                'order_id' => $order->id,
+                'items_count' => count($orderItems),
+                'subtotal' => $subtotal,
+                'total' => $total
+            ]);
+            
+            return redirect()->route('orders.takeaway.summary', $order->id)
+                ->with('success', 'Takeaway order updated successfully!');
+                
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Failed to update takeaway order', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to update order: ' . $e->getMessage()])
+                ->withInput();
         }
-        $tax = $subtotal * 0.10;
-        $order->update([
-            'branch_id' => $data['branch_id'],
-            'order_time' => $data['order_time'],
-            'customer_name' => $data['customer_name'],
-            'customer_phone' => $data['customer_phone'],
-            'subtotal' => $subtotal,
-            'tax_amount' => $tax,
-            'total_amount' => $subtotal + $tax,
-        ]);
-        return redirect()->route('orders.summary', $order->id)
-            ->with('success', 'Takeaway order updated successfully!');
     }
 
     // Submit takeaway order (customer)
@@ -1334,20 +1449,6 @@ class OrderController extends Controller
     }
 
     /**
-     * Generate unique order number
-     */
-    private function generateOrderNumber($branchId)
-    {
-        $prefix = 'ORD' . str_pad($branchId, 2, '0', STR_PAD_LEFT);
-        $date = now()->format('Ymd');
-        $sequence = Order::where('branch_id', $branchId)
-            ->whereDate('created_at', today())
-            ->count() + 1;
-        
-        return $prefix . $date . str_pad($sequence, 3, '0', STR_PAD_LEFT);
-    }
-
-    /**
      * Show reservation summary and ask if user wants to create an order
      */
     public function showReservationSummary(Request $request)
@@ -1553,5 +1654,88 @@ class OrderController extends Controller
         $orders = Order::getTodaysOrders($branchId, $filters)->paginate(20);
         
         return view('admin.orders.today', compact('orders', 'filters'));
+    }
+
+    /**
+     * Get menu items from active menus for specific branch (API endpoint)
+     */
+    public function getMenuItemsFromActiveMenus(Request $request, $branchId)
+    {
+        try {
+            // Get the currently active menu for the branch
+            $activeMenu = \App\Models\Menu::getActiveMenuForBranch($branchId);
+            
+            if (!$activeMenu) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active menu found for this branch',
+                    'items' => []
+                ]);
+            }
+
+            // Get menu items from the active menu
+            $menuItems = $activeMenu->menuItems()
+                ->with(['menuCategory', 'itemMaster'])
+                ->where('is_active', true)
+                ->wherePivot('is_available', true)
+                ->get();
+
+            $items = $menuItems->map(function($item) use ($branchId) {
+                $itemType = $item->type ?? MenuItem::TYPE_KOT;
+                $currentStock = 0;
+                $canOrder = true;
+                $stockStatus = 'available';
+                
+                if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id) {
+                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
+                    $canOrder = $currentStock > 0;
+                    
+                    if ($currentStock <= 0) {
+                        $stockStatus = 'out_of_stock';
+                    } elseif ($currentStock <= 5) {
+                        $stockStatus = 'low_stock';
+                    }
+                }
+                
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'price' => $item->pivot->override_price ?? $item->price,
+                    'selling_price' => $item->pivot->override_price ?? $item->price,
+                    'type' => $itemType,
+                    'type_name' => $itemType === MenuItem::TYPE_KOT ? 'KOT' : 'Buy & Sell',
+                    'item_type' => $itemType === MenuItem::TYPE_KOT ? 'KOT' : 'Buy & Sell',
+                    'current_stock' => $currentStock,
+                    'can_order' => $canOrder,
+                    'stock_status' => $stockStatus,
+                    'category_name' => $item->menuCategory->name ?? 'Uncategorized',
+                    'category_id' => $item->menu_category_id,
+                    'preparation_time' => $item->preparation_time ?? 15,
+                    'is_vegetarian' => $item->is_vegetarian ?? false,
+                    'is_featured' => $item->is_featured ?? false,
+                    'display_order' => $item->display_order ?? 0,
+                    'special_notes' => $item->pivot->special_notes,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'menu' => [
+                    'id' => $activeMenu->id,
+                    'name' => $activeMenu->name,
+                    'type' => $activeMenu->menu_type
+                ],
+                'items' => $items->toArray()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error loading menu items from active menus: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading menu items',
+                'items' => []
+            ], 500);
+        }
     }
 }

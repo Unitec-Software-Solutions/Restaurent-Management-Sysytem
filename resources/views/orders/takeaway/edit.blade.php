@@ -32,7 +32,7 @@
                         <label for="order_time" class="block text-sm font-medium text-gray-700">Pickup Time</label>
                         <input type="datetime-local" name="order_time" id="order_time" 
                                class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                               value="{{ old('order_time', $order->order_time ? (is_string($order->order_time) ? $order->order_time : $order->order_time->format('Y-m-d\TH:i')) : '') }}" 
+                               value="{{ old('order_time', $order->order_time ? \Carbon\Carbon::parse($order->order_time)->format('Y-m-d\TH:i') : '') }}" 
                                required>
                     </div>
                 </div>

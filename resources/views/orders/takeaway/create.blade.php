@@ -137,18 +137,18 @@
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
                                 <input type="text" name="customer_name" 
-                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? 'Walk-in Customer' : old('customer_name', '') }}"
+                                    value="{{ old('customer_name', '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
-                                    placeholder="{{ (auth()->check() && auth()->user()->isAdmin()) ? 'Walk-in Customer' : 'Enter your full name' }}"
+                                    placeholder="Enter your full name"
                                     required>
                             </div>
 
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
                                 <input type="tel" name="customer_phone" 
-                                    value="{{ (auth()->check() && auth()->user()->isAdmin()) ? '+94000000000' : old('customer_phone', '') }}"
+                                    value="{{ old('customer_phone', '') }}"
                                     class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
-                                    placeholder="{{ (auth()->check() && auth()->user()->isAdmin()) ? '+94000000000' : 'Enter your phone number' }}"
+                                    placeholder="Enter your phone number"
                                     required
                                     pattern="[0-9+]{10,15}" 
                                     title="Please enter a valid 10-15 digit phone number">
@@ -489,12 +489,20 @@ function loadMenuItems(branchId, organizationId = null) {
 
     showMenuLoading();
 
-    const url = `/api/menu-items/branch/${branchId}${organizationId ? `?organization_id=${organizationId}` : ''}`;
+    // Use new API endpoint that loads from active menus only
+    const url = `/api/menu-items/branch/${branchId}/active`;
     
     fetch(url)
         .then(response => response.json())
         .then(data => {
-            displayMenuItems(data.items || []);
+            if (data.success) {
+                displayMenuItems(data.items || []);
+                if (data.menu) {
+                    console.log('Loaded items from active menu:', data.menu.name);
+                }
+            } else {
+                showMenuError(data.message || 'No active menu found for this branch');
+            }
         })
         .catch(error => {
             console.error('Error loading menu items:', error);
@@ -613,13 +621,13 @@ function clearMenuItems() {
 /**
  * Show menu error state
  */
-function showMenuError() {
+function showMenuError(message = 'Error loading menu items. Please try again.') {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
     
     loading.classList.add('hidden');
     container.style.display = 'block';
-    container.innerHTML = '<div class="text-center py-8 text-red-500">Error loading menu items. Please try again.</div>';
+    container.innerHTML = `<div class="text-center py-8 text-red-500">${message}</div>`;
 }
 
 /**

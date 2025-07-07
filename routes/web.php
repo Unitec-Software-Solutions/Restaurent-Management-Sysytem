@@ -344,6 +344,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('api')->name('api.')->group(function () {
             Route::get('/organizations/{organization}/branches', [ReservationWorkflowController::class, 'getBranchesForOrganization'])->name('organizations.branches');
             Route::get('/menu-items/branch/{branch}', [ReservationWorkflowController::class, 'getMenuItemsForBranch'])->name('menu-items.branch');
+            Route::get('/menu-items/branch/{branch}/active', [OrderController::class, 'getMenuItemsFromActiveMenus'])->name('menu-items.active');
         });
 
         // Payments
@@ -1063,4 +1064,7 @@ require __DIR__.'/reservation_workflow.php';
 
 // Include public route groups
 require __DIR__.'/groups/public.php';
+
+// API route for getting menu items from active menus
+Route::get('/api/menu-items/branch/{branch}/active', [OrderController::class, 'getMenuItemsFromActiveMenus'])->name('api.menu-items.active');
 
