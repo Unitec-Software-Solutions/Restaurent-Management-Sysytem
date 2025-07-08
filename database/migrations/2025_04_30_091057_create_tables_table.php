@@ -17,11 +17,11 @@ return new class extends Migration
             $table->string('location')->nullable();
             $table->timestamps();
             $table->text('description')->nullable();
-            $table->integer('x_position')->nullable(); // For table mapping visualization
-            $table->integer('y_position')->nullable(); // For table mapping visualization
+            $table->integer('x_position')->nullable(); 
+            $table->integer('y_position')->nullable(); 
             $table->unique(['branch_id', 'number']);
             $table->boolean('is_active')->default(true);
-            $table->softDeletes(); // Adds deleted_at column
+            $table->softDeletes(); 
         });
 
         Schema::create('reservation_tables', function (Blueprint $table) {
