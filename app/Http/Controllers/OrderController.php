@@ -161,10 +161,28 @@ class OrderController extends Controller
             // Fallback: get all active menu items if no specific branch
             $menuItems = \App\Models\MenuItem::with(['menuCategory', 'itemMaster'])
                 ->where('is_active', true)
-                ->whereHas('itemMaster', function($query) {
-                    $query->where('is_active', true);
+                ->where(function($query) {
+                    // Include KOT items (which don't need itemMaster) or Buy & Sell items with active itemMaster
+                    $query->where('type', MenuItem::TYPE_KOT)
+                          ->orWhereHas('itemMaster', function($subQuery) {
+                              $subQuery->where('is_active', true);
+                          });
                 })
                 ->get();
+        }
+
+        // Add proper item type and stock information for the view
+        foreach ($menuItems as $item) {
+            // Determine item type based on the actual MenuItem type field
+            if ($item->type === MenuItem::TYPE_BUY_SELL) {
+                $item->item_type = 'Buy & Sell';
+                // Add current stock information for Buy & Sell items
+                $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $branchId ?? 1) : 0;
+            } else {
+                // KOT items (TYPE_KOT) are always available for ordering
+                $item->item_type = 'KOT';
+                $item->current_stock = 999; // KOT items don't have stock limitations
+            }
         }
 
         // Get available stewards
@@ -526,11 +544,16 @@ class OrderController extends Controller
 
         // Add missing fields for the view
         foreach ($items as $item) {
-            // Determine item type based on associated ItemMaster
-            $item->item_type = $item->itemMaster && $item->itemMaster->is_perishable ? 'Buy & Sell' : 'KOT';
-            
-            // Add current stock information
-            $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $branches->first()?->id ?? 1) : 999;
+            // Determine item type based on the actual MenuItem type field
+            if ($item->type === MenuItem::TYPE_BUY_SELL) {
+                $item->item_type = 'Buy & Sell';
+                // Add current stock information for Buy & Sell items
+                $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $branches->first()?->id ?? 1) : 0;
+            } else {
+                // KOT items (TYPE_KOT) are always available for ordering
+                $item->item_type = 'KOT';
+                $item->current_stock = 999; // KOT items don't have stock limitations
+            }
         }
 
         return view('orders.takeaway.create', [
@@ -892,40 +915,21 @@ class OrderController extends Controller
             // Remove old items
             $order->orderItems()->delete();
             
-            $subtotal = 0;
-            $orderItems = [];
+            // Calculate subtotal and prepare items data
+            $calculation = $this->calculateSubtotal($data['items']);
+            $subtotal = $calculation['subtotal'];
+            $itemsData = $calculation['items_data'];
             
-            foreach ($data['items'] as $itemData) {
-                $menuItem = MenuItem::find($itemData['item_id']);
-                if (!$menuItem) {
-                    Log::warning('Menu item not found', ['item_id' => $itemData['item_id']]);
-                    continue;
-                }
-                
-                $quantity = (int) $itemData['quantity'];
-                $unitPrice = $menuItem->price;
-                $lineTotal = $unitPrice * $quantity;
-                $subtotal += $lineTotal;
-                
-                $orderItems[] = [
-                    'order_id' => $order->id,
-                    'menu_item_id' => $itemData['item_id'],
-                    'item_name' => $menuItem->name,
-                    'quantity' => $quantity,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $lineTotal,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
+            // Prepare order items for database insertion
+            $orderItems = $this->prepareOrderItemsForInsert($order->id, $itemsData);
             
             // Bulk insert order items
             if (!empty($orderItems)) {
                 \App\Models\OrderItem::insert($orderItems);
             }
             
-            $tax = $subtotal * 0.10;
-            $total = $subtotal + $tax;
+            // Calculate totals with tax
+            $totals = $this->calculateOrderTotals($subtotal);
             
             // Update order details
             $order->update([
@@ -933,11 +937,11 @@ class OrderController extends Controller
                 'order_time' => Carbon::parse($data['order_time']),
                 'customer_name' => $data['customer_name'],
                 'customer_phone' => $data['customer_phone'],
-                'subtotal' => $subtotal,
-                'tax_amount' => $tax,
-                'total_amount' => $total,
-                'tax' => $tax, // For compatibility
-                'total' => $total, // For compatibility
+                'subtotal' => $totals['subtotal'],
+                'tax_amount' => $totals['tax'],
+                'total_amount' => $totals['total'],
+                'tax' => $totals['tax'], // For compatibility
+                'total' => $totals['total'], // For compatibility
                 'updated_at' => now(),
             ]);
             
@@ -946,8 +950,8 @@ class OrderController extends Controller
             Log::info('Takeaway order updated successfully', [
                 'order_id' => $order->id,
                 'items_count' => count($orderItems),
-                'subtotal' => $subtotal,
-                'total' => $total
+                'subtotal' => $totals['subtotal'],
+                'total' => $totals['total']
             ]);
             
             return redirect()->route('orders.takeaway.summary', $order->id)
@@ -1326,8 +1330,6 @@ class OrderController extends Controller
                     $stockStatus = 'out_of_stock';
                 } elseif ($currentStock <= ($item->itemMaster->reorder_level ?? 5)) {
                     $stockStatus = 'low_stock';
-                } else {
-                    $stockStatus = 'in_stock';
                 }
             }
             
@@ -1550,17 +1552,19 @@ class OrderController extends Controller
                     throw new \Exception("Insufficient inventory for {$menuItem->name}");
                 }
                 
+                $lineTotal = $menuItem->selling_price * $itemData['quantity'];
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $menuItem->id,
                     'item_name' => $menuItem->name,
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $menuItem->selling_price,
-                    'total_price' => $menuItem->selling_price * $itemData['quantity'],
+                    'subtotal' => $lineTotal,
+                    'total_price' => $lineTotal,
                     'inventory_item_id' => $menuItem->id,
                 ]);
                 
-                $subtotal += $orderItem->total_price;
+                $subtotal += $lineTotal;
                 
                 // Reserve inventory
                 $this->inventoryService->reserveItem($menuItem, $itemData['quantity'], $order->id);
@@ -1738,5 +1742,88 @@ class OrderController extends Controller
                 'items' => []
             ], 500);
         }
+    }
+    
+    /**
+     * Calculate subtotal for order items array
+     * 
+     * @param array $items Array of items with 'menu_item_id' and 'quantity'
+     * @return array ['subtotal' => float, 'items_data' => array]
+     */
+    protected function calculateSubtotal(array $items)
+    {
+        $subtotal = 0;
+        $itemsData = [];
+        
+        foreach ($items as $item) {
+            $menuItem = MenuItem::find($item['menu_item_id'] ?? $item['item_id']);
+            if (!$menuItem) {
+                continue;
+            }
+            
+            $quantity = (int) $item['quantity'];
+            $unitPrice = $menuItem->price;
+            $lineTotal = $unitPrice * $quantity;
+            $subtotal += $lineTotal;
+            
+            $itemsData[] = [
+                'menu_item' => $menuItem,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'line_total' => $lineTotal,
+            ];
+        }
+        
+        return [
+            'subtotal' => $subtotal,
+            'items_data' => $itemsData
+        ];
+    }
+    
+    /**
+     * Calculate order totals with tax
+     * 
+     * @param float $subtotal
+     * @param float $taxRate Default 10%
+     * @return array ['subtotal' => float, 'tax' => float, 'total' => float]
+     */
+    protected function calculateOrderTotals($subtotal, $taxRate = 0.10)
+    {
+        $tax = $subtotal * $taxRate;
+        $total = $subtotal + $tax;
+        
+        return [
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $total
+        ];
+    }
+    
+    /**
+     * Prepare order items array for database insertion
+     * 
+     * @param int $orderId
+     * @param array $itemsData From calculateSubtotal()
+     * @return array
+     */
+    protected function prepareOrderItemsForInsert($orderId, array $itemsData)
+    {
+        $orderItems = [];
+        
+        foreach ($itemsData as $itemData) {
+            $orderItems[] = [
+                'order_id' => $orderId,
+                'menu_item_id' => $itemData['menu_item']->id,
+                'item_name' => $itemData['menu_item']->name,
+                'quantity' => $itemData['quantity'],
+                'unit_price' => $itemData['unit_price'],
+                'subtotal' => $itemData['line_total'],
+                'total_price' => $itemData['line_total'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        
+        return $orderItems;
     }
 }

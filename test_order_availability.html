@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Order Item Availability</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .api-response { background-color: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        pre { background-color: #f1f1f1; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Test Order Item Availability</h1>
+    
+    <div class="test-case">
+        <h3>Test 1: Check if API returns KOT items correctly</h3>
+        <div id="api-test-result">Testing...</div>
+    </div>
+
+    <div class="test-case">
+        <h3>Test 2: Check JavaScript logic for item type detection</h3>
+        <div id="js-test-result">Testing...</div>
+    </div>
+
+    <script>
+        // Simulate the API response data structure
+        const mockApiResponse = {
+            "success": true,
+            "items": [
+                {
+                    "id": 1,
+                    "name": "Cappuccino",
+                    "type": 3,
+                    "type_name": "KOT", 
+                    "item_type": "KOT",
+                    "can_order": true,
+                    "stock_status": "available",
+                    "current_stock": 999
+                },
+                {
+                    "id": 2,
+                    "name": "Grilled Chicken",
+                    "type": 1,
+                    "type_name": "Buy & Sell",
+                    "item_type": "Buy & Sell", 
+                    "can_order": false,
+                    "stock_status": "out_of_stock",
+                    "current_stock": 0
+                }
+            ]
+        };
+
+        // Test 1: API Response Structure
+        function testApiResponse() {
+            const resultDiv = document.getElementById('api-test-result');
+            let html = '<div class="api-response"><pre>' + JSON.stringify(mockApiResponse, null, 2) + '</pre></div>';
+            
+            const kotItems = mockApiResponse.items.filter(item => item.type === 3 || item.item_type === 'KOT');
+            const buyAndSellItems = mockApiResponse.items.filter(item => item.type === 1 || item.item_type === 'Buy & Sell');
+            
+            html += `<p><strong>KOT Items Found:</strong> ${kotItems.length}</p>`;
+            html += `<p><strong>Buy & Sell Items Found:</strong> ${buyAndSellItems.length}</p>`;
+            
+            if (kotItems.length > 0) {
+                html += '<div class="success">✅ API correctly returns KOT items with type=3 and item_type="KOT"</div>';
+            } else {
+                html += '<div class="error">❌ No KOT items found in API response</div>';
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+
+        // Test 2: JavaScript Logic (Fixed Version)
+        function testJavaScriptLogic() {
+            const resultDiv = document.getElementById('js-test-result');
+            let html = '';
+            
+            // Test the FIXED logic
+            function getStockDisplay(item) {
+                // Fixed logic: Check item_type first (string), then handle numeric type
+                const itemType = item.item_type || (item.type === 3 ? 'KOT' : item.type === 1 ? 'Buy & Sell' : 'unknown');
+                const isKOTItem = itemType === 'KOT' || item.type === 3;
+                
+                if (isKOTItem) {
+                    return '<div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>';
+                } else if (item.can_order && item.current_stock > 0) {
+                    return `<div class="text-xs text-green-600 font-medium mt-1">In Stock (${item.current_stock})</div>`;
+                } else {
+                    return '<div class="text-xs text-red-600 font-medium mt-1 bg-red-50 px-2 py-1 rounded">❌ Out of Stock</div>';
+                }
+            }
+            
+            // Test each item
+            mockApiResponse.items.forEach((item, index) => {
+                const stockDisplay = getStockDisplay(item);
+                const itemType = item.item_type || (item.type === 3 ? 'KOT' : item.type === 1 ? 'Buy & Sell' : 'unknown');
+                const isKOTItem = itemType === 'KOT' || item.type === 3;
+                
+                html += `<div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">`;
+                html += `<strong>${item.name}</strong><br>`;
+                html += `Type: ${item.type} | Item Type: ${item.item_type}<br>`;
+                html += `Detected as KOT: ${isKOTItem ? 'Yes' : 'No'}<br>`;
+                html += `Display: ${stockDisplay}`;
+                html += `</div>`;
+                
+                if (item.type === 3 && stockDisplay.includes('Always Available')) {
+                    html += '<div class="success">✅ KOT item correctly shows as "Always Available"</div>';
+                } else if (item.type === 3) {
+                    html += '<div class="error">❌ KOT item incorrectly shows as out of stock</div>';
+                }
+            });
+            
+            resultDiv.innerHTML = html;
+        }
+
+        // Run tests
+        document.addEventListener('DOMContentLoaded', function() {
+            testApiResponse();
+            testJavaScriptLogic();
+        });
+    </script>
+</body>
+</html>

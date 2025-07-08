@@ -215,13 +215,32 @@ class AdminOrderController extends Controller
         ]);
 
         // Create order with reservation data
+        $admin = auth('admin')->user();
+        
+        // Determine organization_id based on admin type
+        $organizationId = null;
+        if ($admin->is_super_admin) {
+            // For super admin, get organization_id from the reservation's branch
+            $branch = Branch::findOrFail($reservation->branch_id);
+            $organizationId = $branch->organization_id;
+        } else {
+            // For regular admins, use their organization_id
+            $organizationId = $admin->organization_id;
+        }
+        
         $order = Order::create([
             'reservation_id' => $reservation->id,
             'branch_id' => $reservation->branch_id,
+            'organization_id' => $organizationId,
             'customer_name' => $reservation->name,
             'customer_phone' => $reservation->phone,
+            'customer_email' => null,
             'order_type' => 'dine_in_admin',
             'status' => 'active',
+            'subtotal' => 0,
+            'created_by' => $admin->id,
+            'placed_by_admin' => true,
+            'order_date' => now(),
         ]);
 
         // Debugging: Log created order
@@ -244,6 +263,7 @@ class AdminOrderController extends Controller
                 'inventory_item_id' => $item['item_id'], 
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->selling_price,
+                'subtotal' => $lineTotal,
                 'total_price' => $lineTotal,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -359,12 +379,23 @@ class AdminOrderController extends Controller
 
             $admin = auth('admin')->user();
 
+            // Determine organization_id based on admin type
+            $organizationId = null;
+            if ($admin->is_super_admin) {
+                // For super admin, get organization_id from the selected branch
+                $branch = Branch::findOrFail($validated['branch_id']);
+                $organizationId = $branch->organization_id;
+            } else {
+                // For regular admins, use their organization_id
+                $organizationId = $admin->organization_id;
+            }
+
             // Find or create customer by phone
             $customer = Customer::findByPhone($validated['customer_phone']);
             if (!$customer) {
                 $customer = Customer::createFromPhone($validated['customer_phone'], [
                     'name' => $validated['customer_name'] ?? 'Admin Customer',
-                    'email' => $validated['customer_email'],
+                    'email' => $validated['customer_email'] ?? null,
                     'preferred_contact' => $validated['preferred_contact'] ?? 'email',
                 ]);
             } else {
@@ -402,9 +433,9 @@ class AdminOrderController extends Controller
                 'customer_name' => $customer->name,
                 'customer_phone' => $customer->phone,
                 'customer_phone_fk' => $customer->phone,
-                'customer_email' => $customer->email,
+                'customer_email' => $customer->email ?? null,
                 'branch_id' => $validated['branch_id'],
-                'organization_id' => $admin->organization_id,
+                'organization_id' => $organizationId,
                 'reservation_id' => $reservation?->id,
                 'order_type' => $orderType,
                 'order_time' => $validated['order_time'] ?? now(),
@@ -413,6 +444,7 @@ class AdminOrderController extends Controller
                 'created_by' => $admin->id,
                 'placed_by_admin' => true,
                 'order_date' => now(),
+                'subtotal' => 0,
                 'total_amount' => 0
             ]);
 
@@ -605,6 +637,7 @@ class AdminOrderController extends Controller
                 'inventory_item_id' => $item['item_id'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->selling_price,
+                'subtotal' => $lineTotal,
                 'total_price' => $lineTotal,
             ]);
         }
@@ -965,17 +998,36 @@ class AdminOrderController extends Controller
         try {
             DB::beginTransaction();
 
+            $admin = auth('admin')->user();
+            
+            // Determine organization_id based on admin type
+            $organizationId = null;
+            if ($admin->is_super_admin) {
+                // For super admin, get organization_id from the selected branch
+                $branch = Branch::findOrFail($validated['branch_id']);
+                $organizationId = $branch->organization_id;
+            } else {
+                // For regular admins, use their organization_id
+                $organizationId = $admin->organization_id;
+            }
+
             // Create the order
             $order = Order::create([
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
+                'customer_email' => null,
                 'branch_id' => $validated['branch_id'],
+                'organization_id' => $organizationId,
                 'menu_id' => $validated['menu_id'], 
-                'order_type' => $validated['order_type'],
+                'order_type' => $validated['order_type'] ?? 'dine_in',
                 'reservation_id' => $validated['reservation_id'] ?? null,
                 'status' => 'pending',
-                'special_instructions' => $validated['special_instructions'],
+                'special_instructions' => $validated['special_instructions'] ?? null,
                 'order_time' => now(),
+                'order_date' => now(),
+                'subtotal' => 0,
+                'created_by' => $admin->id,
+                'placed_by_admin' => true,
             ]);
 
             // Create order items
@@ -995,6 +1047,7 @@ class AdminOrderController extends Controller
                     'menu_item_id' => $itemData['menu_item_id'],
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $menuItem->price,
+                    'subtotal' => $lineTotal,
                     'total_price' => $lineTotal,
                 ]);
 

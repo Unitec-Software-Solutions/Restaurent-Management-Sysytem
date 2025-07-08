@@ -120,14 +120,20 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Get branch to determine organization_id
+            $branch = Branch::findOrFail($validated['branch_id']);
+
             // Create the order
             $order = Order::create([
                 'order_number' => 'TO' . str_pad(Order::count() + 1, 6, '0', STR_PAD_LEFT),
                 'order_type' => 'takeaway',
                 'branch_id' => $validated['branch_id'],
+                'organization_id' => $branch->organization_id,
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
+                'customer_email' => null,
                 'pickup_time' => $validated['pickup_time'],
+                'order_date' => now(),
                 'subtotal' => $validated['total_amount'] - ($validated['tax_amount'] ?? 0) + ($validated['discount_amount'] ?? 0),
                 'discount_amount' => $validated['discount_amount'] ?? 0,
                 'tax_amount' => $validated['tax_amount'] ?? 0,
@@ -137,6 +143,7 @@ class OrderController extends Controller
                 'order_status' => 'confirmed',
                 'notes' => $validated['notes'],
                 'created_by' => Auth::id(),
+                'placed_by_admin' => true,
                 'created_at' => now(),
             ]);
 
