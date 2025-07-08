@@ -10,6 +10,7 @@ use App\Models\ItemMaster;
 use App\Models\OrderItem;
 use App\Models\Menu;
 use App\Models\MenuItem;
+use App\Models\Kot;
 use App\Traits\Exportable;
 use App\Enums\OrderType;
 use App\Services\NotificationService;
@@ -17,6 +18,7 @@ use App\Services\OrderNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\MenuSafetyService;
 use App\Services\EnhancedOrderService;
 use App\Services\EnhancedMenuSchedulingService;
@@ -479,6 +481,23 @@ class AdminOrderController extends Controller
 
             DB::commit();
 
+            // Check and print KOT if order has KOT items
+            $kotResult = $this->checkAndPrintKOT($order, true);
+            
+            if ($kotResult['success'] && $kotResult['has_kot_items']) {
+                // If KOT was generated successfully, include the print URL in success message
+                return redirect()->route('admin.orders.show', $order)
+                    ->with('success', 'Order created successfully!')
+                    ->with('kot_print_url', $kotResult['print_url'] ?? null)
+                    ->with('kot_generated', true);
+            } else if ($kotResult['has_kot_items'] && !$kotResult['success']) {
+                // KOT items exist but generation failed, still proceed but show warning
+                return redirect()->route('admin.orders.show', $order)
+                    ->with('warning', 'Order created successfully, but KOT generation failed: ' . $kotResult['message'])
+                    ->with('kot_error', $kotResult['message']);
+            }
+            
+            // No KOT items or KOT already exists, proceed normally
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', 'Order created successfully!');
 
@@ -807,6 +826,23 @@ class AdminOrderController extends Controller
                 }
             }
 
+            // Check and print KOT if order has KOT items
+            $kotResult = $this->checkAndPrintKOT($order, true);
+            
+            if ($kotResult['success'] && $kotResult['has_kot_items']) {
+                // If KOT was generated successfully, include the print URL in success message
+                return redirect()->route('admin.orders.takeaway.summary', $order)
+                    ->with('success', 'Takeaway order created successfully!')
+                    ->with('kot_print_url', $kotResult['print_url'] ?? null)
+                    ->with('kot_generated', true);
+            } else if ($kotResult['has_kot_items'] && !$kotResult['success']) {
+                // KOT items exist but generation failed, still proceed but show warning
+                return redirect()->route('admin.orders.takeaway.summary', $order)
+                    ->with('warning', 'Takeaway order created successfully, but KOT generation failed: ' . $kotResult['message'])
+                    ->with('kot_error', $kotResult['message']);
+            }
+            
+            // No KOT items or KOT already exists, proceed normally
             return redirect()->route('admin.orders.takeaway.summary', $order)
                 ->with('success', 'Takeaway order created successfully!');
         });
@@ -1391,10 +1427,56 @@ class AdminOrderController extends Controller
      */
     public function printKOT(Order $order)
     {
+        // Load necessary relationships
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+        
         // Update order to mark KOT as generated
         $order->update(['kot_generated' => true]);
         
         return view('orders.kot-print', compact('order'));
+    }
+
+    /**
+     * Generate and download KOT as PDF (Admin)
+     */
+    public function printKOTPDF(Order $order)
+    {
+        // Load necessary relationships
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+        
+        // Update order to mark KOT as generated
+        $order->update(['kot_generated' => true]);
+        
+        // Generate PDF using DOMPDF
+        $pdf = Pdf::loadView('admin.orders.kot-pdf', compact('order'));
+        
+        // Set paper size for thermal printer (80mm width)
+        $pdf->setPaper([0, 0, 226.77, 600], 'portrait'); // 80mm x ~210mm in points
+        
+        // Set PDF options for better printing
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'DejaVu Sans Mono',
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/'),
+            'tempDir' => storage_path('app/temp/'),
+            'chroot' => public_path(),
+        ]);
+        
+        $filename = 'KOT-' . $order->order_number . '-' . now()->format('YmdHis') . '.pdf';
+        
+        return $pdf->download($filename);
     }
 
     /**
@@ -1410,6 +1492,98 @@ class AdminOrderController extends Controller
         ]);
         
         return view('orders.bill-print', compact('order'));
+    }
+
+    /**
+     * Check and print KOT if order has KOT items (Admin version)
+     * This function checks if an order has KOT items and automatically prints the KOT
+     */
+    public function checkAndPrintKOT(Order $order, $autoPrint = false)
+    {
+        try {
+            // Check if order has KOT items
+            if (!$order->hasKotItems()) {
+                return [
+                    'success' => false,
+                    'message' => 'No items in this order require kitchen preparation (KOT)',
+                    'has_kot_items' => false
+                ];
+            }
+
+            // Check if KOT already generated
+            $existingKot = Kot::where('order_id', $order->id)->first();
+            if ($existingKot) {
+                return [
+                    'success' => true,
+                    'message' => 'KOT already exists for this order',
+                    'has_kot_items' => true,
+                    'kot_already_exists' => true,
+                    'kot_id' => $existingKot->id,
+                    'print_url' => route('admin.kots.print', $existingKot->id)
+                ];
+            }
+
+            // Generate KOT using KotController
+            $kotController = new \App\Http\Controllers\KotController();
+            $kotResponse = $kotController->generateKot(request(), $order);
+            
+            if ($kotResponse instanceof \Illuminate\Http\JsonResponse) {
+                $kotData = $kotResponse->getData(true);
+                
+                if ($kotData['success']) {
+                    $result = [
+                        'success' => true,
+                        'message' => 'KOT generated successfully',
+                        'has_kot_items' => true,
+                        'kot_generated' => true,
+                        'kot_id' => $kotData['kot']['id'],
+                        'print_url' => $kotData['print_url'],
+                        'items_count' => $kotData['items_count']
+                    ];
+                    
+                    // If auto-print is enabled, return print URL
+                    if ($autoPrint) {
+                        $result['auto_print_url'] = $kotData['print_url'];
+                    }
+                    
+                    Log::info('Admin KOT check and print completed', [
+                        'order_id' => $order->id,
+                        'kot_id' => $kotData['kot']['id'],
+                        'auto_print' => $autoPrint,
+                        'admin_id' => auth('admin')->id()
+                    ]);
+                    
+                    return $result;
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => $kotData['message'] ?? 'Failed to generate KOT',
+                        'has_kot_items' => true,
+                        'error' => $kotData['message'] ?? 'Unknown error'
+                    ];
+                }
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Unexpected response from KOT generation',
+                'has_kot_items' => true
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error in Admin checkAndPrintKOT', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'admin_id' => auth('admin')->id()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Error processing KOT: ' . $e->getMessage(),
+                'has_kot_items' => $order->hasKotItems()
+            ];
+        }
     }
 
     /**

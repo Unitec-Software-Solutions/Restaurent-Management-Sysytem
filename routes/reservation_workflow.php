@@ -41,8 +41,8 @@ Route::prefix('orders')->group(function () {
     Route::get('{order}/summary', [ReservationWorkflowController::class, 'showOrderSummary'])
         ->name('orders.summary');
     
-    Route::get('{order}/print-kot', [ReservationWorkflowController::class, 'printKOT'])
-        ->name('orders.print-kot');
+    // KOT printing is handled by OrderController and AdminOrderController
+    // Route removed to avoid conflict with main web.php routes
 });
 
 // AJAX routes

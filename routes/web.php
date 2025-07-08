@@ -144,11 +144,16 @@ Route::middleware(['web'])->group(function () {
 
         // Stock checking
         Route::post('/check-stock', [OrderController::class, 'checkStock'])->name('check-stock');
-        Route::post('/{order}/print-kot', [OrderController::class, 'printKOT'])->name('print-kot');
+        Route::get('/{order}/print-kot', [OrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
+        Route::get('/{order}/print-kot-pdf', [OrderController::class, 'printKOTPDF'])->whereNumber('order')->name('print-kot-pdf');
         Route::post('/{order}/print-bill', [OrderController::class, 'printBill'])->name('print-bill');
         Route::post('/{order}/mark-preparing', [OrderController::class, 'markAsPreparing'])->name('mark-preparing');
         Route::post('/{order}/mark-ready', [OrderController::class, 'markAsReady'])->name('mark-ready');
         Route::post('/{order}/complete', [OrderController::class, 'completeOrder'])->name('complete');
+        
+        // Enhanced KOT functionality
+        Route::get('/{order}/check-and-print-kot', [OrderController::class, 'apiCheckAndPrintKOT'])->whereNumber('order')->name('check-and-print-kot');
+        Route::get('/{order}/print-kot-direct', [OrderController::class, 'printKOTForOrder'])->whereNumber('order')->name('print-kot-direct');
 
     });
 });
@@ -312,8 +317,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
             
             // KOT and Printing routes
-            Route::post('/{order}/print-kot', [AdminOrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
+            Route::get('/{order}/print-kot', [AdminOrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
+            Route::get('/{order}/print-kot-pdf', [AdminOrderController::class, 'printKOTPDF'])->whereNumber('order')->name('print-kot-pdf');
             Route::post('/{order}/print-bill', [AdminOrderController::class, 'printBill'])->whereNumber('order')->name('print-bill');
+            
+            // Enhanced KOT functionality
+            Route::get('/{order}/check-and-print-kot', [AdminOrderController::class, 'apiCheckAndPrintKOT'])->whereNumber('order')->name('check-and-print-kot');
+            Route::post('/{order}/generate-kot', [KotController::class, 'generateKot'])->whereNumber('order')->name('generate-kot');
             
             // AJAX endpoints for KOT and status management
             Route::get('/{order}/check-kot', [AdminOrderController::class, 'checkKotItems'])->whereNumber('order')->name('check-kot');

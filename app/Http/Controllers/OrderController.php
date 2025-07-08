@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 class OrderController extends Controller
@@ -348,13 +349,30 @@ class OrderController extends Controller
                 'stock_deducted' => true,
             ]);
 
-            // Generate KOT immediately
-            $order->generateKOT();
-
-            // // Send order confirmation notification
-            // $this->notificationService->sendOrderConfirmation($order);
-
-            return redirect()->route('orders.summary', $order->id)->with('success', 'Order created successfully! Stock deducted and KOT generated.');
+            // Generate KOT immediately using KotController
+            try {
+                $kotController = new \App\Http\Controllers\KotController();
+                $kotResult = $kotController->generateKot(request(), $order);
+                
+                if ($kotResult['success']) {
+                    return redirect()->route('orders.summary', $order->id)
+                        ->with('success', 'Order created successfully! Stock deducted and KOT generated.')
+                        ->with('kot_generated', true)
+                        ->with('kot_print_url', route('orders.print-kot', $order->id));
+                } else {
+                    return redirect()->route('orders.summary', $order->id)
+                        ->with('success', 'Order created successfully! Stock deducted.')
+                        ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+                }
+            } catch (\Exception $e) {
+                Log::error('KOT generation failed for Order #' . $order->id, [
+                    'error' => $e->getMessage()
+                ]);
+                
+                return redirect()->route('orders.summary', $order->id)
+                    ->with('success', 'Order created successfully! Stock deducted.')
+                    ->with('kot_error', 'KOT generation failed: ' . $e->getMessage());
+            }
         });
     }
 
@@ -735,8 +753,30 @@ class OrderController extends Controller
                 }
             }
 
-            return redirect()->route('orders.takeaway.summary', $order)
-                ->with('success', 'Order created successfully!');
+            // Generate KOT immediately using KotController
+            try {
+                $kotController = new \App\Http\Controllers\KotController();
+                $kotResult = $kotController->generateKot(request(), $order);
+                
+                if ($kotResult['success']) {
+                    return redirect()->route('orders.takeaway.summary', $order)
+                        ->with('success', 'Order created successfully! KOT generated.')
+                        ->with('kot_generated', true)
+                        ->with('kot_print_url', route('orders.print-kot', $order->id));
+                } else {
+                    return redirect()->route('orders.takeaway.summary', $order)
+                        ->with('success', 'Order created successfully!')
+                        ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+                }
+            } catch (\Exception $e) {
+                Log::error('KOT generation failed for Takeaway Order #' . $order->id, [
+                    'error' => $e->getMessage()
+                ]);
+                
+                return redirect()->route('orders.takeaway.summary', $order)
+                    ->with('success', 'Order created successfully!')
+                    ->with('kot_error', 'KOT generation failed: ' . $e->getMessage());
+            }
         });
     }
 
@@ -767,7 +807,31 @@ class OrderController extends Controller
     public function submit(Request $request, Order $order)
     {
         $order->update(['status' => 'submitted']);
-        return redirect()->route('orders.index', ['phone' => $order->customer_phone]);
+        
+        // Generate KOT for submitted orders
+        try {
+            $kotController = new \App\Http\Controllers\KotController();
+            $kotResult = $kotController->generateKot($request, $order);
+            
+            if ($kotResult['success']) {
+                return redirect()->route('orders.index', ['phone' => $order->customer_phone])
+                    ->with('success', 'Order submitted successfully! KOT generated.')
+                    ->with('kot_generated', true)
+                    ->with('kot_print_url', route('orders.print-kot', $order->id));
+            } else {
+                return redirect()->route('orders.index', ['phone' => $order->customer_phone])
+                    ->with('success', 'Order submitted successfully!')
+                    ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+            }
+        } catch (\Exception $e) {
+            Log::error('KOT generation failed for submitted Order #' . $order->id, [
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->route('orders.index', ['phone' => $order->customer_phone])
+                ->with('success', 'Order submitted successfully!')
+                ->with('kot_error', 'KOT generation failed: ' . $e->getMessage());
+        }
     }
 
     // Edit takeaway order
@@ -1027,13 +1091,30 @@ class OrderController extends Controller
                     'submitted_at' => now(),
                 ]);
 
-                // Generate KOT for kitchen
-                if (method_exists($order, 'generateKOT')) {
-                    $order->generateKOT();
+                // Generate KOT for kitchen using KotController
+                try {
+                    $kotController = new \App\Http\Controllers\KotController();
+                    $kotResult = $kotController->generateKot(request(), $order);
+                    
+                    if ($kotResult['success']) {
+                        return redirect()->route('orders.takeaway.summary', $order)
+                            ->with('success', 'Order confirmed successfully! Your order has been sent to the kitchen.')
+                            ->with('kot_generated', true)
+                            ->with('kot_print_url', route('orders.print-kot', $order->id));
+                    } else {
+                        return redirect()->route('orders.takeaway.summary', $order)
+                            ->with('success', 'Order confirmed successfully!')
+                            ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+                    }
+                } catch (\Exception $kotException) {
+                    Log::error('KOT generation failed for submitted Order #' . $order->id, [
+                        'error' => $kotException->getMessage()
+                    ]);
+                    
+                    return redirect()->route('orders.takeaway.summary', $order)
+                        ->with('success', 'Order confirmed successfully!')
+                        ->with('kot_error', 'KOT generation failed: ' . $kotException->getMessage());
                 }
-
-                return redirect()->route('orders.takeaway.summary', $order)
-                    ->with('success', 'Order confirmed successfully! Your order has been sent to the kitchen.');
 
             } catch (\Exception $e) {
                 Log::error('Order confirmation failed', [
@@ -1068,10 +1149,52 @@ class OrderController extends Controller
      */
     public function printKOT(Order $order)
     {
+        // Load necessary relationships
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+        
         // Update order to mark KOT as generated
         $order->update(['kot_generated' => true]);
         
         return view('orders.kot-print', compact('order'));
+    }
+
+    public function printKOTPDF(Order $order)
+    {
+        
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+      
+        
+        $order->update(['kot_generated' => true]);
+        
+        
+        $pdf = Pdf::loadView('orders.kot-pdf', compact('order'));
+        
+        
+        $pdf->setPaper([0, 0, 226.77, 600], 'portrait'); 
+        
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'DejaVu Sans Mono',
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/'),
+            'tempDir' => storage_path('app/temp/'),
+            'chroot' => public_path(),
+        ]);
+        
+        $filename = 'KOT-' . $order->order_number . '-' . now()->format('YmdHis') . '.pdf';
+        
+        return $pdf->download($filename);
     }
 
     /**
@@ -1575,7 +1698,6 @@ class OrderController extends Controller
             $order->estimated_prep_time = $order->calculateEstimatedPrepTime();
             $order->save();
 
-            // Send order creation notification
             $this->notificationService->sendOrderCreated($order);
 
             return redirect()->route('orders.payment-selection', ['order' => $order->id])

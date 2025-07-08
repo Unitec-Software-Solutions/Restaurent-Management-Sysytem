@@ -163,14 +163,26 @@
 
                                     <!-- Print KOT if order has KOT items and not generated -->
                                     @if($order->has_kot_items && $order->can_generate_kot)
-                                        <button onclick="printKOT({{ $order->id }})" 
-                                                class="text-orange-600 hover:text-orange-900 bg-none border-none cursor-pointer" title="Print KOT">
-                                            <i class="fas fa-print"></i> KOT
-                                        </button>
+                                        <div class="flex gap-1">
+                                            <button onclick="printKOT({{ $order->id }})" 
+                                                    class="text-orange-600 hover:text-orange-900 bg-none border-none cursor-pointer" title="Print KOT">
+                                                <i class="fas fa-print"></i> KOT
+                                            </button>
+                                            <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
+                                               class="text-red-600 hover:text-red-900" title="Download KOT PDF">
+                                                <i class="fas fa-file-pdf"></i> PDF
+                                            </a>
+                                        </div>
                                     @elseif($order->has_kot_items && $order->kot_generated)
-                                        <span class="text-green-600" title="KOT Already Generated">
-                                            <i class="fas fa-check-circle"></i> KOT ✓
-                                        </span>
+                                        <div class="flex gap-1">
+                                            <span class="text-green-600" title="KOT Already Generated">
+                                                <i class="fas fa-check-circle"></i> KOT ✓
+                                            </span>
+                                            <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
+                                               class="text-red-600 hover:text-red-900" title="Download KOT PDF">
+                                                <i class="fas fa-file-pdf"></i> PDF
+                                            </a>
+                                        </div>
                                     @endif
 
                                     <!-- Mark as Ready (if preparing) -->

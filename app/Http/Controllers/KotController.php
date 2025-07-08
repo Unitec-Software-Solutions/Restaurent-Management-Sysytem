@@ -134,7 +134,7 @@ class KotController extends Controller
     /**
      * Print KOT view
      */
-    public function printKot(Kot $kot)
+    public function print(Kot $kot)
     {
         $admin = auth('admin')->user();
         
@@ -150,7 +150,10 @@ class KotController extends Controller
             'organization'
         ]);
 
-        return view('admin.orders.print-kot', compact('kot'));
+        // Pass the order for compatibility with the view
+        $order = $kot->order;
+
+        return view('admin.orders.print-kot', compact('kot', 'order'));
     }
 
     /**
