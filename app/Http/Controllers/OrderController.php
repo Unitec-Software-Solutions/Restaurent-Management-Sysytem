@@ -1582,7 +1582,26 @@ class OrderController extends Controller
         $reservationId = $request->query('reservation_id');
         $reservation = Reservation::with(['branch', 'customer', 'orders'])->findOrFail($reservationId);
         
-        return view('orders.reservation-summary', compact('reservation'));
+        
+        if (view()->exists('reservations.summary')) {
+            return view('reservations.summary', compact('reservation'));
+        } elseif (view()->exists('reservations.show')) {
+            return view('reservations.show', compact('reservation'));
+        } else {
+            // Show a generic error page if neither view exists
+            return response()->view('errors.generic', [
+            'errorTitle' => 'Reservation Summary Not Found',
+            'errorCode' => '404',
+            'errorHeading' => 'Reservation Summary Not Available',
+            'errorMessage' => 'The reservation summary page could not be found.',
+            'headerClass' => 'bg-gradient-warning',
+            'errorIcon' => 'fas fa-map-marker-alt',
+            'mainIcon' => 'fas fa-map-marker-alt',
+            'iconBgClass' => 'bg-yellow-100',
+            'iconColor' => 'text-yellow-500',
+            'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]',
+            ], 404);
+        }
     }
 
     /**
@@ -1698,7 +1717,7 @@ class OrderController extends Controller
             $order->estimated_prep_time = $order->calculateEstimatedPrepTime();
             $order->save();
 
-            $this->notificationService->sendOrderCreated($order);
+            // $this->notificationService->sendOrderCreated($order);
 
             return redirect()->route('orders.payment-selection', ['order' => $order->id])
                 ->with('success', 'Order created successfully! Please proceed with payment.');
