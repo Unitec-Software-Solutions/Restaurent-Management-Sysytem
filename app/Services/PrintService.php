@@ -197,7 +197,7 @@ class PrintService
                     'Date' => $order->order_date->format('Y-m-d H:i'),
                     'Customer' => $order->customer_name ?? 'Walk-in',
                     'Phone' => $order->customer_phone ?? '-',
-                    'Type' => ucwords(str_replace('_', ' ', $order->order_type)),
+                    'Type' => $order->getOrderTypeLabel(),
                     'Status' => ucfirst($order->status),
                     'Items' => $order->items->count(),
                     'Steward' => $order->steward->name ?? '-',

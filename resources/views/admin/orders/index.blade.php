@@ -175,11 +175,7 @@
                                     @else
                                         bg-gray-100 text-gray-800
                                     @endif">
-                                    @if($order->order_type instanceof \App\Enums\OrderType)
-                                        {{ $order->order_type->getLabel() }}
-                                    @else
-                                        {{ ucfirst(str_replace('_', ' ', $orderTypeValue)) }}
-                                    @endif
+                                    {{ $order->getOrderTypeLabel() }}
                                 </span>
                             </td>
 

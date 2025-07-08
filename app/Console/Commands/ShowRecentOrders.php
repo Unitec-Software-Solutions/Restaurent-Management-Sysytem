@@ -34,7 +34,7 @@ class ShowRecentOrders extends Command
             $tableData[] = [
                 $order->order_number,
                 $order->customer_name ?? 'N/A',
-                ucfirst(str_replace('_', ' ', $order->order_type)),
+                $order->getOrderTypeLabel(),
                 ucfirst($order->status),
                 $order->currency_symbol . $order->formatted_total,
                 $order->branch?->name ?? 'N/A',

@@ -1309,7 +1309,7 @@ class OrderController extends Controller
                         $order->customer_name,
                         $order->customer_phone,
                         $order->branch->name ?? '',
-                        str_replace('_', ' ', $order->order_type),
+                        $order->getOrderTypeLabel(),
                         ucfirst($order->status),
                         $order->steward ? $order->steward->first_name . ' ' . $order->steward->last_name : '',
                         $order->items->count(),

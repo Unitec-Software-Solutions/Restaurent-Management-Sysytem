@@ -94,7 +94,7 @@
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600 font-medium">Order Type:</span>
-                                    <span class="text-gray-800">{{ ucfirst(str_replace('_', ' ', $order->order_type)) }}</span>
+                                    <span class="text-gray-800">{{ $order->getOrderTypeLabel() }}</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-600 font-medium">Branch:</span>

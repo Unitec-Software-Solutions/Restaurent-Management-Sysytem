@@ -94,6 +94,49 @@ class AdminOrderController extends Controller
     // Edit order (admin)
     public function edit(Order $order)
     {
+        $admin = auth('admin')->user();
+        
+        // Check permissions
+        if (!$admin->is_super_admin) {
+            if ($admin->branch_id && $order->branch_id !== $admin->branch_id) {
+                return redirect()->route('admin.orders.index')
+                    ->with('error', 'Access denied to this order');
+            } elseif ($admin->organization_id && $order->branch && $order->branch->organization_id !== $admin->organization_id) {
+                return redirect()->route('admin.orders.index')
+                    ->with('error', 'Access denied to this order');
+            }
+        }
+
+        // Get branches for admin with fallback
+        $branches = $this->getAdminAccessibleBranches($admin);
+        
+        // Ensure branches is never null or undefined
+        if (!$branches || $branches->isEmpty()) {
+            $branches = collect([]); // Empty collection as fallback
+        }
+        
+        // Get menu items with stock information
+        $menuItems = ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
+            ->where('is_menu_item', true)
+            ->where('is_active', true)
+            ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->get();
+
+        // Add stock information for each menu item
+        foreach ($menuItems as $item) {
+            $item->current_stock = \App\Models\ItemTransaction::stockOnHand($item->id, $order->branch_id);
+            $item->is_low_stock = $item->current_stock <= ($item->reorder_level ?? 10);
+        }
+        
+        // Get categories
+        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->active()
+            ->get();
+
         $statusOptions = [
             'submitted' => 'Submitted',
             'preparing' => 'Preparing',
@@ -101,7 +144,8 @@ class AdminOrderController extends Controller
             'completed' => 'Completed',
             'cancelled' => 'Cancelled'
         ];
-        return view('admin.orders.edit', compact('order', 'statusOptions'));
+        
+        return view('admin.orders.edit', compact('order', 'statusOptions', 'branches', 'menuItems', 'categories'));
     }
 
     // Update order status (admin)

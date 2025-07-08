@@ -80,8 +80,8 @@
                             <div class="mb-6">
                                 <label for="order_type" class="block text-sm font-medium text-gray-700">Order Type</label>
                                 <div class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <span>{{ ucfirst($order->order_type) }}</span>
-                                    <input type="hidden" name="order_type" value="{{ $order->order_type }}">
+                                    <span>{{ $order->getOrderTypeLabel() }}</span>
+                                    <input type="hidden" name="order_type" value="{{ $order->order_type instanceof \App\Enums\OrderType ? $order->order_type->value : $order->order_type }}">
                                 </div>
                             </div>
 
