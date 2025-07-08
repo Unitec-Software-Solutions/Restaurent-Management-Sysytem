@@ -22,6 +22,106 @@ interface TestState {
 const STATE_FILE = 'test-state.json';
 const BASE_URL = 'http://restaurent-management-sysytem.test';
 
+  test('2. Navigate to Modules and Create Subscription Plan Unit', async () => {
+// --- Utility functions ---
+const waitForElement = async (page, selector, timeout = 5000) => {
+  await page.waitForSelector(selector, { timeout });
+};
+const fillFormField = async (page, selector, value) => {
+  await page.waitForSelector(selector);
+  await page.fill(selector, value);
+};
+const clickButton = async (page, selector) => {
+  await page.waitForSelector(selector);
+  await page.click(selector);
+};
+const expectUrlContains = async (page, urlPart) => {
+  await expect(page).toHaveURL(new RegExp(urlPart));
+};
+
+// --- TestStateManager class ---
+class TestStateManager {
+  state: TestState;
+  constructor() {
+    this.state = {
+      loginCompleted: false,
+      planCreated: false,
+      organizationCreated: false,
+      organizationActivated: false,
+      branchesActivated: false,
+      newBranchCreated: false,
+      newBranchActivated: false
+    };
+  }
+  async loadState() {
+    try {
+      const stateData = await fs.readFile(STATE_FILE, 'utf8');
+      this.state = { ...this.state, ...JSON.parse(stateData) };
+      console.log('📚 Loaded test state:', this.state);
+    } catch (error) {
+      console.log('📝 No existing state file, starting fresh');
+    }
+  }
+  async saveState() {
+    await fs.writeFile(STATE_FILE, JSON.stringify(this.state, null, 2));
+    console.log('💾 Saved test state:', this.state);
+  }
+  getState() { return this.state; }
+  updateState(updates: Partial<TestState>) { this.state = { ...this.state, ...updates }; }
+  async clearState() {
+    this.state = {
+      loginCompleted: false,
+      planCreated: false,
+      organizationCreated: false,
+      organizationActivated: false,
+      branchesActivated: false,
+      newBranchCreated: false,
+      newBranchActivated: false
+    };
+    await this.saveState();
+  }
+}
+
+// --- Main test suite ---
+test.describe('Restaurant Management System - Comprehensive Test Suite', () => {
+  let stateManager: TestStateManager;
+  let sharedPage: Page;
+  let sharedContext: BrowserContext;
+
+  test.beforeAll(async ({ browser }) => {
+    stateManager = new TestStateManager();
+    await stateManager.loadState();
+    sharedContext = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+    sharedPage = await sharedContext.newPage();
+  });
+
+  test.afterAll(async () => {
+    if (sharedContext) {
+      await sharedContext.close();
+    }
+  });
+
+  test('1. Admin Login Unit', async () => {
+    const state = stateManager.getState();
+    if (state.loginCompleted) {
+      console.log('✅ Login already completed, skipping...');
+      return;
+    }
+    console.log('� Starting admin login test...');
+    await sharedPage.goto(`${BASE_URL}/admin/login`);
+    await expectUrlContains(sharedPage, '/admin/login');
+    await expect(sharedPage.locator('h1, h2, .text-3xl')).toContainText(/admin login/i);
+    await fillFormField(sharedPage, 'input[name="email"]', 'superadmin@rms.com');
+    await fillFormField(sharedPage, 'input[name="password"]', 'SuperAdmin123!');
+    await clickButton(sharedPage, 'button[type="submit"]');
+    await sharedPage.waitForURL(/\/admin\/dashboard/, { timeout: 10000 });
+    await expect(sharedPage).not.toHaveURL(/\/admin\/login$/);
+    stateManager.updateState({ loginCompleted: true });
+    await stateManager.saveState();
+    console.log('✅ Admin login completed successfully');
+  });
+
+  test('2. Navigate to Modules and Create Subscription Plan Unit', async () => {
     const state = stateManager.getState();
     if (!state.loginCompleted) {
       test.skip(!state.loginCompleted, 'Login not completed');
@@ -32,22 +132,15 @@ const BASE_URL = 'http://restaurent-management-sysytem.test';
       return;
     }
     console.log('📋 Creating subscription plan...');
-    // Navigate to subscription plans
     await clickButton(sharedPage, 'a[href*="subscription-plans"], a:has-text("Subscriptions")');
     await expectUrlContains(sharedPage, 'subscription-plans');
-    // Check if plan already exists
     const planName = `Test-Pro-Plan-${Date.now()}`;
     const existingPlan = await sharedPage.locator(`text="${planName}"`).count();
     if (existingPlan === 0) {
-      // Create new plan
       await clickButton(sharedPage, 'a:has-text("Create Plan"), a:has-text("+ Create Plan")');
-      // Fill Plan Name
       await fillFormField(sharedPage, 'input[name="name"]', planName);
-      // Select Currency (default to LKR)
       await sharedPage.selectOption('select[name="currency"]', 'LKR');
-      // Fill Description
       await fillFormField(sharedPage, 'textarea[name="description"]', 'Comprehensive plan with all modules for testing');
-      // Select all modules (check all checkboxes in the modules section)
       const moduleCheckboxes = await sharedPage.locator('input[type="checkbox"][name="modules[]"]');
       const moduleCount = await moduleCheckboxes.count();
       for (let i = 0; i < moduleCount; i++) {
@@ -56,55 +149,23 @@ const BASE_URL = 'http://restaurent-management-sysytem.test';
           await checkbox.check();
         }
       }
-      // Set Price
       await fillFormField(sharedPage, 'input[name="price"]', '35000.00');
-      // Set Max Branches (optional, leave empty for unlimited)
-      // await fillFormField(sharedPage, 'input[name="max_branches"]', '');
-      // Set Max Employees (optional, leave empty for unlimited)
-      // await fillFormField(sharedPage, 'input[name="max_employees"]', '');
-      // Enable trial and set trial days
+      // Optionally set max_branches and max_employees here if needed
       const trialCheckbox = sharedPage.locator('input[name="is_trial"]');
       if (!(await trialCheckbox.isChecked())) {
         await trialCheckbox.check();
       }
       await fillFormField(sharedPage, 'input[name="trial_period_days"]', '30');
-      // Set plan as active
       const activeCheckbox = sharedPage.locator('input[name="is_active"]');
       if (!(await activeCheckbox.isChecked())) {
         await activeCheckbox.check();
       }
-      // Submit plan creation
       await clickButton(sharedPage, 'button:has-text("Create Plan"), button[type="submit"]');
-      // Wait for success message or redirect
       await sharedPage.waitForTimeout(2000);
     }
-    // Update state
-    stateManager.updateState({
-      planCreated: true,
-      planName: planName
-    });
+    stateManager.updateState({ planCreated: true, planName: planName });
     await stateManager.saveState();
     console.log('✅ Subscription plan created successfully');
-  });
-  let stateManager: TestStateManager;
-  let sharedPage: Page;
-  let sharedContext: BrowserContext;
-
-  test.beforeAll(async ({ browser }) => {
-    stateManager = new TestStateManager();
-    await stateManager.loadState();
-
-    // Create persistent context to maintain session
-    sharedContext = await browser.newContext({
-      viewport: { width: 1920, height: 1080 }
-    });
-    sharedPage = await sharedContext.newPage();
-  });
-
-  test.afterAll(async () => {
-    if (sharedContext) {
-      await sharedContext.close();
-    }
   });
 
   test('1. Admin Login Unit', async () => {
@@ -539,7 +600,7 @@ const BASE_URL = 'http://restaurent-management-sysytem.test';
     await stateManager.clearState();
     console.log('🗑️ Test state cleared');
   });
-});
+// End of test.describe
 
 // Additional helper test for debugging
 test.describe('Debug Tests', () => {
