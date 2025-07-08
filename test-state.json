@@ -1,0 +1,12 @@
+{
+  "loginCompleted": false,
+  "planCreated": false,
+  "organizationCreated": false,
+  "organizationActivated": false,
+  "branchesActivated": false,
+  "newBranchCreated": false,
+  "newBranchActivated": false,
+  "lastUpdateTime": "2025-07-08T12:03:11.539Z",
+  "planName": "Pro Plan",
+  "organizationName": "Test-Organization"
+}
