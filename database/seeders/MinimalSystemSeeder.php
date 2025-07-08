@@ -490,6 +490,14 @@ class MinimalSystemSeeder extends Seeder
      */
     private function createMenu(Organization $organization, Branch $branch, string $name, string $type): Menu
     {
+        // Map type parameter to valid enum values
+        $menuTypeMapping = [
+            'morning' => 'breakfast',
+            'evening' => 'dinner'
+        ];
+        
+        $validMenuType = $menuTypeMapping[$type] ?? 'all_day';
+        
         return Menu::create([
             'organization_id' => $organization->id,
             'branch_id' => $branch->id,
@@ -501,7 +509,7 @@ class MinimalSystemSeeder extends Seeder
             'valid_until' => now()->addDays(365),
             'start_time' => $type === 'morning' ? '06:00:00' : '17:00:00',
             'end_time' => $type === 'morning' ? '12:00:00' : '23:00:00',
-            'type' => 'regular', // Use valid menu type
+            'type' => $validMenuType, // Use valid menu type from enum
             'menu_type' => 'regular',
             'is_active' => true,
             'auto_activate' => true,
@@ -550,7 +558,8 @@ class MinimalSystemSeeder extends Seeder
      */
     private function createMenuItems(Organization $organization, Branch $branch, array $categories, string $menuType): void
     {
-        $itemCategory = ItemCategory::where('organization_id', $organization->id)->first();
+        // For KOT items, we don't need to link to item_master (they are recipe-based, not inventory items)
+        // $itemCategory = ItemCategory::where('organization_id', $organization->id)->first();
         
         if ($menuType === 'breakfast') {
             $items = [
@@ -630,7 +639,7 @@ class MinimalSystemSeeder extends Seeder
                 'organization_id' => $organization->id,
                 'branch_id' => $branch->id,
                 'menu_category_id' => $itemData['category_id'],
-                'item_master_id' => $itemCategory ? $itemCategory->id : null,
+                'item_master_id' => null, // KOT items don't need item_master link (they are recipe-based)
                 'name' => $itemData['name'],
                 'description' => $itemData['description'],
                 'item_code' => strtoupper(substr($itemData['name'], 0, 3)) . '-' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
@@ -708,13 +717,12 @@ class MinimalSystemSeeder extends Seeder
 
         foreach ($tables as $tableData) {
             Table::create([
+                'organization_id' => $branch->organization_id,
                 'branch_id' => $branch->id,
-                'table_number' => $tableData['number'],
+                'number' => $tableData['number'],
                 'capacity' => $tableData['capacity'],
                 'is_active' => true,
-                'is_available' => true,
-                'location' => 'Main Dining Area',
-                'table_type' => 'regular'
+                'location' => 'Main Dining Area'
             ]);
         }
 
@@ -779,7 +787,11 @@ class MinimalSystemSeeder extends Seeder
             'payment_status' => Order::PAYMENT_STATUS_PENDING,
             'payment_method' => Order::PAYMENT_METHOD_CASH,
             'notes' => 'Created by seeder',
-            'currency' => 'LKR'
+            'currency' => 'LKR',
+            'subtotal' => 0.00,
+            'tax_amount' => 0.00,
+            'total_amount' => 0.00,
+            'order_date' => now()
         ]);
 
         // Add order items
