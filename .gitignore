@@ -33,3 +33,10 @@ yarn-error.log
 
 pnpm-lock.yaml
 .rnd
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
