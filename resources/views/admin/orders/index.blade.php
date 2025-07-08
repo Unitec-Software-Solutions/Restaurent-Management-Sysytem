@@ -228,48 +228,35 @@
                                 <div class="text-sm text-gray-500">
                                     {{ $order->created_at->format('H:i A') }}
                                 </div>
-                            </td>
-
-                            <!-- Actions -->
+                            </td>                                <!-- Actions -->
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex items-center justify-end space-x-2">
+                                <div class="flex items-center justify-end space-x-3">
+                                    <!-- View button -->
                                     <a href="{{ route('admin.orders.show', $order) }}" 
-                                       class="text-indigo-600 hover:text-indigo-900" title="View Order">
-                                        <i class="fas fa-eye"></i>
+                                       class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                       title="View Order">
+                                        <i class="fas fa-eye mr-1"></i>
+                                        <span>View</span>
                                     </a>
                                     
-                                    @if(in_array($order->status, ['pending', 'confirmed']))
+                                    <!-- Edit button - only for pending or confirmed orders -->
+                                    @if(in_array($order->status, ['pending', 'confirmed', 'submitted']))
                                         <a href="{{ route('admin.orders.edit', $order) }}" 
-                                           class="text-yellow-600 hover:text-yellow-900" title="Edit Order">
-                                            <i class="fas fa-edit"></i>
+                                           class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                           title="Edit Order">
+                                            <i class="fas fa-edit mr-1"></i>
+                                            <span>Edit</span>
                                         </a>
                                     @endif
-
-                                    @if($order->status !== 'cancelled' && $order->status !== 'completed')
-                                        <button onclick="updateOrderStatus({{ $order->id }}, 'cancelled')" 
-                                                class="text-red-600 hover:text-red-900" title="Cancel Order">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    @endif
-
-                                    <!-- Print KOT if order has KOT items -->
-                                    @php
-                                        $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
-                                            $q->where('type', \App\Models\MenuItem::TYPE_KOT);
-                                        })->exists();
-                                    @endphp
                                     
-                                    @if($hasKotItems)
-                                        <div class="flex gap-1">
-                                            <button onclick="printKOT({{ $order->id }})" 
-                                                    class="text-orange-600 hover:text-orange-900" title="Print KOT">
-                                                <i class="fas fa-print"></i> KOT
-                                            </button>
-                                            <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
-                                               class="text-red-600 hover:text-red-900" title="Download KOT PDF">
-                                                <i class="fas fa-file-pdf"></i> PDF
-                                            </a>
-                                        </div>
+                                    <!-- Delete button - only show if not completed -->
+                                    @if($order->status !== 'completed')
+                                        <button onclick="confirmDeleteOrder({{ $order->id }})" 
+                                                class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                                title="Delete Order">
+                                            <i class="fas fa-trash mr-1"></i>
+                                            <span>Delete</span>
+                                        </button>
                                     @endif
                                 </div>
                             </td>
@@ -351,6 +338,29 @@ function printKOT(orderId) {
         alert('Failed to check KOT items');
     });
 }
+
+// Function to show delete confirmation modal
+function confirmDeleteOrder(orderId) {
+    if (confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/orders/${orderId}`;
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        const methodField = document.createElement('input');
+        methodField.type = 'hidden';
+        methodField.name = '_method';
+        methodField.value = 'DELETE';
+        
+        form.appendChild(csrfToken);
+        form.appendChild(methodField);
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 
 function exportOrders() {

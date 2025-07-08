@@ -1030,12 +1030,21 @@ $statusOptions = [
      */
     public function destroyTakeaway(Order $order)
     {
-        $order->orderItems()->delete();
-        $order->delete();
+        try {
+            if ($order->status === 'completed') {
+                return back()->with('error', 'Cannot delete completed takeaway orders.');
+            }
+            
+            $order->orderItems()->delete();
+            $order->delete();
 
-        return redirect()->route('admin.orders.takeaway.index')
-     
-        ->with('success', 'Takeaway order deleted successfully.');
+            return redirect()->route('admin.orders.index')
+                ->with('success', 'Takeaway order deleted successfully!');
+        } catch (\Exception $e) {
+            Log::error('Takeaway order deletion failed: ' . $e->getMessage());
+            
+            return back()->with('error', 'Failed to delete takeaway order.');
+        }
     }
 
        public function adminIndex()
@@ -1658,7 +1667,7 @@ $statusOptions = [
                     'has_kot_items' => true,
                     'kot_already_exists' => true,
                     'kot_id' => $existingKot->id,
-                    'print_url' => route('admin.kots.print', $existingKot->id)
+                    'print_url' => route('admin.orders.print-kot', $existingKot->id)
                 ];
             }
 
