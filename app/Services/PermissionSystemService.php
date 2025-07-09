@@ -22,7 +22,7 @@ class PermissionSystemService
     private function createScopedRoles()
     {
         $roleStructure = [
-            // Organization Level - Only essential admin roles
+            
             'org_admin' => [
                 'name' => 'Organization Administrator',
                 'scope' => 'organization',
@@ -36,7 +36,7 @@ class PermissionSystemService
                 ]
             ],
             
-            // Branch Level - Only essential admin roles
+           
             'branch_admin' => [
                 'name' => 'Branch Administrator',
                 'scope' => 'branch',
@@ -49,10 +49,6 @@ class PermissionSystemService
                     'reports.view_branch'
                 ]
             ]
-            
-            // Note: Other operational roles (shift manager, cashier, waiter, kitchen staff) 
-            // should be created manually as needed by organization/branch admins
-            // to avoid cluttering the system with unused roles
         ];
 
         foreach ($roleStructure as $key => $roleData) {
