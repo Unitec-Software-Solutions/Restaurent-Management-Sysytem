@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
@@ -20,7 +20,7 @@ class PaymentController extends Controller
      */
     public function create()
     {
-        return view('admin.payments.create');
+        //
     }
 
     /**
@@ -28,8 +28,7 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        // TODO: Implement store logic
-        return redirect()->route('admin.payments.index')->with('success', 'Payment created successfully');
+        //
     }
 
     /**
@@ -37,7 +36,7 @@ class PaymentController extends Controller
      */
     public function show($id)
     {
-        return view('admin.payments.show', compact('id'));
+        //
     }
 
     /**
@@ -45,7 +44,7 @@ class PaymentController extends Controller
      */
     public function edit($id)
     {
-        return view('admin.payments.edit', compact('id'));
+        //
     }
 
     /**
@@ -53,8 +52,7 @@ class PaymentController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // TODO: Implement update logic
-        return redirect()->route('admin.payments.show', $id)->with('success', 'Payment updated successfully');
+        //
     }
 
     /**
@@ -62,13 +60,14 @@ class PaymentController extends Controller
      */
     public function print($id)
     {
-        return view('admin.payments.print', compact('id'));
+        //
     }
 
+    /**
+     * Remove the specified payment from storage
+     */
     public function destroy($id)
     {
-        // TODO: Implement destroy logic
-        return redirect()->back()->with('success', 'Deleted successfully');
+        //
     }
-
 }
