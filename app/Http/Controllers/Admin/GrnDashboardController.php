@@ -26,12 +26,12 @@ class GrnDashboardController extends Controller
      * Add more categories here as needed
      */
     const ALLOWED_GRN_CATEGORIES = [
-        'Buy & sell',
-        'Ingredients',
         // Add more categories here as needed:
-        // 'Raw Materials',
-        // 'Packaging Materials',
-        // 'Supplies',
+        'Buy & sell',
+        'Buy & Sell',
+        'Ingredients',
+        'Buy_&_Sell',
+        'Raw Materials'
     ];
 
     protected function getOrganizationId()
@@ -591,12 +591,14 @@ class GrnDashboardController extends Controller
                 throw new \Exception('Validation errors: ' . implode(' ', $validationErrors));
             }
 
+            $userId = $request->input('received_by_user_id');
+            $userExists = \DB::table('users')->where('id', $userId)->exists();
             $grn = GrnMaster::create([
                 'grn_number' => GrnMaster::generateGRNNumber($targetOrgId),
                 'branch_id' => $validated['branch_id'],
                 'organization_id' => $targetOrgId,
                 'supplier_id' => $validated['supplier_id'],
-                'received_by_user_id' => Auth::guard('admin')->id(),
+                'received_by_user_id' => $userExists ? $userId : null,
                 'received_date' => $validated['received_date'],
                 'delivery_note_number' => $validated['delivery_note_number'],
                 'invoice_number' => $validated['invoice_number'],
