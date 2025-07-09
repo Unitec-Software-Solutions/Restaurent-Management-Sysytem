@@ -33,6 +33,12 @@ return new class extends Migration
             $table->unsignedBigInteger('reference_id')->nullable();
             $table->string('reference_number')->nullable();
 
+            // Add GTN reference if not exists
+            if (!Schema::hasColumn('item_transactions', 'gtn_id')) {
+                $table->unsignedBigInteger('gtn_id')->nullable()->after('reference_type');
+                $table->foreign('gtn_id')->references('gtn_id')->on('gtn_master')->onDelete('set null');
+            }
+
             // Transaction metadata
             $table->text('notes')->nullable();
             $table->string('batch_number')->nullable();
@@ -43,6 +49,12 @@ return new class extends Migration
 
             // Audit fields
             $table->unsignedBigInteger('created_by')->nullable();
+
+            // Add verification reference
+            if (!Schema::hasColumn('item_transactions', 'verified_by')) {
+                $table->integer('verified_by')->nullable()->after('created_by_user_id');
+            }
+
             $table->timestamps();
 
             // PostgreSQL optimized indexes
