@@ -16,28 +16,11 @@ class Menu extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'organization_id',
+        'branch_id',
         'name',
         'description',
-        'date_from',
-        'date_to',
-        'valid_from',
-        'valid_until',
-        'available_days',
-        'start_time',
-        'end_time',
-        'type',
-        'is_active',
-        'menu_type',
-        'days_of_week',
-        'activation_time',
-        'deactivation_time',
-        'branch_id',
-        'organization_id',
-        'priority',
-        'auto_activate',
-        'special_occasion',
-        'notes',
-        'created_by'
+        'price',
     ];
 
     protected $casts = [
