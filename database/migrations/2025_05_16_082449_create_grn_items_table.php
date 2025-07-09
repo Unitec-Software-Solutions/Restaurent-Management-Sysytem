@@ -18,8 +18,8 @@ return new class extends Migration
             $table->foreignId('item_id')->nullable()->constrained('item_master', 'id')->cascadeOnDelete();
 
             // Item identification
-            $table->string('item_code');
-            $table->string('item_name');
+            $table->string('item_code')->nullable();
+            $table->string('item_name')->nullable();
 
             // Quantities
             $table->decimal('ordered_quantity', 12, 4)->default(0)->nullable();
