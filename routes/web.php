@@ -616,7 +616,7 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
         // Subscription Plans
         Route::resource('subscription-plans', SubscriptionPlanController::class);
 
-        Route::resource('subscriptions', \App\Http\Controllers\SubscriptionController::class)->only(['edit', 'update']);
+        Route::resource('subscriptions', SubscriptionController::class)->only(['edit', 'update']);
     });
 
 Route::middleware(['auth:admin'])->group(function () {
@@ -652,7 +652,7 @@ Route::middleware(['auth:admin', SuperAdmin::class])
     ->name('admin.')
     ->group(function () {
         Route::resource('roles', \App\Http\Controllers\RoleController::class)->except(['show']);
-        Route::resource('modules', \App\Http\Controllers\ModuleController::class)->except(['show']);
+        Route::resource('modules', \App\Http\Controllers\Admin\ModuleController::class)->except(['show']);
         Route::get('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'permissions'])->name('roles.permissions');
         Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
     });
