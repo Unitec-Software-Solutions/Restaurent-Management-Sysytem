@@ -9,8 +9,7 @@ class CheckTableAvailabilityController extends Controller
 {
     public function index()
     {
-        // TODO: Implement index logic
-        return view('admin.index');
+        // Show table availability
+        return view('admin.tables.availability');
     }
-
 }

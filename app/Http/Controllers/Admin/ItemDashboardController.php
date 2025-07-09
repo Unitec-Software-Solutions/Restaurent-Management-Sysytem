@@ -1,8 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Controller;
 use App\Models\ItemCategory;
 use App\Models\ItemMaster;
 use App\Models\ItemTransaction;

@@ -1,9 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+
 use App\Http\Controllers\Controller;
-
-
 use App\Models\ItemTransaction;
 use App\Models\ProductionOrder;
 use App\Models\ProductionOrderIngredient;
@@ -448,5 +447,4 @@ class ProductionSessionController extends Controller
         // TODO: Implement issueIngredients logic
         return redirect()->back()->with('success', 'Ingredients issued successfully');
     }
-
 }

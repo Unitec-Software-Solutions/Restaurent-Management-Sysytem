@@ -10,25 +10,25 @@ class DashboardController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth');
+        $this->middleware('auth:admin');
     }
 
     public function index()
     {
-        $user = Auth::user();
-        return view('dashboard', [
-            'role' => $user->userRole
+        $user = Auth::guard('admin')->user();
+        return view('admin.dashboard', [
+            'role' => $user ? $user->userRole : null
         ]);
     }
 
     public function staff()
     {
-        $user = Auth::user();
-        // ...existing code...
+        $user = Auth::guard('admin')->user();
+        return view('admin.staff', compact('user'));
     }
 
     public function management()
     {
-        // ...existing code...
+        return view('admin.management');
     }
 }

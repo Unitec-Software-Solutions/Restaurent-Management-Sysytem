@@ -1,9 +1,8 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+
 use App\Http\Controllers\Controller;
-
-
 use App\Models\ProductionRequestMaster;
 use App\Models\ProductionRequestItem;
 use App\Models\ItemMaster;
