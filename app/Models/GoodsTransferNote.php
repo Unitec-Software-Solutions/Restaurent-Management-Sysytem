@@ -396,6 +396,10 @@ class GoodsTransferNote extends Model
 
     protected function createIncomingInventoryTransactions($userId)
     {
+        // Check if user exists in users table
+        $userExists = \DB::table('users')->where('id', $userId)->exists();
+        $verifiedBy = $userExists ? $userId : null;
+
         foreach ($this->items as $item) {
             if ($item->quantity_accepted > 0) {
                 ItemTransaction::create([
@@ -410,7 +414,7 @@ class GoodsTransferNote extends Model
                     'reference_type' => 'GTN',
                     'gtn_id' => $this->gtn_id,
                     'created_by_user_id' => $userId,
-                    'verified_by' => $userId,
+                    'verified_by' => $verifiedBy,
                     'notes' => "Stock received from GTN: {$this->gtn_number}",
                     'is_active' => true,
                 ]);
