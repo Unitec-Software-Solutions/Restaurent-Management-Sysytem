@@ -10,27 +10,27 @@ return new class extends Migration
     {
         Schema::create('grn_master', function (Blueprint $table) {
             $table->id('grn_id');
-            $table->string('grn_number')->unique();
+            $table->string('grn_number')->unique()->nullable();
             $table->foreignId('po_id')->nullable()->constrained('po_master', 'po_id');
-            $table->foreignId('branch_id')->constrained('branches');
-            $table->foreignId('organization_id')->constrained('organizations');
+            $table->foreignId('branch_id')->nullable()->constrained('branches');
+            $table->foreignId('organization_id')->nullable()->constrained('organizations');
             $table->foreignId('supplier_id')->nullable()->constrained('suppliers');
-            $table->foreignId('received_by_user_id')->constrained('users');
+            $table->foreignId('received_by_user_id')->nullable()->constrained('users');
             $table->foreignId('verified_by_user_id')->nullable()->constrained('users');
             $table->timestamp('verified_at')->nullable();
-            $table->date('received_date');
+            $table->date('received_date')->nullable();
             $table->string('delivery_note_number')->nullable();
             $table->string('invoice_number')->nullable();
            // $table->decimal('total_amount', 15, 2)->default(0.00);
-            $table->decimal('total_amount', 12, 2)->default(0.00);
-            $table->decimal('grand_discount', 15, 2)->default(0)->after('total_amount');
-            $table->string('status', 50)->default('Pending'); // Pending, Verified, Rejected
-            $table->string('payment_status', 50)->default('Pending')->comment('Payment status: Pending, Partial, Paid'); // Pending, Verified, Rejected
+            $table->decimal('total_amount', 12, 2)->default(0.00)->nullable();
+            $table->decimal('grand_discount', 15, 2)->default(0)->after('total_amount')->nullable();
+            $table->string('status', 50)->default('Pending')->nullable(); // Pending, Verified, Rejected
+            $table->string('payment_status', 50)->default('Pending')->comment('Payment status: Pending, Partial, Paid')->nullable(); // Pending, Verified, Rejected
             $table->text('notes')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(true)->nullable();
             $table->foreignId('created_by')->constrained('users')->nullable(); // User who created the GRN (Staff)
             $table->timestamps();
-            $table->softDeletes();
+            $table->softDeletes(); // For soft delete functionality
         });
     }
 
