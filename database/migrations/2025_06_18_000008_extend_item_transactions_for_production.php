@@ -12,11 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('item_transactions', function (Blueprint $table) {
-            // Add new transaction types to enum if not already present
-            // Note: In production, you'd want to alter the enum more carefully
             $table->unsignedBigInteger('production_session_id')->nullable()->after('gtn_id');
             $table->unsignedBigInteger('production_order_id')->nullable()->after('production_session_id');
-            $table->decimal('waste_quantity', 10, 2)->default(0)->after('damaged_quantity');
+            $table->decimal('waste_quantity', 10, 2)->default(0)->after('damaged_quantity')->nullable();
             $table->string('waste_reason')->nullable()->after('waste_quantity');
         });
     }
