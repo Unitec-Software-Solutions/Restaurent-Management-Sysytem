@@ -15,8 +15,8 @@ return new class extends Migration
             $table->foreignId('branch_id')->nullable()->constrained('branches');
             $table->foreignId('organization_id')->nullable()->constrained('organizations');
             $table->foreignId('supplier_id')->nullable()->constrained('suppliers');
-            $table->foreignId('received_by_user_id')->nullable()->constrained('users');
-            $table->foreignId('verified_by_user_id')->nullable()->constrained('users');
+            $table->foreignId('received_by_user_id')->nullable();
+            $table->foreignId('verified_by_user_id')->nullable();
             $table->timestamp('verified_at')->nullable();
             $table->date('received_date')->nullable();
             $table->string('delivery_note_number')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('payment_status', 50)->default('Pending')->comment('Payment status: Pending, Partial, Paid')->nullable(); // Pending, Verified, Rejected
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true)->nullable();
-            $table->foreignId('created_by')->constrained('users')->nullable(); // User who created the GRN (Staff)
+            $table->foreignId('created_by')->nullable(); // User who created the GRN (Staff)
             $table->timestamps();
             $table->softDeletes(); // For soft delete functionality
         });
