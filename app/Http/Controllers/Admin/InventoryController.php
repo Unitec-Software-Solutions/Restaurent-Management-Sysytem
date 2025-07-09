@@ -1,14 +1,13 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-use App\Http\Controllers\Controller;
 
-use Illuminate\Http\Request;
+use App\Models\InventoryItem;
 use App\Models\ItemMaster;
-use App\Models\ItemTransaction;
-use App\Models\GoodsTransferNote;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Models\Organization;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
 
 class InventoryController extends Controller
 {
@@ -125,4 +124,9 @@ class InventoryController extends Controller
 
         return view('admin.inventory.gtn.index', compact('gtns'));
     }
+
+    public function store(Request $request)
+    {}
+    public function updateStock(Request $request, InventoryItem $inventoryItem)
+    {}
 }
