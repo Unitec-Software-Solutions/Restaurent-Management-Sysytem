@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Models\InventoryItem;
 use App\Models\ItemMaster;
 use App\Models\Organization;
+use App\Models\GoodsTransferNote;
+use App\Models\ItemTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class InventoryController extends Controller
 {

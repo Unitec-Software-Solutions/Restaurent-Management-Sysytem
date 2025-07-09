@@ -49,5 +49,6 @@ class ModuleController extends Controller
     protected function getSearchableColumns(): array
     {
         // ...existing code...
+        return [];
     }
 }

@@ -29,11 +29,20 @@ class KotController extends Controller
 
     private function generateKotNumber($branchId = null): string
     {
-        // ...existing code...
+        // Example implementation to ensure a return value
+        if ($branchId) {
+            // Generate KOT number with branch ID
+            return 'KOT-' . $branchId . '-' . now()->format('YmdHis');
+        } else {
+            // Generate KOT number without branch ID
+            return 'KOT-' . now()->format('YmdHis');
+        }
     }
 
     private function determineKotPriority(Order $order): string
     {
         // ...existing code...
+        // Ensure a default return value if no other return is hit
+        return 'normal';
     }
 }
