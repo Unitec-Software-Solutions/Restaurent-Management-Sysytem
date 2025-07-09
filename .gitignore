@@ -23,7 +23,6 @@ yarn-error.log
 /.zed
 
 *.env
-*.github
 *.temp
 *.rar
 *.zip
