@@ -21,7 +21,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Admin\SubscriptionPlanController;
 use App\Http\Controllers\SubscriptionController;
-use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\Admin\ModuleController;
 use App\Http\Controllers\RealtimeDashboardController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\DatabaseTestController;

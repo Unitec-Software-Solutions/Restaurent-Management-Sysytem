@@ -99,12 +99,12 @@ Total routes: 206
 | GET, HEAD | admin/roles/{role}/edit | admin.roles.edit | App\Http\Controllers\RoleController@edit | web, auth:admin, App\Http\Middleware\SuperAdmin |
 | PUT, PATCH | admin/roles/{role} | admin.roles.update | App\Http\Controllers\RoleController@update | web, auth:admin, App\Http\Middleware\SuperAdmin |
 | DELETE | admin/roles/{role} | admin.roles.destroy | App\Http\Controllers\RoleController@destroy | web, auth:admin, App\Http\Middleware\SuperAdmin |
-| GET, HEAD | admin/modules | admin.modules.index | App\Http\Controllers\ModuleController@index | web, auth:admin, App\Http\Middleware\SuperAdmin |
-| GET, HEAD | admin/modules/create | admin.modules.create | App\Http\Controllers\ModuleController@create | web, auth:admin, App\Http\Middleware\SuperAdmin |
-| POST | admin/modules | admin.modules.store | App\Http\Controllers\ModuleController@store | web, auth:admin, App\Http\Middleware\SuperAdmin |
-| GET, HEAD | admin/modules/{module}/edit | admin.modules.edit | App\Http\Controllers\ModuleController@edit | web, auth:admin, App\Http\Middleware\SuperAdmin |
-| PUT, PATCH | admin/modules/{module} | admin.modules.update | App\Http\Controllers\ModuleController@update | web, auth:admin, App\Http\Middleware\SuperAdmin |
-| DELETE | admin/modules/{module} | admin.modules.destroy | App\Http\Controllers\ModuleController@destroy | web, auth:admin, App\Http\Middleware\SuperAdmin |
+| GET, HEAD | admin/modules | admin.modules.index | App\Http\Controllers\Admin\ModuleController@index | web, auth:admin, App\Http\Middleware\SuperAdmin |
+| GET, HEAD | admin/modules/create | admin.modules.create | App\Http\Controllers\Admin\ModuleController@create | web, auth:admin, App\Http\Middleware\SuperAdmin |
+| POST | admin/modules | admin.modules.store | App\Http\Controllers\Admin\ModuleController@store | web, auth:admin, App\Http\Middleware\SuperAdmin |
+| GET, HEAD | admin/modules/{module}/edit | admin.modules.edit | App\Http\Controllers\Admin\ModuleController@edit | web, auth:admin, App\Http\Middleware\SuperAdmin |
+| PUT, PATCH | admin/modules/{module} | admin.modules.update | App\Http\Controllers\Admin\ModuleController@update | web, auth:admin, App\Http\Middleware\SuperAdmin |
+| DELETE | admin/modules/{module} | admin.modules.destroy | App\Http\Controllers\Admin\ModuleController@destroy | web, auth:admin, App\Http\Middleware\SuperAdmin |
 | GET, HEAD | admin/roles/{role}/permissions | admin.roles.permissions | App\Http\Controllers\RoleController@permissions | web, auth:admin, App\Http\Middleware\SuperAdmin |
 | POST | admin/roles/{role}/permissions | admin.roles.permissions.update | App\Http\Controllers\RoleController@updatePermissions | web, auth:admin, App\Http\Middleware\SuperAdmin |
 | GET, HEAD | admin/users/create | admin.users.create | App\Http\Controllers\UserController@create | web, auth:admin, App\Http\Middleware\SuperAdmin |

@@ -48,6 +48,7 @@ class ModuleController extends Controller
 
     protected function getSearchableColumns(): array
     {
-        // ...existing code...
+        // Return an array of searchable columns or an empty array by default
+        return [];
     }
 }
