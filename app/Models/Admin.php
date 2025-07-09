@@ -21,18 +21,10 @@ class Admin extends Authenticatable
         'password',
         'organization_id',
         'branch_id',
-        'role',
-        'current_role_id',
-        'department',
-        'job_title',
-        'status',
         'is_super_admin',
         'is_active',
         'phone',
-        'profile_image',
         'last_login_at',
-        'preferences',
-        'ui_settings',
         'failed_login_attempts',
         'locked_until',
         'password_changed_at',
@@ -76,46 +68,7 @@ class Admin extends Authenticatable
     /**
      * Boot method to set default UI settings and handle role migration
      */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($admin) {
-            
-            if (empty($admin->ui_settings)) {
-                $admin->ui_settings = [
-                    'theme' => 'light',
-                    'sidebar_collapsed' => false,
-                    'dashboard_layout' => 'grid',
-                    'notifications_enabled' => true,
-                    'preferred_language' => 'en',
-                    'cards_per_row' => 4,
-                    'show_help_tips' => true,
-                ];
-            }
-
-            if (empty($admin->preferences)) {
-                $admin->preferences = [
-                    'timezone' => 'Asia/Colombo',
-                    'date_format' => 'Y-m-d',
-                    'time_format' => '24h',
-                    'currency' => 'LKR',
-                ];
-            }
-
-            // Handle legacy role field
-            if ($admin->role && !$admin->current_role_id) {
-                $admin->migrateLegacyRole();
-            }
-        });
-
-        static::updating(function ($admin) {
-            // Handle legacy role field updates
-            if ($admin->isDirty('role') && $admin->role && !$admin->current_role_id) {
-                $admin->migrateLegacyRole();
-            }
-        });
-    }
+    
 
     /**
      * Migrate legacy role to Spatie role system
@@ -129,8 +82,6 @@ class Admin extends Authenticatable
             'admin' => 'Organization Admin',
             'super_admin' => 'Super Admin',
             'branch_admin' => 'Branch Admin',
-            'manager' => 'Branch Manager',
-            'staff' => 'Staff',
         ];
 
         $roleName = $roleMapping[$this->role] ?? $this->role;
@@ -147,7 +98,7 @@ class Admin extends Authenticatable
                 }
             }
         } catch (\Exception $e) {
-            // Silently handle role migration errors
+            
         }
     }
 
