@@ -81,7 +81,7 @@ class Admin extends Authenticatable
         parent::boot();
 
         static::creating(function ($admin) {
-            // Set default UI settings following the UI/UX guidelines
+            
             if (empty($admin->ui_settings)) {
                 $admin->ui_settings = [
                     'theme' => 'light',
