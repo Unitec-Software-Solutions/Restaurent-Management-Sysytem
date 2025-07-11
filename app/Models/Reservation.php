@@ -402,6 +402,11 @@ class Reservation extends Model
 
         return $selectedTables;
     }
+
+    public function table()
+    {
+        return $this->belongsTo(Table::class, 'table_id');
+    }
 }
 
 

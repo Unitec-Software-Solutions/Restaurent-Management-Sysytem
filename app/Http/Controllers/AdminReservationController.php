@@ -159,6 +159,15 @@ class AdminReservationController extends Controller
     {
         $admin = auth('admin')->user();
 
+        // Allow super admin to edit any reservation
+        if ($admin->isSuperAdmin()) {
+            $branches = \App\Models\Branch::where('is_active', true)->get();
+            $tables = Table::where('branch_id', $reservation->branch_id)->get();
+            $assignedTableIds = $reservation->tables->pluck('id')->toArray();
+            $availableTableIds = $tables->pluck('id')->toArray();
+            return view('admin.reservations.edit', compact('reservation', 'tables', 'assignedTableIds', 'availableTableIds'));
+        }
+
         // Load admin's branch relationship if not already loaded
         if (!$admin->relationLoaded('branch')) {
             $admin->load('branch');
@@ -191,7 +200,9 @@ class AdminReservationController extends Controller
 
 public function update(Request $request, Reservation $reservation)
 {
-    if ($reservation->branch_id !== auth('admin')->user()->branch_id) {
+    $admin = auth('admin')->user();
+    // Allow super admin to update any reservation
+    if (!$admin->isSuperAdmin() && $reservation->branch_id !== $admin->branch_id) {
         abort(403);
     }
 
@@ -323,30 +334,47 @@ public function update(Request $request, Reservation $reservation)
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
+        // Allow super admin to create reservation for any branch
+        if ($admin->isSuperAdmin()) {
+            $validated = $request->validate([
+                'name' => 'nullable|string|max:255',
+                'phone' => 'required|string|min:10|max:15',
+                'email' => 'nullable|email|max:255',
+                'date' => 'required|date|after_or_equal:today',
+                'start_time' => 'required|date_format:H:i',
+                'end_time' => 'required|date_format:H:i|after:start_time',
+                'number_of_people' => 'required|integer|min:1',
+                'assigned_table_ids' => 'nullable|array',
+                'assigned_table_ids.*' => 'exists:tables,id',
+                'steward_id' => 'nullable|exists:employees,id',
+                'branch_id' => 'required|exists:branches,id',
+            ]);
+            $branch = \App\Models\Branch::find($validated['branch_id']);
+        } else {
+            // Load branch relationship if not already loaded
+            if (!$admin->relationLoaded('branch')) {
+                $admin->load('branch');
+            }
 
-        // Load branch relationship if not already loaded
-        if (!$admin->relationLoaded('branch')) {
-            $admin->load('branch');
+            // Validate admin has a branch assigned
+            if (!$admin->branch_id || !$admin->branch) {
+                return redirect()->route('admin.reservations.index')
+                    ->with('error', 'You must be assigned to a branch to create reservations.');
+            }
+            $validated = $request->validate([
+                'name' => 'nullable|string|max:255',
+                'phone' => 'required|string|min:10|max:15',
+                'email' => 'nullable|email|max:255',
+                'date' => 'required|date|after_or_equal:today',
+                'start_time' => 'required|date_format:H:i',
+                'end_time' => 'required|date_format:H:i|after:start_time',
+                'number_of_people' => 'required|integer|min:1',
+                'assigned_table_ids' => 'nullable|array',
+                'assigned_table_ids.*' => 'exists:tables,id',
+                'steward_id' => 'nullable|exists:employees,id',
+            ]);
+            $branch = $admin->branch;
         }
-
-        // Validate admin has a branch assigned
-        if (!$admin->branch_id || !$admin->branch) {
-            return redirect()->route('admin.reservations.index')
-                ->with('error', 'You must be assigned to a branch to create reservations.');
-        }
-
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'phone' => 'required|string|min:10|max:15',
-            'email' => 'nullable|email|max:255',
-            'date' => 'required|date|after_or_equal:today',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
-            'number_of_people' => 'required|integer|min:1',
-            'assigned_table_ids' => 'nullable|array',
-            'assigned_table_ids.*' => 'exists:tables,id',
-            'steward_id' => 'nullable|exists:employees,id',
-        ]);
 
         // Use null-safe operator for branch access
         $branch = $admin->branch;
@@ -446,62 +474,46 @@ public function update(Request $request, Reservation $reservation)
             ->with('success', 'Reservation created successfully. You can now check in.');
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $admin = auth('admin')->user();
+        $isSuperAdmin = $admin->is_super_admin;
+        $organizations = \App\Models\Organization::where('is_active', true)->orderBy('name')->get();
 
-        // Load branch relationship if not already loaded
-        if (!$admin->relationLoaded('branch')) {
-            $admin->load('branch');
+        $organization_id = $request->get('organization_id') ?? ($isSuperAdmin ? null : $admin->organization_id);
+        $branch_id = $request->get('branch_id') ?? ($isSuperAdmin ? null : $admin->branch_id);
+        $branches = collect();
+        if ($organization_id) {
+            $branches = \App\Models\Branch::where('organization_id', $organization_id)->get();
         }
-
-        // // For super admin, redirect to reservation initialization page
-        // if ($admin->is_super_admin) {
-        //     return redirect()->route('reservations.initialize');
-        // }
-
-        // Validate admin has a branch assigned
-        if (!$admin->branch_id || !$admin->branch) {
-            return redirect()->route('admin.dashboard')
-                ->with('error', 'You must be assigned to a branch to create reservations.');
-        }
-
-        $branch = $admin->branch;
-
-        // Use null-safe operators to prevent errors
-        $branchId = $branch?->id;
-        if (!$branchId) {
-            return redirect()->route('admin.dashboard')
-                ->with('error', 'Invalid branch assignment. Please contact administrator.');
-        }
-
-        // Get tables for the branch with null-safe operations
-        $tables = Table::where('branch_id', $branchId)->get();
-
+        $tables = $branch_id ? Table::where('branch_id', $branch_id)->get() : collect();
         $availableTableIds = $tables->pluck('id')->toArray();
-        $defaultPhone = $branch?->phone ?? '';
+        $defaultPhone = $branch_id ? (\App\Models\Branch::find($branch_id)->phone ?? '') : ($admin->branch->phone ?? '');
         $defaultDate = now()->toDateString();
-
-        // Set default start time to now, end time to 2 hours later
         $now = now();
         $start_time = $now->format('H:i');
         $end_time = $now->copy()->addHours(2)->format('H:i');
-
-        // Get next ID safely
-        $nextId = (DB::table('reservations')->max('id') ?? 0) + 1;
-        $defaultName = 'Reservation #' . $nextId;
-        $defaultPhone = $branch?->phone ?? '';
-
-        // Get stewards for the branch with null-safe operations
-        $stewards = Employee::where('branch_id', $branchId)
+        $defaultName = 'Reservation #' . ((DB::table('reservations')->max('id') ?? 0) + 1);
+        $stewards = $branch_id ? \App\Models\Employee::where('branch_id', $branch_id)
             ->where('is_active', true)
             ->whereHas('roles', function($query) {
                 $query->where('name', 'steward');
-            })
-            ->get();
+            })->get() : collect();
 
         return view('admin.reservations.create', compact(
-            'tables', 'branch', 'availableTableIds', 'defaultPhone', 'defaultDate', 'defaultName', 'start_time', 'end_time', 'stewards'
+            'isSuperAdmin',
+            'organizations',
+            'organization_id',
+            'branches',
+            'branch_id',
+            'tables',
+            'availableTableIds',
+            'defaultPhone',
+            'defaultDate',
+            'defaultName',
+            'start_time',
+            'end_time',
+            'stewards'
         ));
     }
 
