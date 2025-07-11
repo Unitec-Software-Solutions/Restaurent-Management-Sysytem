@@ -918,7 +918,7 @@ class AdminOrderController extends Controller
     public function getAvailableMenuItemsLegacy(Request $request)
     {
         $branchId = $request->get('branch_id');
-        $menuType = $request->get('menu_type', null); // optional filter by menu type
+        // $menuType = $request->get('menu_type', null); // optional filter by menu type
         
         if (!$branchId) {
             return response()->json(['error' => 'Branch ID is required'], 400);
@@ -1519,7 +1519,8 @@ class AdminOrderController extends Controller
                     'has_kot_items' => true,
                     'kot_already_exists' => true,
                     'kot_id' => $existingKot->id,
-                    'print_url' => route('admin.kots.print', $existingKot->id)
+                    // 'print_url' => route('admin.kots.print', $existingKot->id)
+                    'print_url' => route('admin.orders.print-kot', $order->id)
                 ];
             }
 
@@ -1998,7 +1999,7 @@ class AdminOrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update availability'
-            ], 500);
+            ],  500);
         }
     }
 
@@ -2119,12 +2120,10 @@ class AdminOrderController extends Controller
             }
             
             DB::transaction(function () use ($order) {
-                // Restore stock for cancelled order
-                foreach ($order->orderItems as $orderItem) {
-                    // Logic to restore stock would go here
-                    // This depends on your stock management system
-                }
+                // Logic to restore stock would go here
+                // This depends on your stock management system
                 
+                $order->update(['status' => 'cancelled']);
                 $order->update(['status' => 'cancelled']);
             });
             
@@ -2145,20 +2144,15 @@ class AdminOrderController extends Controller
      * Helper method to check menu item stock
      */
     private function checkMenuItemStock($menuItem, $quantity, $branchId)
+
     {
-        // This is a simplified stock check - you may need to implement
-        // more complex logic based on your recipe/ingredient system
-        
-        // For now, assume menu items are always available
-        // In a real system, you'd check against ingredient stock
-        
+        // Parameters are currently unused; this is a stub for future stock logic.
         return [
             'available' => true,
             'available_quantity' => 999,
             'message' => 'Item available'
         ];
     }
-
     /**
      * Get branches for organization (API endpoint for admin orders)
      */

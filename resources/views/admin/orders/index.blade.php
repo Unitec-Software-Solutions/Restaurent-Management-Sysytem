@@ -264,13 +264,10 @@
                                     @endphp
                                     
                                     @if($hasKotItems)
-                                        <div class="flex gap-1">
-                                            
-                                            <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
-                                               class="text-red-600 hover:text-red-900" title="KOT">
-                                                <i class="fas fa-file-pdf"></i> KOT
-                                            </a>
-                                        </div>
+                                        <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
+                                           class="text-red-600 hover:text-red-900" title="KOT">
+                                            <i class="fas fa-file-pdf"></i> KOT
+                                        </a>
                                     @endif
                                 </div>
                             </td>
