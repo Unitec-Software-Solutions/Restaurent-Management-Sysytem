@@ -232,26 +232,28 @@
         <!-- Items Section -->
         <div class="items-section">
             @forelse($order->orderItems ?? [] as $item)
-            <div class="item-row">
-                <div class="item-name">{{ $item->item_name }}</div>
-                <div class="item-details">
-                    <div class="item-qty">Qty: {{ $item->quantity }}</div>
-                    @if($item->menuItem && $item->menuItem->type)
-                        <div class="item-type">
-                            {{ $item->menuItem->type === 'kot' ? 'Kitchen' : 'Bar/Cold' }}
+                @if($item->menuItem->type === \App\Models\MenuItem::TYPE_KOT)
+                    <div class="item-row">
+                        <div class="item-name">{{ $item->item_name }}</div>
+                        <div class="item-details">
+                            <div class="item-qty">Qty: {{ $item->quantity }}</div>
+                            @if($item->menuItem && $item->menuItem->type)
+                                <div class="item-type">
+                                    {{ $item->menuItem->type === 'kot' ? 'Kitchen' : 'Bar/Cold' }}
+                                </div>
+                            @endif
                         </div>
-                    @endif
-                </div>
-                <div class="item-price">
-                    @ LKR {{ number_format($item->unit_price, 2) }}
-                    = LKR {{ number_format($item->subtotal ?? ($item->unit_price * $item->quantity), 2) }}
-                </div>
-                @if($item->notes)
-                <div style="font-size: 8px; font-style: italic; margin-top: 1px;">
-                    Note: {{ $item->notes }}
-                </div>
+                        <div class="item-price">
+                            @ LKR {{ number_format($item->unit_price, 2) }}
+                            = LKR {{ number_format($item->subtotal ?? ($item->unit_price * $item->quantity), 2) }}
+                        </div>
+                        @if($item->notes)
+                        <div style="font-size: 8px; font-style: italic; margin-top: 1px;">
+                            Note: {{ $item->notes }}
+                        </div>
+                        @endif
+                    </div>
                 @endif
-            </div>
             @empty
             <div class="item-row">
                 <div class="item-name">No items found</div>

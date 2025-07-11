@@ -43,11 +43,11 @@ class AdminOrderController extends Controller
         $this->menuSchedulingService = $menuSchedulingService;
         $this->notificationService = $notificationService;
     }
-    
+
     public function index(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         // Implement branch-scoped queries as requested
         $query = Order::with(['reservation', 'branch', 'orderItems.menuItem']);
 
@@ -76,7 +76,7 @@ class AdminOrderController extends Controller
         }
 
         $orders = $query->latest()->paginate(20);
-        
+
         // Get branches based on admin permissions
         $branches = $this->getAdminAccessibleBranches($admin);
 
@@ -95,7 +95,7 @@ class AdminOrderController extends Controller
     public function edit(Order $order)
     {
         $admin = auth('admin')->user();
-        
+
         // Check permissions
         if (!$admin->is_super_admin) {
             if ($admin->branch_id && $order->branch_id !== $admin->branch_id) {
@@ -106,7 +106,7 @@ class AdminOrderController extends Controller
                     ->with('error', 'Access denied to this order');
             }
         }
-        
+
         // Load relationships
         $order->load(['orderItems.menuItem', 'branch']);
 
@@ -167,7 +167,7 @@ class AdminOrderController extends Controller
     {
         // Custom validation rules for order time
         $orderTimeRule = $order->id ? 'required|date|after_or_equal:now' : 'required|date|after_or_equal:now';
-        
+
         $validated = $request->validate([
             'status' => 'required|in:submitted,preparing,ready,completed,cancelled',
             'order_type' => 'required|string',
@@ -205,7 +205,7 @@ class AdminOrderController extends Controller
                         ];
                     }
                 }
-                
+
                 // Log items for debugging
                 Log::debug('Selected items for order #' . $order->id, [
                     'items' => $selectedItems,
@@ -215,16 +215,16 @@ class AdminOrderController extends Controller
                 if (!empty($selectedItems)) {
                     // Delete existing order items
                     $order->orderItems()->delete();
-                    
+
                     // Create new order items
                     $subtotal = 0;
                     foreach ($selectedItems as $itemData) {
                         $menuItem = \App\Models\ItemMaster::find($itemData['item_id']);
                         if (!$menuItem) continue;
-                        
+
                         $lineTotal = $menuItem->selling_price * $itemData['quantity'];
                         $subtotal += $lineTotal;
-                        
+
                         \App\Models\OrderItem::create([
                             'order_id' => $order->id,
                             'menu_item_id' => $itemData['item_id'],
@@ -235,7 +235,7 @@ class AdminOrderController extends Controller
                             'total_price' => $lineTotal
                         ]);
                     }
-                    
+
                     // Update order totals
                     $tax = $subtotal * 0.10; // 10% tax
                     $order->update([
@@ -247,14 +247,14 @@ class AdminOrderController extends Controller
             }
 
             DB::commit();
-            
+
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', 'Order updated successfully!');
-        
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Order update failed: ' . $e->getMessage());
-            
+
             return back()->withInput()
                 ->with('error', 'Failed to update order: ' . $e->getMessage());
         }
@@ -268,7 +268,7 @@ class AdminOrderController extends Controller
         try {
             $hasKotItems = $order->hasKotItems();
             $canGenerateKot = $order->canGenerateKot();
-            
+
             return response()->json([
                 'success' => true,
                 'hasKotItems' => $hasKotItems,
@@ -290,19 +290,19 @@ class AdminOrderController extends Controller
             ->where('status', 'submitted')
             ->latest()
             ->paginate(10);
-            
+
         return view('admin.orders.index', compact('orders'));
     }
 
     public function createForReservation(Reservation $reservation)
     {
         $admin = auth('admin')->user();
-        
+
         // Get branches
-        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id, 
+        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id,
             fn($q) => $q->where('organization_id', $admin->organization_id)
         )->active()->get();
-        
+
         // Get menu items
         $menuItems = ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
             ->where('is_menu_item', true)
@@ -311,29 +311,29 @@ class AdminOrderController extends Controller
                 $q->where('organization_id', $admin->organization_id);
             })
             ->get();
-        
+
         // Get categories
         $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
                 $q->where('organization_id', $admin->organization_id);
             })
             ->active()
             ->get();
-        
+
         // Get menus
         $menus = Menu::with(['menuItems.menuCategory'])
             ->where('is_active', true)
-            ->when(!$admin->is_super_admin && $admin->branch_id, 
+            ->when(!$admin->is_super_admin && $admin->branch_id,
                 fn($q) => $q->where('branch_id', $admin->branch_id)
             )
             ->get();
-        
+
         // Stock summary
         $stockSummary = [
             'available_count' => $menuItems->count(),
             'low_stock_count' => 0,
             'out_of_stock_count' => 0
         ];
-        
+
         return view('admin.orders.create', compact('reservation', 'branches', 'menuItems', 'categories', 'menus', 'stockSummary'));
     }
 
@@ -358,7 +358,7 @@ class AdminOrderController extends Controller
 
         // Create order with reservation data
         $admin = auth('admin')->user();
-        
+
         // Determine organization_id based on admin type
         $organizationId = null;
         if ($admin->is_super_admin) {
@@ -369,7 +369,7 @@ class AdminOrderController extends Controller
             // For regular admins, use their organization_id
             $organizationId = $admin->organization_id;
         }
-        
+
         $order = Order::create([
             'reservation_id' => $reservation->id,
             'branch_id' => $reservation->branch_id,
@@ -394,15 +394,15 @@ class AdminOrderController extends Controller
         // Create order items with optimized queries
         $itemIds = collect($data['items'])->pluck('item_id')->unique();
         $menuItems = ItemMaster::whereIn('id', $itemIds)->get()->keyBy('id');
-        
+
         $orderItems = collect($data['items'])->map(function ($item) use ($menuItems, $order) {
             $menuItem = $menuItems[$item['item_id']];
             $lineTotal = $menuItem->selling_price * $item['quantity'];
-            
+
             return [
                 'order_id' => $order->id,
                 'menu_item_id' => $item['item_id'],
-                'inventory_item_id' => $item['item_id'], 
+                'inventory_item_id' => $item['item_id'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->selling_price,
                 'subtotal' => $lineTotal,
@@ -411,7 +411,7 @@ class AdminOrderController extends Controller
                 'updated_at' => now(),
             ];
         })->toArray();
-        
+
         OrderItem::insert($orderItems);
         $subtotal = collect($orderItems)->sum('total_price');
 
@@ -436,12 +436,12 @@ class AdminOrderController extends Controller
     {
         $admin = auth('admin')->user();
         $orderType = $request->get('type', 'in_house'); // Default to in_house
-        
+
         // For takeaway orders, set default takeaway type if not specified
         if ($orderType === 'takeaway' && !$request->has('subtype')) {
             $orderType = 'takeaway_walk_in_demand'; // Default takeaway subtype
         }
-        
+
         // Apply admin defaults (pre-filled values as requested in refactoring)
         $defaultData = [
             'branch_id' => $admin->branch_id,
@@ -454,14 +454,14 @@ class AdminOrderController extends Controller
             'customer_email' => '',
             'order_time' => now()->addMinutes(30)->format('Y-m-d\TH:i')
         ];
-        
+
         $branches = $this->getAdminAccessibleBranches($admin);
-        
+
         // Get organizations if super admin
-        $organizations = $admin->is_super_admin ? 
-            \App\Models\Organization::where('is_active', true)->get() : 
+        $organizations = $admin->is_super_admin ?
+            \App\Models\Organization::where('is_active', true)->get() :
             collect([$admin->organization]);
-        
+
         return view('admin.orders.create', [
             'admin' => $admin,
             'organizations' => $organizations,
@@ -475,7 +475,7 @@ class AdminOrderController extends Controller
         ]);
     }
 
-    
+
     private function getItemAvailabilityInfo($item, $currentStock, $itemType)
     {
         if ($itemType == MenuItem::TYPE_BUY_SELL) {
@@ -593,14 +593,14 @@ class AdminOrderController extends Controller
             $totalAmount = 0;
             foreach ($validated['items'] as $item) {
                 $menuItem = MenuItem::findOrFail($item['menu_item_id']);
-                
+
                 // Check if item requires stock validation
                 if ($menuItem->type == MenuItem::TYPE_BUY_SELL) {
                     $this->reserveStock($menuItem->id, $order->id, $item['quantity']);
                 }
-                
+
                 $subtotal = $menuItem->price * $item['quantity'];
-                
+
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $item['menu_item_id'],
@@ -610,7 +610,7 @@ class AdminOrderController extends Controller
                     'subtotal' => $subtotal,
                     'special_instructions' => $item['special_instructions'] ?? null
                 ]);
-                
+
                 $totalAmount += $subtotal;
             }
 
@@ -623,7 +623,7 @@ class AdminOrderController extends Controller
 
             // Check and print KOT if order has KOT items
             $kotResult = $this->checkAndPrintKOT($order, true);
-            
+
             if ($kotResult['success'] && $kotResult['has_kot_items']) {
                 // If KOT was generated successfully, include the print URL in success message
                 return redirect()->route('admin.orders.show', $order)
@@ -636,7 +636,7 @@ class AdminOrderController extends Controller
                     ->with('warning', 'Order created successfully, but KOT generation failed: ' . $kotResult['message'])
                     ->with('kot_error', $kotResult['message']);
             }
-            
+
             // No KOT items or KOT already exists, proceed normally
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', 'Order created successfully!');
@@ -644,7 +644,7 @@ class AdminOrderController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Order creation failed: ' . $e->getMessage());
-            
+
             return back()->withInput()
                 ->with('error', 'Failed to create order. Please try again.');
         }
@@ -656,7 +656,7 @@ class AdminOrderController extends Controller
     public function show(Order $order)
     {
         $order->load(['orderItems.menuItem.menuCategory', 'branch', 'reservation']);
-        
+
         return view('admin.orders.show', compact('order'));
     }
 
@@ -678,7 +678,7 @@ class AdminOrderController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Order deletion failed: ' . $e->getMessage());
-            
+
             return back()->with('error', 'Failed to delete order.');
         }
     }
@@ -761,7 +761,7 @@ class AdminOrderController extends Controller
         $branches = Branch::all();
         $menuItems = ItemMaster::where('is_menu_item', true)->get();
 $statusOptions = [
-    'submitted' => 'Submitted',  
+    'submitted' => 'Submitted',
     'preparing' => 'Preparing',
     'ready' => 'Ready',
     'completed' => 'Completed',
@@ -817,7 +817,7 @@ $statusOptions = [
     public function storeTakeaway(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         $data = $request->validate([
             'order_type' => 'required|in:takeaway_walk_in_demand,takeaway_in_call_scheduled,takeaway_online_scheduled',
             'branch_id' => 'required|exists:branches,id',
@@ -844,7 +844,7 @@ $statusOptions = [
 
             // Generate order number first for customer name
             $orderNumber = OrderNumberService::generate($data['branch_id']);
-            
+
             // Update customer name with actual order number if it was default
             if (strpos($data['customer_name'], 'Customer with Order #') !== false) {
                 $data['customer_name'] = 'Customer with Order #' . $orderNumber;
@@ -866,18 +866,18 @@ $statusOptions = [
                     $stockErrors[] = "Missing menu item ID in order data";
                     continue;
                 }
-                
+
                 $menuItem = MenuItem::find($item['menu_item_id']);
                 if (!$menuItem) {
                     $stockErrors[] = "Menu item with ID {$item['menu_item_id']} not found";
                     continue;
                 }
-                
+
                 if (!$menuItem->is_active) {
                     $stockErrors[] = "Menu item {$menuItem->name} is not active";
                     continue;
                 }
-                
+
                 // Get the associated ItemMaster for stock checking if available
                 $itemMaster = $menuItem->itemMaster;
                 if ($itemMaster && $itemMaster->is_perishable) {
@@ -926,8 +926,8 @@ $statusOptions = [
                 'subtotal' => $subtotal,
                 'tax_amount' => $tax,
                 'total_amount' => $total,
-                'tax' => $tax, 
-                'total' => $total, 
+                'tax' => $tax,
+                'total' => $total,
                 'currency' => 'LKR',
                 'payment_status' => 'pending',
                 'special_instructions' => $data['special_instructions'] ?? null,
@@ -946,7 +946,7 @@ $statusOptions = [
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $itemData['unit_price'],
                     'total_price' => $itemData['total_price'],
-                    'subtotal' => $itemData['total_price'], 
+                    'subtotal' => $itemData['total_price'],
                 ]);
 
                 // Deduct stock for perishable items (Buy & Sell items)
@@ -968,7 +968,7 @@ $statusOptions = [
 
             // Check and print KOT if order has KOT items
             $kotResult = $this->checkAndPrintKOT($order, true);
-            
+
             if ($kotResult['success'] && $kotResult['has_kot_items']) {
                 // If KOT was generated successfully, include the print URL in success message
                 return redirect()->route('admin.orders.takeaway.summary', $order)
@@ -981,7 +981,7 @@ $statusOptions = [
                     ->with('warning', 'Takeaway order created successfully, but KOT generation failed: ' . $kotResult['message'])
                     ->with('kot_error', $kotResult['message']);
             }
-            
+
             // No KOT items or KOT already exists, proceed normally
             return redirect()->route('admin.orders.takeaway.summary', $order)
                 ->with('success', 'Takeaway order created successfully!');
@@ -995,7 +995,7 @@ $statusOptions = [
     {
         $order = Order::with(['orderItems.menuItem', 'branch', 'customer'])
             ->findOrFail($id);
-        
+
         // Check if admin has access to this order
         $admin = auth()->guard('admin')->user();
         if (!$admin->is_super_admin && $admin->branch_id && $order->branch_id != $admin->branch_id) {
@@ -1034,7 +1034,7 @@ $statusOptions = [
             if ($order->status === 'completed') {
                 return back()->with('error', 'Cannot delete completed takeaway orders.');
             }
-            
+
             $order->orderItems()->delete();
             $order->delete();
 
@@ -1042,7 +1042,7 @@ $statusOptions = [
                 ->with('success', 'Takeaway order deleted successfully!');
         } catch (\Exception $e) {
             Log::error('Takeaway order deletion failed: ' . $e->getMessage());
-            
+
             return back()->with('error', 'Failed to delete takeaway order.');
         }
     }
@@ -1062,20 +1062,20 @@ $statusOptions = [
     }
 
     /**
-     * Get available menu items from active menus for a branch 
+     * Get available menu items from active menus for a branch
      */
     public function getAvailableMenuItemsLegacy(Request $request)
     {
         $branchId = $request->get('branch_id');
-        $menuType = $request->get('menu_type', null); // optional filter by menu type
-        
+        // $menuType = $request->get('menu_type', null); // optional filter by menu type
+
         if (!$branchId) {
             return response()->json(['error' => 'Branch ID is required'], 400);
         }
 
         // Get active menu for the branch
         $activeMenu = Menu::getActiveMenuForBranch($branchId);
-        
+
         if (!$activeMenu) {
             return response()->json([
                 'menu' => null,
@@ -1121,9 +1121,9 @@ $statusOptions = [
     public function enhancedCreate(Request $request)
     {
         $admin = auth('admin')->user();
-        
+
         // Get branches based on admin permissions
-        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id, 
+        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id,
             fn($q) => $q->where('organization_id', $admin->organization_id)
         )->active()->get();
 
@@ -1157,11 +1157,11 @@ $statusOptions = [
         // Safety validation
         $itemIds = collect($validated['items'])->pluck('item_id')->toArray();
         $safetyCheck = $this->menuSafetyService->validateMenuItemsAvailability($itemIds, $validated['menu_id']);
-        
+
         if (!empty($safetyCheck['errors'])) {
             return back()->withErrors($safetyCheck['errors'])->withInput();
         }
-        
+
         if (!empty($safetyCheck['warnings'])) {
             session()->flash('warnings', $safetyCheck['warnings']);
         }
@@ -1175,7 +1175,7 @@ $statusOptions = [
         // Verify all items belong to the selected menu
         $menuItemIds = $menu->menuItems->pluck('id')->toArray();
         $requestedItemIds = collect($validated['items'])->pluck('item_id')->toArray();
-        
+
         if (array_diff($requestedItemIds, $menuItemIds)) {
             return back()->withErrors(['items' => 'Some selected items are not available in the chosen menu.']);
         }
@@ -1184,7 +1184,7 @@ $statusOptions = [
             DB::beginTransaction();
 
             $admin = auth('admin')->user();
-            
+
             // Determine organization_id based on admin type
             $organizationId = null;
             if ($admin->is_super_admin) {
@@ -1203,7 +1203,7 @@ $statusOptions = [
                 'customer_email' => null,
                 'branch_id' => $validated['branch_id'],
                 'organization_id' => $organizationId,
-                'menu_id' => $validated['menu_id'], 
+                'menu_id' => $validated['menu_id'],
                 'order_type' => $validated['order_type'] ?? 'dine_in',
                 'reservation_id' => $validated['reservation_id'] ?? null,
                 'status' => 'pending',
@@ -1219,14 +1219,14 @@ $statusOptions = [
             $subtotal = 0;
             foreach ($validated['items'] as $itemData) {
                 $menuItem = MenuItem::find($itemData['menu_item_id']);
-                
+
                 // Check item availability
                 if (!$menuItem->getMenuAvailability()) {
                     throw new \Exception("Item '{$menuItem->name}' is no longer available.");
                 }
 
                 $lineTotal = $menuItem->price * $itemData['quantity'];
-                
+
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $itemData['menu_item_id'],
@@ -1255,7 +1255,7 @@ $statusOptions = [
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Enhanced order creation failed: ' . $e->getMessage());
-            
+
             return back()
                 ->withInput()
                 ->withErrors(['general' => 'Failed to create order: ' . $e->getMessage()]);
@@ -1268,14 +1268,14 @@ $statusOptions = [
     public function validateOrderSafety(Order $order)
     {
         $issues = $this->menuSafetyService->preventInactiveItemOrders($order);
-        
+
         if (!empty($issues)) {
             return response()->json([
                 'valid' => false,
                 'issues' => $issues
             ], 422);
         }
-        
+
         return response()->json(['valid' => true]);
     }
 
@@ -1288,7 +1288,7 @@ $statusOptions = [
         if (!$branchId) {
             return response()->json(['error' => 'Branch ID required'], 400);
         }
-        
+
         $status = $this->menuSafetyService->getMenuSafetyStatus($branchId);
         return response()->json($status);
     }
@@ -1299,14 +1299,14 @@ $statusOptions = [
     public function archiveOldMenus(Request $request)
     {
         $daysOld = $request->get('days_old', 30);
-        
+
         $result = $this->menuSafetyService->archiveOldMenus($daysOld);
-        
+
         $message = "Archived {$result['archived_count']} old menus";
         if (!empty($result['errors'])) {
             $message .= ". Errors: " . implode(', ', $result['errors']);
         }
-        
+
         return redirect()->back()->with('success', $message);
     }
 
@@ -1317,20 +1317,20 @@ $statusOptions = [
     {
         $reservationId = $request->get('reservation');
         $orderId = $request->get('order');
-        
+
         if (!$reservationId || !$orderId) {
             return redirect()->route('admin.orders.dashboard')
                 ->with('error', 'Invalid reservation or order ID');
         }
-        
+
         $reservation = Reservation::with(['branch', 'table'])->find($reservationId);
         $order = Order::with(['orderItems.menuItem', 'branch'])->find($orderId);
-        
+
         if (!$reservation || !$order) {
             return redirect()->route('admin.orders.dashboard')
                 ->with('error', 'Reservation or order not found');
         }
-        
+
         // Verify admin can access this order
         $admin = auth('admin')->user();
         if (!$admin->is_super_admin) {
@@ -1342,7 +1342,7 @@ $statusOptions = [
                     ->with('error', 'Access denied to this order');
             }
         }
-        
+
         return view('admin.orders.reservations.summary', compact('reservation', 'order'));
     }
 
@@ -1360,7 +1360,7 @@ $statusOptions = [
     public function editTakeaway(Order $order)
     {
         $admin = auth('admin')->user();
-        
+
         // Check permissions
         if (!$admin->is_super_admin) {
             if ($admin->branch_id && $order->branch_id !== $admin->branch_id) {
@@ -1373,10 +1373,10 @@ $statusOptions = [
         }
 
         // Get branches for admin
-        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id, 
+        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id,
             fn($q) => $q->where('organization_id', $admin->organization_id)
         )->active()->get();
-        
+
         // Get menu items with stock information
         $menuItems = ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
             ->where('is_menu_item', true)
@@ -1391,7 +1391,7 @@ $statusOptions = [
             $item->current_stock = \App\Models\ItemTransaction::stockOnHand($item->id, $order->branch_id);
             $item->is_low_stock = $item->current_stock <= ($item->reorder_level ?? 10);
         }
-        
+
         // Get categories
         $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
                 $q->where('organization_id', $admin->organization_id);
@@ -1408,7 +1408,7 @@ $statusOptions = [
     public function updateTakeaway(Request $request, Order $order)
     {
         $admin = auth('admin')->user();
-        
+
         // Check permissions
         if (!$admin->is_super_admin) {
             if ($admin->branch_id && $order->branch_id !== $admin->branch_id) {
@@ -1438,11 +1438,11 @@ $statusOptions = [
             foreach ($validated['items'] as $item) {
                 $inventoryItem = ItemMaster::find($item['item_id']);
                 if (!$inventoryItem) continue;
-                
+
                 $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $validated['branch_id']);
                 $currentOrderQty = $order->items->where('menu_item_id', $item['item_id'])->first()->quantity ?? 0;
                 $netRequirement = $item['quantity'] - $currentOrderQty;
-                
+
                 if ($netRequirement > 0 && $currentStock < $netRequirement) {
                     $stockErrors[] = "Insufficient stock for {$inventoryItem->name}. Available: {$currentStock}, Additional Required: {$netRequirement}";
                 }
@@ -1474,13 +1474,13 @@ $statusOptions = [
 
             // Delete existing order items
             $order->items()->delete();
-            
+
             // Create new order items and adjust stock
             $subtotal = 0;
             foreach ($validated['items'] as $item) {
                 $inventoryItem = ItemMaster::find($item['item_id']);
                 if (!$inventoryItem) continue;
-                
+
                 $lineTotal = $inventoryItem->selling_price * $item['quantity'];
                 $subtotal += $lineTotal;
 
@@ -1532,7 +1532,7 @@ $statusOptions = [
 
             return redirect()->route('admin.orders.takeaway.show', $order)
                 ->with('success', 'Takeaway order updated successfully!');
-                
+
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()
@@ -1582,10 +1582,10 @@ $statusOptions = [
             'reservation',
             'customer'
         ]);
-        
+
         // Update order to mark KOT as generated
         $order->update(['kot_generated' => true]);
-        
+
         return view('orders.kot-print', compact('order'));
     }
 
@@ -1601,16 +1601,16 @@ $statusOptions = [
             'reservation',
             'customer'
         ]);
-        
+
         // Update order to mark KOT as generated
         $order->update(['kot_generated' => true]);
-        
+
         // Generate PDF using DOMPDF
         $pdf = Pdf::loadView('admin.orders.kot-pdf', compact('order'));
-        
+
         // Set paper size for thermal printer (80mm width)
         $pdf->setPaper([0, 0, 226.77, 600], 'portrait'); // 80mm x ~210mm in points
-        
+
         // Set PDF options for better printing
         $pdf->setOptions([
             'isHtml5ParserEnabled' => true,
@@ -1621,9 +1621,9 @@ $statusOptions = [
             'tempDir' => storage_path('app/temp/'),
             'chroot' => public_path(),
         ]);
-        
+
         $filename = 'KOT-' . $order->order_number . '-' . now()->format('YmdHis') . '.pdf';
-        
+
         return $pdf->download($filename);
     }
 
@@ -1638,7 +1638,7 @@ $statusOptions = [
             'status' => Order::STATUS_COMPLETED,
             'completed_at' => now()
         ]);
-        
+
         return view('orders.bill-print', compact('order'));
     }
 
@@ -1667,17 +1667,18 @@ $statusOptions = [
                     'has_kot_items' => true,
                     'kot_already_exists' => true,
                     'kot_id' => $existingKot->id,
-                    'print_url' => route('admin.orders.print-kot', $existingKot->id)
+                    // 'print_url' => route('admin.kots.print', $existingKot->id)
+                    'print_url' => route('admin.orders.print-kot', $order->id)
                 ];
             }
 
             // Generate KOT using KotController
             $kotController = new \App\Http\Controllers\KotController();
             $kotResponse = $kotController->generateKot(request(), $order);
-            
+
             if ($kotResponse instanceof \Illuminate\Http\JsonResponse) {
                 $kotData = $kotResponse->getData(true);
-                
+
                 if ($kotData['success']) {
                     $result = [
                         'success' => true,
@@ -1688,19 +1689,19 @@ $statusOptions = [
                         'print_url' => $kotData['print_url'],
                         'items_count' => $kotData['items_count']
                     ];
-                    
+
                     // If auto-print is enabled, return print URL
                     if ($autoPrint) {
                         $result['auto_print_url'] = $kotData['print_url'];
                     }
-                    
+
                     Log::info('Admin KOT check and print completed', [
                         'order_id' => $order->id,
                         'kot_id' => $kotData['kot']['id'],
                         'auto_print' => $autoPrint,
                         'admin_id' => auth('admin')->id()
                     ]);
-                    
+
                     return $result;
                 } else {
                     return [
@@ -1711,7 +1712,7 @@ $statusOptions = [
                     ];
                 }
             }
-            
+
             return [
                 'success' => false,
                 'message' => 'Unexpected response from KOT generation',
@@ -1725,7 +1726,7 @@ $statusOptions = [
                 'trace' => $e->getTraceAsString(),
                 'admin_id' => auth('admin')->id()
             ]);
-            
+
             return [
                 'success' => false,
                 'message' => 'Error processing KOT: ' . $e->getMessage(),
@@ -1741,7 +1742,7 @@ $statusOptions = [
     {
         foreach ($items as $item) {
             $menuItem = MenuItem::findOrFail($item['menu_item_id']);
-            
+
             if ($menuItem->type == MenuItem::TYPE_BUY_SELL) {
                 $availableStock = $menuItem->itemMaster->stock ?? 0;
                 if ($availableStock < $item['quantity']) {
@@ -1812,7 +1813,7 @@ $statusOptions = [
             return collect();
         }
     }
-    
+
     /**
      * Get menu items for a specific branch (API endpoint)
      */
@@ -1820,7 +1821,7 @@ $statusOptions = [
     {
         $admin = auth('admin')->user();
         $branchId = $request->get('branch_id');
-        
+
         try {
             // Verify admin has access to this branch
             if (!$admin->is_super_admin) {
@@ -1832,7 +1833,7 @@ $statusOptions = [
                     ], 403);
                 }
             }
-            
+
             if (!$branchId) {
                 return response()->json([
                     'success' => false,
@@ -1840,10 +1841,10 @@ $statusOptions = [
                     'items' => []
                 ]);
             }
-            
+
             // Get the currently active menu for the branch
             $activeMenu = Menu::getActiveMenuForBranch($branchId);
-            
+
             if (!$activeMenu) {
                 return response()->json([
                     'success' => false,
@@ -1859,24 +1860,24 @@ $statusOptions = [
                 ->where('is_active', true)
                 ->wherePivot('is_available', true)
                 ->get();
-            
+
             $items = $menuItems->map(function($item) use ($branchId) {
                 $itemType = $item->type ?? MenuItem::TYPE_KOT;
                 $currentStock = 0;
                 $canOrder = true;
                 $stockStatus = 'available';
-                
+
                 if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id) {
                     $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
                     $canOrder = $currentStock > 0;
-                    
+
                     if ($currentStock <= 0) {
                         $stockStatus = 'out_of_stock';
                     } elseif ($currentStock <= 5) {
                         $stockStatus = 'low_stock';
                     }
                 }
-                
+
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
@@ -1900,7 +1901,7 @@ $statusOptions = [
                     'special_notes' => $item->pivot->special_notes,
                 ];
             });
-            
+
             return response()->json([
                 'success' => true,
                 'menu' => [
@@ -1911,7 +1912,7 @@ $statusOptions = [
                 'items' => $items->toArray(),
                 'branch_id' => $branchId
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to get menu items from active menu', [
                 'branch_id' => $branchId,
@@ -1919,14 +1920,14 @@ $statusOptions = [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load menu items'
             ], 500);
         }
     }
-    
+
     /**
      * Get stock summary for API endpoint
      */
@@ -1935,7 +1936,7 @@ $statusOptions = [
         try {
             $admin = auth('admin')->user();
             $branchId = $request->get('branch_id', $admin->branch_id);
-            
+
             $stockSummary = ItemMaster::where('branch_id', $branchId)
                 ->select('id', 'name', 'current_stock', 'minimum_stock', 'unit')
                 ->get()
@@ -1971,9 +1972,9 @@ $statusOptions = [
         try {
             $cartItems = $request->get('cart_items', []);
             $branchId = $request->get('branch_id');
-            
+
             $validationResults = [];
-            
+
             foreach ($cartItems as $item) {
                 $menuItem = MenuItem::find($item['menu_item_id']);
                 if (!$menuItem) {
@@ -1984,10 +1985,10 @@ $statusOptions = [
                     ];
                     continue;
                 }
-                
+
                 // Check if we have enough stock
                 $stockCheck = $this->checkMenuItemStock($menuItem, $item['quantity'], $branchId);
-                
+
                 $validationResults[] = [
                     'menu_item_id' => $item['menu_item_id'],
                     'valid' => $stockCheck['available'],
@@ -2022,9 +2023,9 @@ $statusOptions = [
                     'message' => 'Menu item not found'
                 ], 404);
             }
-            
+
             $branchId = $request->get('branch_id');
-            
+
             // Find alternatives based on category and availability
             $alternatives = MenuItem::where('menu_category_id', $menuItem->menu_category_id)
                 ->where('id', '!=', $itemId)
@@ -2120,19 +2121,19 @@ $statusOptions = [
         try {
             $menuItemId = $request->get('menu_item_id');
             $isAvailable = $request->get('is_available', false);
-            
+
             $menuItem = MenuItem::join('menus', 'menu_items.menu_id', '=', 'menus.id')
                 ->where('menus.branch_id', $branchId)
                 ->where('menu_items.id', $menuItemId)
                 ->first();
-                
+
             if (!$menuItem) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Menu item not found'
                 ], 404);
             }
-            
+
             MenuItem::where('id', $menuItemId)->update([
                 'is_available' => $isAvailable
             ]);
@@ -2146,7 +2147,7 @@ $statusOptions = [
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update availability'
-            ], 500);
+            ],  500);
         }
     }
 
@@ -2156,18 +2157,18 @@ $statusOptions = [
     public function createTakeaway()
     {
         $admin = auth()->guard('admin')->user();
-        
+
         // Generate default customer info with order ID placeholder
         $defaultCustomerName = 'Customer with Order #PENDING';
         $defaultPhone = $admin->branch ? $admin->branch->phone ?? '0000000000' : '0000000000';
-        
+
         if ($admin->is_super_admin) {
             // Super admin can see all organizations and branches like customer
             $organizations = \App\Models\Organization::where('is_active', true)->get();
             $branches = \App\Models\Branch::with('organization')
                 ->where('is_active', true)
                 ->get();
-            
+
             return view('admin.orders.takeaway.create', [
                 'admin' => $admin,
                 'organizations' => $organizations,
@@ -2181,15 +2182,15 @@ $statusOptions = [
             if (!$currentBranch) {
                 return redirect()->route('admin.orders.index')->with('error', 'No branch assigned to your account.');
             }
-            
+
             if (!$currentBranch->is_active || !$currentBranch->organization->is_active) {
                 return redirect()->route('admin.orders.index')->with('error', 'Your branch or organization is not active.');
             }
-            
+
             // For branch admin, only show their branch
             $branches = collect([$currentBranch]);
             $organizations = collect([$currentBranch->organization]);
-            
+
             return view('admin.orders.takeaway.create', [
                 'admin' => $admin,
                 'organizations' => $organizations,
@@ -2210,22 +2211,22 @@ $statusOptions = [
         try {
             $orderId = $request->get('order_id');
             $order = Order::with('orderItems.menuItem')->find($orderId);
-            
+
             if (!$order) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Order not found'
                 ], 404);
             }
-            
+
             $stockIssues = [];
             foreach ($order->orderItems as $orderItem) {
                 $stockCheck = $this->checkMenuItemStock(
-                    $orderItem->menuItem, 
-                    $orderItem->quantity, 
+                    $orderItem->menuItem,
+                    $orderItem->quantity,
                     $order->branch_id
                 );
-                
+
                 if (!$stockCheck['available']) {
                     $stockIssues[] = [
                         'item' => $orderItem->menuItem->name,
@@ -2235,7 +2236,7 @@ $statusOptions = [
                     ];
                 }
             }
-            
+
             return response()->json([
                 'success' => true,
                 'has_stock_issues' => !empty($stockIssues),
@@ -2258,24 +2259,22 @@ $statusOptions = [
         try {
             $orderId = $request->get('order_id');
             $order = Order::with('orderItems.menuItem')->find($orderId);
-            
+
             if (!$order) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Order not found'
                 ], 404);
             }
-            
+
             DB::transaction(function () use ($order) {
-                // Restore stock for cancelled order
-                foreach ($order->orderItems as $orderItem) {
-                    // Logic to restore stock would go here
-                    // This depends on your stock management system
-                }
-                
+                // Logic to restore stock would go here
+                // This depends on your stock management system
+
+                $order->update(['status' => 'cancelled']);
                 $order->update(['status' => 'cancelled']);
             });
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Order cancelled and stock restored'
@@ -2293,20 +2292,15 @@ $statusOptions = [
      * Helper method to check menu item stock
      */
     private function checkMenuItemStock($menuItem, $quantity, $branchId)
+
     {
-        // This is a simplified stock check - you may need to implement
-        // more complex logic based on your recipe/ingredient system
-        
-        // For now, assume menu items are always available
-        // In a real system, you'd check against ingredient stock
-        
+        // Parameters are currently unused; this is a stub for future stock logic.
         return [
             'available' => true,
             'available_quantity' => 999,
             'message' => 'Item available'
         ];
     }
-
     /**
      * Get branches for organization (API endpoint for admin orders)
      */
@@ -2315,54 +2309,54 @@ $statusOptions = [
         try {
             $admin = auth('admin')->user();
             $organizationId = $request->get('organization_id');
-            
+
             if (!$admin) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
-            
+
             if (!$organizationId) {
                 return response()->json(['error' => 'Organization ID required'], 400);
             }
-            
+
             // Build query based on admin permissions
             $query = Branch::where('organization_id', $organizationId)
                 ->where('is_active', true);
-            
+
             // Super admin can access any organization's branches
             if (!$admin->is_super_admin) {
                 // Non-super admin can only access their own organization
                 if ($admin->organization_id && $admin->organization_id != $organizationId) {
                     return response()->json(['error' => 'Access denied'], 403);
                 }
-                
+
                 // Branch admin can only see their own branch
                 if ($admin->branch_id) {
                     $query->where('id', $admin->branch_id);
                 }
             }
-            
+
             $branches = $query->select(['id', 'name', 'address', 'phone', 'is_head_office'])
                 ->orderBy('is_head_office', 'desc')
                 ->orderBy('name')
                 ->get();
-            
+
             Log::info('Admin order branches fetched for organization', [
                 'admin_id' => $admin->id,
                 'organization_id' => $organizationId,
                 'branches_count' => $branches->count()
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'branches' => $branches
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Error fetching admin order branches', [
                 'organization_id' => $organizationId ?? null,
                 'error' => $e->getMessage()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to fetch branches'
