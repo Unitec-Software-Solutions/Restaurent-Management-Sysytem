@@ -132,8 +132,8 @@ class ReservationAvailabilityService
      */
     private function validateBusinessHours(Branch $branch, string $date, string $startTime, string $endTime): array
     {
-        $branchOpenTime = $branch->opening_time ? $branch->opening_time->format('H:i') : '08:00';
-        $branchCloseTime = $branch->closing_time ? $branch->closing_time->format('H:i') : '22:00';
+        $branchOpenTime = $branch->opening_time ? Carbon::parse($branch->opening_time)->format('H:i') : '08:00';
+        $branchCloseTime = $branch->closing_time ? Carbon::parse($branch->closing_time)->format('H:i') : '22:00';
 
         if ($startTime < $branchOpenTime) {
             return [
@@ -474,8 +474,8 @@ class ReservationAvailabilityService
         $branch = Branch::find($branchId);
         $suggestions = [];
 
-        $openTime = $branch->opening_time ? $branch->opening_time->format('H:i') : '08:00';
-        $closeTime = $branch->closing_time ? $branch->closing_time->format('H:i') : '22:00';
+        $openTime = $branch->opening_time ? Carbon::parse($branch->opening_time)->format('H:i') : '08:00';
+        $closeTime = $branch->closing_time ? Carbon::parse($branch->closing_time)->format('H:i') : '22:00';
 
         // Calculate duration of requested reservation
         $requestStart = Carbon::parse($startTime);

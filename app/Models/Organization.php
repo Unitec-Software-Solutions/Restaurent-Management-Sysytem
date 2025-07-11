@@ -114,9 +114,6 @@ class Organization extends Model
         return $this->hasMany(Branch::class);
     }
 
-    /**
-     * Get active branches for the organization.
-     */
     public function activeBranches()
     {
         return $this->hasMany(Branch::class)->where('is_active', true);

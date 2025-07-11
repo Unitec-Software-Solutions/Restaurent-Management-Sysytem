@@ -118,10 +118,10 @@ class ReservationWorkflowController extends Controller
 
         // Get dine-in order types
         $orderTypes = collect(OrderType::dineInTypes())->map(function($type) {
-            return [
+            return array(
                 'value' => $type->value,
                 'label' => $type->getLabel(),
-            ];
+            );
         });
 
         return view('reservations.create-order', compact(
@@ -356,24 +356,12 @@ class ReservationWorkflowController extends Controller
     /**
      * Get branches for organization (AJAX)
      */
-    public function getBranchesForOrganization(Request $request, $organizationId)
+    public function getBranchesForOrganization($organizationId)
     {
-        if (!$organizationId) {
-            return response()->json(['branches' => []]);
-        }
-
-        // Check admin permissions
-        $admin = auth('admin')->user();
-        if ($admin && !$admin->is_super_admin && $admin->organization_id !== (int)$organizationId) {
-            return response()->json(['error' => 'Access denied'], 403);
-        }
-
-        $branches = Branch::where('organization_id', $organizationId)
+        // Only return active branches
+        $branches = \App\Models\Branch::where('organization_id', $organizationId)
             ->where('is_active', true)
-            ->select('id', 'name', 'address', 'phone')
-            ->orderBy('name')
-            ->get();
-
+            ->get(['id', 'name', 'address', 'opening_time', 'closing_time', 'phone']);
         return response()->json(['branches' => $branches]);
     }
 
@@ -748,13 +736,29 @@ class ReservationWorkflowController extends Controller
             ->orderBy('capacity')
             ->get();
 
+        // Get branch phone number
+        $branchPhone = $branch->phone;
+
+        // Get stewards for the branch
+        $stewards = \App\Models\Employee::where('branch_id', $branch->id)
+            ->where('is_active', true)
+            ->where(function($q) {
+                $q->where('role', 'steward')
+                  ->orWhereHas('roles', function($r) {
+                      $r->where('name', 'steward');
+                  });
+            })
+            ->get();
+
         return view('reservations.create', compact(
             'reservationType',
             'branch',
             'fees', 
             'customer',
             'defaults',
-            'tables'
+            'tables',
+            'branchPhone',
+            'stewards'
         ));
     }
 

@@ -32,7 +32,10 @@ class ReservationController extends Controller
     public function create(Request $request)
     {
         try {
-            // Get all active organizations (minimal data for dropdown)
+            $admin = auth('admin')->user();
+            $isSuperAdmin = $admin && $admin->is_super_admin;
+
+            // Get all active organizations (for super admin dropdown)
             $organizations = Organization::where('is_active', true)
                 ->select('id', 'name', 'trading_name')
                 ->orderBy('name')
@@ -44,13 +47,32 @@ class ReservationController extends Controller
                     ];
                 });
 
-            $organization_id = $request->get('organization_id');
-            $branch_id = $request->get('branch_id');
+            $organization_id = null;
+            $branch_id = null;
+            $branches = collect();
+
+            if ($isSuperAdmin) {
+                // Super admin: allow selection, no default
+                $organization_id = $request->get('organization_id');
+                $branch_id = $request->get('branch_id');
+                if ($organization_id) {
+                    $branches = \App\Models\Branch::where('organization_id', $organization_id)->get();
+                }
+            } else if ($admin) {
+                // Admin: auto-fill
+                $organization_id = $admin->organization_id;
+                $branch_id = $admin->branch_id;
+                if ($organization_id) {
+                    $branches = \App\Models\Branch::where('organization_id', $organization_id)->get();
+                }
+            }
 
             return view('reservations.create', compact(
                 'organizations',
                 'organization_id',
-                'branch_id'
+                'branch_id',
+                'branches',
+                'isSuperAdmin'
             ));
 
         } catch (\Exception $e) {
