@@ -90,6 +90,7 @@
 
     <form action="{{ route('admin.menu-items.store-kot') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
 
+
     <form action="{{ route('admin.menu-items.store-kot') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
         @csrf
 
@@ -141,6 +142,9 @@
         @endauth
         
         <!-- Configuration Section -->
+
+        @csrf
+
 
         @csrf
 
@@ -258,6 +262,7 @@
 
                 <div>
                     <label for="preparation_time" class="block text-sm font-medium text-gray-700 mb-1">
+<<<<<<< HEAD
 
                         Default Preparation Time (minutes)
                     </label>
@@ -280,8 +285,19 @@
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
                         Description
 
+=======
+>>>>>>> f6ec61a (:feat: add options to create KOT items and link to item master when no menu items exist)
                         Preparation Time (minutes)
 
+                    </label>
+                    <textarea id="description" name="description" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">{{ old('description') }}</textarea>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+                        Description
                     </label>
                     <textarea id="description" name="description" rows="3"
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">{{ old('description') }}</textarea>
@@ -401,6 +417,23 @@
                     <span class="ml-2 text-sm text-gray-900">Make items available immediately</span>
                 </label>
 
+        <!-- Image Upload Section -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mt-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Image</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="image" class="block text-sm font-medium text-gray-700 mb-1">
+                        Upload Image
+                    </label>
+                    <input type="file" id="image" name="image" accept="image/*"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 @error('image') border-red-500 @enderror">
+                    @error('image')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">Accepted formats: JPEG, PNG, JPG, GIF (Max: 2MB)</p>
+                </div>
+            </div>
+        </div>
         <!-- Image Upload Section -->
         <div class="bg-white rounded-lg shadow-sm p-6 mt-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Image</h3>
