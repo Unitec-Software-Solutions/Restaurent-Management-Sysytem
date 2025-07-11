@@ -160,9 +160,17 @@
                         </div>
                         <h3 class="text-lg font-medium text-gray-900 mb-2">No menu items in this category</h3>
                         <p class="text-gray-500 mb-4">Add menu items to organize your offerings</p>
-                        <a href="{{ route('admin.menu-items.create') }}?category_id={{ $menuCategory->id }}" 
-                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
-                            <i class="fas fa-plus mr-2"></i> Add First Menu Item
+                        <div class="flex flex-col sm:flex-row gap-3 justify-center mb-4">
+                            <a href="{{ route('admin.menu-items.create-kot', ['organization_id' => $menuCategory->organization_id, 'branch_id' => $menuCategory->branch_id, 'category_id' => $menuCategory->id]) }}"
+                               class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                                <i class="fas fa-fire mr-2"></i>Create KOT Items
+                            </a>
+                            <button onclick="openCreateFromItemMasterModal()"
+                                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                                <i class="fas fa-link mr-2"></i>From Item Master
+                            </button>
+                        </div>
+
                         </a>
                     </div>
                 @endif
