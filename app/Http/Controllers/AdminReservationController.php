@@ -376,8 +376,16 @@ public function update(Request $request, Reservation $reservation)
             $branch = $admin->branch;
         }
 
-        // Use null-safe operator for branch access
-        $branch = $admin->branch;
+        
+        if ($admin->isSuperAdmin()) {
+            $branch = \App\Models\Branch::find($validated['branch_id']);
+        } else {
+            $branch = $admin->branch;
+        }
+        // Validate branch exists and is active
+        if (!$branch || !$branch->is_active) {
+            return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
+        }
 
         // Validate branch operating hours with null-safe operators
         $branchOpenTime = $branch?->opening_time ? \Carbon\Carbon::parse($branch->opening_time)->format('H:i') : '00:00';
@@ -385,13 +393,6 @@ public function update(Request $request, Reservation $reservation)
 
         if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
             return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')'])->withInput();
-        }
-        // For same-day reservations, ensure start time is at least 30 minutes from now
-        if ($validated['date'] === now()->format('Y-m-d')) {
-            $minStartTime = now()->addMinutes(30)->format('H:i');
-            if (\Carbon\Carbon::parse($validated['start_time'])->lt(\Carbon\Carbon::parse($minStartTime))) {
-                return back()->withErrors(['start_time' => 'Start time must be at least 30 minutes from now.']);
-            }
         }
         // Check capacity with null-safe operations
         $totalCapacity = $branch?->total_capacity ?? 0;
@@ -461,15 +462,15 @@ public function update(Request $request, Reservation $reservation)
             'reservation_fee' => $reservationFee,
             'cancellation_fee' => $cancellationFee,
             'steward_id' => $validated['steward_id'],
-            'created_by_admin_id' => $admin->id, // Track which admin created this reservation
-            'type' => ReservationType::IN_CALL, // Admin-created reservations are typically phone-based
+            'created_by_admin_id' => $admin->id,
+            'type' => ReservationType::IN_CALL, 
         ]);
 
         if (!empty($validated['assigned_table_ids'])) {
             $reservation->tables()->sync($validated['assigned_table_ids']);
         }
 
-        // Redirect to the edit page for the new reservation
+
         return redirect()->route('admin.reservations.edit', $reservation)
             ->with('success', 'Reservation created successfully. You can now check in.');
     }
@@ -517,35 +518,12 @@ public function update(Request $request, Reservation $reservation)
         ));
     }
 
-    // protected function sendNotification(Reservation $reservation, $method)
-    // {
-    //     if (in_array($method, ['email', 'both'])) {
-    //         // Send email
-    //         Mail::to($reservation->email)->send(new ReservationConfirmationMail($reservation));
-    //     }
-
-    //     if (in_array($method, ['sms', 'both'])) {
-    //         // Send SMS (use a service like Twilio)
-    //         SmsService::send($reservation->phone, "Your reservation has been confirmed.");
-    //     }
-    // }
-
-    // protected function sendCancellationNotification(Reservation $reservation, $method)
-    // {
-    //     if (in_array($method, ['email', 'both'])) {
-    //         // Send cancellation email
-    //         Mail::to($reservation->email)->send(new ReservationCancellationMail($reservation));
-    //     }
-
-    //     if (in_array($method, ['sms', 'both'])) {
-    //         SmsService::send($reservation->phone, "Your reservation has been cancelled. Reason: {$reservation->cancel_reason}");
-    //     }
-    // }
+  
 public function assignSteward(Request $request, Reservation $reservation)
 {
     try {
         $validated = $request->validate([
-            'steward_id' => 'required|exists:employees,id', // use employees table
+            'steward_id' => 'required|exists:employees,id', 
         ]);
 
         $reservation->update(['steward_id' => $validated['steward_id']]);
@@ -620,19 +598,19 @@ public function checkOut(Reservation $reservation)
 public function checkTableAvailability(Request $request)
 {
     $request->validate([
-        'date' => 'required|date',
+        'date' => 'required|date|after_or_equal:today',
         'start_time' => 'required|date_format:H:i',
         'end_time' => 'required|date_format:H:i|after:start_time',
     ]);
 
     $admin = auth('admin')->user();
 
-    // Load branch relationship if not already loaded
+    
     if (!$admin->relationLoaded('branch')) {
         $admin->load('branch');
     }
 
-    // Validate admin has a branch assigned with null-safe operator
+
     $branchId = $admin->branch?->id;
 
     if (!$branchId) {
@@ -665,20 +643,13 @@ public function checkTableAvailability(Request $request)
     ]);
 }
 
-/**
- * Show the order creation form for a reservation (admin).
- */
+
 public function createOrder(Reservation $reservation)
 {
-    // You may want to pass reservation, branch, and any other needed data
-    // For now, just redirect to the admin order creation view for this reservation
-    // (You can customize this as needed for your order creation flow)
+
     return redirect()->route('admin.orders.reservations.create', ['reservation' => $reservation->id]);
 }
 
-/**
-     * Export reservations based on filters
-     */
     private function exportReservations($reservations, $format)
     {
         if ($format === 'csv') {
@@ -692,14 +663,14 @@ public function createOrder(Reservation $reservation)
             $callback = function() use ($reservations) {
                 $file = fopen('php://output', 'w');
 
-                // CSV Headers
+ 
                 fputcsv($file, [
                     'ID', 'Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time',
                     'Number of People', 'Status', 'Branch', 'Steward', 'Tables',
                     'Reservation Fee', 'Cancellation Fee', 'Created At'
                 ]);
 
-                // CSV Data
+
                 foreach ($reservations as $reservation) {
                     fputcsv($file, [
                         $reservation->id,
@@ -731,7 +702,7 @@ public function createOrder(Reservation $reservation)
 
     public function destroy($id)
     {
-        // TODO: Implement destroy logic
+
         return redirect()->back()->with('success', 'Deleted successfully');
     }
 

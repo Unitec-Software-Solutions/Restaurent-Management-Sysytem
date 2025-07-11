@@ -370,12 +370,13 @@ class ReservationController extends Controller
         }
 
         // For same-day reservations, ensure start time is at least 30 minutes from now
-        if ($validated['date'] === now()->format('Y-m-d')) {
-            $minStartTime = now()->addMinutes(30)->format('H:i');
-            if ($validated['start_time'] < $minStartTime) {
-                return back()->withErrors(['time' => 'For same-day reservations, start time must be at least 30 minutes from now.']);
-            }
-        }
+        // (Removed as per user request)
+        // if ($validated['date'] === now()->format('Y-m-d')) {
+        //     $minStartTime = now()->addMinutes(30)->format('H:i');
+        //     if ($validated['start_time'] < $minStartTime) {
+        //         return back()->withErrors(['time' => 'For same-day reservations, start time must be at least 30 minutes from now.']);
+        //     }
+        // }
 
         // Construct a reservation object and pass it to the view.
         $reservation = (object) [

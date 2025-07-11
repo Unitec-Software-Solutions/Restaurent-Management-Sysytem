@@ -149,17 +149,7 @@ class ReservationAvailabilityService
             ];
         }
 
-        // For same-day reservations, ensure start time is at least 30 minutes from now
-        if ($date === now()->toDateString()) {
-            $minStartTime = now()->addMinutes(30)->format('H:i');
-            if ($startTime < $minStartTime) {
-                return [
-                    'valid' => false,
-                    'message' => "For same-day reservations, start time must be at least 30 minutes from now"
-                ];
-            }
-        }
-
+        // Removed 30-minute restriction for same-day reservations
         return ['valid' => true];
     }
 
