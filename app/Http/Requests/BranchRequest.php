@@ -26,7 +26,7 @@ class BranchRequest extends FormRequest
             'reservation_fee' => 'required|numeric|min:0',
             'cancellation_fee' => 'required|numeric|min:0',
             'type' => 'nullable|string|max:50',
-            'activation_key' => 'required|string|unique:branches,activation_key,' . $this->id,
+            'activation_key' => 'required|string|unique:branches,activation_key,' . ($this->branch ? $this->branch->id : 'NULL'),
             'is_active' => 'boolean',
         ];
     }
