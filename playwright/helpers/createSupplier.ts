@@ -10,7 +10,7 @@ export async function createSupplier(page: Page, supplier: {
   phone: string,
   email: string
 }) {
-  await page.goto('https://restaurant-management-system.test/admin/suppliers');
+  await page.goto('https://rms.test/admin/suppliers');
   await page.getByRole('link', { name: '+ Add New Supplier' }).click();
   await page.getByLabel('Organization *').selectOption(supplier.organization);
   await page.getByRole('textbox', { name: 'Company Name *' }).fill(supplier.companyName);

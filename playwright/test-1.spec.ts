@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('test', async ({ page }) => {
-  await page.goto('https://restaurant-management-system.test/admin/login');
+  await page.goto('https://rms.test/admin/login');
   await page.getByRole('textbox', { name: 'Email' }).fill('superadmin@rms.com');
   await page.getByRole('textbox', { name: 'Password' }).fill('SuperAdmin123!');
   await page.getByRole('button', { name: 'Login' }).click();
@@ -18,7 +18,7 @@ test('test', async ({ page }) => {
   await page.getByPlaceholder('Minimum stock level').click();
   await page.getByPlaceholder('Minimum stock level').fill('3');
   await page.locator('select[name="items[0][unit_of_measurement]"]').selectOption('piece');
-  await page.locator('select[name="items[0][item_category_id]"]').selectOption('2');
+  await page.locator('select[name="items[0][item_category_id]"]').selectOption('1');
   await page.locator('input[name="items[0][buying_price]"]').click();
   await page.locator('input[name="items[0][buying_price]"]').fill('656');
   await page.locator('input[name="items[0][selling_price]"]').click();
