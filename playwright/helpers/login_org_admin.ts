@@ -1,6 +1,6 @@
 import { Page } from '@playwright/test';
 
-export async function loginasorganizationadmin(page: Page) {
+export async function loginAsOrganizationAdmin(page: Page) {
   await page.goto('https://rms.test/admin/login');
   await page.getByRole('textbox', { name: 'Email' }).fill('torg@mail.com');
   await page.getByRole('textbox', { name: 'Password' }).fill('SuperAdmin123!');
