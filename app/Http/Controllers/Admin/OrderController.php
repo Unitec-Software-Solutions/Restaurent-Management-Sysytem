@@ -38,11 +38,18 @@ class OrderController extends Controller
     }
 
     /**
-     * Show reservations related to orders
+     * Show the reservation orders page (reuse order blades)
      */
     public function reservations()
     {
-        return view('admin.orders.reservations');
+        // You can pass the same data as for index, or filter for reservation orders
+        $orders = $this->getReservationOrders(); // Implement this method as needed
+        $branches = $this->getBranches(); // Implement as needed
+        // Paginate the orders for compatibility with the view
+        if ($orders instanceof \Illuminate\Database\Eloquent\Collection) {
+            $orders = $orders->paginate(20);
+        }
+        return view('admin.orders.index', compact('orders', 'branches'));
     }
 
     /**
@@ -289,5 +296,32 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to load orders: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get reservation orders for the current admin (simple version)
+     */
+    protected function getReservationOrders()
+    {
+        // You can filter by order_type or join with reservations as needed
+        return \App\Models\Order::whereNotNull('reservation_id')->latest()->get();
+    }
+
+    /**
+     * Get all branches for the current admin's organization (or all if super admin)
+     */
+    protected function getBranches()
+    {
+        $admin = auth('admin')->user();
+        if ($admin && $admin->is_super_admin) {
+            return \App\Models\Branch::where('is_active', true)->get();
+        } elseif ($admin && $admin->organization_id) {
+            return \App\Models\Branch::where('organization_id', $admin->organization_id)
+                ->where('is_active', true)->get();
+        } elseif ($admin && $admin->branch_id) {
+            return \App\Models\Branch::where('id', $admin->branch_id)
+                ->where('is_active', true)->get();
+        }
+        return collect();
     }
 }
