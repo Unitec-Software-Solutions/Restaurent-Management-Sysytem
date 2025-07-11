@@ -25,8 +25,8 @@ return new class extends Migration
 
             $table->foreign('organization_id')->references('id')->on('organizations');
             $table->foreign('production_requests_master_id')->references('id')->on('production_requests_master')->nullOnDelete();
-            $table->foreign('created_by_user_id')->references('id')->on('users');
-            $table->foreign('approved_by_user_id')->references('id')->on('users');
+            // $table->foreign('created_by_user_id')->references('id')->on('admins');
+            // $table->foreign('approved_by_user_id')->references('id')->on('admins');
             $table->index(['organization_id', 'production_date', 'status']);
         });
     }
