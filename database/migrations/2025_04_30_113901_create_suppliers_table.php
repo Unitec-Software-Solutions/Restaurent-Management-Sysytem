@@ -22,10 +22,25 @@ return new class extends Migration
                   ->onDelete('set null');
 
             // Supplier-specific columns
-            $table->string('supplier_id')->unique();
-            $table->string('name');
+            $table->string('supplier_id')->nullable();
+            $table->string('name')->nullable();
+
+            // Company details
+            $table->string('company_name')->nullable();
+            $table->string('company_address')->nullable();
+            $table->string('company_contact_no')->nullable();
+            $table->string('company_secondary_no')->nullable();
+            $table->string('company_email')->nullable();
+            $table->string('company_website')->nullable();
+
+            // Contact person details
             $table->string('contact_person')->nullable();
-            $table->string('phone');
+            $table->string('contact_person_no')->nullable();
+            $table->string('contact_person_secondary_no')->nullable();
+            $table->string('contact_person_email')->nullable();
+
+            // Supplier-contact information (legacy, for backward compatibility)
+            $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->string('address')->nullable();
 
