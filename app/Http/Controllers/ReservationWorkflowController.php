@@ -404,12 +404,10 @@ class ReservationWorkflowController extends Controller
             $itemType = $item->type ?? MenuItem::TYPE_KOT;
             $currentStock = 0;
             $canOrder = true;
-            
             if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id) {
                 $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
                 $canOrder = $currentStock > 0;
             }
-            
             return [
                 'id' => $item->id,
                 'name' => $item->name,
@@ -458,7 +456,7 @@ class ReservationWorkflowController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
-            'order_time' => 'required|date|after_or_equal:now',
+            'order_time' => 'required|date',
             'order_type' => 'required|string|in:' . implode(',', array_column(OrderType::takeawayTypes(), 'value')),
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
@@ -724,7 +722,7 @@ class ReservationWorkflowController extends Controller
         if ($admin) {
             $defaults = [
                 'phone' => $admin->phone ?? '',
-                'datetime' => now()->addHour()->format('Y-m-d\TH:i'),
+                'datetime' => now()->format('Y-m-d\TH:i'),
                 'name' => $customer->name ?? '',
                 'email' => $customer->email ?? ''
             ];
@@ -956,7 +954,7 @@ class ReservationWorkflowController extends Controller
             'datetime' => now()->format('Y-m-d\TH:i'),
             'customer_name' => '',
             'customer_email' => '',
-            'order_time' => now()->addMinutes(30)->format('Y-m-d\TH:i'),
+            'order_time' => now()->format('Y-m-d\TH:i'),
             'branch_id' => null,
             'organization_id' => null
         ];
