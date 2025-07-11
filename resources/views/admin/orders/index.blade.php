@@ -265,13 +265,10 @@
                                     
                                     @if($hasKotItems)
                                         <div class="flex gap-1">
-                                            <button onclick="printKOT({{ $order->id }})" 
-                                                    class="text-orange-600 hover:text-orange-900" title="Print KOT">
-                                                <i class="fas fa-print"></i> KOT
-                                            </button>
+                                            
                                             <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
-                                               class="text-red-600 hover:text-red-900" title="Download KOT PDF">
-                                                <i class="fas fa-file-pdf"></i> PDF
+                                               class="text-red-600 hover:text-red-900" title="KOT">
+                                                <i class="fas fa-file-pdf"></i> KOT
                                             </a>
                                         </div>
                                     @endif

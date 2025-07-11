@@ -242,29 +242,12 @@ function printKOT(orderId) {
         if (data.hasKotItems) {
             // Open KOT print window
             const kotWindow = window.open(`/admin/orders/${orderId}/print-kot`, '_blank', 'width=800,height=600');
-            
             // Update order status to preparing after KOT is printed
-            fetch(`/admin/orders/${orderId}/status`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({ status: 'preparing' })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Refresh the page to show updated status
-                    setTimeout(() => location.reload(), 2000);
-                }
-            });
         } else {
             alert('This order has no items that require kitchen preparation (KOT items).');
         }
     })
-    .catch(error => {
-        console.error('Error:', error);
+    .catch(() => {
         alert('Failed to check KOT items');
     });
 }
