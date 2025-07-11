@@ -23,8 +23,8 @@ return new class extends Migration
 
             $table->foreign('organization_id')->references('id')->on('organizations');
             $table->foreign('branch_id')->references('id')->on('branches');
-            $table->foreign('created_by_user_id')->references('id')->on('users');
-            $table->foreign('approved_by_user_id')->references('id')->on('users');
+            $table->foreign('created_by_user_id')->references('id')->on('admins');
+            $table->foreign('approved_by_user_id')->references('id')->on('admins');
             $table->index(['organization_id', 'branch_id', 'request_date']);
         });
     }

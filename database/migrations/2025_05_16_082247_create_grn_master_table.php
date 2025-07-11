@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('grn_master', function (Blueprint $table) {
             $table->id('grn_id');
-            $table->string('grn_number')->unique()->nullable();
+            $table->string('grn_number')->nullable();
             $table->foreignId('po_id')->nullable()->constrained('po_master', 'po_id');
             $table->foreignId('branch_id')->nullable()->constrained('branches');
             $table->foreignId('organization_id')->nullable()->constrained('organizations');
