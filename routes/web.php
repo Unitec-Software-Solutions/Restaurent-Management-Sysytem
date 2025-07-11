@@ -311,11 +311,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->whereNumber('order')->name('edit');
             Route::put('/{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
             Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
-            
+
             // KOT and Printing routes
             Route::post('/{order}/print-kot', [AdminOrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
             Route::post('/{order}/print-bill', [AdminOrderController::class, 'printBill'])->whereNumber('order')->name('print-bill');
-            
+
             // AJAX endpoints for KOT and status management
             Route::get('/{order}/check-kot', [AdminOrderController::class, 'checkKotItems'])->whereNumber('order')->name('check-kot');
             Route::post('/{order}/update-status', [AdminOrderController::class, 'updateStatus'])->whereNumber('order')->name('update-status');
@@ -348,7 +348,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/reservation/{reservation}/order/create', [ReservationWorkflowController::class, 'showOrderCreation'])->name('order.create');
             Route::post('/reservation/{reservation}/order/store', [ReservationWorkflowController::class, 'storeOrder'])->name('order.store');
             Route::get('/fees/calculate', [ReservationWorkflowController::class, 'calculateFees'])->name('fees.calculate');
-            
+
             // API routes for dynamic loading
             Route::get('/api/organizations/{organization}/branches', [ReservationWorkflowController::class, 'getBranchesForOrganization'])->name('api.branches');
             Route::get('/api/branches/{branch}/menu-items', [ReservationWorkflowController::class, 'getMenuItemsForBranch'])->name('api.menu-items');
@@ -444,6 +444,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{session}/cancel', [ProductionSessionController::class, 'cancel'])->name('cancel');
                 Route::post('/{session}/issue-ingredients', [ProductionSessionController::class, 'issueIngredients'])->name('issue-ingredients');
                 Route::post('/{session}/record-production', [ProductionSessionController::class, 'recordProduction'])->name('record-production');
+                Route::post('/{productionOrder}/complete-production', [ProductionSessionController::class, 'completeProduction'])->name('complete-production');
             });
 
 
