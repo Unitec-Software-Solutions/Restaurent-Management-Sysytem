@@ -89,6 +89,7 @@
     @endif
 
     <form action="{{ route('admin.menu-items.store-kot') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
+    <form action="{{ route('admin.menu-items.store-kot') }}" method="POST" class="space-y-6" enctype="multipart/form-data">
         @csrf
 
         
@@ -268,6 +269,15 @@
 
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
                     <p class="text-sm text-gray-500 mt-1">Time required to prepare this item</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+                        Description
+                    </label>
+                    <textarea id="description" name="description" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">{{ old('description') }}</textarea>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
