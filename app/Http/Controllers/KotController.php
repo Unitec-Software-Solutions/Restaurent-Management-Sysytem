@@ -238,17 +238,14 @@ class KotController extends Controller
         if ($order->customer && isset($order->customer->attributes['is_vip'])) {
             return 'high';
         }
-        
         // Rush orders or late orders
-        if ($order->order_type && str_contains((string)$order->order_type, 'rush')) {
+        if ($order->order_type && str_contains($order->order_type instanceof \App\Enums\OrderType ? $order->order_type->value : (string)$order->order_type, 'rush')) {
             return 'urgent';
         }
-        
         // Large orders
         if ($order->orderItems->sum('quantity') > 10) {
             return 'high';
         }
-        
         return 'normal';
     }
 
