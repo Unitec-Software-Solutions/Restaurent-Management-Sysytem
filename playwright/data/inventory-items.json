@@ -1,0 +1,202 @@
+[
+    {
+        "name": "Rice",
+        "category": "2",
+        "unit": "kg",
+        "buyingPrice": "200.00",
+        "sellingPrice": "250.00",
+        "stockLevel": "10"
+    },
+    {
+        "name": "Chicken",
+        "category": "2",
+        "unit": "kg",
+        "buyingPrice": "500.00",
+        "sellingPrice": "600.00",
+        "stockLevel": "5"
+    },
+    {
+        "name": "Fish",
+        "category": "2",
+        "unit": "kg",
+        "buyingPrice": "800.00",
+        "sellingPrice": "900.00",
+        "stockLevel": "8"
+    },
+    {
+        "name": "Coconut Sambol",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "50.00",
+        "sellingPrice": "100.00",
+        "stockLevel": "20"
+    },
+    {
+        "name": "Pol Roti",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "30.00",
+        "sellingPrice": "60.00",
+        "stockLevel": "30"
+    },
+    {
+        "name": "Kottu Roti",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "200.00",
+        "sellingPrice": "350.00",
+        "stockLevel": "15"
+    },
+    {
+        "name": "Parippu (Dhal Curry)",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "60.00",
+        "sellingPrice": "120.00",
+        "stockLevel": "18"
+    },
+    {
+        "name": "Egg Hopper",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "40.00",
+        "sellingPrice": "80.00",
+        "stockLevel": "25"
+    },
+    {
+        "name": "Watalappan",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "70.00",
+        "sellingPrice": "150.00",
+        "stockLevel": "12"
+    },
+    {
+        "name": "String Hoppers",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "10.00",
+        "sellingPrice": "20.00",
+        "stockLevel": "50"
+    },
+    {
+        "name": "Coca Cola",
+        "category": "1",
+        "unit": "can",
+        "buyingPrice": "80.00",
+        "sellingPrice": "150.00",
+        "stockLevel": "40"
+    },
+    {
+        "name": "Sprite",
+        "category": "1",
+        "unit": "bottle",
+        "buyingPrice": "90.00",
+        "sellingPrice": "160.00",
+        "stockLevel": "35"
+    },
+    {
+        "name": "Mineral Water",
+        "category": "1",
+        "unit": "bottle",
+        "buyingPrice": "40.00",
+        "sellingPrice": "80.00",
+        "stockLevel": "60"
+    },
+    {
+        "name": "Flour",
+        "category": "2",
+        "unit": "kg",
+        "buyingPrice": "120.00",
+        "sellingPrice": "150.00",
+        "stockLevel": "15"
+    },
+    {
+        "name": "Sugar",
+        "category": "2",
+        "unit": "kg",
+        "buyingPrice": "110.00",
+        "sellingPrice": "140.00",
+        "stockLevel": "12"
+    },
+    {
+        "name": "Salt",
+        "category": "2",
+        "unit": "kg",
+        "buyingPrice": "30.00",
+        "sellingPrice": "50.00",
+        "stockLevel": "20"
+    },
+    {
+        "name": "Pizza Dough",
+        "category": "3",
+        "unit": "piece",
+        "buyingPrice": "100.00",
+        "sellingPrice": "180.00",
+        "stockLevel": "25"
+    },
+    {
+        "name": "Prepared Bun Dough",
+        "category": "3",
+        "unit": "box",
+        "buyingPrice": "150.00",
+        "sellingPrice": "250.00",
+        "stockLevel": "18"
+    },
+    {
+        "name": "Half-baked Bread",
+        "category": "3",
+        "unit": "box",
+        "buyingPrice": "80.00",
+        "sellingPrice": "120.00",
+        "stockLevel": "20"
+    },
+    {
+        "name": "Lamprais Pack",
+        "category": "3",
+        "unit": "box",
+        "buyingPrice": "300.00",
+        "sellingPrice": "500.00",
+        "stockLevel": "10"
+    },
+    {
+        "name": "Pepsi",
+        "category": "1",
+        "unit": "can",
+        "buyingPrice": "75.00",
+        "sellingPrice": "140.00",
+        "stockLevel": "30"
+    },
+    {
+        "name": "Eggs",
+        "category": "2",
+        "unit": "box",
+        "buyingPrice": "240.00",
+        "sellingPrice": "300.00",
+        "stockLevel": "8"
+    },
+    {
+        "name": "Coconut Milk",
+        "category": "2",
+        "unit": "L",
+        "buyingPrice": "180.00",
+        "sellingPrice": "220.00",
+        "stockLevel": "12"
+    },
+    {
+        "name": "Pre-cut Vegetables",
+        "category": "3",
+        "unit": "pack",
+        "buyingPrice": "120.00",
+        "sellingPrice": "180.00",
+        "stockLevel": "15"
+    },
+    {
+        "name": "Chili Paste",
+        "category": "3",
+        "unit": "bottle",
+        "buyingPrice": "90.00",
+        "sellingPrice": "150.00",
+        "stockLevel": "20"
+    }
+]
