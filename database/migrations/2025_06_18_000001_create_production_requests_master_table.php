@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('production_requests_master', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('organization_id');
-            $table->unsignedBigInteger('branch_id');
-            $table->date('request_date');
-            $table->date('required_date');
-            $table->enum('status', ['draft', 'submitted', 'approved', 'in_production', 'completed', 'cancelled'])->default('draft');
+            $table->unsignedBigInteger('organization_id')->nullable();
+            $table->unsignedBigInteger('branch_id')->nullable();
+            $table->date('request_date')->nullable();
+            $table->date('required_date')->nullable();
+            $table->enum('status', ['draft', 'submitted', 'approved', 'in_production', 'completed', 'cancelled'])->nullable()->default('draft');
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by_user_id')->nullable();
             $table->unsignedBigInteger('approved_by_user_id')->nullable();

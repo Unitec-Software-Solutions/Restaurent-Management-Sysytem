@@ -1,0 +1,36 @@
+import { test, expect } from '@playwright/test';
+
+test('test', async ({ page }) => {
+  await page.goto('https://restaurant-management-system.test/admin/login');
+  await page.getByRole('textbox', { name: 'Email' }).fill('superadmin@rms.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('SuperAdmin123!');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByRole('link', { name: ' Inventory ' }).click();
+  await page.getByRole('link', { name: '+ New Item' }).click();
+  await page.getByLabel('Target Organization *').selectOption('1');
+  await page.getByRole('textbox', { name: 'Enter item name' }).click();
+  await page.getByRole('textbox', { name: 'Enter item name' }).fill('w322');
+  await page.getByRole('textbox', { name: 'Enter unicode name' }).click();
+  await page.getByRole('textbox', { name: 'Enter unicode name' }).fill('2322');
+  await page.getByRole('textbox', { name: 'Enter item code' }).click();
+    const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await page.getByRole('textbox', { name: 'Enter item code' }).fill(randomCode);
+  await page.getByPlaceholder('Minimum stock level').click();
+  await page.getByPlaceholder('Minimum stock level').fill('3');
+  await page.locator('select[name="items[0][unit_of_measurement]"]').selectOption('piece');
+  await page.locator('select[name="items[0][item_category_id]"]').selectOption('2');
+  await page.locator('input[name="items[0][buying_price]"]').click();
+  await page.locator('input[name="items[0][buying_price]"]').fill('656');
+  await page.locator('input[name="items[0][selling_price]"]').click();
+  await page.locator('input[name="items[0][selling_price]"]').fill('566');
+  await page.getByPlaceholder('Expiry period in days').click();
+  await page.getByPlaceholder('Expiry period in days').fill('66');
+  await page.getByRole('textbox', { name: 'Detailed item description' }).click();
+  await page.getByRole('textbox', { name: 'Detailed item description' }).fill('666');
+  await page.getByRole('textbox', { name: 'Any special notes about this' }).click();
+  await page.getByRole('textbox', { name: 'Any special notes about this' }).fill('666');
+  await page.locator('select[name="items[0][item_type]"]').selectOption('buy_sell');
+  await page.locator('input[name="items[0][current_stock]"]').click();
+  await page.locator('input[name="items[0][current_stock]"]').fill('0');
+  await page.getByRole('button', { name: ' Save All Items' }).click();
+});

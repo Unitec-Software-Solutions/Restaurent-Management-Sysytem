@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('production_order_items', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('production_order_id');
-            $table->unsignedBigInteger('item_id');
-            $table->decimal('quantity_to_produce', 10, 2);
-            $table->decimal('quantity_produced', 10, 2)->default(0);
-            $table->decimal('quantity_wasted', 10, 2)->default(0);
+            $table->unsignedBigInteger('production_order_id')->nullable();
+            $table->unsignedBigInteger('item_id')->nullable();
+            $table->decimal('quantity_to_produce', 10, 2)->nullable();
+            $table->decimal('quantity_produced', 10, 2)->default(0)->nullable();
+            $table->decimal('quantity_wasted', 10, 2)->default(0)->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
 

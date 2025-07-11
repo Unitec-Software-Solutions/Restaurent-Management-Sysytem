@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('production_orders', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('organization_id')->nullable();
             $table->unsignedBigInteger('production_requests_master_id')->nullable();
-            $table->string('production_order_number')->unique();
-            $table->date('production_date');
-            $table->enum('status', ['draft', 'approved', 'in_progress', 'completed', 'cancelled'])->default('draft');
+            $table->string('production_order_number')->unique()->nullable();
+            $table->date('production_date')->nullable();
+            $table->enum('status', ['draft', 'approved', 'in_progress', 'completed', 'cancelled'])->nullable()->default('draft');
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('created_by_user_id')->nullable();
             $table->unsignedBigInteger('approved_by_user_id')->nullable();

@@ -291,6 +291,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
             Route::delete('/{grn}', [GrnDashboardController::class, 'destroy'])->whereNumber('grn')->name('destroy');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
+            Route::post('/verify/{grn}', [GrnDashboardController::class, 'verify'])->name('verify');
         });
 
         // GRN API routes for super admin organization selection
