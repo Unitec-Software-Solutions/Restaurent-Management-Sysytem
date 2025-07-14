@@ -15,8 +15,6 @@ class Kernel extends ConsoleKernel
     protected $commands = [
         Commands\DatabaseSeedSafeCommand::class,
         Commands\DatabaseIntegrityCheckCommand::class,
-        Commands\SeedComprehensiveTestData::class,
-        Commands\RunSeededDataTests::class,
     ];
 
     protected function schedule(Schedule $schedule)
