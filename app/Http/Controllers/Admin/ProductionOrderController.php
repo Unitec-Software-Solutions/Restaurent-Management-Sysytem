@@ -24,8 +24,14 @@ class ProductionOrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ProductionOrder::with(['productionRequests', 'items.item', 'createdBy'])
-            ->where('organization_id', Auth::user()->organization_id);
+        $user = Auth::user();
+
+        $query = ProductionOrder::with(['productionRequests', 'items.item', 'createdBy']);
+
+        // Super admins can see all orders, others filter by organization
+        if (!$user->is_super_admin) {
+            $query->where('organization_id', $user->organization_id);
+        }
 
         // Apply filters
         if ($request->filled('status')) {
@@ -43,14 +49,23 @@ class ProductionOrderController extends Controller
         $orders = $query->latest()->paginate(20);
 
         // Fetch production items for filter dropdown
-        $productionItems = \App\Models\ItemMaster::whereHas('category', function($query) {
+        $productionItemsQuery = \App\Models\ItemMaster::whereHas('category', function($query) {
             $query->where('name', 'Production Items');
-        })->where('organization_id', Auth::user()->organization_id)->get();
+        });
+
+        if (!$user->is_super_admin) {
+            $productionItemsQuery->where('organization_id', $user->organization_id);
+        }
+
+        $productionItems = $productionItemsQuery->get();
 
         // Count pending requests for aggregation
-        $pendingRequests = \App\Models\ProductionRequestMaster::where('organization_id', Auth::user()->organization_id)
-            ->where('status', 'approved')
-            ->count();
+        $pendingRequestsQuery = \App\Models\ProductionRequestMaster::query();
+
+        if (!$user->is_super_admin) {
+            $pendingRequestsQuery->where('organization_id', $user->organization_id);
+        }
+        $pendingRequests = $pendingRequestsQuery->where('status', 'approved')->count();
 
         return view('admin.production.orders.index', compact('orders', 'productionItems', 'pendingRequests'));
     }
@@ -71,6 +86,9 @@ class ProductionOrderController extends Controller
      */
     public function store(Request $request)
     {
+        $userExists = \DB::table('users')->where('id', $userId)->exists();
+        $createdBy = $userExists ? $userId : null;
+
         $request->validate([
             'production_date' => 'required|date',
             'items' => 'required|array|min:1',
@@ -86,7 +104,7 @@ class ProductionOrderController extends Controller
                 'production_date' => $request->production_date,
                 'status' => 'draft',
                 'notes' => $request->notes,
-                'created_by_user_id' => Auth::id(),
+                'created_by_user_id' => $createdBy,
             ]);
 
             foreach ($request->items as $item) {
@@ -706,6 +724,8 @@ class ProductionOrderController extends Controller
                     ->whereIn('id', $request->selected_requests)
                     ->get();
 
+                $userExists = \DB::table('users')->where('id', $userId)->exists();
+                $byuser = $userExists ? $userId : null;
                 if ($selectedRequests->isEmpty()) {
                     throw new \Exception('No valid approved requests found.');
                 }
@@ -717,8 +737,8 @@ class ProductionOrderController extends Controller
                     'production_date' => now()->addDay()->toDateString(),
                     'status' => ProductionOrder::STATUS_APPROVED,
                     'notes' => $request->production_notes,
-                    'created_by_user_id' => Auth::id(),
-                    'approved_by_user_id' => Auth::id(),
+                    'created_by_user_id' => $byuser,
+                    'approved_by_user_id' => $byuser,
                     'approved_at' => now(),
                 ]);
 

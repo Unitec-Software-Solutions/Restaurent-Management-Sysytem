@@ -30,8 +30,12 @@ class ProductionRequestsMasterController extends Controller
 
         $admin = auth('admin')->user();
 
-        $query = ProductionRequestMaster::with(['items.item', 'branch'])
-            ->where('organization_id', $admin->organization_id);
+        $query = ProductionRequestMaster::with(['items.item', 'branch']);
+
+        // Super admins can see all requests, others filter by organization
+        if (!$admin->is_super_admin) {
+            $query->where('organization_id', $admin->organization_id);
+        }
 
         // Apply filters
         if ($request->filled('status')) {

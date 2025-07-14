@@ -13,18 +13,18 @@ return new class extends Migration
     {
         Schema::create('production_recipes', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('organization_id');
-            $table->unsignedBigInteger('production_item_id'); // FK to item master
-            $table->string('recipe_name');
+            $table->unsignedBigInteger('organization_id')->nullable();
+            $table->unsignedBigInteger('production_item_id')->nullable(); // FK to item master
+            $table->string('recipe_name')->nullable();
             $table->text('description')->nullable();
             $table->text('instructions')->nullable();
-            $table->decimal('yield_quantity', 10, 2)->default(1); // How many units this recipe produces
-            $table->integer('preparation_time')->default(0);
-            $table->integer('cooking_time')->default(0);
-            $table->integer('total_time')->default(0);
+            $table->decimal('yield_quantity', 10, 2)->default(1)->nullable(); // How many units this recipe produces
+            $table->integer('preparation_time')->default(0)->nullable();
+            $table->integer('cooking_time')->default(0)->nullable();
+            $table->integer('total_time')->default(0)->nullable();
             $table->string('difficulty_level')->nullable();
             $table->text('notes')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(true)->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();

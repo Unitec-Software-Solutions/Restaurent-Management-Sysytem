@@ -150,7 +150,7 @@ Route::middleware(['web'])->group(function () {
         Route::post('/{order}/mark-preparing', [OrderController::class, 'markAsPreparing'])->name('mark-preparing');
         Route::post('/{order}/mark-ready', [OrderController::class, 'markAsReady'])->name('mark-ready');
         Route::post('/{order}/complete', [OrderController::class, 'completeOrder'])->name('complete');
-        
+
         // Enhanced KOT functionality
         Route::get('/{order}/check-and-print-kot', [OrderController::class, 'apiCheckAndPrintKOT'])->whereNumber('order')->name('check-and-print-kot');
         Route::get('/{order}/print-kot-direct', [OrderController::class, 'printKOTForOrder'])->whereNumber('order')->name('print-kot-direct');
@@ -296,6 +296,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('/{grn}', [GrnDashboardController::class, 'update'])->whereNumber('grn')->name('update');
             Route::delete('/{grn}', [GrnDashboardController::class, 'destroy'])->whereNumber('grn')->name('destroy');
             Route::get('/{grn}/print', [GrnDashboardController::class, 'print'])->name('print');
+            Route::post('/verify/{grn}', [GrnDashboardController::class, 'verify'])->name('verify');
         });
 
         // GRN API routes for super admin organization selection
@@ -315,16 +316,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{order}/edit', [AdminOrderController::class, 'edit'])->whereNumber('order')->name('edit');
             Route::put('/{order}', [AdminOrderController::class, 'update'])->whereNumber('order')->name('update');
             Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
-            
+
             // KOT and Printing routes
             Route::get('/{order}/print-kot', [AdminOrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
             Route::get('/{order}/print-kot-pdf', [AdminOrderController::class, 'printKOTPDF'])->whereNumber('order')->name('print-kot-pdf');
             Route::post('/{order}/print-bill', [AdminOrderController::class, 'printBill'])->whereNumber('order')->name('print-bill');
-            
+
+
             // Enhanced KOT functionality
             Route::get('/{order}/check-and-print-kot', [AdminOrderController::class, 'apiCheckAndPrintKOT'])->whereNumber('order')->name('check-and-print-kot');
             Route::post('/{order}/generate-kot', [KotController::class, 'generateKot'])->whereNumber('order')->name('generate-kot');
-            
+
             // AJAX endpoints for KOT and status management
             Route::get('/{order}/check-kot', [AdminOrderController::class, 'checkKotItems'])->whereNumber('order')->name('check-kot');
             Route::post('/{order}/update-status', [AdminOrderController::class, 'updateStatus'])->whereNumber('order')->name('update-status');
@@ -357,7 +359,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/reservation/{reservation}/order/create', [ReservationWorkflowController::class, 'showOrderCreation'])->name('order.create');
             Route::post('/reservation/{reservation}/order/store', [ReservationWorkflowController::class, 'storeOrder'])->name('order.store');
             Route::get('/fees/calculate', [ReservationWorkflowController::class, 'calculateFees'])->name('fees.calculate');
-            
+
             // API routes for dynamic loading
             Route::get('/api/organizations/{organization}/branches', [ReservationWorkflowController::class, 'getBranchesForOrganization'])->name('api.branches');
             Route::get('/api/branches/{branch}/menu-items', [ReservationWorkflowController::class, 'getMenuItemsForBranch'])->name('api.menu-items');
@@ -453,6 +455,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{session}/cancel', [ProductionSessionController::class, 'cancel'])->name('cancel');
                 Route::post('/{session}/issue-ingredients', [ProductionSessionController::class, 'issueIngredients'])->name('issue-ingredients');
                 Route::post('/{session}/record-production', [ProductionSessionController::class, 'recordProduction'])->name('record-production');
+                Route::post('/{productionOrder}/complete-production', [ProductionSessionController::class, 'completeProduction'])->name('complete-production');
             });
 
 

@@ -13,15 +13,15 @@ return new class extends Migration
     {
         Schema::create('production_order_ingredients', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('production_order_id');
-            $table->unsignedBigInteger('ingredient_item_id'); // Raw material/ingredient
-            $table->decimal('planned_quantity', 10, 3);
-            $table->decimal('issued_quantity', 10, 3)->default(0);
-            $table->decimal('consumed_quantity', 10, 3)->default(0);
-            $table->decimal('returned_quantity', 10, 3)->default(0);
+            $table->unsignedBigInteger('production_order_id')->nullable();
+            $table->unsignedBigInteger('ingredient_item_id')->nullable(); // Raw material/ingredient
+            $table->decimal('planned_quantity', 10, 3)->nullable();
+            $table->decimal('issued_quantity', 10, 3)->default(0)->nullable();
+            $table->decimal('consumed_quantity', 10, 3)->default(0)->nullable();
+            $table->decimal('returned_quantity', 10, 3)->default(0)->nullable();
             $table->string('unit_of_measurement')->nullable();
             $table->text('notes')->nullable();
-            $table->boolean('is_manually_added')->default(false);
+            $table->boolean('is_manually_added')->default(false)->nullable();
             $table->timestamps();
 
             $table->foreign('production_order_id')->references('id')->on('production_orders');

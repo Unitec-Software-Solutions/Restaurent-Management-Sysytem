@@ -18,8 +18,14 @@ class ProductionRecipeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = ProductionRecipe::with(['productionItem', 'details.rawMaterialItem'])
-            ->where('organization_id', Auth::user()->organization_id);
+        $user = Auth::user();
+
+        $query = ProductionRecipe::with(['productionItem', 'details.rawMaterialItem']);
+
+        // Super admins can see all recipes, others filter by organization
+        if (!$user->is_super_admin) {
+            $query->where('organization_id', $user->organization_id);
+        }
 
         // Apply filters
         if ($request->filled('production_item_id')) {
@@ -37,11 +43,15 @@ class ProductionRecipeController extends Controller
         $recipes = $query->latest()->paginate(20);
 
         // Get production items for filter
-        $productionItems = ItemMaster::whereHas('category', function($query) {
+        $productionItemsQuery = ItemMaster::whereHas('category', function($query) {
             $query->where('name', 'Production Items');
-        })
-        ->where('organization_id', Auth::user()->organization_id)
-        ->get();
+        });
+
+        if (!$user->is_super_admin) {
+            $productionItemsQuery->where('organization_id', $user->organization_id);
+        }
+
+        $productionItems = $productionItemsQuery->get();
 
         return view('admin.production.recipes.index', compact('recipes', 'productionItems'));
     }
