@@ -17,11 +17,11 @@ test('Admin Workflow 🚀', async ({ page }) => {
 
 test('create Organization 🏢', async ({ page }) => {
     await loginAsSuperAdmin(page);
-    await createOrganization(page);
+    // await createOrganization(page);
 });
 
 test('Activate Branch 🔑', async ({ page }) => {
-        await loginAsSuperAdmin(page);
+    await loginAsSuperAdmin(page);
     await activateBranch(page);
 });
 

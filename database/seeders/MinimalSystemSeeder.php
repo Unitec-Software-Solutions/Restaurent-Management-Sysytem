@@ -459,26 +459,30 @@ class MinimalSystemSeeder extends Seeder
      */
     private function createItemCategories(Organization $organization): void
     {
-        $categories = [
+        $defaultCategories = [
             [
-                'organization_id' => $organization->id,
-                'name' => 'Beverages',
-                'description' => 'Hot and cold drinks',
-                'is_active' => true
+            'organization_id' => $organization->id,
+            'name' => 'Production Items',
+            'code' => 'PI' . $organization->id,
+            'description' => 'Items that are produced in-house like buns, bread, etc.',
+            'is_active' => true
             ],
             [
-                'organization_id' => $organization->id,
-                'name' => 'Main Dishes',
-                'description' => 'Primary food items',
-                'is_active' => true
+            'organization_id' => $organization->id,
+            'name' => 'Buy & Sell',
+            'code' => 'BS' . $organization->id,
+            'description' => 'Items that are bought and sold directly',
+            'is_active' => true
             ],
             [
-                'organization_id' => $organization->id,
-                'name' => 'Desserts',
-                'description' => 'Sweet treats and desserts',
-                'is_active' => true
+            'organization_id' => $organization->id,
+            'name' => 'Ingredients',
+            'code' => 'IG' . $organization->id,
+            'description' => 'Raw cooking ingredients and supplies',
+            'is_active' => true
             ]
         ];
+        $categories = $defaultCategories;
 
         foreach ($categories as $categoryData) {
             ItemCategory::create($categoryData);
