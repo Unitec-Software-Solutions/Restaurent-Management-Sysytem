@@ -561,7 +561,6 @@
                 });
             });
 
-            // ...existing code...
         });
     </script>
 @endsection
