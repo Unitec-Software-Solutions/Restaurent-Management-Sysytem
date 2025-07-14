@@ -332,7 +332,7 @@
 
         <div class="thermal-info-row">
             <div class="thermal-info-left">Type:</div>
-            <div class="thermal-info-right">{{ strtoupper($order->order_type ? $order->order_type->getLabel() : 'TAKEAWAY') }}</div>
+            <div class="thermal-info-right">{{ strtoupper($order->getOrderTypeLabel()) }}</div>
         </div>
 
         @if($order->customer_name)

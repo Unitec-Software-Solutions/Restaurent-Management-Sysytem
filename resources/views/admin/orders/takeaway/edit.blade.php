@@ -24,12 +24,12 @@
                             
                             @if(auth()->check() && auth()->user()->isAdmin())
                             <!-- Hidden field for order type since this is already a takeaway order -->
-                            <input type="hidden" name="order_type" value="{{ $order->order_type }}">
+                            <input type="hidden" name="order_type" value="{{ $order->order_type instanceof \App\Enums\OrderType ? $order->order_type->value : $order->order_type }}">
                             
                             <div class="form-group mb-3">
                                 <div class="alert alert-info">
                                     <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Order Type:</strong> {{ ucfirst(str_replace(['_', 'takeaway'], [' ', 'Takeaway'], $order->order_type)) }}
+                                    <strong>Order Type:</strong> {{ $order->getOrderTypeLabel() }}
                                 </div>
                             </div>
                             @endif

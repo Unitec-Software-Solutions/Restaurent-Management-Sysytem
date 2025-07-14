@@ -12,10 +12,6 @@ class Role extends SpatieRole
     protected $fillable = [
         'name',
         'guard_name',
-        'scope',
-        'is_system_role',
-        'organization_id',
-        'branch_id',
     ];
 
     protected $casts = [
@@ -119,8 +115,7 @@ class Role extends SpatieRole
                     'manage_organization',
                     'manage_branches',
                     'manage_users',
-                    'view_reports',
-                    'manage_subscription'
+                    'manage_reports'
                 ]
             ],
             'branch_admin' => [
@@ -131,13 +126,10 @@ class Role extends SpatieRole
                     'manage_branch_operations',
                     'manage_branch_staff',
                     'manage_inventory',
-                    'view_branch_reports',
+                    'manage_branch_reports',
                     'manage_orders'
                 ]
             ]
-            
-            // Note: Operational roles like Manager, Staff Member, Guest User should be created
-            // manually by organization/branch admins as needed, not automatically seeded
         ];
     }
 }

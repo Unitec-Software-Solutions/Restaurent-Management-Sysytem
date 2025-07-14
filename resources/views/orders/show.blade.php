@@ -30,7 +30,7 @@
                 </div>
                 <div>
                     <p class="font-semibold">Order Type:</p>
-                    <p>{{ $order->order_type ? $order->order_type->getLabel() : 'Unknown' }}</p>
+                    <p>{{ $order->getOrderTypeLabel() }}</p>
                     @if($order?->reservation)
                         <p class="mt-2">
                             Reservation #{{ $order->reservation_id ?? '' }}

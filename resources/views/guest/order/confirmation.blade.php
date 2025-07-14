@@ -63,7 +63,7 @@
                         <dl class="space-y-2">
                             <div class="flex">
                                 <dt class="text-sm font-medium text-gray-500 w-24">Type:</dt>
-                                <dd class="text-sm text-gray-900">{{ ucfirst(str_replace('_', ' ', $order->order_type)) }}</dd>
+                                <dd class="text-sm text-gray-900">{{ $order->getOrderTypeLabel() }}</dd>
                             </div>
                             @if($order->pickup_time)
                             <div class="flex">

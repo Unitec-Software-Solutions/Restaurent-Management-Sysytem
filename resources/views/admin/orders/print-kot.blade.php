@@ -162,7 +162,7 @@
             <div>
                 <strong>KOT #:</strong> {{ $kot->id ?? $order->id }}<br>
                 <strong>Order #:</strong> {{ $order->id }}<br>
-                <strong>Type:</strong> <span class="order-type">{{ strtoupper($order->order_type ?? 'TAKEAWAY') }}</span>
+                <strong>Type:</strong> <span class="order-type">{{ strtoupper($order->getOrderTypeLabel()) }}</span>
                 @if($order->priority ?? false)
                     <span class="priority">PRIORITY</span>
                 @endif

@@ -94,6 +94,63 @@ class AdminOrderController extends Controller
     // Edit order (admin)
     public function edit(Order $order)
     {
+        $admin = auth('admin')->user();
+        
+        // Check permissions
+        if (!$admin->is_super_admin) {
+            if ($admin->branch_id && $order->branch_id !== $admin->branch_id) {
+                return redirect()->route('admin.orders.index')
+                    ->with('error', 'Access denied to this order');
+            } elseif ($admin->organization_id && $order->branch && $order->branch->organization_id !== $admin->organization_id) {
+                return redirect()->route('admin.orders.index')
+                    ->with('error', 'Access denied to this order');
+            }
+        }
+        
+        // Load relationships
+        $order->load(['orderItems.menuItem', 'branch']);
+
+        // Get branches for admin with fallback
+        $branches = $this->getAdminAccessibleBranches($admin);
+        if (!$branches || $branches->isEmpty()) {
+            $branches = collect([]); // Empty collection as fallback
+        }
+
+        // Load the active menu for the order's branch
+        $activeMenu = null;
+        $menuItems = collect([]);
+        if ($order->branch_id) {
+            $activeMenu = \App\Models\Menu::getActiveMenuForBranch($order->branch_id);
+            if ($activeMenu) {
+                // Only available menu items for this menu
+                $menuItems = $activeMenu->availableMenuItems()->with('itemMaster')->get();
+            }
+        }
+
+        // Fallback: if no active menu, show all active menu items for org/branch
+        if ($menuItems->isEmpty()) {
+            $menuItems = \App\Models\ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
+                ->where('is_menu_item', true)
+                ->where('is_active', true)
+                ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                    $q->where('organization_id', $admin->organization_id);
+                })
+                ->get();
+        }
+
+        // Add stock information for each menu item
+        foreach ($menuItems as $item) {
+            $item->current_stock = \App\Models\ItemTransaction::stockOnHand($item->id, $order->branch_id);
+            $item->is_low_stock = $item->current_stock <= ($item->reorder_level ?? 10);
+        }
+
+        // Get categories
+        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->active()
+            ->get();
+
         $statusOptions = [
             'submitted' => 'Submitted',
             'preparing' => 'Preparing',
@@ -101,23 +158,106 @@ class AdminOrderController extends Controller
             'completed' => 'Completed',
             'cancelled' => 'Cancelled'
         ];
-        return view('admin.orders.edit', compact('order', 'statusOptions'));
+
+        return view('admin.orders.edit', compact('order', 'statusOptions', 'branches', 'menuItems', 'categories', 'activeMenu'));
     }
 
     // Update order status (admin)
     public function update(Request $request, Order $order)
     {
+        // Custom validation rules for order time
+        $orderTimeRule = $order->id ? 'required|date|after_or_equal:now' : 'required|date|after_or_equal:now';
+        
         $validated = $request->validate([
             'status' => 'required|in:submitted,preparing,ready,completed,cancelled',
             'order_type' => 'required|string',
             'branch_id' => 'required|exists:branches,id',
-            'order_time' => 'required|date',
-            'customer_phone' => 'required|string|min:10|max:15'
+            'order_time' => $orderTimeRule,
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|min:10|max:15',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1'
         ]);
 
-        $order->update($validated);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.orders.index')->with('success', 'Order updated successfully!');
+            // Update the order basic information
+            $order->update([
+                'status' => $validated['status'],
+                'order_type' => $validated['order_type'],
+                'branch_id' => $validated['branch_id'],
+                'order_time' => $validated['order_time'],
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone']
+            ]);
+
+            // Process order items if present in the request
+            if ($request->has('items') && is_array($request->items)) {
+                // Extract selected items (only checked checkboxes)
+                $selectedItems = [];
+                foreach ($request->items as $itemId => $itemData) {
+                    if (isset($itemData['item_id'])) {
+                        $selectedItems[$itemId] = [
+                            'item_id' => $itemData['item_id'],
+                            'quantity' => $itemData['quantity'] ?? 1
+                        ];
+                    }
+                }
+                
+                // Log items for debugging
+                Log::debug('Selected items for order #' . $order->id, [
+                    'items' => $selectedItems,
+                    'raw' => $request->items
+                ]);
+
+                if (!empty($selectedItems)) {
+                    // Delete existing order items
+                    $order->orderItems()->delete();
+                    
+                    // Create new order items
+                    $subtotal = 0;
+                    foreach ($selectedItems as $itemData) {
+                        $menuItem = \App\Models\ItemMaster::find($itemData['item_id']);
+                        if (!$menuItem) continue;
+                        
+                        $lineTotal = $menuItem->selling_price * $itemData['quantity'];
+                        $subtotal += $lineTotal;
+                        
+                        \App\Models\OrderItem::create([
+                            'order_id' => $order->id,
+                            'menu_item_id' => $itemData['item_id'],
+                            'inventory_item_id' => $itemData['item_id'],
+                            'quantity' => $itemData['quantity'],
+                            'unit_price' => $menuItem->selling_price,
+                            'subtotal' => $lineTotal,
+                            'total_price' => $lineTotal
+                        ]);
+                    }
+                    
+                    // Update order totals
+                    $tax = $subtotal * 0.10; // 10% tax
+                    $order->update([
+                        'subtotal' => $subtotal,
+                        'tax' => $tax,
+                        'total' => $subtotal + $tax
+                    ]);
+                }
+            }
+
+            DB::commit();
+            
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', 'Order updated successfully!');
+        
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Order update failed: ' . $e->getMessage());
+            
+            return back()->withInput()
+                ->with('error', 'Failed to update order: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -270,10 +410,10 @@ class AdminOrderController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
-        });
+        })->toArray();
         
-        OrderItem::insert($orderItems->toArray());
-        $subtotal = $orderItems->sum('total_price');
+        OrderItem::insert($orderItems);
+        $subtotal = collect($orderItems)->sum('total_price');
 
         // Calculate totals
         $tax = $subtotal * 0.10;
@@ -620,12 +760,12 @@ class AdminOrderController extends Controller
 
         $branches = Branch::all();
         $menuItems = ItemMaster::where('is_menu_item', true)->get();
-        $statusOptions = [
-            'submitted' => 'Submitted',  
-            'preparing' => 'Preparing',
-            'ready' => 'Ready',
-            'completed' => 'Completed',
-            'cancelled' => 'Cancelled'
+$statusOptions = [
+    'submitted' => 'Submitted',  
+    'preparing' => 'Preparing',
+    'ready' => 'Ready',
+    'completed' => 'Completed',
+    'cancelled' => 'Cancelled'
 ];
 
         return view('admin.orders.edit', compact('order', 'reservation', 'branches', 'menuItems', 'statusOptions'));
@@ -890,12 +1030,21 @@ class AdminOrderController extends Controller
      */
     public function destroyTakeaway(Order $order)
     {
-        $order->orderItems()->delete();
-        $order->delete();
+        try {
+            if ($order->status === 'completed') {
+                return back()->with('error', 'Cannot delete completed takeaway orders.');
+            }
+            
+            $order->orderItems()->delete();
+            $order->delete();
 
-        return redirect()->route('admin.orders.takeaway.index')
-     
-        ->with('success', 'Takeaway order deleted successfully.');
+            return redirect()->route('admin.orders.index')
+                ->with('success', 'Takeaway order deleted successfully!');
+        } catch (\Exception $e) {
+            Log::error('Takeaway order deletion failed: ' . $e->getMessage());
+            
+            return back()->with('error', 'Failed to delete takeaway order.');
+        }
     }
 
        public function adminIndex()
@@ -1361,8 +1510,8 @@ class AdminOrderController extends Controller
                 ]);
             }
 
-            // Calculate totals
-            $tax = $subtotal * 0.10; // 10% tax
+            // Calculate tax and total before updating order
+            $tax = $subtotal * 0.10;
             $total = $subtotal + $tax;
 
             // Update order
@@ -1372,7 +1521,6 @@ class AdminOrderController extends Controller
                 'customer_phone' => $validated['customer_phone'],
                 'order_time' => $validated['order_time'],
                 'special_instructions' => $validated['special_instructions'],
-               
                 'tax' => $tax,
                 'total' => $total,
                 'stock_deducted' => true,
@@ -1520,7 +1668,7 @@ class AdminOrderController extends Controller
                     'kot_already_exists' => true,
                     'kot_id' => $existingKot->id,
                     // 'print_url' => route('admin.kots.print', $existingKot->id)
-                    'print_url' => route('admin.orders.print-kot', $order->id)
+                    'print_url' => route('admin.orders.print-kot', $existingKot->id)
                 ];
             }
 

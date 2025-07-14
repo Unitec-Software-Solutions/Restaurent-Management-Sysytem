@@ -121,7 +121,7 @@
             </div>
             <div class="flex justify-between mb-1">
                 <span class="font-bold">Order Type:</span>
-                <span class="capitalize">{{ $order->order_type ? $order->order_type->getLabel() : 'Unknown' }}</span>
+                <span class="capitalize">{{ $order->getOrderTypeLabel() }}</span>
             </div>
             @if($order->steward)
             <div class="flex justify-between mb-1">
