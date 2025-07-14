@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Reservation;
 use App\Models\MenuItem;
 use App\Services\GuestSessionService;
+use App\Services\MenuService;
 use App\Services\MenuScheduleService;
 use App\Services\OrderManagementService;
 use App\Services\CartService;
@@ -286,12 +287,16 @@ class GuestController extends Controller
             // Generate guest session ID
             $guestSessionId = $this->guestSessionService->getOrCreateGuestId();
 
+            // Get branch to determine organization_id
+            $branch = Branch::findOrFail($cart[0]['branch_id']);
+
             // Create order
             $order = Order::create([
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
-                'customer_email' => $validated['customer_email'],
+                'customer_email' => $validated['customer_email'] ?? null,
                 'branch_id' => $cart[0]['branch_id'],
+                'organization_id' => $branch->organization_id,
                 'menu_id' => $cart[0]['menu_id'],
                 'order_type' => $validated['order_type'],
                 'pickup_time' => $validated['pickup_time'],
@@ -300,7 +305,9 @@ class GuestController extends Controller
                 'status' => 'pending',
                 'guest_session_id' => $guestSessionId,
                 'order_source' => 'guest_website',
-                'created_at' => now()
+                'created_at' => now(),
+                'order_date' => now(),
+                'subtotal' => 0,
             ]);
 
             // Create order items
@@ -501,7 +508,7 @@ class GuestController extends Controller
                 'guest_session_id' => $guestId,
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
-                'customer_email' => $validated['customer_email'],
+                'customer_email' => $validated['customer_email'] ?? null,
                 'party_size' => $validated['party_size'],
                 'reservation_date' => $validated['reservation_date'],
                 'reservation_time' => $validated['reservation_time'],
@@ -516,7 +523,7 @@ class GuestController extends Controller
             $guestData = [
                 'name' => $validated['customer_name'],
                 'phone' => $validated['customer_phone'],
-                'email' => $validated['customer_email']
+                'email' => $validated['customer_email'] ?? null
             ];
             Session::put("guest_data_{$guestId}", $guestData);
 

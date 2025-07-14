@@ -11,10 +11,6 @@
             <p class="text-gray-600">Manage your restaurant menu items</p>
         </div>
         <div class="flex gap-3">
-            <a href="{{ route('admin.menu-items.create') }}" 
-               class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <i class="fas fa-plus mr-2"></i>Add Menu Item
-            </a>
             <a href="{{ route('admin.menu-items.create-kot') }}" 
                class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
                 <i class="fas fa-fire mr-2"></i>Create KOT Items

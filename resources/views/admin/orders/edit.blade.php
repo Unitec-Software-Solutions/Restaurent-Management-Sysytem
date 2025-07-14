@@ -67,7 +67,17 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('admin.orders.takeaway.update', ['order' => $order->id]) }}" method="POST" id="order-form">
+                        @php
+                            $orderTypeStr = $order->order_type instanceof \App\Enums\OrderType 
+                                ? $order->order_type->value 
+                                : (string)$order->order_type;
+                            $isTakeaway = str_contains($orderTypeStr, 'takeaway');
+                        @endphp
+                        <form action="{{ 
+                            $isTakeaway
+                            ? route('admin.orders.takeaway.update', ['order' => $order->id]) 
+                            : route('admin.orders.update', ['order' => $order->id]) 
+                        }}" method="POST" id="order-form">
                             @csrf
                             @method('PUT')
                             @if($order->reservation)
@@ -80,8 +90,8 @@
                             <div class="mb-6">
                                 <label for="order_type" class="block text-sm font-medium text-gray-700">Order Type</label>
                                 <div class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                    <span>{{ ucfirst($order->order_type) }}</span>
-                                    <input type="hidden" name="order_type" value="{{ $order->order_type }}">
+                                    <span>{{ $order->getOrderTypeLabel() }}</span>
+                                    <input type="hidden" name="order_type" value="{{ $order->order_type instanceof \App\Enums\OrderType ? $order->order_type->value : $order->order_type }}">
                                 </div>
                             </div>
 
@@ -96,7 +106,13 @@
 
                             <div class="mb-6">
                                 <label for="order_time" class="block text-sm font-medium text-gray-700">Order Time</label>
-                                <input type="datetime-local" name="order_time" id="order_time" value="{{ old('order_time', $order->order_time) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <input type="datetime-local" name="order_time" id="order_time" value="{{ old('order_time', $order->order_time?->format('Y-m-d\TH:i')) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <small class="text-gray-500 mt-1 block">* Schedule at least 15 minutes in the future</small>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label for="customer_name" class="block text-sm font-medium text-gray-700">Customer Name</label>
+                                <input type="text" name="customer_name" id="customer_name" value="{{ old('customer_name', $order->customer_name) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
                             </div>
 
                             <div class="mb-6">
@@ -132,8 +148,10 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="menu-items-container">
                                     @foreach($menuItems as $item)
                                     @php
-                                        // Corrected relationship and column:
-                                        $existing = isset($order) ? $order->items->firstWhere('menu_item_id', $item->id) : null;
+                                        // Find existing order items correctly
+                                        $existing = isset($order) ? $order->orderItems->first(function($orderItem) use ($item) {
+                                            return $orderItem->menu_item_id == $item->id || $orderItem->inventory_item_id == $item->id;
+                                        }) : null;
                                     @endphp
                                     <div class="flex items-center border-b py-4">
                                         <input type="checkbox"
@@ -157,8 +175,8 @@
                                                 value="{{ $existing ? $existing->quantity : 1 }}"
                                                 class="item-qty w-12 text-center border-x border-gray-300 text-sm focus:outline-none mx-1"
                                                 data-item-id="{{ $item->id }}"
-                                                @if(!$existing) disabled @endif
-                                                @if($existing) name="items[{{ $item->id }}][quantity]" @endif>
+                                                name="items[{{ $item->id }}][quantity]"
+                                                @if(!$existing) disabled @endif>
                                             <button type="button"
                                                 class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl flex items-center justify-center rounded"
                                                 data-item-id="{{ $item->id }}"
@@ -310,6 +328,27 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the form with existing selections
+    document.querySelectorAll('.item-check').forEach(function(checkbox) {
+        const itemId = checkbox.getAttribute('data-item-id');
+        const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
+        const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
+        const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
+        
+        if (checkbox.checked) {
+            qtyInput.disabled = false;
+            plusBtn.disabled = false;
+            minusBtn.disabled = false;
+            qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
+        } else {
+            qtyInput.disabled = true;
+            plusBtn.disabled = true;
+            minusBtn.disabled = true;
+            qtyInput.removeAttribute('name');
+        }
+    });
+    
+    // Setup event handlers for checkbox changes
     document.querySelectorAll('.item-check').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
             const itemId = this.getAttribute('data-item-id');
@@ -329,6 +368,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 qtyInput.value = 1;
             }
         });
+    });
+    
+    // Handle form submission to ensure order time is valid and required fields are filled
+    document.getElementById('order-form').addEventListener('submit', function(e) {
+        const orderTimeInput = document.getElementById('order_time');
+        const orderTime = new Date(orderTimeInput.value);
+        const now = new Date();
+        
+        // For existing orders, we'll allow past dates since they might have been placed earlier
+        const isExistingOrder = {{ $order->id ? 'true' : 'false' }};
+        
+        // Only validate time for new orders or if the time was changed
+        if (!isExistingOrder && orderTime < now) {
+            e.preventDefault();
+            alert('Order time must be in the future.');
+            return false;
+        }
+        
+        // Ensure at least one item is selected
+        const checkedItems = document.querySelectorAll('.item-check:checked');
+        if (checkedItems.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one menu item.');
+            return false;
+        }
+        
+        // Ensure customer name is provided
+        const customerName = document.getElementById('customer_name').value;
+        if (!customerName.trim()) {
+            e.preventDefault();
+            alert('Please enter a customer name.');
+            document.getElementById('customer_name').focus();
+            return false;
+        }
+        
+        return true;
     });
 
     document.querySelectorAll('.item-qty').forEach(function(input) {

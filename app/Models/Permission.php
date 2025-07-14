@@ -9,10 +9,7 @@ class Permission extends Model
 {
     protected $fillable = [
         'name',
-        'slug',
-        'description',
-        'category',
-        'module_slug'
+        'guard_name',
     ];
 
     public function roles(): BelongsToMany

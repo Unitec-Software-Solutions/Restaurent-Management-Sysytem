@@ -95,7 +95,7 @@
                             </div>
                             <div class="ml-4">
                                 <h4 class="font-medium {{ in_array($order->status, ['ready', 'completed']) ? 'text-gray-900' : 'text-gray-500' }}">
-                                    Ready for {{ ucfirst(str_replace('_', ' ', $order->order_type)) }}
+                                    Ready for {{ $order->getOrderTypeLabel() }}
                                 </h4>
                                 <p class="text-sm text-gray-500">
                                     {{ $order->status === 'ready' ? 'Your order is ready!' : ($order->status === 'completed' ? 'Order completed' : 'In preparation') }}
@@ -191,7 +191,7 @@
                 <!-- Branch Info -->
                 @if($order->branch)
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">{{ ucfirst(str_replace('_', ' ', $order->order_type)) }} Location</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">{{ $order->getOrderTypeLabel() }} Location</h3>
                     <div class="space-y-2">
                         <h4 class="font-medium text-gray-900">{{ $order->branch->name }}</h4>
                         <p class="text-sm text-gray-600">{{ $order->branch->address }}</p>

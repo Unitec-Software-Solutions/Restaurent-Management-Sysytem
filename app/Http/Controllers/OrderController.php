@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 class OrderController extends Controller
@@ -161,10 +162,28 @@ class OrderController extends Controller
             // Fallback: get all active menu items if no specific branch
             $menuItems = \App\Models\MenuItem::with(['menuCategory', 'itemMaster'])
                 ->where('is_active', true)
-                ->whereHas('itemMaster', function($query) {
-                    $query->where('is_active', true);
+                ->where(function($query) {
+                    // Include KOT items (which don't need itemMaster) or Buy & Sell items with active itemMaster
+                    $query->where('type', MenuItem::TYPE_KOT)
+                          ->orWhereHas('itemMaster', function($subQuery) {
+                              $subQuery->where('is_active', true);
+                          });
                 })
                 ->get();
+        }
+
+        // Add proper item type and stock information for the view
+        foreach ($menuItems as $item) {
+            // Determine item type based on the actual MenuItem type field
+            if ($item->type === MenuItem::TYPE_BUY_SELL) {
+                $item->item_type = 'Buy & Sell';
+                // Add current stock information for Buy & Sell items
+                $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $branchId ?? 1) : 0;
+            } else {
+                // KOT items (TYPE_KOT) are always available for ordering
+                $item->item_type = 'KOT';
+                $item->current_stock = 999; // KOT items don't have stock limitations
+            }
         }
 
         // Get available stewards
@@ -330,13 +349,30 @@ class OrderController extends Controller
                 'stock_deducted' => true,
             ]);
 
-            // Generate KOT immediately
-            $order->generateKOT();
-
-            // // Send order confirmation notification
-            // $this->notificationService->sendOrderConfirmation($order);
-
-            return redirect()->route('orders.summary', $order->id)->with('success', 'Order created successfully! Stock deducted and KOT generated.');
+            // Generate KOT immediately using KotController
+            try {
+                $kotController = new \App\Http\Controllers\KotController();
+                $kotResult = $kotController->generateKot(request(), $order);
+                
+                if ($kotResult['success']) {
+                    return redirect()->route('orders.summary', $order->id)
+                        ->with('success', 'Order created successfully! Stock deducted and KOT generated.')
+                        ->with('kot_generated', true)
+                        ->with('kot_print_url', route('orders.print-kot', $order->id));
+                } else {
+                    return redirect()->route('orders.summary', $order->id)
+                        ->with('success', 'Order created successfully! Stock deducted.')
+                        ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+                }
+            } catch (\Exception $e) {
+                Log::error('KOT generation failed for Order #' . $order->id, [
+                    'error' => $e->getMessage()
+                ]);
+                
+                return redirect()->route('orders.summary', $order->id)
+                    ->with('success', 'Order created successfully! Stock deducted.')
+                    ->with('kot_error', 'KOT generation failed: ' . $e->getMessage());
+            }
         });
     }
 
@@ -526,11 +562,16 @@ class OrderController extends Controller
 
         // Add missing fields for the view
         foreach ($items as $item) {
-            // Determine item type based on associated ItemMaster
-            $item->item_type = $item->itemMaster && $item->itemMaster->is_perishable ? 'Buy & Sell' : 'KOT';
-            
-            // Add current stock information
-            $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $branches->first()?->id ?? 1) : 999;
+            // Determine item type based on the actual MenuItem type field
+            if ($item->type === MenuItem::TYPE_BUY_SELL) {
+                $item->item_type = 'Buy & Sell';
+                // Add current stock information for Buy & Sell items
+                $item->current_stock = $item->itemMaster ? $this->getCurrentStock($item->itemMaster->id, $branches->first()?->id ?? 1) : 0;
+            } else {
+                // KOT items (TYPE_KOT) are always available for ordering
+                $item->item_type = 'KOT';
+                $item->current_stock = 999; // KOT items don't have stock limitations
+            }
         }
 
         return view('orders.takeaway.create', [
@@ -712,8 +753,30 @@ class OrderController extends Controller
                 }
             }
 
-            return redirect()->route('orders.takeaway.summary', $order)
-                ->with('success', 'Order created successfully!');
+            // Generate KOT immediately using KotController
+            try {
+                $kotController = new \App\Http\Controllers\KotController();
+                $kotResult = $kotController->generateKot(request(), $order);
+                
+                if ($kotResult['success']) {
+                    return redirect()->route('orders.takeaway.summary', $order)
+                        ->with('success', 'Order created successfully! KOT generated.')
+                        ->with('kot_generated', true)
+                        ->with('kot_print_url', route('orders.print-kot', $order->id));
+                } else {
+                    return redirect()->route('orders.takeaway.summary', $order)
+                        ->with('success', 'Order created successfully!')
+                        ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+                }
+            } catch (\Exception $e) {
+                Log::error('KOT generation failed for Takeaway Order #' . $order->id, [
+                    'error' => $e->getMessage()
+                ]);
+                
+                return redirect()->route('orders.takeaway.summary', $order)
+                    ->with('success', 'Order created successfully!')
+                    ->with('kot_error', 'KOT generation failed: ' . $e->getMessage());
+            }
         });
     }
 
@@ -744,7 +807,31 @@ class OrderController extends Controller
     public function submit(Request $request, Order $order)
     {
         $order->update(['status' => 'submitted']);
-        return redirect()->route('orders.index', ['phone' => $order->customer_phone]);
+        
+        // Generate KOT for submitted orders
+        try {
+            $kotController = new \App\Http\Controllers\KotController();
+            $kotResult = $kotController->generateKot($request, $order);
+            
+            if ($kotResult['success']) {
+                return redirect()->route('orders.index', ['phone' => $order->customer_phone])
+                    ->with('success', 'Order submitted successfully! KOT generated.')
+                    ->with('kot_generated', true)
+                    ->with('kot_print_url', route('orders.print-kot', $order->id));
+            } else {
+                return redirect()->route('orders.index', ['phone' => $order->customer_phone])
+                    ->with('success', 'Order submitted successfully!')
+                    ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+            }
+        } catch (\Exception $e) {
+            Log::error('KOT generation failed for submitted Order #' . $order->id, [
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->route('orders.index', ['phone' => $order->customer_phone])
+                ->with('success', 'Order submitted successfully!')
+                ->with('kot_error', 'KOT generation failed: ' . $e->getMessage());
+        }
     }
 
     // Edit takeaway order
@@ -892,40 +979,21 @@ class OrderController extends Controller
             // Remove old items
             $order->orderItems()->delete();
             
-            $subtotal = 0;
-            $orderItems = [];
+            // Calculate subtotal and prepare items data
+            $calculation = $this->calculateSubtotal($data['items']);
+            $subtotal = $calculation['subtotal'];
+            $itemsData = $calculation['items_data'];
             
-            foreach ($data['items'] as $itemData) {
-                $menuItem = MenuItem::find($itemData['item_id']);
-                if (!$menuItem) {
-                    Log::warning('Menu item not found', ['item_id' => $itemData['item_id']]);
-                    continue;
-                }
-                
-                $quantity = (int) $itemData['quantity'];
-                $unitPrice = $menuItem->price;
-                $lineTotal = $unitPrice * $quantity;
-                $subtotal += $lineTotal;
-                
-                $orderItems[] = [
-                    'order_id' => $order->id,
-                    'menu_item_id' => $itemData['item_id'],
-                    'item_name' => $menuItem->name,
-                    'quantity' => $quantity,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $lineTotal,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
+            // Prepare order items for database insertion
+            $orderItems = $this->prepareOrderItemsForInsert($order->id, $itemsData);
             
             // Bulk insert order items
             if (!empty($orderItems)) {
                 \App\Models\OrderItem::insert($orderItems);
             }
             
-            $tax = $subtotal * 0.10;
-            $total = $subtotal + $tax;
+            // Calculate totals with tax
+            $totals = $this->calculateOrderTotals($subtotal);
             
             // Update order details
             $order->update([
@@ -933,11 +1001,11 @@ class OrderController extends Controller
                 'order_time' => Carbon::parse($data['order_time']),
                 'customer_name' => $data['customer_name'],
                 'customer_phone' => $data['customer_phone'],
-                'subtotal' => $subtotal,
-                'tax_amount' => $tax,
-                'total_amount' => $total,
-                'tax' => $tax, // For compatibility
-                'total' => $total, // For compatibility
+                'subtotal' => $totals['subtotal'],
+                'tax_amount' => $totals['tax'],
+                'total_amount' => $totals['total'],
+                'tax' => $totals['tax'], // For compatibility
+                'total' => $totals['total'], // For compatibility
                 'updated_at' => now(),
             ]);
             
@@ -946,8 +1014,8 @@ class OrderController extends Controller
             Log::info('Takeaway order updated successfully', [
                 'order_id' => $order->id,
                 'items_count' => count($orderItems),
-                'subtotal' => $subtotal,
-                'total' => $total
+                'subtotal' => $totals['subtotal'],
+                'total' => $totals['total']
             ]);
             
             return redirect()->route('orders.takeaway.summary', $order->id)
@@ -1023,13 +1091,30 @@ class OrderController extends Controller
                     'submitted_at' => now(),
                 ]);
 
-                // Generate KOT for kitchen
-                if (method_exists($order, 'generateKOT')) {
-                    $order->generateKOT();
+                // Generate KOT for kitchen using KotController
+                try {
+                    $kotController = new \App\Http\Controllers\KotController();
+                    $kotResult = $kotController->generateKot(request(), $order);
+                    
+                    if ($kotResult['success']) {
+                        return redirect()->route('orders.takeaway.summary', $order)
+                            ->with('success', 'Order confirmed successfully! Your order has been sent to the kitchen.')
+                            ->with('kot_generated', true)
+                            ->with('kot_print_url', route('orders.print-kot', $order->id));
+                    } else {
+                        return redirect()->route('orders.takeaway.summary', $order)
+                            ->with('success', 'Order confirmed successfully!')
+                            ->with('kot_error', $kotResult['message'] ?? 'KOT generation failed');
+                    }
+                } catch (\Exception $kotException) {
+                    Log::error('KOT generation failed for submitted Order #' . $order->id, [
+                        'error' => $kotException->getMessage()
+                    ]);
+                    
+                    return redirect()->route('orders.takeaway.summary', $order)
+                        ->with('success', 'Order confirmed successfully!')
+                        ->with('kot_error', 'KOT generation failed: ' . $kotException->getMessage());
                 }
-
-                return redirect()->route('orders.takeaway.summary', $order)
-                    ->with('success', 'Order confirmed successfully! Your order has been sent to the kitchen.');
 
             } catch (\Exception $e) {
                 Log::error('Order confirmation failed', [
@@ -1064,10 +1149,52 @@ class OrderController extends Controller
      */
     public function printKOT(Order $order)
     {
+        // Load necessary relationships
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+        
         // Update order to mark KOT as generated
         $order->update(['kot_generated' => true]);
         
         return view('orders.kot-print', compact('order'));
+    }
+
+    public function printKOTPDF(Order $order)
+    {
+        
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+      
+        
+        $order->update(['kot_generated' => true]);
+        
+        
+        $pdf = Pdf::loadView('orders.kot-pdf', compact('order'));
+        
+        
+        $pdf->setPaper([0, 0, 226.77, 600], 'portrait'); 
+        
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'DejaVu Sans Mono',
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/'),
+            'tempDir' => storage_path('app/temp/'),
+            'chroot' => public_path(),
+        ]);
+        
+        $filename = 'KOT-' . $order->order_number . '-' . now()->format('YmdHis') . '.pdf';
+        
+        return $pdf->download($filename);
     }
 
     /**
@@ -1182,7 +1309,7 @@ class OrderController extends Controller
                         $order->customer_name,
                         $order->customer_phone,
                         $order->branch->name ?? '',
-                        str_replace('_', ' ', $order->order_type),
+                        $order->getOrderTypeLabel(),
                         ucfirst($order->status),
                         $order->steward ? $order->steward->first_name . ' ' . $order->steward->last_name : '',
                         $order->items->count(),
@@ -1326,8 +1453,6 @@ class OrderController extends Controller
                     $stockStatus = 'out_of_stock';
                 } elseif ($currentStock <= ($item->itemMaster->reorder_level ?? 5)) {
                     $stockStatus = 'low_stock';
-                } else {
-                    $stockStatus = 'in_stock';
                 }
             }
             
@@ -1457,7 +1582,26 @@ class OrderController extends Controller
         $reservationId = $request->query('reservation_id');
         $reservation = Reservation::with(['branch', 'customer', 'orders'])->findOrFail($reservationId);
         
-        return view('orders.reservation-summary', compact('reservation'));
+        
+        if (view()->exists('reservations.summary')) {
+            return view('reservations.summary', compact('reservation'));
+        } elseif (view()->exists('reservations.show')) {
+            return view('reservations.show', compact('reservation'));
+        } else {
+            // Show a generic error page if neither view exists
+            return response()->view('errors.generic', [
+            'errorTitle' => 'Reservation Summary Not Found',
+            'errorCode' => '404',
+            'errorHeading' => 'Reservation Summary Not Available',
+            'errorMessage' => 'The reservation summary page could not be found.',
+            'headerClass' => 'bg-gradient-warning',
+            'errorIcon' => 'fas fa-map-marker-alt',
+            'mainIcon' => 'fas fa-map-marker-alt',
+            'iconBgClass' => 'bg-yellow-100',
+            'iconColor' => 'text-yellow-500',
+            'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]',
+            ], 404);
+        }
     }
 
     /**
@@ -1550,17 +1694,19 @@ class OrderController extends Controller
                     throw new \Exception("Insufficient inventory for {$menuItem->name}");
                 }
                 
+                $lineTotal = $menuItem->selling_price * $itemData['quantity'];
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $menuItem->id,
                     'item_name' => $menuItem->name,
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $menuItem->selling_price,
-                    'total_price' => $menuItem->selling_price * $itemData['quantity'],
+                    'subtotal' => $lineTotal,
+                    'total_price' => $lineTotal,
                     'inventory_item_id' => $menuItem->id,
                 ]);
                 
-                $subtotal += $orderItem->total_price;
+                $subtotal += $lineTotal;
                 
                 // Reserve inventory
                 $this->inventoryService->reserveItem($menuItem, $itemData['quantity'], $order->id);
@@ -1571,8 +1717,7 @@ class OrderController extends Controller
             $order->estimated_prep_time = $order->calculateEstimatedPrepTime();
             $order->save();
 
-            // Send order creation notification
-            $this->notificationService->sendOrderCreated($order);
+            // $this->notificationService->sendOrderCreated($order);
 
             return redirect()->route('orders.payment-selection', ['order' => $order->id])
                 ->with('success', 'Order created successfully! Please proceed with payment.');
@@ -1738,5 +1883,88 @@ class OrderController extends Controller
                 'items' => []
             ], 500);
         }
+    }
+    
+    /**
+     * Calculate subtotal for order items array
+     * 
+     * @param array $items Array of items with 'menu_item_id' and 'quantity'
+     * @return array ['subtotal' => float, 'items_data' => array]
+     */
+    protected function calculateSubtotal(array $items)
+    {
+        $subtotal = 0;
+        $itemsData = [];
+        
+        foreach ($items as $item) {
+            $menuItem = MenuItem::find($item['menu_item_id'] ?? $item['item_id']);
+            if (!$menuItem) {
+                continue;
+            }
+            
+            $quantity = (int) $item['quantity'];
+            $unitPrice = $menuItem->price;
+            $lineTotal = $unitPrice * $quantity;
+            $subtotal += $lineTotal;
+            
+            $itemsData[] = [
+                'menu_item' => $menuItem,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'line_total' => $lineTotal,
+            ];
+        }
+        
+        return [
+            'subtotal' => $subtotal,
+            'items_data' => $itemsData
+        ];
+    }
+    
+    /**
+     * Calculate order totals with tax
+     * 
+     * @param float $subtotal
+     * @param float $taxRate Default 10%
+     * @return array ['subtotal' => float, 'tax' => float, 'total' => float]
+     */
+    protected function calculateOrderTotals($subtotal, $taxRate = 0.10)
+    {
+        $tax = $subtotal * $taxRate;
+        $total = $subtotal + $tax;
+        
+        return [
+            'subtotal' => $subtotal,
+            'tax' => $tax,
+            'total' => $total
+        ];
+    }
+    
+    /**
+     * Prepare order items array for database insertion
+     * 
+     * @param int $orderId
+     * @param array $itemsData From calculateSubtotal()
+     * @return array
+     */
+    protected function prepareOrderItemsForInsert($orderId, array $itemsData)
+    {
+        $orderItems = [];
+        
+        foreach ($itemsData as $itemData) {
+            $orderItems[] = [
+                'order_id' => $orderId,
+                'menu_item_id' => $itemData['menu_item']->id,
+                'item_name' => $itemData['menu_item']->name,
+                'quantity' => $itemData['quantity'],
+                'unit_price' => $itemData['unit_price'],
+                'subtotal' => $itemData['line_total'],
+                'total_price' => $itemData['line_total'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        
+        return $orderItems;
     }
 }

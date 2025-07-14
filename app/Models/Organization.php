@@ -15,19 +15,9 @@ class Organization extends Model
     protected $fillable = [
         'name',
         'email',
-        'phone',
-        'address',
-        'contact_person',
-        'contact_person_designation',
-        'contact_person_phone',
-        'business_type',
-        'is_active',
-        'subscription_plan_id',
-        'plan_snapshot',
-        'discount_percentage',
         'activation_key',
-        'activated_at',
-        'password'
+        'subscription_plan_id',
+        'plan_name',
     ];
 
     protected $casts = [
@@ -114,9 +104,6 @@ class Organization extends Model
         return $this->hasMany(Branch::class);
     }
 
-    /**
-     * Get active branches for the organization.
-     */
     public function activeBranches()
     {
         return $this->hasMany(Branch::class)->where('is_active', true);

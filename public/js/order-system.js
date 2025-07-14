@@ -114,7 +114,7 @@ function updateAvailabilityBadge(itemId, stock = null) {
 
     let badgeHtml = '';
     
-    // TYPE_BUY_SELL = 1, TYPE_KOT = 2 as defined in MenuItem model
+    // TYPE_BUY_SELL = 1, TYPE_KOT = 3 as defined in MenuItem model
     if (itemType === 1) {
         if (currentStock > 0) {
             badgeHtml = `<span class="badge bg-success">
@@ -125,7 +125,7 @@ function updateAvailabilityBadge(itemId, stock = null) {
                 <i class="fas fa-times-circle mr-1"></i>Out of Stock
             </span>`;
         }
-    } else if (itemType === 2) {
+    } else if (itemType === 3) {
         if (isAvailable) {
             badgeHtml = `<span class="badge bg-success">
                 <i class="fas fa-check-circle mr-1"></i>Available

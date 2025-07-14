@@ -37,6 +37,47 @@
                 </div>
             </div>
 
+            <!-- KOT Alert -->
+            @if(session('kot_generated'))
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-receipt text-orange-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h3 class="text-orange-800 font-medium">KOT Generated!</h3>
+                            <p class="mt-1 text-orange-700">Kitchen Order Ticket has been generated for kitchen preparation items.</p>
+                            @if(session('kot_print_url'))
+                                <div class="mt-2 flex gap-2">
+                                    <button onclick="printKOT('{{ session('kot_print_url') }}')" 
+                                            class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
+                                        <i class="fas fa-print mr-2"></i> Print KOT
+                                    </button>
+                                    <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
+                                       class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
+                                        <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if(session('kot_error'))
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-red-800 font-medium">KOT Generation Issue</h3>
+                            <p class="mt-1 text-red-700">{{ session('kot_error') }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <!-- Order and Customer Details -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <!-- Order Details -->
@@ -203,6 +244,11 @@
     document.getElementById('print-button').addEventListener('click', function() {
         window.print();
     });
+
+    // KOT printing functionality
+    function printKOT(kotUrl) {
+        window.open(kotUrl, '_blank', 'width=800,height=600');
+    }
 
     // Add confirmation for delete action
     document.addEventListener('DOMContentLoaded', function() {

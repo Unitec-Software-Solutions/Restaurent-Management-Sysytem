@@ -606,8 +606,8 @@ function displayMenuItems(items) {
     let html = '';
     items.forEach(item => {
         // Map API fields to expected format
-        const itemType = item.type || item.item_type || 'kot';
-        const isKOTItem = itemType === 'kot';
+        const itemType = item.item_type || (item.type === 3 ? 'KOT' : 'Buy & Sell');
+        const isKOTItem = itemType === 'KOT';
         const isDisabled = !isKOTItem && !item.can_order;
         
         const stockDisplay = isKOTItem

@@ -144,11 +144,16 @@ Route::middleware(['web'])->group(function () {
 
         // Stock checking
         Route::post('/check-stock', [OrderController::class, 'checkStock'])->name('check-stock');
-        Route::post('/{order}/print-kot', [OrderController::class, 'printKOT'])->name('print-kot');
+        Route::get('/{order}/print-kot', [OrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
+        Route::get('/{order}/print-kot-pdf', [OrderController::class, 'printKOTPDF'])->whereNumber('order')->name('print-kot-pdf');
         Route::post('/{order}/print-bill', [OrderController::class, 'printBill'])->name('print-bill');
         Route::post('/{order}/mark-preparing', [OrderController::class, 'markAsPreparing'])->name('mark-preparing');
         Route::post('/{order}/mark-ready', [OrderController::class, 'markAsReady'])->name('mark-ready');
         Route::post('/{order}/complete', [OrderController::class, 'completeOrder'])->name('complete');
+        
+        // Enhanced KOT functionality
+        Route::get('/{order}/check-and-print-kot', [OrderController::class, 'apiCheckAndPrintKOT'])->whereNumber('order')->name('check-and-print-kot');
+        Route::get('/{order}/print-kot-direct', [OrderController::class, 'printKOTForOrder'])->whereNumber('order')->name('print-kot-direct');
 
     });
 });
@@ -313,8 +318,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('/{order}', [AdminOrderController::class, 'destroy'])->whereNumber('order')->name('destroy');
             
             // KOT and Printing routes
-            Route::post('/{order}/print-kot', [AdminOrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
+            Route::get('/{order}/print-kot', [AdminOrderController::class, 'printKOT'])->whereNumber('order')->name('print-kot');
+            Route::get('/{order}/print-kot-pdf', [AdminOrderController::class, 'printKOTPDF'])->whereNumber('order')->name('print-kot-pdf');
             Route::post('/{order}/print-bill', [AdminOrderController::class, 'printBill'])->whereNumber('order')->name('print-bill');
+            
+            // Enhanced KOT functionality
+            Route::get('/{order}/check-and-print-kot', [AdminOrderController::class, 'apiCheckAndPrintKOT'])->whereNumber('order')->name('check-and-print-kot');
+            Route::post('/{order}/generate-kot', [KotController::class, 'generateKot'])->whereNumber('order')->name('generate-kot');
             
             // AJAX endpoints for KOT and status management
             Route::get('/{order}/check-kot', [AdminOrderController::class, 'checkKotItems'])->whereNumber('order')->name('check-kot');
@@ -1041,37 +1051,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/management', [App\Http\Controllers\DashboardController::class, 'management'])->name('dashboard.management');
 });
 
-// Debug route for testing reservation form
-Route::get('/debug/reservation', function () {
-    return view('debug_reservation');
-})->name('debug.reservation');
 
-// Test route for branch loading
-Route::get('/test/branch-loading', function () {
-    return view('test_branch_loading');
-})->name('test.branch-loading');
 
-// Debug route for branch loading
-Route::get('/debug/branch-loading', function () {
-    // Get organizations for testing
-    $organizations = App\Models\Organization::where('is_active', true)
-        ->select('id', 'name', 'trading_name')
-        ->orderBy('name')
-        ->get()
-        ->map(function($org) {
-            return [
-                'id' => $org->id,
-                'name' => $org->trading_name ?: $org->name
-            ];
-        });
 
-    return view('debug_reservation_branch_loading', compact('organizations'));
-})->name('debug.branch-loading');
 
-// Simple branch test route
-Route::get('/test/simple-branch', function () {
-    return view('simple_branch_test');
-})->name('test.simple-branch');
+
 
 // Include reservation workflow routes
 require __DIR__.'/reservation_workflow.php';
@@ -1082,3 +1066,6 @@ require __DIR__.'/groups/public.php';
 // API route for getting menu items from active menus
 Route::get('/api/menu-items/branch/{branch}/active', [OrderController::class, 'getMenuItemsFromActiveMenus'])->name('api.menu-items.active');
 
+Route::get('admin/kots/{kot}/print', [\App\Http\Controllers\KotController::class, 'print'])
+    ->name('admin.kots.print')
+    ->middleware(['auth:admin']);

@@ -13,28 +13,12 @@ class Reservation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'phone',
-        'customer_phone_fk',
-        'email',
-        'type',
-        'table_size',
-        'date',
-        'start_time',
-        'end_time',
-        'number_of_people',
-        'comments',
-        'reservation_fee',
-        'cancellation_fee',
-        'status',
+        'organization_id',
         'branch_id',
         'user_id',
-        'steward_id',
-        'check_in_time',
-        'check_out_time',
-        'send_notification',
-        'created_by_admin_id', 
-        'assigned_table_ids', 
+        'reservation_time',
+        'guest_count',
+        'status',
     ];
 
     protected $casts = [
@@ -401,6 +385,11 @@ class Reservation extends Model
         $this->save();
 
         return $selectedTables;
+    }
+
+    public function table()
+    {
+        return $this->belongsTo(Table::class, 'table_id');
     }
 }
 

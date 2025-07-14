@@ -152,18 +152,6 @@
                             <span class="text-xs text-gray-500 italic px-3 py-1 block">Individual food & drink items</span>
                         </li>
                         <li class="submenu-divider"></li>
-                        <li><a href="{{ route('admin.menu-items.create') }}" class="submenu-link">
-                            <i class="fas fa-plus text-indigo-500 mr-2"></i>Add Menu Item
-                            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full ml-auto">Single</span>
-                        </a></li>
-                        <li><a href="{{ route('admin.menu-items.create-kot') }}" class="submenu-link">
-                            <i class="fas fa-warehouse text-orange-500 mr-2"></i>Bulk Add from Inventory
-                            <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full ml-auto">Bulk</span>
-                        </a></li>
-                        <li class="submenu-note">
-                            <span class="text-xs text-gray-500 italic px-3 py-1 block">Auto-detects KOT vs Buy & Sell</span>
-                        </li>
-                        <li class="submenu-divider"></li>
                         <li><a href="{{ route('admin.menu-categories.index') }}" class="submenu-link">
                             <i class="fas fa-tags text-green-500 mr-2"></i>Item Categories
                         </a></li>

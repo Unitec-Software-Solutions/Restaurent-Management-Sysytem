@@ -38,11 +38,18 @@ class OrderController extends Controller
     }
 
     /**
-     * Show reservations related to orders
+     * Show the reservation orders page (reuse order blades)
      */
     public function reservations()
     {
-        return view('admin.orders.reservations');
+        // You can pass the same data as for index, or filter for reservation orders
+        $orders = $this->getReservationOrders(); // Implement this method as needed
+        $branches = $this->getBranches(); // Implement as needed
+        // Paginate the orders for compatibility with the view
+        if ($orders instanceof \Illuminate\Database\Eloquent\Collection) {
+            $orders = $orders->paginate(20);
+        }
+        return view('admin.orders.index', compact('orders', 'branches'));
     }
 
     /**
@@ -120,14 +127,20 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Get branch to determine organization_id
+            $branch = Branch::findOrFail($validated['branch_id']);
+
             // Create the order
             $order = Order::create([
                 'order_number' => 'TO' . str_pad(Order::count() + 1, 6, '0', STR_PAD_LEFT),
                 'order_type' => 'takeaway',
                 'branch_id' => $validated['branch_id'],
+                'organization_id' => $branch->organization_id,
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
+                'customer_email' => null,
                 'pickup_time' => $validated['pickup_time'],
+                'order_date' => now(),
                 'subtotal' => $validated['total_amount'] - ($validated['tax_amount'] ?? 0) + ($validated['discount_amount'] ?? 0),
                 'discount_amount' => $validated['discount_amount'] ?? 0,
                 'tax_amount' => $validated['tax_amount'] ?? 0,
@@ -137,6 +150,7 @@ class OrderController extends Controller
                 'order_status' => 'confirmed',
                 'notes' => $validated['notes'],
                 'created_by' => Auth::id(),
+                'placed_by_admin' => true,
                 'created_at' => now(),
             ]);
 
@@ -282,5 +296,32 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to load orders: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get reservation orders for the current admin (simple version)
+     */
+    protected function getReservationOrders()
+    {
+        // You can filter by order_type or join with reservations as needed
+        return \App\Models\Order::whereNotNull('reservation_id')->latest()->get();
+    }
+
+    /**
+     * Get all branches for the current admin's organization (or all if super admin)
+     */
+    protected function getBranches()
+    {
+        $admin = auth('admin')->user();
+        if ($admin && $admin->is_super_admin) {
+            return \App\Models\Branch::where('is_active', true)->get();
+        } elseif ($admin && $admin->organization_id) {
+            return \App\Models\Branch::where('organization_id', $admin->organization_id)
+                ->where('is_active', true)->get();
+        } elseif ($admin && $admin->branch_id) {
+            return \App\Models\Branch::where('id', $admin->branch_id)
+                ->where('is_active', true)->get();
+        }
+        return collect();
     }
 }

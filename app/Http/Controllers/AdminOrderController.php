@@ -10,6 +10,7 @@ use App\Models\ItemMaster;
 use App\Models\OrderItem;
 use App\Models\Menu;
 use App\Models\MenuItem;
+use App\Models\Kot;
 use App\Traits\Exportable;
 use App\Enums\OrderType;
 use App\Services\NotificationService;
@@ -17,6 +18,7 @@ use App\Services\OrderNumberService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\MenuSafetyService;
 use App\Services\EnhancedOrderService;
 use App\Services\EnhancedMenuSchedulingService;
@@ -92,6 +94,63 @@ class AdminOrderController extends Controller
     // Edit order (admin)
     public function edit(Order $order)
     {
+        $admin = auth('admin')->user();
+        
+        // Check permissions
+        if (!$admin->is_super_admin) {
+            if ($admin->branch_id && $order->branch_id !== $admin->branch_id) {
+                return redirect()->route('admin.orders.index')
+                    ->with('error', 'Access denied to this order');
+            } elseif ($admin->organization_id && $order->branch && $order->branch->organization_id !== $admin->organization_id) {
+                return redirect()->route('admin.orders.index')
+                    ->with('error', 'Access denied to this order');
+            }
+        }
+        
+        // Load relationships
+        $order->load(['orderItems.menuItem', 'branch']);
+
+        // Get branches for admin with fallback
+        $branches = $this->getAdminAccessibleBranches($admin);
+        if (!$branches || $branches->isEmpty()) {
+            $branches = collect([]); // Empty collection as fallback
+        }
+
+        // Load the active menu for the order's branch
+        $activeMenu = null;
+        $menuItems = collect([]);
+        if ($order->branch_id) {
+            $activeMenu = \App\Models\Menu::getActiveMenuForBranch($order->branch_id);
+            if ($activeMenu) {
+                // Only available menu items for this menu
+                $menuItems = $activeMenu->availableMenuItems()->with('itemMaster')->get();
+            }
+        }
+
+        // Fallback: if no active menu, show all active menu items for org/branch
+        if ($menuItems->isEmpty()) {
+            $menuItems = \App\Models\ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
+                ->where('is_menu_item', true)
+                ->where('is_active', true)
+                ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                    $q->where('organization_id', $admin->organization_id);
+                })
+                ->get();
+        }
+
+        // Add stock information for each menu item
+        foreach ($menuItems as $item) {
+            $item->current_stock = \App\Models\ItemTransaction::stockOnHand($item->id, $order->branch_id);
+            $item->is_low_stock = $item->current_stock <= ($item->reorder_level ?? 10);
+        }
+
+        // Get categories
+        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->active()
+            ->get();
+
         $statusOptions = [
             'submitted' => 'Submitted',
             'preparing' => 'Preparing',
@@ -99,23 +158,106 @@ class AdminOrderController extends Controller
             'completed' => 'Completed',
             'cancelled' => 'Cancelled'
         ];
-        return view('admin.orders.edit', compact('order', 'statusOptions'));
+
+        return view('admin.orders.edit', compact('order', 'statusOptions', 'branches', 'menuItems', 'categories', 'activeMenu'));
     }
 
     // Update order status (admin)
     public function update(Request $request, Order $order)
     {
+        // Custom validation rules for order time
+        $orderTimeRule = $order->id ? 'required|date|after_or_equal:now' : 'required|date|after_or_equal:now';
+        
         $validated = $request->validate([
             'status' => 'required|in:submitted,preparing,ready,completed,cancelled',
             'order_type' => 'required|string',
             'branch_id' => 'required|exists:branches,id',
-            'order_time' => 'required|date',
-            'customer_phone' => 'required|string|min:10|max:15'
+            'order_time' => $orderTimeRule,
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|min:10|max:15',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1'
         ]);
 
-        $order->update($validated);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.orders.index')->with('success', 'Order updated successfully!');
+            // Update the order basic information
+            $order->update([
+                'status' => $validated['status'],
+                'order_type' => $validated['order_type'],
+                'branch_id' => $validated['branch_id'],
+                'order_time' => $validated['order_time'],
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone']
+            ]);
+
+            // Process order items if present in the request
+            if ($request->has('items') && is_array($request->items)) {
+                // Extract selected items (only checked checkboxes)
+                $selectedItems = [];
+                foreach ($request->items as $itemId => $itemData) {
+                    if (isset($itemData['item_id'])) {
+                        $selectedItems[$itemId] = [
+                            'item_id' => $itemData['item_id'],
+                            'quantity' => $itemData['quantity'] ?? 1
+                        ];
+                    }
+                }
+                
+                // Log items for debugging
+                Log::debug('Selected items for order #' . $order->id, [
+                    'items' => $selectedItems,
+                    'raw' => $request->items
+                ]);
+
+                if (!empty($selectedItems)) {
+                    // Delete existing order items
+                    $order->orderItems()->delete();
+                    
+                    // Create new order items
+                    $subtotal = 0;
+                    foreach ($selectedItems as $itemData) {
+                        $menuItem = \App\Models\ItemMaster::find($itemData['item_id']);
+                        if (!$menuItem) continue;
+                        
+                        $lineTotal = $menuItem->selling_price * $itemData['quantity'];
+                        $subtotal += $lineTotal;
+                        
+                        \App\Models\OrderItem::create([
+                            'order_id' => $order->id,
+                            'menu_item_id' => $itemData['item_id'],
+                            'inventory_item_id' => $itemData['item_id'],
+                            'quantity' => $itemData['quantity'],
+                            'unit_price' => $menuItem->selling_price,
+                            'subtotal' => $lineTotal,
+                            'total_price' => $lineTotal
+                        ]);
+                    }
+                    
+                    // Update order totals
+                    $tax = $subtotal * 0.10; // 10% tax
+                    $order->update([
+                        'subtotal' => $subtotal,
+                        'tax' => $tax,
+                        'total' => $subtotal + $tax
+                    ]);
+                }
+            }
+
+            DB::commit();
+            
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', 'Order updated successfully!');
+        
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Order update failed: ' . $e->getMessage());
+            
+            return back()->withInput()
+                ->with('error', 'Failed to update order: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -215,13 +357,32 @@ class AdminOrderController extends Controller
         ]);
 
         // Create order with reservation data
+        $admin = auth('admin')->user();
+        
+        // Determine organization_id based on admin type
+        $organizationId = null;
+        if ($admin->is_super_admin) {
+            // For super admin, get organization_id from the reservation's branch
+            $branch = Branch::findOrFail($reservation->branch_id);
+            $organizationId = $branch->organization_id;
+        } else {
+            // For regular admins, use their organization_id
+            $organizationId = $admin->organization_id;
+        }
+        
         $order = Order::create([
             'reservation_id' => $reservation->id,
             'branch_id' => $reservation->branch_id,
+            'organization_id' => $organizationId,
             'customer_name' => $reservation->name,
             'customer_phone' => $reservation->phone,
+            'customer_email' => null,
             'order_type' => 'dine_in_admin',
             'status' => 'active',
+            'subtotal' => 0,
+            'created_by' => $admin->id,
+            'placed_by_admin' => true,
+            'order_date' => now(),
         ]);
 
         // Debugging: Log created order
@@ -244,14 +405,15 @@ class AdminOrderController extends Controller
                 'inventory_item_id' => $item['item_id'], 
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->selling_price,
+                'subtotal' => $lineTotal,
                 'total_price' => $lineTotal,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
-        });
+        })->toArray();
         
-        OrderItem::insert($orderItems->toArray());
-        $subtotal = $orderItems->sum('total_price');
+        OrderItem::insert($orderItems);
+        $subtotal = collect($orderItems)->sum('total_price');
 
         // Calculate totals
         $tax = $subtotal * 0.10;
@@ -359,12 +521,23 @@ class AdminOrderController extends Controller
 
             $admin = auth('admin')->user();
 
+            // Determine organization_id based on admin type
+            $organizationId = null;
+            if ($admin->is_super_admin) {
+                // For super admin, get organization_id from the selected branch
+                $branch = Branch::findOrFail($validated['branch_id']);
+                $organizationId = $branch->organization_id;
+            } else {
+                // For regular admins, use their organization_id
+                $organizationId = $admin->organization_id;
+            }
+
             // Find or create customer by phone
             $customer = Customer::findByPhone($validated['customer_phone']);
             if (!$customer) {
                 $customer = Customer::createFromPhone($validated['customer_phone'], [
                     'name' => $validated['customer_name'] ?? 'Admin Customer',
-                    'email' => $validated['customer_email'],
+                    'email' => $validated['customer_email'] ?? null,
                     'preferred_contact' => $validated['preferred_contact'] ?? 'email',
                 ]);
             } else {
@@ -402,9 +575,9 @@ class AdminOrderController extends Controller
                 'customer_name' => $customer->name,
                 'customer_phone' => $customer->phone,
                 'customer_phone_fk' => $customer->phone,
-                'customer_email' => $customer->email,
+                'customer_email' => $customer->email ?? null,
                 'branch_id' => $validated['branch_id'],
-                'organization_id' => $admin->organization_id,
+                'organization_id' => $organizationId,
                 'reservation_id' => $reservation?->id,
                 'order_type' => $orderType,
                 'order_time' => $validated['order_time'] ?? now(),
@@ -413,6 +586,7 @@ class AdminOrderController extends Controller
                 'created_by' => $admin->id,
                 'placed_by_admin' => true,
                 'order_date' => now(),
+                'subtotal' => 0,
                 'total_amount' => 0
             ]);
 
@@ -447,6 +621,23 @@ class AdminOrderController extends Controller
 
             DB::commit();
 
+            // Check and print KOT if order has KOT items
+            $kotResult = $this->checkAndPrintKOT($order, true);
+            
+            if ($kotResult['success'] && $kotResult['has_kot_items']) {
+                // If KOT was generated successfully, include the print URL in success message
+                return redirect()->route('admin.orders.show', $order)
+                    ->with('success', 'Order created successfully!')
+                    ->with('kot_print_url', $kotResult['print_url'] ?? null)
+                    ->with('kot_generated', true);
+            } else if ($kotResult['has_kot_items'] && !$kotResult['success']) {
+                // KOT items exist but generation failed, still proceed but show warning
+                return redirect()->route('admin.orders.show', $order)
+                    ->with('warning', 'Order created successfully, but KOT generation failed: ' . $kotResult['message'])
+                    ->with('kot_error', $kotResult['message']);
+            }
+            
+            // No KOT items or KOT already exists, proceed normally
             return redirect()->route('admin.orders.show', $order)
                 ->with('success', 'Order created successfully!');
 
@@ -569,12 +760,12 @@ class AdminOrderController extends Controller
 
         $branches = Branch::all();
         $menuItems = ItemMaster::where('is_menu_item', true)->get();
-        $statusOptions = [
-            'submitted' => 'Submitted',  
-            'preparing' => 'Preparing',
-            'ready' => 'Ready',
-            'completed' => 'Completed',
-            'cancelled' => 'Cancelled'
+$statusOptions = [
+    'submitted' => 'Submitted',  
+    'preparing' => 'Preparing',
+    'ready' => 'Ready',
+    'completed' => 'Completed',
+    'cancelled' => 'Cancelled'
 ];
 
         return view('admin.orders.edit', compact('order', 'reservation', 'branches', 'menuItems', 'statusOptions'));
@@ -605,6 +796,7 @@ class AdminOrderController extends Controller
                 'inventory_item_id' => $item['item_id'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $menuItem->selling_price,
+                'subtotal' => $lineTotal,
                 'total_price' => $lineTotal,
             ]);
         }
@@ -774,6 +966,23 @@ class AdminOrderController extends Controller
                 }
             }
 
+            // Check and print KOT if order has KOT items
+            $kotResult = $this->checkAndPrintKOT($order, true);
+            
+            if ($kotResult['success'] && $kotResult['has_kot_items']) {
+                // If KOT was generated successfully, include the print URL in success message
+                return redirect()->route('admin.orders.takeaway.summary', $order)
+                    ->with('success', 'Takeaway order created successfully!')
+                    ->with('kot_print_url', $kotResult['print_url'] ?? null)
+                    ->with('kot_generated', true);
+            } else if ($kotResult['has_kot_items'] && !$kotResult['success']) {
+                // KOT items exist but generation failed, still proceed but show warning
+                return redirect()->route('admin.orders.takeaway.summary', $order)
+                    ->with('warning', 'Takeaway order created successfully, but KOT generation failed: ' . $kotResult['message'])
+                    ->with('kot_error', $kotResult['message']);
+            }
+            
+            // No KOT items or KOT already exists, proceed normally
             return redirect()->route('admin.orders.takeaway.summary', $order)
                 ->with('success', 'Takeaway order created successfully!');
         });
@@ -821,12 +1030,21 @@ class AdminOrderController extends Controller
      */
     public function destroyTakeaway(Order $order)
     {
-        $order->orderItems()->delete();
-        $order->delete();
+        try {
+            if ($order->status === 'completed') {
+                return back()->with('error', 'Cannot delete completed takeaway orders.');
+            }
+            
+            $order->orderItems()->delete();
+            $order->delete();
 
-        return redirect()->route('admin.orders.takeaway.index')
-     
-        ->with('success', 'Takeaway order deleted successfully.');
+            return redirect()->route('admin.orders.index')
+                ->with('success', 'Takeaway order deleted successfully!');
+        } catch (\Exception $e) {
+            Log::error('Takeaway order deletion failed: ' . $e->getMessage());
+            
+            return back()->with('error', 'Failed to delete takeaway order.');
+        }
     }
 
        public function adminIndex()
@@ -849,7 +1067,7 @@ class AdminOrderController extends Controller
     public function getAvailableMenuItemsLegacy(Request $request)
     {
         $branchId = $request->get('branch_id');
-        $menuType = $request->get('menu_type', null); // optional filter by menu type
+        // $menuType = $request->get('menu_type', null); // optional filter by menu type
         
         if (!$branchId) {
             return response()->json(['error' => 'Branch ID is required'], 400);
@@ -965,17 +1183,36 @@ class AdminOrderController extends Controller
         try {
             DB::beginTransaction();
 
+            $admin = auth('admin')->user();
+            
+            // Determine organization_id based on admin type
+            $organizationId = null;
+            if ($admin->is_super_admin) {
+                // For super admin, get organization_id from the selected branch
+                $branch = Branch::findOrFail($validated['branch_id']);
+                $organizationId = $branch->organization_id;
+            } else {
+                // For regular admins, use their organization_id
+                $organizationId = $admin->organization_id;
+            }
+
             // Create the order
             $order = Order::create([
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
+                'customer_email' => null,
                 'branch_id' => $validated['branch_id'],
+                'organization_id' => $organizationId,
                 'menu_id' => $validated['menu_id'], 
-                'order_type' => $validated['order_type'],
+                'order_type' => $validated['order_type'] ?? 'dine_in',
                 'reservation_id' => $validated['reservation_id'] ?? null,
                 'status' => 'pending',
-                'special_instructions' => $validated['special_instructions'],
+                'special_instructions' => $validated['special_instructions'] ?? null,
                 'order_time' => now(),
+                'order_date' => now(),
+                'subtotal' => 0,
+                'created_by' => $admin->id,
+                'placed_by_admin' => true,
             ]);
 
             // Create order items
@@ -995,6 +1232,7 @@ class AdminOrderController extends Controller
                     'menu_item_id' => $itemData['menu_item_id'],
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $menuItem->price,
+                    'subtotal' => $lineTotal,
                     'total_price' => $lineTotal,
                 ]);
 
@@ -1272,8 +1510,8 @@ class AdminOrderController extends Controller
                 ]);
             }
 
-            // Calculate totals
-            $tax = $subtotal * 0.10; // 10% tax
+            // Calculate tax and total before updating order
+            $tax = $subtotal * 0.10;
             $total = $subtotal + $tax;
 
             // Update order
@@ -1283,7 +1521,6 @@ class AdminOrderController extends Controller
                 'customer_phone' => $validated['customer_phone'],
                 'order_time' => $validated['order_time'],
                 'special_instructions' => $validated['special_instructions'],
-               
                 'tax' => $tax,
                 'total' => $total,
                 'stock_deducted' => true,
@@ -1338,10 +1575,56 @@ class AdminOrderController extends Controller
      */
     public function printKOT(Order $order)
     {
+        // Load necessary relationships
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+        
         // Update order to mark KOT as generated
         $order->update(['kot_generated' => true]);
         
         return view('orders.kot-print', compact('order'));
+    }
+
+    /**
+     * Generate and download KOT as PDF (Admin)
+     */
+    public function printKOTPDF(Order $order)
+    {
+        // Load necessary relationships
+        $order->load([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ]);
+        
+        // Update order to mark KOT as generated
+        $order->update(['kot_generated' => true]);
+        
+        // Generate PDF using DOMPDF
+        $pdf = Pdf::loadView('admin.orders.kot-pdf', compact('order'));
+        
+        // Set paper size for thermal printer (80mm width)
+        $pdf->setPaper([0, 0, 226.77, 600], 'portrait'); // 80mm x ~210mm in points
+        
+        // Set PDF options for better printing
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'DejaVu Sans Mono',
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/'),
+            'tempDir' => storage_path('app/temp/'),
+            'chroot' => public_path(),
+        ]);
+        
+        $filename = 'KOT-' . $order->order_number . '-' . now()->format('YmdHis') . '.pdf';
+        
+        return $pdf->download($filename);
     }
 
     /**
@@ -1357,6 +1640,99 @@ class AdminOrderController extends Controller
         ]);
         
         return view('orders.bill-print', compact('order'));
+    }
+
+    /**
+     * Check and print KOT if order has KOT items (Admin version)
+     * This function checks if an order has KOT items and automatically prints the KOT
+     */
+    public function checkAndPrintKOT(Order $order, $autoPrint = false)
+    {
+        try {
+            // Check if order has KOT items
+            if (!$order->hasKotItems()) {
+                return [
+                    'success' => false,
+                    'message' => 'No items in this order require kitchen preparation (KOT)',
+                    'has_kot_items' => false
+                ];
+            }
+
+            // Check if KOT already generated
+            $existingKot = Kot::where('order_id', $order->id)->first();
+            if ($existingKot) {
+                return [
+                    'success' => true,
+                    'message' => 'KOT already exists for this order',
+                    'has_kot_items' => true,
+                    'kot_already_exists' => true,
+                    'kot_id' => $existingKot->id,
+                    // 'print_url' => route('admin.kots.print', $existingKot->id)
+                    'print_url' => route('admin.orders.print-kot', $existingKot->id)
+                ];
+            }
+
+            // Generate KOT using KotController
+            $kotController = new \App\Http\Controllers\KotController();
+            $kotResponse = $kotController->generateKot(request(), $order);
+            
+            if ($kotResponse instanceof \Illuminate\Http\JsonResponse) {
+                $kotData = $kotResponse->getData(true);
+                
+                if ($kotData['success']) {
+                    $result = [
+                        'success' => true,
+                        'message' => 'KOT generated successfully',
+                        'has_kot_items' => true,
+                        'kot_generated' => true,
+                        'kot_id' => $kotData['kot']['id'],
+                        'print_url' => $kotData['print_url'],
+                        'items_count' => $kotData['items_count']
+                    ];
+                    
+                    // If auto-print is enabled, return print URL
+                    if ($autoPrint) {
+                        $result['auto_print_url'] = $kotData['print_url'];
+                    }
+                    
+                    Log::info('Admin KOT check and print completed', [
+                        'order_id' => $order->id,
+                        'kot_id' => $kotData['kot']['id'],
+                        'auto_print' => $autoPrint,
+                        'admin_id' => auth('admin')->id()
+                    ]);
+                    
+                    return $result;
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => $kotData['message'] ?? 'Failed to generate KOT',
+                        'has_kot_items' => true,
+                        'error' => $kotData['message'] ?? 'Unknown error'
+                    ];
+                }
+            }
+            
+            return [
+                'success' => false,
+                'message' => 'Unexpected response from KOT generation',
+                'has_kot_items' => true
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Error in Admin checkAndPrintKOT', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'admin_id' => auth('admin')->id()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Error processing KOT: ' . $e->getMessage(),
+                'has_kot_items' => $order->hasKotItems()
+            ];
+        }
     }
 
     /**
@@ -1771,7 +2147,7 @@ class AdminOrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update availability'
-            ], 500);
+            ],  500);
         }
     }
 
@@ -1892,12 +2268,10 @@ class AdminOrderController extends Controller
             }
             
             DB::transaction(function () use ($order) {
-                // Restore stock for cancelled order
-                foreach ($order->orderItems as $orderItem) {
-                    // Logic to restore stock would go here
-                    // This depends on your stock management system
-                }
+                // Logic to restore stock would go here
+                // This depends on your stock management system
                 
+                $order->update(['status' => 'cancelled']);
                 $order->update(['status' => 'cancelled']);
             });
             
@@ -1918,20 +2292,15 @@ class AdminOrderController extends Controller
      * Helper method to check menu item stock
      */
     private function checkMenuItemStock($menuItem, $quantity, $branchId)
+
     {
-        // This is a simplified stock check - you may need to implement
-        // more complex logic based on your recipe/ingredient system
-        
-        // For now, assume menu items are always available
-        // In a real system, you'd check against ingredient stock
-        
+        // Parameters are currently unused; this is a stub for future stock logic.
         return [
             'available' => true,
             'available_quantity' => 999,
             'message' => 'Item available'
         ];
     }
-
     /**
      * Get branches for organization (API endpoint for admin orders)
      */

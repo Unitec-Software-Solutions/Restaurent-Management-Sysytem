@@ -25,4 +25,4 @@ class NotificationProvider extends Model
     {
         $this->attributes['credentials'] = json_encode($value);
     }
-} 
+}

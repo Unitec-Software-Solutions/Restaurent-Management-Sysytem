@@ -11,6 +11,7 @@ class Table extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'organization_id',
         'branch_id',
         'number',
         'capacity',

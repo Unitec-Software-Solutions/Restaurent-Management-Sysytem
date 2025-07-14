@@ -121,7 +121,7 @@
             </div>
             <div class="flex justify-between mb-1">
                 <span class="font-bold">Order Type:</span>
-                <span class="capitalize">{{ $order->order_type ? $order->order_type->getLabel() : 'Unknown' }}</span>
+                <span class="capitalize">{{ $order->getOrderTypeLabel() }}</span>
             </div>
             @if($order->steward)
             <div class="flex justify-between mb-1">
@@ -144,10 +144,10 @@
         <!-- Order Items -->
         <div class="kot-items">
             <div class="font-bold mb-2 text-center">ITEMS TO PREPARE</div>
-            @foreach($order->items as $item)
+            @forelse($order->orderItems as $item)
             <div class="kot-item">
                 <div>
-                    <div class="font-bold">{{ $item->menuItem->name }}</div>
+                    <div class="font-bold">{{ $item->menuItem->name ?? $item->item_name }}</div>
                     @if($item->special_instructions)
                         <div class="text-xs italic text-gray-600">Note: {{ $item->special_instructions }}</div>
                     @endif
@@ -159,7 +159,11 @@
             @if(!$loop->last)
                 <div class="border-b border-dotted border-gray-300 my-1"></div>
             @endif
-            @endforeach
+            @empty
+            <div class="kot-item">
+                <div class="text-center">No items found to prepare</div>
+            </div>
+            @endforelse
         </div>
 
         <div class="dotted-line"></div>

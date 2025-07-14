@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test KOT Item Type Detection</title>
+</head>
+<body>
+    <h2>Testing KOT Item Detection Logic</h2>
+    <div id="results"></div>
+    
+    <script>
+        // Test data similar to API response
+        const testItems = [
+            {
+                id: 1,
+                name: "Cappuccino",
+                type: 3,
+                item_type: "KOT",
+                can_order: true,
+                current_stock: 0
+            },
+            {
+                id: 2,
+                name: "Test Buy Sell Item",
+                type: 1,
+                item_type: "Buy & Sell",
+                can_order: true,
+                current_stock: 5
+            }
+        ];
+        
+        let html = '<h3>Test Results:</h3>';
+        
+        testItems.forEach(item => {
+            // Fixed logic
+            const itemType = item.item_type || (item.type === 3 ? 'KOT' : 'Buy & Sell');
+            const isKOTItem = itemType === 'KOT';
+            
+            const stockDisplay = isKOTItem
+                ? '<div style="color: green;">✓ Always Available (KOT)</div>'
+                : (item.can_order && item.current_stock > 0)
+                    ? `<div style="color: green;">In Stock (${item.current_stock})</div>`
+                    : '<div style="color: red;">❌ Out of Stock</div>';
+            
+            html += `
+                <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                    <h4>${item.name}</h4>
+                    <p>Type: ${item.type} | Item Type: ${item.item_type}</p>
+                    <p>Detected as: ${itemType} | Is KOT: ${isKOTItem}</p>
+                    <p>Status: ${stockDisplay}</p>
+                </div>
+            `;
+        });
+        
+        document.getElementById('results').innerHTML = html;
+    </script>
+</body>
+</html>
