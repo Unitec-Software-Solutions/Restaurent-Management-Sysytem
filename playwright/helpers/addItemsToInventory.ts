@@ -44,13 +44,7 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Ite
     await page.getByPlaceholder('Minimum stock level').fill('3');
     await page.locator('select[name="items[0][unit_of_measurement]"]').selectOption(item.unit);
     // Keep track of the current category id between test runs
-    const path = './category-counter.txt';
-    let categoryId = parseInt(item.category, 10);
-    if (fs.existsSync(path)) {
-      const last = parseInt(fs.readFileSync(path, 'utf-8'), 10);
-      categoryId = last >= 3 ? 1 : last + 1;
-    }
-    fs.writeFileSync(path, categoryId.toString());
+    let categoryId = (i % 3) + 1; // Cycle through 1, 2, 3
     await page.locator('select[name="items[0][item_category_id]"]').selectOption(categoryId.toString());
     await page.locator('input[name="items[0][buying_price]"]').fill(item.buyingPrice);
     await page.locator('input[name="items[0][selling_price]"]').fill(item.sellingPrice);
