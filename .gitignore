@@ -42,3 +42,5 @@ node_modules/
 
 playwright/.auth
 category-counter.txt
+
+laravel.log
