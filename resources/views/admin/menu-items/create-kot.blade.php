@@ -55,8 +55,8 @@
         @csrf
         @php
             $defaultMenuCategoryId = request('category_id');
-            $defaultOrgId = request('organization_id');
-            $defaultBranchId = request('branch_id');
+            $defaultOrgId = request('organization_id') ?? (auth('admin')->user()->is_super_admin ? null : auth('admin')->user()->organization_id);
+            $defaultBranchId = request('branch_id') ?? (auth('admin')->user()->is_super_admin ? null : auth('admin')->user()->branch_id);
         @endphp
         @if($defaultOrgId)
             <input type="hidden" name="organization_id" value="{{ $defaultOrgId }}">
