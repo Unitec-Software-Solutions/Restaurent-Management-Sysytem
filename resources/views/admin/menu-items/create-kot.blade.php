@@ -262,7 +262,7 @@
 
                 <div>
                     <label for="preparation_time" class="block text-sm font-medium text-gray-700 mb-1">
-<<<<<<< HEAD
+
 
                         Default Preparation Time (minutes)
                     </label>
@@ -285,9 +285,8 @@
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
                         Description
 
-=======
->>>>>>> f6ec61a (:feat: add options to create KOT items and link to item master when no menu items exist)
-                        Preparation Time (minutes)
+
+
 
                     </label>
                     <textarea id="description" name="description" rows="3"
