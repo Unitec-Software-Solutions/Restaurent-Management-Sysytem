@@ -59,7 +59,7 @@
                 @endif
             </label>
             <select name="{{ $prefix }}[item_category_id]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white item-category"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white item-category"
                 data-index="{{ $index }}">
                 <option value="">Select Category</option>
                 @if (!Auth::guard('admin')->user()->is_super_admin)
@@ -76,7 +76,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unit*</label>
             <select name="{{ $prefix }}[unit_of_measurement]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white">
                 <option value="">Select Unit</option>
                 <option value="piece">Piece</option>
                 <option value="kg">Kg</option>
@@ -150,7 +150,7 @@
                 Item Type <span class="text-red-500">*</span>
             </label>
             <select name="{{ $prefix }}[item_type]" required
-                class="item-type-select w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="item-type-select w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 data-index="{{ $index }}">
                 <option value="">Select Item Type</option>
                 <option value="buy_sell">Buy & Sell Item (Inventory Item)</option>
@@ -184,7 +184,7 @@
             <input type="hidden" name="{{ $prefix }}[is_perishable]" value="0">
             <input type="checkbox" id="perishable-{{ $index }}" name="{{ $prefix }}[is_perishable]"
                 value="1"
-                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600">
+                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600">
             <label for="perishable-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Perishable</label>
         </div>
@@ -192,7 +192,7 @@
             <input type="hidden" name="{{ $prefix }}[is_menu_item]" value="0">
             <input type="checkbox" id="menuitem-{{ $index }}" name="{{ $prefix }}[is_menu_item]"
                 value="1"
-                class="menu-item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+                class="menu-item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600"
                 data-index="{{ $index }}">
             <label for="menuitem-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Include in Menu</label>
@@ -201,7 +201,7 @@
             <input type="hidden" name="{{ $prefix }}[requires_production]" value="0">
             <input type="checkbox" id="requires-production-{{ $index }}" name="{{ $prefix }}[requires_production]"
                 value="1"
-                class="production-checkbox h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+                class="production-checkbox h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600"
                 data-index="{{ $index }}">
             <label for="requires-production-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Requires Production</label>
@@ -210,7 +210,7 @@
             <input type="hidden" name="{{ $prefix }}[is_inventory_item]" value="0">
             <input type="checkbox" id="inventory-item-{{ $index }}" name="{{ $prefix }}[is_inventory_item]"
                 value="1"
-                class="inventory-checkbox h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+                class="inventory-checkbox h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600"
                 data-index="{{ $index }}">
             <label for="inventory-item-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Track Inventory</label>
@@ -384,47 +384,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const menuItemCheckbox = document.querySelector('.menu-item-checkbox[data-index="{{ $index }}"]');
     const productionCheckbox = document.querySelector('.production-checkbox[data-index="{{ $index }}"]');
     const inventoryCheckbox = document.querySelector('.inventory-checkbox[data-index="{{ $index }}"]');
-    
+
     if (itemTypeSelect) {
         // Initialize based on current selection
         handleItemTypeChange();
-        
+
         // Handle item type changes
         itemTypeSelect.addEventListener('change', handleItemTypeChange);
-        
+
         function handleItemTypeChange() {
             const itemType = itemTypeSelect.value;
             const stockRequiredText = document.querySelector('.stock-required-text');
-            
+
             if (itemType === 'buy_sell') {
                 // Buy & Sell Item Configuration
                 currentStockInput.required = true;
                 currentStockInput.style.borderColor = '#F59E0B'; // Amber border for required
-                
+
                 // Auto-check appropriate flags
                 inventoryCheckbox.checked = true;
                 productionCheckbox.checked = false;
                 menuItemCheckbox.checked = true; // Most buy & sell items go to menu
-                
+
                 // Update helper text
                 if (stockRequiredText) {
                     stockRequiredText.innerHTML = '<span class="text-amber-600 font-medium">Required for Buy & Sell items</span> - Enter current inventory level';
                 }
-                
+
                 showItemTypeInfo('Buy & Sell items require current stock and are sold directly to customers with inventory tracking.');
-                
+
             } else {
                 // Clear selection
                 currentStockInput.required = false;
                 currentStockInput.style.borderColor = '#D1D5DB';
-                
+
                 if (stockRequiredText) {
                     stockRequiredText.innerHTML = 'Required for Buy & Sell items';
                 }
                 showItemTypeInfo('');
             }
         }
-        
+
         function showItemTypeInfo(message) {
             let infoDiv = document.querySelector(`.item-type-info-${{{ $index }}}`);
             if (!infoDiv && message) {
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 infoDiv.className = `item-type-info-${{{ $index }}} mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800`;
                 itemTypeSelect.parentNode.appendChild(infoDiv);
             }
-            
+
             if (infoDiv) {
                 if (message) {
                     infoDiv.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
