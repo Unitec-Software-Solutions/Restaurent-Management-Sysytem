@@ -10,17 +10,12 @@ class SubscriptionPlan extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 
-        'modules', 
-        'price', 
-        'currency', 
-        'description', 
-        'is_trial', 
+        'name',
+        'modules',
+        'price',
+        'is_trial',
         'trial_period_days',
-        'max_branches',
-        'max_employees',
-        'features',
-        'is_active'
+        'is_active',
     ];
     
     protected $casts = [
