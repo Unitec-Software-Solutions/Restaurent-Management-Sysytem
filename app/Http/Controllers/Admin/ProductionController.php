@@ -64,9 +64,14 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
 
-        return ProductionRequestMaster::with(['branch', 'items.item', 'createdBy'])
-            ->where('organization_id', $user->organization_id)
-            ->where('status', ProductionRequestMaster::STATUS_SUBMITTED)
+        $query = ProductionRequestMaster::with(['branch', 'items.item', 'createdBy']);
+
+        // Super admins can see all requests, others filter by organization
+        if (!$user->is_super_admin) {
+            $query->where('organization_id', $user->organization_id);
+        }
+
+        return $query->where('status', ProductionRequestMaster::STATUS_SUBMITTED)
             ->orderBy('required_date', 'asc')
             ->orderBy('created_at', 'asc')
             ->limit(10)
@@ -80,10 +85,15 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
 
-        return ProductionOrder::with(['items.item', 'sessions', 'createdBy'])
-            ->where('organization_id', $user->organization_id)
-            ->whereIn('status', ['approved', 'in_progress'])
-            ->orderBy('production_date', 'asc')
+        $query = ProductionOrder::with(['items.item', 'requestMaster.branch']);
+
+        // Super admins can see all orders, others filter by organization
+        if (!$user->is_super_admin) {
+            $query->where('organization_id', $user->organization_id);
+        }
+
+        return $query->whereIn('status', ['approved', 'in_progress'])
+            ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
     }
@@ -95,9 +105,14 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
 
-        return ProductionSession::with(['productionOrder.items.item', 'supervisor'])
-            ->where('organization_id', $user->organization_id)
-            ->whereDate('created_at', today())
+        $query = ProductionSession::with(['productionOrder.items.item', 'supervisor']);
+
+        // Super admins can see all sessions, others filter by organization
+        if (!$user->is_super_admin) {
+            $query->where('organization_id', $user->organization_id);
+        }
+
+        return $query->whereDate('created_at', today())
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -112,41 +127,47 @@ class ProductionController extends Controller
         $thisWeek = now()->startOfWeek();
         $thisMonth = now()->startOfMonth();
 
+        $organizationFilter = function ($query) use ($user) {
+            if (!$user->is_super_admin) {
+                $query->where('organization_id', $user->organization_id);
+            }
+        };
+
         return [
             'requests' => [
-                'pending' => ProductionRequestMaster::where('organization_id', $user->organization_id)
+                'pending' => ProductionRequestMaster::where($organizationFilter)
                     ->where('status', ProductionRequestMaster::STATUS_SUBMITTED)
                     ->count(),
-                'approved_today' => ProductionRequestMaster::where('organization_id', $user->organization_id)
+                'approved_today' => ProductionRequestMaster::where($organizationFilter)
                     ->where('status', ProductionRequestMaster::STATUS_APPROVED)
                     ->whereDate('approved_at', $today)
                     ->count(),
-                'weekly_total' => ProductionRequestMaster::where('organization_id', $user->organization_id)
+                'weekly_total' => ProductionRequestMaster::where($organizationFilter)
                     ->where('created_at', '>=', $thisWeek)
                     ->count(),
             ],
             'orders' => [
-                'active' => ProductionOrder::where('organization_id', $user->organization_id)
+                'active' => ProductionOrder::where($organizationFilter)
                     ->whereIn('status', ['approved', 'in_progress'])
                     ->count(),
-                'completed_today' => ProductionOrder::where('organization_id', $user->organization_id)
+                'completed_today' => ProductionOrder::where($organizationFilter)
                     ->where('status', 'completed')
                     ->whereDate('completed_at', $today)
                     ->count(),
-                'scheduled_tomorrow' => ProductionOrder::where('organization_id', $user->organization_id)
+                'scheduled_tomorrow' => ProductionOrder::where($organizationFilter)
                     ->where('status', 'approved')
                     ->whereDate('production_date', $today->copy()->addDay())
                     ->count(),
             ],
             'sessions' => [
-                'active' => ProductionSession::where('organization_id', $user->organization_id)
+                'active' => ProductionSession::where($organizationFilter)
                     ->whereIn('status', ['in_progress'])
                     ->count(),
-                'completed_today' => ProductionSession::where('organization_id', $user->organization_id)
+                'completed_today' => ProductionSession::where($organizationFilter)
                     ->where('status', 'completed')
                     ->whereDate('end_time', $today)
                     ->count(),
-                'monthly_total' => ProductionSession::where('organization_id', $user->organization_id)
+                'monthly_total' => ProductionSession::where($organizationFilter)
                     ->where('created_at', '>=', $thisMonth)
                     ->count(),
             ],

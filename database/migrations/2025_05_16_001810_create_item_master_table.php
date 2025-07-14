@@ -14,26 +14,27 @@ return new class extends Migration
     {
         Schema::create('item_master', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->nullable();
             $table->string('unicode_name')->nullable();
-            $table->foreignId('item_category_id')->constrained('item_categories');
+            $table->foreignId('item_category_id')->constrained('item_categories')->nullable();
             $table->string('item_code')->default('Item-code-not-set')->nullable();
             $table->string('barcode')->nullable();
-            $table->string('unit_of_measurement');
-            $table->integer('reorder_level')->default(0);
-            $table->boolean('is_perishable')->default(false);
+            $table->string('unit_of_measurement')->nullable();
+            $table->integer('reorder_level')->default(0)->nullable();
+            $table->boolean('is_perishable')->default(false)->nullable();
             $table->integer('shelf_life_in_days')->nullable();
-            $table->foreignId('branch_id')->nullable()->constrained('branches');
-            $table->foreignId('organization_id')->constrained('organizations');
-            $table->decimal('buying_price', 10, 2)->default(0.00);
-            $table->decimal('selling_price', 10, 2)->default(0.00);
-            $table->boolean('is_menu_item')->default(false);
+            $table->foreignId('branch_id')->nullable()->constrained('branches')->nullable();
+            $table->foreignId('organization_id')->constrained('organizations')->nullable();
+            $table->decimal('buying_price', 10, 2)->default(0.00)->nullable();
+            $table->decimal('selling_price', 10, 2)->default(0.00)->nullable();
+            $table->boolean('is_menu_item')->default(false)->nullable();
             $table->text('additional_notes')->nullable();
             $table->text('description')->nullable();
             $table->jsonb('attributes')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes();
+            $table->boolean('is_active')->default(true)->nullable();
+
             $table->timestamps();
+            $table->softDeletes(); // For soft delete functionality
         });
     }
 

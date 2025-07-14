@@ -13,17 +13,20 @@ return new class extends Migration
     {
         Schema::create('item_categories', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('organization_id')->after('id');
-            $table->string('name'); // Name of the category
-            $table->string('code'); // Optional: Short code for the category
+            $table->unsignedBigInteger('organization_id')->after('id')->nullable();
+            $table->string('name')->nullable(); // Name of the category
+            $table->string('code')->nullable(); // Optional: Short code for the category
             $table->text('description')->nullable();
-            $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(true)->nullable();
             $table->timestamps();
 
             $table->foreign('organization_id')
                 ->references('id')
                 ->on('organizations')
-                ->onDelete('cascade');
+                ->onDelete('cascade')
+                ->nullable();
+
+            $table->softDeletes(); // For soft delete functionality
         });
     }
 

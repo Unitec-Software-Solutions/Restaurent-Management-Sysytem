@@ -14,12 +14,13 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->morphs('payable');
-            $table->decimal('amount', 10, 2);
-            $table->string('payment_method');
-            $table->string('status');
+            $table->decimal('amount', 10, 2)->nullable();
+            $table->string('payment_method')->nullable();
+            $table->string('status')->nullable();
             $table->string('payment_reference')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
+                        $table->softDeletes();
         });
     }
 

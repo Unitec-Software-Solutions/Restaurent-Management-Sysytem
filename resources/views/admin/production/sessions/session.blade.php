@@ -151,13 +151,64 @@
 
                     <!-- Production Session Notes -->
                     <div class="p-6 border-t border-gray-200">
-                        <div class="mb-4">
-                            <label for="session_notes" class="block text-sm font-medium text-gray-700 mb-2">
-                                Production Session Notes
-                            </label>
-                            <textarea id="session_notes" name="session_notes" rows="3"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Add notes about this production session, batch information, quality notes, etc...">{{ old('session_notes') }}</textarea>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+                            <!-- Branch Selection -->
+                            <div>
+                                <label for="destination_branch_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-store mr-1"></i>Destination Branch <span class="text-red-500">*</span>
+                                </label>
+                                <select id="destination_branch_id" name="destination_branch_id" required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="">Select branch to send produced items</option>
+                                    @php
+                                        $user = Auth::user();
+                                        $availableBranches = collect([]);
+
+                                        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+                                            $availableBranches = \App\Models\Branch::with('organization')->get();
+                                        } elseif ($user->organization_id) {
+                                            if ($user->branch_id === null) {
+                                                // Organization admin
+                                                $availableBranches = \App\Models\Branch::where('organization_id', $user->organization_id)->get();
+                                            } else {
+                                                // Branch admin - can only send to their own branch
+                                                $availableBranches = \App\Models\Branch::where('id', $user->branch_id)->get();
+                                            }
+                                        }
+
+                                        // Find HQ branch as default
+                                        $hqBranch = $availableBranches->where('is_head_office', true)->first();
+                                        $defaultBranchId = old('destination_branch_id', $hqBranch?->id ?? $user->branch_id);
+                                    @endphp
+
+                                    @foreach ($availableBranches as $branch)
+                                        <option value="{{ $branch->id }}"
+                                            {{ $defaultBranchId == $branch->id ? 'selected' : '' }}>
+                                            {{ $branch->name }}
+                                            @if ($branch->is_head_office)
+                                                (Head Office)
+                                            @endif
+                                            @if (isset($branch->organization))
+                                                - {{ $branch->organization->name }}
+                                            @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Produced items will be added to the selected branch's inventory
+                                </p>
+                            </div>
+
+                            <!-- Session Notes -->
+                            <div>
+                                <label for="session_notes" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-sticky-note mr-1"></i>Production Session Notes
+                                </label>
+                                <textarea id="session_notes" name="session_notes" rows="3"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Add notes about this production session, batch information, quality notes, etc...">{{ old('session_notes') }}</textarea>
+                            </div>
                         </div>
 
                         <!-- Production Actions -->
@@ -379,6 +430,16 @@
                     const action = e.submitter.value;
 
                     if (action === 'complete') {
+                        // Check if branch is selected
+                        const branchSelect = document.getElementById('destination_branch_id');
+                        if (!branchSelect.value) {
+                            e.preventDefault();
+                            alert('Please select a destination branch for the produced items.');
+                            branchSelect.focus();
+                            return;
+                        }
+
+                        // Check if any production quantities are entered
                         let hasProduction = false;
                         document.querySelectorAll('.produced-qty').forEach(input => {
                             if (parseFloat(input.value) > 0) {
@@ -393,7 +454,7 @@
                         }
 
                         if (!confirm(
-                                'This will complete the production and add items to inventory. Are you sure?'
+                                'This will complete the production and add items to the selected branch inventory. Are you sure?'
                                 )) {
                             e.preventDefault();
                         }

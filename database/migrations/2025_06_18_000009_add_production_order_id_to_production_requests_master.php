@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('production_requests_master', function (Blueprint $table) {
             $table->unsignedBigInteger('production_order_id')->nullable()->after('approved_at');
-            $table->foreign('production_order_id')->references('id')->on('production_orders')->nullOnDelete();
+            $table->foreign('production_order_id')->references('id')->on('production_orders')->nullOnDelete()->nullable();
         });
     }
 

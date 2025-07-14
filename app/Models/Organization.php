@@ -59,14 +59,14 @@ class Organization extends Model
             // If organization becomes inactive, deactivate all branches
             if (!$organization->is_active && $organization->isDirty('is_active')) {
                 $organization->branches()->update(['is_active' => false]);
-                
+
                 Log::info('Organization deactivated - all branches deactivated', [
                     'organization_id' => $organization->id,
                     'organization_name' => $organization->name,
                     'branches_count' => $organization->branches()->count()
                 ]);
             }
-            
+
             // When organization becomes active, log but don't auto-activate branches
             // Branches should be activated individually for better control
             if ($organization->is_active && $organization->isDirty('is_active')) {
@@ -112,6 +112,17 @@ class Organization extends Model
     public function branches()
     {
         return $this->hasMany(Branch::class);
+    }
+
+    /**
+     * Get the head office branch id for the organization.
+     *
+     * @return int|null
+     */
+    public function getHeadOfficeBranchId()
+    {
+        $headOffice = $this->branches()->where('is_head_office', true)->first();
+        return $headOffice ? $headOffice->id : null;
     }
 
     /**

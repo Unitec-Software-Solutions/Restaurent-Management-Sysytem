@@ -357,6 +357,14 @@ class OrganizationAutomationService
             'order.refund',
             'order.print_kot',
 
+            // Production Management (Organization-wide)
+            'production.view',
+            'production.create',
+            'production.manage',
+            'production.update',
+            'production.delete',
+
+
             // Kitchen Management (Organization-wide)
             'kitchen.view',
             'kitchen.manage',
@@ -590,6 +598,13 @@ class OrganizationAutomationService
             'user.manage',
             'user.update',
             'user.delete',
+
+            // Production Management (Organization-wide)
+            'production.view',
+            'production.create',
+            'production.manage',
+            'production.update',
+            'production.delete',
 
             // Basic Settings (Branch-level)
             'settings.view',

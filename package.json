@@ -1,23 +1,26 @@
 {
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "build": "vite build",
-        "dev": "vite"
-    },
-    "devDependencies": {
-        "@popperjs/core": "^2.11.6",
-        "@tailwindcss/vite": "^4.1.5",
-        "axios": "^1.8.2",
-        "bootstrap": "^5.2.3",
-        "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^1.2.0",
-        "sass": "^1.56.1",
-        "tailwindcss": "^4.1.5",
-        "vite": "^6.2.4"
-    },
-    "dependencies": {
-        "flatpickr": "^4.6.13",
-        "flowbite": "^3.1.2"
-    }
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.2",
+    "@popperjs/core": "^2.11.6",
+    "@tailwindcss/vite": "^4.1.5",
+    "@types/node": "^24.0.10",
+    "axios": "^1.8.2",
+    "bootstrap": "^5.2.3",
+    "concurrently": "^9.0.1",
+    "laravel-vite-plugin": "^1.2.0",
+    "sass": "^1.56.1",
+    "tailwindcss": "^4.1.5",
+    "vite": "^6.2.4"
+  },
+  "dependencies": {
+    "flatpickr": "^4.6.13",
+    "flowbite": "^3.1.2"
+  }
 }

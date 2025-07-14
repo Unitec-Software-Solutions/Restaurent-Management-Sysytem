@@ -1,7 +1,12 @@
-Generate a commit message using the Conventional Commits format with a relevant emoji prefix. 
-Format: "<emoji> <type>(<scope>): <short summary>"
-- Use types like feat, fix, chore, docs, refactor, test, style, perf, build, ci, revert.
-- Scope should be a file, feature, or module name.
-- The summary must be under 70 characters.
-- Pick an emoji that matches the context (e.g., ✨ for features, 🐛 for fixes, 📝 for docs).
-- Example: "✨ feat(reservations): add table availability check"
+Generate a conventional commit message with an emoji, using this format:
+<emoji> <type>(<scope>): <subject>
+Include:
+Type (feat, fix, docs, etc.) with correct emoji: ✨ 🐛 📚 💎 📦 🚀 🚨 🛠 ⚙️ ♻️ 🗑
+Scope: affected file/module (e.g., login-form, api/user.js)
+Subject: imperative, ≤50 chars
+Body (optional): describe what changed (e.g., added, removed, refactored), list files/lines touched
+Mention breaking changes or issues (e.g., fix #123) if applicable
+Example:
+📦 refactor(auth): simplify token handler logic
+Refactored auth/token.js, removed legacyTokenCheck.js
+#test

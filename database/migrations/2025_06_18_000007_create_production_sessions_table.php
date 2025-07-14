@@ -11,12 +11,12 @@ return new class extends Migration
     {
         Schema::create('production_sessions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('organization_id');
-            $table->unsignedBigInteger('production_order_id');
-            $table->string('session_name');
+            $table->unsignedBigInteger('organization_id')->nullable();
+            $table->unsignedBigInteger('production_order_id')->nullable();
+            $table->string('session_name')->nullable();
             $table->dateTime('start_time')->nullable();
             $table->dateTime('end_time')->nullable();
-            $table->enum('status', ['scheduled', 'in_progress', 'completed', 'cancelled'])->default('scheduled');
+            $table->enum('status', ['scheduled', 'in_progress', 'completed', 'cancelled'])->nullable()->default('scheduled');
             $table->text('notes')->nullable();
             $table->unsignedBigInteger('supervisor_user_id')->nullable();
             $table->timestamps();
