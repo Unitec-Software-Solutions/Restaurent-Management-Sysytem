@@ -33,19 +33,19 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Item Name*</label>
             <input type="text" name="{{ $prefix }}[name]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="Enter item name">
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unicode Name</label>
             <input type="text" name="{{ $prefix }}[unicode_name]"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="Enter unicode name">
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Item Code*</label>
             <input type="text" name="{{ $prefix }}[item_code]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="Enter item code">
         </div>
     </div>
@@ -92,7 +92,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reorder Level</label>
             <input type="number" name="{{ $prefix }}[reorder_level]" min="0" step="1"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="Minimum stock level">
         </div>
     </div>
@@ -105,7 +105,7 @@
                     <span class="text-gray-500 dark:text-gray-400">Rs.</span>
                 </div>
                 <input type="number" name="{{ $prefix }}[buying_price]" required step="0.01" min="0"
-                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                     placeholder="0.00">
             </div>
         </div>
@@ -116,14 +116,14 @@
                     <span class="text-gray-500 dark:text-gray-400">Rs.</span>
                 </div>
                 <input type="number" name="{{ $prefix }}[selling_price]" required step="0.01" min="0"
-                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                     placeholder="0.00">
             </div>
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shelf Life (Days)</label>
             <input type="number" name="{{ $prefix }}[shelf_life_in_days]" step="1" min="0"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="Expiry period in days">
         </div>
     </div>
@@ -132,13 +132,13 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
             <textarea name="{{ $prefix }}[description]" rows="3"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="Detailed item description"></textarea>
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Additional Notes</label>
             <textarea name="{{ $prefix }}[additional_notes]" rows="3"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="Any special notes about this item"></textarea>
         </div>
     </div>
@@ -171,7 +171,7 @@
                 Current Stock Level
             </label>
             <input type="number" name="{{ $prefix }}[current_stock]" min="0" step="0.01"
-                class="current-stock-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                class="current-stock-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
                 placeholder="0.00" data-index="{{ $index }}">
             <p class="text-xs text-gray-500 mt-1">
                 <span class="stock-required-text">Required for Buy & Sell items, optional for KOT items</span>
