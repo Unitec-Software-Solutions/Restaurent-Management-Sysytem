@@ -249,6 +249,13 @@
                                         </a>
                                     @endif
                                     
+<<<<<<< HEAD
+                                    @if($hasKotItems)
+                                        <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
+                                           class="text-red-600 hover:text-red-900" title="KOT">
+                                            <i class="fas fa-file-pdf"></i> KOT
+                                        </a>
+=======
                                     <!-- Delete button - only show if not completed -->
                                     @if($order->status !== 'completed')
                                         <button onclick="confirmDeleteOrder({{ $order->id }})" 
@@ -257,6 +264,7 @@
                                             <i class="fas fa-trash mr-1"></i>
                                             <span>Delete</span>
                                         </button>
+>>>>>>> 079dbb637ec5cdd062ec1ce1d8f47a1e8b04535d
                                     @endif
                                 </div>
                             </td>

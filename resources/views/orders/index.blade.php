@@ -200,7 +200,9 @@
                             </span>
                             <div class="text-xs text-gray-500 mt-1">
                                 @if($order->kot_generated)
-                                    <i class="fas fa-check text-green-500"></i> KOT
+                                    <a href="{{ route('orders.print-kot-pdf', $order) }}" class="text-orange-600 hover:text-orange-900 bg-none border-none cursor-pointer" title="Print KOT PDF">
+                                        <i class="fas fa-print"></i> KOT Print
+                                    </a>
                                 @endif
                                 @if($order->bill_generated)
                                     <i class="fas fa-check text-blue-500"></i> Bill
@@ -245,13 +247,6 @@
                                     <a href="{{ route('orders.complete', $order->id) }}" 
                                        class="text-green-600 hover:text-green-900" title="Complete & Bill">
                                         <i class="fas fa-file-invoice"></i>
-                                    </a>
-                                @endif
-
-                                @if(!$order->kot_generated && in_array($order->status, ['submitted', 'preparing']))
-                                    <a href="{{ route('orders.print-kot', $order->id) }}" 
-                                       class="text-purple-600 hover:text-purple-900" title="Print KOT">
-                                        <i class="fas fa-print"></i>
                                     </a>
                                 @endif
 
@@ -366,4 +361,45 @@
     </div>
     @endif
 </div>
+
+<!-- Print KOT if order has KOT items -->
+@php
+    $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
+        $q->where('type', \App\Models\MenuItem::TYPE_KOT);
+    })->exists();
+@endphp
+
+@if($hasKotItems)
+    <div class="flex gap-1">
+        <button onclick="printKOT({{ $order->id }})" 
+                class="text-orange-600 hover:text-orange-900" title="Print KOT">
+            <i class="fas fa-print"></i> KOT
+        </button>
+        <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
+           class="text-red-600 hover:text-red-900" title="Download KOT PDF">
+            <i class="fas fa-file-pdf"></i> PDF
+        </a>
+    </div>
+@endif
 @endsection
+
+<script>
+function printKOT(orderId) {
+    // Check if order has KOT items before printing
+    fetch(`/admin/orders/${orderId}/check-kot`, {
+        // ...
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.hasKotItems) {
+            // Open KOT print window
+            window.open(`/admin/orders/${orderId}/print-kot`, '_blank', 'width=800,height=600');
+        } else {
+            alert('This order has no items that require kitchen preparation (KOT items).');
+        }
+    })
+    .catch(() => {
+        alert('Failed to check KOT items');
+    });
+}
+</script>

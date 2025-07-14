@@ -193,16 +193,18 @@
                 <div class="item-qty">QTY</div>
             </div>
             
-            @forelse($order->orderItems ?? $items ?? [] as $item)
-            <div class="item-row">
-                <div class="item-name">
-                    {{ $item->menuItem->name ?? $item['name'] ?? 'Unknown Item' }}
-                    @if(!empty($item->special_requests) || !empty($item['special_requests']))
-                        <br><small style="font-style: italic;">* {{ $item->special_requests ?? $item['special_requests'] }}</small>
-                    @endif
-                </div>
-                <div class="item-qty">{{ $item->quantity ?? $item['quantity'] ?? 1 }}</div>
-            </div>
+            @forelse($order->orderItems ?? [] as $item)
+                @if($item->menuItem->type === \App\Models\MenuItem::TYPE_KOT)
+                    <div class="item-row">
+                        <div class="item-name">
+                            {{ $item->menuItem->name ?? $item['name'] ?? 'Unknown Item' }}
+                            @if(!empty($item->special_requests) || !empty($item['special_requests']))
+                                <br><small style="font-style: italic;">* {{ $item->special_requests ?? $item['special_requests'] }}</small>
+                            @endif
+                        </div>
+                        <div class="item-qty">{{ $item->quantity ?? $item['quantity'] ?? 1 }}</div>
+                    </div>
+                @endif
             @empty
             <div class="item-row">
                 <div class="item-name">No items found</div>

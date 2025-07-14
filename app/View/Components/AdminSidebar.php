@@ -658,8 +658,8 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Production Management
-        if ($this->hasPermission($admin, 'production.view')) {
+        // Production Management // Fix Permission for Branch Admin
+        //  if ($this->hasPermission($admin, 'production.view')) {
             $menuItems[] = [
                 'title' => 'Production',
                 'route' => 'admin.production.index',
@@ -672,7 +672,7 @@ class AdminSidebar extends Component
                 'is_route_valid' => $this->validateRoute('admin.production.index'),
                 'sub_items' => $this->getProductionSubItems()
             ];
-        }
+        // }
 
         // Kitchen Operations (for branch staff)
         if ($this->hasPermission($admin, 'kitchen.view')) {
@@ -1050,14 +1050,14 @@ class AdminSidebar extends Component
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.menu-items.index')
             ],
-            [
-                'title' => 'Add Menu Item',
-                'route' => 'admin.menu-items.create',
-                'icon' => 'fas fa-plus-circle',
-                'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
-                'is_route_valid' => $this->validateRoute('admin.menu-items.create')
-            ],
+            // [
+            //     'title' => 'Add Menu Item',
+            //     'route' => 'admin.menu-items.create',
+            //     'icon' => 'fas fa-plus-circle',
+            //     'icon_type' => 'fa',
+            //     'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
+            //     'is_route_valid' => $this->validateRoute('admin.menu-items.create')
+            // ],
             [
                 'title' => 'Create KOT Items',
                 'route' => 'admin.menu-items.create-kot',
