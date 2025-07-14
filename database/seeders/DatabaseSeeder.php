@@ -4,8 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Database\Seeders\MinimalSystemSeeder;
-use App\Models\Admin;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,12 +12,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Admin::create([
-            'name' => 'Super Admin',
-            'email' => 'superadmin@rms.com',
-            'password' => Hash::make('SuperAdmin123!'),
-            'is_super_admin' => true,
-            'is_active' => true,
+        $this->command->info('🌱 Starting minimal database seeding...');
+        
+        // Only essential seeders for basic system functionality
+        $this->call([
+            MinimalSystemSeeder::class,
         ]);
+        
+        $this->command->info('✅ Minimal seeding completed successfully');
+        $this->command->info('🔐 Login at /admin/login with: superadmin@rms.com / SuperAdmin123!');
     }
 }
