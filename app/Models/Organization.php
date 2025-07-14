@@ -114,20 +114,6 @@ class Organization extends Model
         return $this->hasMany(Branch::class);
     }
 
-    /**
-     * Get the head office branch id for the organization.
-     *
-     * @return int|null
-     */
-    public function getHeadOfficeBranchId()
-    {
-        $headOffice = $this->branches()->where('is_head_office', true)->first();
-        return $headOffice ? $headOffice->id : null;
-    }
-
-    /**
-     * Get active branches for the organization.
-     */
     public function activeBranches()
     {
         return $this->hasMany(Branch::class)->where('is_active', true);

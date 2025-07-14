@@ -28,7 +28,7 @@
             <!-- Search -->
             <div>
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input type="text" name="search" id="search" value="{{ request('search') }}" 
+                <input type="text" name="search" id="search" value="{{ request('search') }}"
                        placeholder="Customer name, phone, or order ID"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
             </div>
@@ -109,11 +109,11 @@
                                     <div class="flex-shrink-0 w-10 h-10">
                                         @php
                                             // Fix: Convert enum to string value for comparison
-                                            $orderTypeValue = $order->order_type instanceof \App\Enums\OrderType 
-                                                ? $order->order_type->value 
+                                            $orderTypeValue = $order->order_type instanceof \App\Enums\OrderType
+                                                ? $order->order_type->value
                                                 : (string) $order->order_type;
                                         @endphp
-                                        
+
                                         @if(str_contains($orderTypeValue, 'takeaway'))
                                             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                                                 <i class="fas fa-shopping-bag text-blue-600"></i>
@@ -232,31 +232,45 @@
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex items-center justify-end space-x-3">
                                     <!-- View button -->
-                                    <a href="{{ route('admin.orders.show', $order) }}" 
-                                       class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                    <a href="{{ route('admin.orders.show', $order) }}"
+                                       class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2.5 py-1.5 rounded-md flex items-center"
                                        title="View Order">
                                         <i class="fas fa-eye mr-1"></i>
                                         <span>View</span>
                                     </a>
-                                    
+
                                     <!-- Edit button - only for pending or confirmed orders -->
                                     @if(in_array($order->status, ['pending', 'confirmed', 'submitted']))
-                                        <a href="{{ route('admin.orders.edit', $order) }}" 
-                                           class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                        <a href="{{ route('admin.orders.edit', $order) }}"
+                                           class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2.5 py-1.5 rounded-md flex items-center"
                                            title="Edit Order">
                                             <i class="fas fa-edit mr-1"></i>
                                             <span>Edit</span>
                                         </a>
                                     @endif
-                                    
+
                                     <!-- Delete button - only show if not completed -->
                                     @if($order->status !== 'completed')
-                                        <button onclick="confirmDeleteOrder({{ $order->id }})" 
-                                                class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                        <button onclick="confirmDeleteOrder({{ $order->id }})"
+                                                class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded-md flex items-center"
                                                 title="Delete Order">
                                             <i class="fas fa-trash mr-1"></i>
                                             <span>Delete</span>
                                         </button>
+                                    @endif
+
+                                    <!-- Print KOT if order has KOT items -->
+                                    @php
+                                        $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
+                                            $q->where('type', \App\Models\MenuItem::TYPE_KOT);
+                                        })->exists();
+                                    @endphp
+
+                                    @if($hasKotItems)
+                                        <a href="{{ route('admin.orders.print-kot-pdf', $order) }}"
+                                           class="text-red-600 hover:text-red-900" title="KOT">
+                                            <i class="fas fa-file-pdf"></i> KOT
+                                        </a>
                                     @endif
                                 </div>
                             </td>
@@ -269,7 +283,7 @@
                                 </div>
                                 <h3 class="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
                                 <p class="text-gray-500 mb-4">Get started by creating your first order.</p>
-                                <a href="{{ route('admin.orders.create') }}" 
+                                <a href="{{ route('admin.orders.create') }}"
                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
                                     <i class="fas fa-plus mr-2"></i> Create Order
                                 </a>
@@ -345,17 +359,17 @@ function confirmDeleteOrder(orderId) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/admin/orders/${orderId}`;
-        
+
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = '_token';
         csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
+
         const methodField = document.createElement('input');
         methodField.type = 'hidden';
         methodField.name = '_method';
         methodField.value = 'DELETE';
-        
+
         form.appendChild(csrfToken);
         form.appendChild(methodField);
         document.body.appendChild(form);
