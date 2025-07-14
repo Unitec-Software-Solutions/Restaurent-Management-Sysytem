@@ -71,6 +71,9 @@ class ProductionOrderController extends Controller
      */
     public function store(Request $request)
     {
+        $userExists = \DB::table('users')->where('id', $userId)->exists();
+        $createdBy = $userExists ? $userId : null;
+
         $request->validate([
             'production_date' => 'required|date',
             'items' => 'required|array|min:1',
@@ -86,7 +89,7 @@ class ProductionOrderController extends Controller
                 'production_date' => $request->production_date,
                 'status' => 'draft',
                 'notes' => $request->notes,
-                'created_by_user_id' => Auth::id(),
+                'created_by_user_id' => $createdBy,
             ]);
 
             foreach ($request->items as $item) {
@@ -706,6 +709,8 @@ class ProductionOrderController extends Controller
                     ->whereIn('id', $request->selected_requests)
                     ->get();
 
+                $userExists = \DB::table('users')->where('id', $userId)->exists();
+                $byuser = $userExists ? $userId : null;
                 if ($selectedRequests->isEmpty()) {
                     throw new \Exception('No valid approved requests found.');
                 }
@@ -717,8 +722,8 @@ class ProductionOrderController extends Controller
                     'production_date' => now()->addDay()->toDateString(),
                     'status' => ProductionOrder::STATUS_APPROVED,
                     'notes' => $request->production_notes,
-                    'created_by_user_id' => Auth::id(),
-                    'approved_by_user_id' => Auth::id(),
+                    'created_by_user_id' => $byuser,
+                    'approved_by_user_id' => $byuser,
                     'approved_at' => now(),
                 ]);
 
