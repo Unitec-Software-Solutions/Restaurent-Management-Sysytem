@@ -25,13 +25,11 @@
     </div>
     <div class="mb-4">
         <span class="font-semibold text-gray-700">Permissions:</span>
-        <div class="mt-2 flex flex-wrap gap-2">
-            @forelse($role->permissions as $permission)
-                <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">{{ $permission->name }}</span>
-            @empty
-                <span class="text-gray-500">No permissions assigned</span>
-            @endforelse
-        </div>
+        @forelse($role->permissions as $permission)
+            <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">{{ $permission->name }}</span>
+        @empty
+            <span class="text-gray-500">No permissions assigned</span>
+        @endforelse
     </div>
     <div class="mt-6 flex gap-2">
         <a href="{{ route('admin.roles.edit', $role) }}" class="inline-flex items-center gap-1 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition">

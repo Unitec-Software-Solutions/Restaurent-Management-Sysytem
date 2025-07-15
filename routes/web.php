@@ -18,7 +18,8 @@ use App\Http\Controllers\{
     RealtimeDashboardController,
     MenuController,
     KitchenController,
-    KotController
+    KotController,
+    ModuleController
 };
  // Admin namespace controllers
 use App\Http\Controllers\Admin\{
@@ -31,7 +32,7 @@ use App\Http\Controllers\Admin\{
     PaymentController,
     KitchenStationController,
     MenuItemController,
-    ModuleController
+
 };
 // Purchase Order Controller
 use App\Http\Controllers\Admin\{
@@ -826,7 +827,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
 // Remove the duplicate test route - keep only one for debugging
 Route::get('/test-branches/{organization}', function($organizationId) {
     try {
-        $controller = app(\App\Http\Controllers\ReservationController::class);
+        $controller = app(ReservationController::class);
         return $controller->getBranches($organizationId);
     } catch (\Exception $e) {
         return response()->json([

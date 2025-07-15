@@ -67,9 +67,9 @@
                                 </option>
                             @endforeach
                         </select>
-                        @error('organization_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if($errors->has('organization_id'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('organization_id') }}</p>
+                        @endif
                     </div>
 
                     <div class="mb-4">
