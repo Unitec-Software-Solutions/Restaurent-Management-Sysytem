@@ -33,19 +33,19 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Item Name*</label>
             <input type="text" name="{{ $prefix }}[name]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="Enter item name">
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unicode Name</label>
             <input type="text" name="{{ $prefix }}[unicode_name]"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="Enter unicode name">
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Item Code*</label>
             <input type="text" name="{{ $prefix }}[item_code]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="Enter item code">
         </div>
     </div>
@@ -59,7 +59,7 @@
                 @endif
             </label>
             <select name="{{ $prefix }}[item_category_id]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white item-category"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900 item-category"
                 data-index="{{ $index }}">
                 <option value="">Select Category</option>
                 @if (!Auth::guard('admin')->user()->is_super_admin)
@@ -76,7 +76,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unit*</label>
             <select name="{{ $prefix }}[unit_of_measurement]" required
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white">
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900">
                 <option value="">Select Unit</option>
                 <option value="piece">Piece</option>
                 <option value="kg">Kg</option>
@@ -92,7 +92,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reorder Level</label>
             <input type="number" name="{{ $prefix }}[reorder_level]" min="0" step="1"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="Minimum stock level">
         </div>
     </div>
@@ -105,7 +105,7 @@
                     <span class="text-gray-500 dark:text-gray-400">Rs.</span>
                 </div>
                 <input type="number" name="{{ $prefix }}[buying_price]" required step="0.01" min="0"
-                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                     placeholder="0.00">
             </div>
         </div>
@@ -116,14 +116,14 @@
                     <span class="text-gray-500 dark:text-gray-400">Rs.</span>
                 </div>
                 <input type="number" name="{{ $prefix }}[selling_price]" required step="0.01" min="0"
-                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                    class="block w-full pl-10 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                     placeholder="0.00">
             </div>
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shelf Life (Days)</label>
             <input type="number" name="{{ $prefix }}[shelf_life_in_days]" step="1" min="0"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="Expiry period in days">
         </div>
     </div>
@@ -132,13 +132,13 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
             <textarea name="{{ $prefix }}[description]" rows="3"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="Detailed item description"></textarea>
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Additional Notes</label>
             <textarea name="{{ $prefix }}[additional_notes]" rows="3"
-                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="Any special notes about this item"></textarea>
         </div>
     </div>
@@ -150,7 +150,7 @@
                 Item Type <span class="text-red-500">*</span>
             </label>
             <select name="{{ $prefix }}[item_type]" required
-                class="item-type-select w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="item-type-select w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 data-index="{{ $index }}">
                 <option value="">Select Item Type</option>
                 <option value="buy_sell">Buy & Sell Item (Inventory Item)</option>
@@ -171,7 +171,7 @@
                 Current Stock Level
             </label>
             <input type="number" name="{{ $prefix }}[current_stock]" min="0" step="0.01"
-                class="current-stock-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-800 dark:text-white"
+                class="current-stock-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 placeholder="0.00" data-index="{{ $index }}">
             <p class="text-xs text-gray-500 mt-1">
                 <span class="stock-required-text">Required for Buy & Sell items, optional for KOT items</span>
@@ -184,7 +184,7 @@
             <input type="hidden" name="{{ $prefix }}[is_perishable]" value="0">
             <input type="checkbox" id="perishable-{{ $index }}" name="{{ $prefix }}[is_perishable]"
                 value="1"
-                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600">
+                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900">
             <label for="perishable-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Perishable</label>
         </div>
@@ -192,7 +192,7 @@
             <input type="hidden" name="{{ $prefix }}[is_menu_item]" value="0">
             <input type="checkbox" id="menuitem-{{ $index }}" name="{{ $prefix }}[is_menu_item]"
                 value="1"
-                class="menu-item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600"
+                class="menu-item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900"
                 data-index="{{ $index }}">
             <label for="menuitem-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Include in Menu</label>
@@ -201,7 +201,7 @@
             <input type="hidden" name="{{ $prefix }}[requires_production]" value="0">
             <input type="checkbox" id="requires-production-{{ $index }}" name="{{ $prefix }}[requires_production]"
                 value="1"
-                class="production-checkbox h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600"
+                class="production-checkbox h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900"
                 data-index="{{ $index }}">
             <label for="requires-production-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Requires Production</label>
@@ -210,7 +210,7 @@
             <input type="hidden" name="{{ $prefix }}[is_inventory_item]" value="0">
             <input type="checkbox" id="inventory-item-{{ $index }}" name="{{ $prefix }}[is_inventory_item]"
                 value="1"
-                class="inventory-checkbox h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded bg-gray-200 dark:border-gray-600"
+                class="inventory-checkbox h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900"
                 data-index="{{ $index }}">
             <label for="inventory-item-{{ $index }}"
                 class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Track Inventory</label>
@@ -230,7 +230,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuisine Type</label>
                 <select data-menu-attr="cuisine_type"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900">
                     <option value="">Select Cuisine</option>
                     <option value="sri_lankan">Sri Lankan</option>
                     <option value="chinese">Chinese</option>
@@ -250,7 +250,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Spice Level</label>
                 <select data-menu-attr="spice_level"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900">
                     <option value="">Select Level</option>
                     <option value="mild">Mild</option>
                     <option value="medium">Medium</option>
@@ -264,7 +264,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prep Time
                     (minutes)</label>
                 <input type="number" data-menu-attr="prep_time_minutes" min="1" max="120"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900"
                     placeholder="e.g., 15">
             </div>
 
@@ -272,7 +272,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Serving Size</label>
                 <select data-menu-attr="serving_size"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900">
                     <option value="">Select Size</option>
                     <option value="small">Small</option>
                     <option value="regular">Regular</option>
@@ -285,7 +285,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dietary</label>
                 <select data-menu-attr="dietary_type"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900">
                     <option value="">Select Type</option>
                     <option value="vegetarian">Vegetarian</option>
                     <option value="vegan">Vegan</option>
@@ -301,7 +301,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Available During</label>
                 <select data-menu-attr="availability"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900">
                     <option value="">Select Availability</option>
                     <option value="all_day">All Day</option>
                     <option value="breakfast">Breakfast Only</option>
@@ -317,7 +317,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Main Ingredients</label>
                 <textarea data-menu-attr="main_ingredients" rows="2"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900"
                     placeholder="e.g., Rice, Chicken, Vegetables"></textarea>
             </div>
 
@@ -325,7 +325,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allergen Info</label>
                 <textarea data-menu-attr="allergen_info" rows="2"
-                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-100 dark:border-gray-600 dark:text-gray-900"
                     placeholder="e.g., Contains nuts, dairy"></textarea>
             </div>
         </div>
@@ -334,7 +334,7 @@
         <div class="mt-4">
             <div class="flex items-center">
                 <input type="checkbox" data-menu-attr="is_chefs_special" value="1"
-                    class="menu-attribute-field h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600">
+                    class="menu-attribute-field h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900">
                 <label class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Chef's Special</label>
             </div>
         </div>
@@ -343,7 +343,7 @@
         <div class="mt-2">
             <div class="flex items-center">
                 <input type="checkbox" data-menu-attr="is_popular" value="1"
-                    class="menu-attribute-field h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600">
+                    class="menu-attribute-field h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900">
                 <label class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Popular Item</label>
             </div>
         </div>
