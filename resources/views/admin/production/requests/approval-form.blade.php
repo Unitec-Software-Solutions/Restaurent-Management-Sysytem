@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Approve Production Request')
-
+@section('header-title', 'Approve Production Request - ' . $productionRequest->id)
 @section('content')
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-6xl mx-auto">
@@ -128,7 +128,7 @@
                                                 step="0.01" min="0"
                                                 class="w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                                 placeholder="Can exceed requested" required>
-                                            
+
                                         </td>
                                         <td class="px-6 py-4">
                                             <input type="text" name="items[{{ $item->item_id }}][notes]"
