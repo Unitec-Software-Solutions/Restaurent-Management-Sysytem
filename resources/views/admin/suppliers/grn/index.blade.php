@@ -18,7 +18,7 @@
             ]" active="Goods Received Notes" />
         </div>
 
-<!-- Filters -->
+        <!-- Filters -->
         <x-module-filters
             :searchValue="request('search', '')"
             :statusOptions="[
