@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Branch Details - ' . $branch->name)
-
+@section('header-title', 'Branch Details - ' . $branch->name)
 @section('content')
 <div class="container mx-auto px-4 py-6">
     <!-- Header -->
@@ -11,7 +11,7 @@
             <p class="text-gray-600">{{ $organization->name }}</p>
         </div>
         <div class="flex gap-2">
-            <a href="{{ route('admin.branches.index', $organization) }}" 
+            <a href="{{ route('admin.branches.index', $organization) }}"
                class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
                 ← Back to Branches
             </a>

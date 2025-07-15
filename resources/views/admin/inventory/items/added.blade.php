@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-
+@section('header-title', 'Recently Added Items')
 @section('content')
     <div class="p-4 rounded-lg">
 

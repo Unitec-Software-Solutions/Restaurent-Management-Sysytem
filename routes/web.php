@@ -8,8 +8,6 @@ use App\Http\Controllers\{
     AdminController,
     AdminAuthController,
     OrderController,
-    SupplierController,
-    SupplierPaymentController,
     AdminOrderController,
     OrganizationController,
     RoleController,
@@ -32,6 +30,13 @@ use App\Http\Controllers\Admin\{
     KitchenStationController,
     MenuItemController
 };
+
+// supplier controllers
+use App\Http\Controllers\Admin\{
+    SupplierController,
+    SupplierPaymentController
+};
+
 // Purchase Order Controller
 use App\Http\Controllers\Admin\{
     PurchaseOrderController
@@ -786,7 +791,7 @@ Route::get('purchase-orders/create', [App\Http\Controllers\Admin\PurchaseOrderCo
 Route::get('purchase-orders/print', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'print'])->middleware(['auth:admin'])->name('admin.purchase-orders.print');
 Route::get('purchase-orders/approve', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'approve'])->middleware(['auth:admin'])->name('admin.purchase-orders.approve');
 Route::get('purchase-orders/edit', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'edit'])->middleware(['auth:admin'])->name('admin.purchase-orders.edit');
-Route::get('suppliers/purchase-orders', [App\Http\Controllers\Admin\SupplierController::class, 'purchaseOrders'])->middleware(['auth:admin'])->name('admin.suppliers.purchase-orders');
+Route::get('suppliers/index', [App\Http\Controllers\Admin\SupplierController::class, 'index'])->middleware(['auth:admin'])->name('admin.suppliers.index');
 Route::get('users/assign-role/store', [App\Http\Controllers\UserController::class, 'assignRoleStore'])->name('users.assign-role.store');
 Route::get('kitchen/orders/index', [App\Http\Controllers\KitchenController::class, 'orders'])->name('kitchen.orders.index');
 Route::get('reservations/index', [App\Http\Controllers\ReservationController::class, 'index'])->name('reservations.index');

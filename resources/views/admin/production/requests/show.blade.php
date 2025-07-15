@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Production Request Details')
+@section('header-title', 'Production Request Details - ' . $productionRequest->id)
 
 @section('content')
     <div class="p-4 rounded-lg">

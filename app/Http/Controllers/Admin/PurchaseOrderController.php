@@ -22,11 +22,20 @@ class PurchaseOrderController extends Controller
     // Get current user's organization ID with validation
     protected function getOrganizationId()
     {
-        $user = Auth::user();
-        if (!$user || !$user->organization_id) {
-            abort(403, 'Unauthorized access - organization not set');
+        $admin = Auth::guard('admin')->user(); // Use the 'admin' guard explicitly
+
+        if (!$admin) {
+            return redirect()->route('admin.login')->with('error', 'Please log in to access this page.');
         }
-        return $user->organization_id;
+
+        // Super admin check - bypass organization requirements
+        $isSuperAdmin = $admin->is_super_admin;
+
+        if (!$isSuperAdmin && !$admin->organization_id) {
+            return redirect()->route('admin.dashboard')->with('error', 'Account setup incomplete. Contact support to assign you to an organization.');
+        }
+
+        return $admin->organization_id;
     }
 
     // Base query for POs belonging to current organization
@@ -364,5 +373,42 @@ class PurchaseOrderController extends Controller
     protected function getSearchableColumns(): array
     {
         return ['po_number'];
+    }
+
+    // Update the applyFiltersToQuery method to include permission checks
+    protected function applyFiltersToQuery($query, Request $request)
+    {
+        $admin = Auth::guard('admin')->user();
+
+        if (!$admin) {
+            abort(403, 'Unauthorized access. Please log in.');
+        }
+
+        // Super admin bypasses all filters
+        if ($admin->is_super_admin) {
+            return $query;
+        }
+
+        // Apply organization filter for non-super admins
+        if ($admin->organization_id) {
+            $query->where('organization_id', $admin->organization_id);
+        }
+
+        // Apply branch filter if branch_id is provided
+        if ($request->filled('branch')) {
+            $query->where('branch_id', $request->input('branch'));
+        }
+
+        // Apply supplier filter if supplier_id is provided
+        if ($request->filled('supplier')) {
+            $query->where('supplier_id', $request->input('supplier'));
+        }
+
+        // Apply status filter if status is provided
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        return $query;
     }
 }

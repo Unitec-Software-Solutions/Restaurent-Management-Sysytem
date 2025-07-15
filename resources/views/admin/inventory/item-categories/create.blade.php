@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Create Item Category')
-
+@section('header-title', 'Create Item Category')
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Main Content Card -->

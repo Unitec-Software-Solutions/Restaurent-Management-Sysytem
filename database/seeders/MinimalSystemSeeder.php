@@ -36,45 +36,45 @@ class MinimalSystemSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('🎛️ Creating minimal system foundation...');
-        
+
         DB::transaction(function () {
             // Step 1: Clear existing data
             $this->clearExistingData();
-            
+
             // Step 2: Create system modules
             $this->createSystemModules();
-            
+
             // Step 3: Create permissions
             $this->createSystemPermissions();
-            
+
             // Step 4: Create super admin role
             $this->createSuperAdminRole();
-            
+
             // Step 5: Create super admin user
             $this->createSuperAdmin();
-            
+
             // Step 6: Create subscription plan
             $subscriptionPlan = $this->createSubscriptionPlan();
-            
+
             // Step 7: Create organization
-            $organization = $this->createOrganization($subscriptionPlan);
-            
+            // $organization = $this->createOrganization($subscriptionPlan);
+
             // Step 8: Create branch
-            $branch = $this->createBranch($organization);
-            
+            // $branch = $this->createBranch($organization);
+
             // Step 9: Create menu structure
-            $this->createMenuStructure($organization, $branch);
-            
+            // $this->createMenuStructure($organization, $branch);
+
             // Step 10: Create customers
-            $this->createCustomers();
-            
+            //$this->createCustomers();
+
             // Step 11: Create tables for the branch
-            $this->createTables($branch);
-            
+            //$this->createTables($branch);
+
             // Step 12: Create reservations and orders
-            $this->createReservationsAndOrders($branch);
+            //$this->createReservationsAndOrders($branch);
         });
-        
+
         $this->command->info('✅ Minimal system foundation created successfully');
     }
 
@@ -84,7 +84,7 @@ class MinimalSystemSeeder extends Seeder
     private function clearExistingData(): void
     {
         $this->command->info('  🧹 Clearing existing data...');
-        
+
         // Clear in dependency order for PostgreSQL - only clear existing tables
         $this->safeTableDelete('order_items');
         $this->safeTableDelete('orders');
@@ -100,18 +100,18 @@ class MinimalSystemSeeder extends Seeder
         $this->safeTableDelete('branches');
         $this->safeTableDelete('organizations');
         $this->safeTableDelete('subscription_plans');
-        
+
         $this->safeTableDelete('model_has_roles');
         $this->safeTableDelete('model_has_permissions');
         $this->safeTableDelete('role_has_permissions');
-        
+
         Permission::truncate();
         Role::truncate();
         Module::truncate();
-        
+
         // Clear admins but preserve any existing data structure
         Admin::truncate();
-        
+
         $this->command->info('  ✅ Existing data cleared');
     }
 
@@ -136,7 +136,7 @@ class MinimalSystemSeeder extends Seeder
     private function createSystemModules(): void
     {
         $this->command->info('  📦 Creating system modules...');
-        
+
         $modules = [
             [
                 'name' => 'Order Management',
@@ -200,57 +200,57 @@ class MinimalSystemSeeder extends Seeder
     private function createSystemPermissions(): void
     {
         $this->command->info('  🔐 Creating system permissions...');
-        
+
         $permissions = [
             // System Administration
             'system.manage', 'system.settings', 'system.backup', 'system.logs',
-            
+
             // Order Management
             'order.view', 'order.create', 'order.update', 'order.delete', 'order.manage',
             'order.process', 'order.cancel', 'order.refund', 'order.print_kot',
-            
+
             // Reservation Management
             'reservation.view', 'reservation.create', 'reservation.update', 'reservation.delete',
             'reservation.manage', 'reservation.approve', 'reservation.cancel', 'reservation.checkin',
-            
+
             // Inventory Management
             'inventory.view', 'inventory.create', 'inventory.update', 'inventory.delete',
             'inventory.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.audit',
-            
+
             // Menu Management
             'menu.view', 'menu.create', 'menu.update', 'menu.delete', 'menu.manage',
             'menu.categories', 'menu.pricing', 'menu.schedule', 'menu.publish',
-            
+
             // Customer Management
             'customer.view', 'customer.create', 'customer.update', 'customer.delete',
             'customer.manage', 'customer.loyalty', 'customer.communications',
-            
+
             // Kitchen Operations
             'kitchen.view', 'kitchen.manage', 'kitchen.stations', 'kitchen.orders',
             'kitchen.status', 'kitchen.recipes', 'kitchen.production',
             'kot.view', 'kot.create', 'kot.update', 'kot.manage', 'kot.print',
-            
+
             // Reports & Analytics
             'report.view', 'report.generate', 'report.export', 'report.sales',
             'report.inventory', 'report.staff', 'report.financial', 'report.dashboard',
-            
+
             // Organization & Branch Management
             'organization.view', 'organization.create', 'organization.update', 'organization.manage',
             'branch.view', 'branch.create', 'branch.update', 'branch.manage',
-            
+
             // User Management
             'user.view', 'user.create', 'user.update', 'user.delete', 'user.manage',
             'role.view', 'role.create', 'role.update', 'role.delete', 'role.manage',
             'permission.view', 'permission.manage',
-            
+
             // Staff Management
             'staff.view', 'staff.create', 'staff.update', 'staff.delete', 'staff.manage',
             'staff.schedule', 'staff.attendance', 'staff.performance',
-            
+
             // Financial Management
             'payment.view', 'payment.process', 'payment.refund', 'payment.manage',
             'billing.view', 'billing.create', 'billing.manage',
-            
+
             // Dashboard & Profile
             'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update'
         ];
@@ -273,7 +273,7 @@ class MinimalSystemSeeder extends Seeder
     private function createSuperAdminRole(): void
     {
         $this->command->info('  👑 Creating super admin role...');
-        
+
         // Create Super Admin role
         $superAdminRole = Role::create([
             'name' => 'Super Administrator',
@@ -283,7 +283,7 @@ class MinimalSystemSeeder extends Seeder
         // Assign ALL permissions to Super Admin
         $allPermissions = Permission::where('guard_name', 'admin')->get();
         $superAdminRole->syncPermissions($allPermissions);
-        
+
         $this->command->info("    ✓ Super Admin role created with {$allPermissions->count()} permissions");
     }
 
@@ -293,7 +293,7 @@ class MinimalSystemSeeder extends Seeder
     private function createSuperAdmin(): void
     {
         $this->command->info('  🔑 Creating super admin user...');
-        
+
         // Create super admin user (system level - no organization)
         $superAdmin = Admin::create([
             'name' => 'Super Administrator',
@@ -320,7 +320,7 @@ class MinimalSystemSeeder extends Seeder
         $superAdminRole = Role::where('name', 'Super Administrator')
             ->where('guard_name', 'admin')
             ->first();
-            
+
         if ($superAdminRole) {
             $superAdmin->assignRole($superAdminRole);
         }
@@ -338,7 +338,7 @@ class MinimalSystemSeeder extends Seeder
     private function createSubscriptionPlan(): SubscriptionPlan
     {
         $this->command->info('  💳 Creating subscription plan...');
-        
+
         $subscriptionPlan = SubscriptionPlan::create([
             'name' => 'Premium Plan',
             'price' => 99.99,
@@ -370,7 +370,7 @@ class MinimalSystemSeeder extends Seeder
     private function createOrganization(SubscriptionPlan $subscriptionPlan): Organization
     {
         $this->command->info('  🏢 Creating sample organization...');
-        
+
         $organization = Organization::create([
             'name' => 'Delicious Bites Restaurant',
             'email' => 'admin@deliciousbites.com',
@@ -397,7 +397,7 @@ class MinimalSystemSeeder extends Seeder
     private function createBranch(Organization $organization): Branch
     {
         $this->command->info('  🏪 Creating sample branch...');
-        
+
         $branch = Branch::create([
             'organization_id' => $organization->id,
             'name' => 'Main Branch - Colombo',
@@ -433,24 +433,24 @@ class MinimalSystemSeeder extends Seeder
     private function createMenuStructure(Organization $organization, Branch $branch): void
     {
         $this->command->info('  📋 Creating menu structure...');
-        
+
         // Create item categories for inventory
         $this->createItemCategories($organization);
-        
+
         // Create 2 menus
         $breakfastMenu = $this->createMenu($organization, $branch, 'Breakfast Menu', 'morning');
         $dinnerMenu = $this->createMenu($organization, $branch, 'Dinner Menu', 'evening');
-        
+
         // Create menu categories for each menu
         $breakfastCategories = $this->createMenuCategories($organization, $branch, 'breakfast');
         $dinnerCategories = $this->createMenuCategories($organization, $branch, 'dinner');
-        
+
         // Create menu items for breakfast menu
         $this->createMenuItems($organization, $branch, $breakfastCategories, 'breakfast');
-        
-        // Create menu items for dinner menu  
+
+        // Create menu items for dinner menu
         $this->createMenuItems($organization, $branch, $dinnerCategories, 'dinner');
-        
+
         $this->command->info('    ✓ Menu structure created with 2 menus and 10 items total');
     }
 
@@ -499,9 +499,9 @@ class MinimalSystemSeeder extends Seeder
             'morning' => 'breakfast',
             'evening' => 'dinner'
         ];
-        
+
         $validMenuType = $menuTypeMapping[$type] ?? 'all_day';
-        
+
         return Menu::create([
             'organization_id' => $organization->id,
             'branch_id' => $branch->id,
@@ -564,7 +564,7 @@ class MinimalSystemSeeder extends Seeder
     {
         // For KOT items, we don't need to link to item_master (they are recipe-based, not inventory items)
         // $itemCategory = ItemCategory::where('organization_id', $organization->id)->first();
-        
+
         if ($menuType === 'breakfast') {
             $items = [
                 // Hot Beverages
@@ -669,7 +669,7 @@ class MinimalSystemSeeder extends Seeder
     private function createCustomers(): void
     {
         $this->command->info('  👥 Creating sample customers...');
-        
+
         $customers = [
             [
                 'name' => 'Alice Johnson',
@@ -710,7 +710,7 @@ class MinimalSystemSeeder extends Seeder
     private function createTables(Branch $branch): void
     {
         $this->command->info('  🪑 Creating tables...');
-        
+
         $tables = [
             ['number' => 'T001', 'capacity' => 2],
             ['number' => 'T002', 'capacity' => 4],
@@ -739,7 +739,7 @@ class MinimalSystemSeeder extends Seeder
     private function createReservationsAndOrders(Branch $branch): void
     {
         $this->command->info('  📝 Creating reservations and orders...');
-        
+
         $customers = Customer::take(2)->get();
         $menuItems = MenuItem::where('branch_id', $branch->id)->take(3)->get();
         $tables = Table::where('branch_id', $branch->id)->take(2)->get();
@@ -747,7 +747,7 @@ class MinimalSystemSeeder extends Seeder
         // Create 2 reservations
         foreach ($customers as $index => $customer) {
             $reservationDate = now()->addDays($index + 1);
-            
+
             $reservation = Reservation::create([
                 'name' => $customer->name,
                 'phone' => $customer->phone,
@@ -804,7 +804,7 @@ class MinimalSystemSeeder extends Seeder
             $quantity = rand(1, 2);
             $unitPrice = $menuItem->price;
             $totalPrice = $unitPrice * $quantity;
-            
+
             OrderItem::create([
                 'order_id' => $order->id,
                 'menu_item_id' => $menuItem->id,
@@ -815,14 +815,14 @@ class MinimalSystemSeeder extends Seeder
                 'total_price' => $totalPrice,
                 'special_instructions' => $quantity > 1 ? 'Extra portion' : null
             ]);
-            
+
             $subtotal += $totalPrice;
         }
 
         // Update order totals
         $tax = $subtotal * 0.12; // 12% tax
         $total = $subtotal + $tax;
-        
+
         $order->update([
             'subtotal' => $subtotal,
             'tax_amount' => $tax,

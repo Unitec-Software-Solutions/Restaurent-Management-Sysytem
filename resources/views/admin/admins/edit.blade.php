@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Edit Admin')
-
+@section('header-title', 'Edit Admin')
 @section('content')
 <div class="container mx-auto px-4 py-6">
     <div class="bg-white rounded-lg shadow-md p-6">
@@ -127,14 +127,14 @@
             <!-- Checkboxes -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="flex items-center">
-                    <input type="checkbox" id="is_super_admin" name="is_super_admin" value="1" 
+                    <input type="checkbox" id="is_super_admin" name="is_super_admin" value="1"
                            {{ old('is_super_admin', $admin->is_super_admin) ? 'checked' : '' }}
                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                     <label for="is_super_admin" class="ml-2 block text-sm text-gray-900">Super Admin</label>
                 </div>
 
                 <div class="flex items-center">
-                    <input type="checkbox" id="is_active" name="is_active" value="1" 
+                    <input type="checkbox" id="is_active" name="is_active" value="1"
                            {{ old('is_active', $admin->is_active) ? 'checked' : '' }}
                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                     <label for="is_active" class="ml-2 block text-sm text-gray-900">Active</label>
@@ -164,11 +164,11 @@
 
             <!-- Submit -->
             <div class="flex justify-end space-x-4">
-                <a href="{{ route('admins.index') }}" 
+                <a href="{{ route('admins.index') }}"
                    class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
                     Cancel
                 </a>
-                <button type="submit" 
+                <button type="submit"
                         class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
                     Update Admin
                 </button>

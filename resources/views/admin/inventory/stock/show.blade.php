@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Transaction Details')
-
+@section('header-title', 'Transaction Details - ' . $transaction->id)
 @section('content')
     <div class="p-4 rounded-lg">
         <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-6">

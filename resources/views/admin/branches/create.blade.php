@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-
+@section('header-title', 'Add Branch to ' . $organization->name)
 @section('content')
 <div class="container mx-auto px-4 py-8 max-w-2xl">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">

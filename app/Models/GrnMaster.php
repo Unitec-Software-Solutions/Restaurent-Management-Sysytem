@@ -47,6 +47,7 @@ class GrnMaster extends Model
     const STATUS_VERIFIED = 'Verified';
     const STATUS_REJECTED = 'Rejected';
     const STATUS_PARTIAL = 'Partially Verified';
+    const STATUS_COMPLETED = 'Completed';
 
     public function isPaymentPending()
     {

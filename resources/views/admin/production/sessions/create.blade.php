@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Create Production Session')
-
+@section('header-title', 'Create Production Session')
 @section('content')
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto">
@@ -221,12 +221,12 @@
                             </span>
                         </div>
                     </div>
-                    
+
                     <div class="mt-4">
                         <h3 class="text-lg font-medium text-gray-900 mb-2">Items to Produce</h3>
                         ${itemsHtml}
                     </div>
-                    
+
                     ${order.notes ? `
                                 <div class="mt-4">
                                     <label class="block text-sm font-medium text-gray-700">Order Notes</label>

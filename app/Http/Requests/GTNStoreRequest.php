@@ -26,7 +26,8 @@ class GTNStoreRequest extends FormRequest
             'organization_id' => 'nullable|exists:organizations,id', // For super admin
             'from_branch_id' => 'required|exists:branches,id',
             'to_branch_id' => 'required|exists:branches,id|different:from_branch_id',
-            'transfer_date' => 'required|date|after_or_equal:today',
+            // Allow transfer_date up to 30 days in the past
+            'transfer_date' => ['required', 'date', 'after_or_equal:' . now()->subDays(30)->toDateString()],
             'notes' => 'nullable|string|max:1000',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:item_master,id',
@@ -50,7 +51,7 @@ class GTNStoreRequest extends FormRequest
             'to_branch_id.required' => 'Destination branch is required.',
             'to_branch_id.different' => 'Destination branch must be different from origin branch.',
             'transfer_date.required' => 'Transfer date is required.',
-            'transfer_date.after_or_equal' => 'Transfer date cannot be in the past.',
+            'transfer_date.after_or_equal' => 'Transfer date cannot be more than 30 days in the past.',
             'items.required' => 'At least one item is required.',
             'items.*.item_id.required' => 'Item selection is required.',
             'items.*.transfer_quantity.required' => 'Transfer quantity is required.',

@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-
+@section('header-title', 'Reports')
 @section('content')
 <div >
     <div class="p-4 rounded-lg">

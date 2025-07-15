@@ -6,6 +6,7 @@
     <title>@yield('title', config('app.name'))</title>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
     <script src="https://kit.fontawesome.com/a2e0e6fa71.js" crossorigin="anonymous"></script>
     <style>
         @keyframes fade-in {
@@ -13,30 +14,18 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in { animation: fade-in 1s ease-out forwards; }
+        .bg-noise {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.2'/%3E%3C/svg%3E");
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
-    <!-- Minimal Header -->
-    <header class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div></div>
-            <a href="{{ route('admin.login') }}"
-                class="px-2 py-1 bg-gray-700 text-white rounded-full text-xs font-medium hover:bg-gray-800 transition">
-                Admin Login
-            </a>
-        </div>
-    </header>
+    @include('partials.landing-page.nav.welcome-nav')
 
-    <!-- Main Content -->
     <main class="flex-grow">
         @yield('content')
     </main>
 
-    <!-- Simple Footer -->
-    <footer class="bg-white py-4 border-t">
-        <div class="max-w-7xl mx-auto px-4 text-center text-gray-600">
-            &copy; {{ date('Y') }} Restaurant Name. All rights reserved.
-        </div>
-    </footer>
+    {{-- @include('partials.landing-page.footer.welcome-footer') --}}
 </body>
 </html>

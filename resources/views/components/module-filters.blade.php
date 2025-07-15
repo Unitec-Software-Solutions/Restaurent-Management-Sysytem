@@ -16,15 +16,15 @@
         @foreach(request()->except(['search', 'status', 'branch_id', 'start_date', 'end_date']) as $key => $value)
             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
         @endforeach
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Search -->
             <div>
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input 
-                    type="text" 
-                    id="search" 
-                    name="search" 
+                <input
+                    type="text"
+                    id="search"
+                    name="search"
                     value="{{ $searchValue }}"
                     placeholder="Search records..."
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -35,8 +35,8 @@
             @if($showStatusFilter && !empty($statusOptions))
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select 
-                        id="status" 
+                    <select
+                        id="status"
                         name="status"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     >
@@ -49,13 +49,43 @@
                     </select>
                 </div>
             @endif
+            <!-- Date Range -->
+            @if($showDateRange)
+                <div class="grid grid-cols-2 gap-2">
+                    <div id="date-range-picker" date-rangepicker >
+                        <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                        <input
+                            datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+                            type="text"
+                            id="start_date"
+                            name="start_date"
+                            value="{{ request('start_date', now()->subDays(30)->toDateString()) }}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            autocomplete="off"
+                            >
+                    </div>
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                        <input
+                            datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+                            type="text"
+                            id="end_date"
+                            name="end_date"
+                            value="{{ request('end_date', now()->toDateString()) }}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            autocomplete="off"
+                            >
+                    </div>
+                </div>
+            @endif
+
 
             <!-- Branch Filter -->
             @if($showBranchFilter && !empty($branches))
                 <div>
                     <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <select 
-                        id="branch_id" 
+                    <select
+                        id="branch_id"
                         name="branch_id"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     >
@@ -69,32 +99,6 @@
                 </div>
             @endif
 
-            <!-- Date Range -->
-            @if($showDateRange)
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                        <input 
-                            type="date" 
-                            id="start_date" 
-                            name="start_date" 
-                            value="{{ request('start_date') }}"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        >
-                    </div>
-                    <div>
-                        <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                        <input 
-                            type="date" 
-                            id="end_date" 
-                            name="end_date" 
-                            value="{{ request('end_date') }}"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                        >
-                    </div>
-                </div>
-            @endif
-
             <!-- Custom Filters -->
             @foreach($customFilters as $filter)
                 <div>
@@ -102,8 +106,8 @@
                         {{ $filter['label'] }}
                     </label>
                     @if($filter['type'] === 'select')
-                        <select 
-                            id="{{ $filter['name'] }}" 
+                        <select
+                            id="{{ $filter['name'] }}"
                             name="{{ $filter['name'] }}"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                         >
@@ -115,10 +119,10 @@
                             @endforeach
                         </select>
                     @else
-                        <input 
-                            type="{{ $filter['type'] ?? 'text' }}" 
-                            id="{{ $filter['name'] }}" 
-                            name="{{ $filter['name'] }}" 
+                        <input
+                            type="{{ $filter['type'] ?? 'text' }}"
+                            id="{{ $filter['name'] }}"
+                            name="{{ $filter['name'] }}"
                             value="{{ request($filter['name']) }}"
                             placeholder="{{ $filter['placeholder'] ?? '' }}"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -131,15 +135,15 @@
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-2 justify-between items-center">
             <div class="flex gap-2">
-                <button 
+                <button
                     type="submit"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                 >
                     <i class="fas fa-search mr-2"></i>
                     Filter
                 </button>
-                
-                <a 
+
+                <a
                     href="{{ request()->url() }}"
                     class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center transition-colors"
                 >
@@ -152,7 +156,7 @@
             <div class="flex gap-2">
                 @can('export_data')
                     <!-- Excel Export -->
-                    <button 
+                    <button
                         type="submit"
                         name="export"
                         value="excel"
@@ -164,7 +168,7 @@
                     </button>
 
                     <!-- CSV Export -->
-                    <button 
+                    <button
                         type="submit"
                         name="export"
                         value="csv"
@@ -198,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show progress indicator for exports
     const exportButtons = document.querySelectorAll('button[name="export"]');
     const progressDiv = document.getElementById('export-progress');
-    
+
     exportButtons.forEach(button => {
         button.addEventListener('click', function() {
             progressDiv.classList.remove('hidden');
