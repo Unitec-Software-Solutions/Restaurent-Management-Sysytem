@@ -90,7 +90,7 @@
     @endauth
 
     <!-- Header -->
-    {{-- @include('partials.header.admin-header') --}}
+    @include('partials.header.admin-header')
 
     <!-- Main Content -->
     <main class="lg:ml-64 transition-all duration-300">
