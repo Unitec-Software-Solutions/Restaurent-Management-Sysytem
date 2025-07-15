@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'GTN Details')
+@section('header-title', 'GTN Details - ' . $gtn->gtn_number)
 
 @section('content')
     <div class="p-4 rounded-lg">
