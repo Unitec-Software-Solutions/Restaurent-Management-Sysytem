@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Branch Summary')
-
+@section('header-title', 'Branch Summary - ' . $branch->name)
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
