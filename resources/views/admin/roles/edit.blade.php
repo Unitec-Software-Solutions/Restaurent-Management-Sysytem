@@ -125,6 +125,17 @@
         <div class="mt-6">
             <label class="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @php
+                    $oldPermissions = old('permissions', $role->permissions->pluck('name')->toArray());
+                @endphp
+                @foreach($allPermissions as $permission)
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="permissions[]" value="{{ $permission->name }}" class="permission-checkbox"
+                            {{ in_array($permission->name, $oldPermissions) ? 'checked' : '' }}>
+                        <span>{{ $permission->name }}</span>
+                    </label>
+                @endforeach
+            </div>
                 @foreach($permissionDefinitions as $category => $data)
                     @if(isset($availablePermissions[$category]) && !empty($availablePermissions[$category]))
                         <div class="mb-4 border rounded p-3">

@@ -30,7 +30,8 @@ use App\Http\Controllers\Admin\{
     SubscriptionPlanController,
     PaymentController,
     KitchenStationController,
-    MenuItemController
+    MenuItemController,
+    ModuleController
 };
 // Purchase Order Controller
 use App\Http\Controllers\Admin\{
@@ -103,9 +104,9 @@ Route::prefix('guest')->name('guest.')->group(function () {
     Route::get('/reservations/{confirmationNumber}/confirmation', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmation'])->name('reservations.confirmation');
     Route::get('/reservations/{reservationId}/confirmation/{token}', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmationById'])->name('reservation.confirmation');
 
-    // Guest session management
-    Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
-});
+        // Guest session management
+        Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
+    });
 
 /*-------------------------------------------------------------------------
 | Customer Routes
@@ -654,10 +655,10 @@ Route::middleware(['auth:admin', SuperAdmin::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::resource('roles', \App\Http\Controllers\RoleController::class)->except(['show']);
-        Route::resource('modules', \App\Http\Controllers\ModuleController::class)->except(['show']);
-        Route::get('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'permissions'])->name('roles.permissions');
-        Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
+        Route::resource('roles', RoleController::class);
+        Route::resource('modules', ModuleController::class)->except(['show']);
+        Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions');
+        Route::post('roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
     });
 
 // User Management Routes - Accessible by Superadmin, Org Admin, and Branch Admin with permissions
@@ -1071,3 +1072,9 @@ Route::get('/api/menu-items/branch/{branch}/active', [OrderController::class, 'g
 Route::get('admin/kots/{kot}/print', [\App\Http\Controllers\KotController::class, 'print'])
     ->name('admin.kots.print')
     ->middleware(['auth:admin']);
+
+// Roles CRUD - Accessible by Super Admin
+Route::middleware(['auth:admin', SuperAdmin::class])->group(function () {
+    Route::resource('roles', RoleController::class);
+
+});
