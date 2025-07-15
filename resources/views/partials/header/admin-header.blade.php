@@ -26,10 +26,17 @@
 
             <!-- Title and subtitle container -->
             <div class="flex-1 ml-3 lg:ml-0">
-                <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                    @yield('header-title', 'Dashboard')
-                </h1>
-                @hasSection('header-subtitle')
+                @if(View::hasSection('header-title'))
+                    <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                        @yield('header-title')
+                    </h1>
+                @else
+                    <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                        Dashboard
+                    </h1>
+                @endif
+
+                @if(View::hasSection('header-subtitle'))
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         @yield('header-subtitle')
                     </p>
