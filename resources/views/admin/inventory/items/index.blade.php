@@ -294,10 +294,6 @@
                                 <span class="text-indigo-600 font-medium">(filtered)</span>
                             @endif
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            For KOT items (recipes), use Menu Items → Create KOT Recipe instead
-                        </p>
                         <p class="text-sm text-gray-500 mt-1">
                             @if (Auth::guard('admin')->user()->is_super_admin)
                                 Organization: All Organizations (Super Admin)
@@ -309,12 +305,16 @@
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-3">
+                        <a href="{{ route('admin.menu-items.enhanced.index') }}"
+                            class="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors">
+                            <i class="fas fa-utensils mr-2"></i>Menu Items
+                        </a>
                         <a href="{{ route('admin.item-categories.create') }}"
-                            class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors">
                             <i class="fas fa-plus mr-2"></i> New Item Category
                         </a>
                         <a href="{{ route('admin.inventory.items.create') }}"
-                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors">
                             <i class="fas fa-plus mr-2"></i> New Item
                         </a>
                     </div>
