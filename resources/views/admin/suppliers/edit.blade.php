@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-
+@section('header-title', 'Edit Supplier')
 @section('content')
     <div class="p-4 rounded-lg">
         <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm overflow-hidden">
