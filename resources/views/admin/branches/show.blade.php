@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Branch Details - ' . $branch->name)
-
+@section('header-title', 'Branch Details - ' . $branch->name)
 @section('content')
 <div class="container mx-auto px-4 py-6">
     <!-- Header -->
