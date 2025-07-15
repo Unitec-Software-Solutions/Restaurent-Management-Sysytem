@@ -63,8 +63,45 @@ class GoodsTransferNoteController extends Controller
             $query->where('organization_id', $orgId);
         }
 
-        // Apply filters using the trait
-        $query = $this->applyFiltersToQuery($query, $request);
+        // Apply search filter
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('gtn_number', 'like', "%{$search}%")
+                  ->orWhereHas('fromBranch', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('toBranch', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Apply status filter (origin_status)
+        if ($request->has('status') && $request->status != '') {
+            $query->where('origin_status', $request->status);
+        }
+
+        // Apply branch filter
+        if ($request->has('branch_id') && $request->branch_id != '') {
+            $query->where(function($q) use ($request) {
+                $q->where('from_branch_id', $request->branch_id)
+                  ->orWhere('to_branch_id', $request->branch_id);
+            });
+        }
+
+        // Apply from_branch_id filter
+        if ($request->has('from_branch_id') && $request->from_branch_id != '') {
+            $query->where('from_branch_id', $request->from_branch_id);
+        }
+
+        // Apply to_branch_id filter
+        if ($request->has('to_branch_id') && $request->to_branch_id != '') {
+            $query->where('to_branch_id', $request->to_branch_id);
+        }
+
+        // Apply date range filter
+        $query->whereBetween('transfer_date', [$startDate, $endDate]);
 
         // Handle export
         if ($request->has('export')) {
@@ -72,9 +109,6 @@ class GoodsTransferNoteController extends Controller
                 'GTN Number', 'From Branch', 'To Branch', 'Status', 'Origin Status', 'Receiver Status', 'Transfer Date', 'Created At'
             ]);
         }
-
-        // Always apply date range filter
-        $query->whereBetween('transfer_date', [$startDate, $endDate]);
 
         $gtns = $query->latest()->paginate(15);
 
