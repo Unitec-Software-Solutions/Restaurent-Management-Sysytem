@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Production Order Details')
-
+@section('header-title', 'Production Order Details')
 @section('content')
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-6xl mx-auto">
