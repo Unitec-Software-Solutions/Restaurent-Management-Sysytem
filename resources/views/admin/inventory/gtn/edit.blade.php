@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('header-title', 'Edit Goods Transfer Note')
+@section('header-title', 'Edit Goods Transfer Note' . $gtn->gtn_number)
 @section('content')
     <div class="p-4 rounded-lg">
         <!-- Main Content Card -->
