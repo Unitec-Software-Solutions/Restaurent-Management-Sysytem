@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Activate Branch')
-
+@section('header-title', 'Activate Branch')
 @section('content')
 <div class="max-w-2xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
