@@ -1023,7 +1023,7 @@ $statusOptions = [
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
-        if (!$admin->hasRole(['organization_admin', 'branch_admin', 'super_admin'])) {
+        if (!$admin->can('create', Order::class)) {
             abort(403, 'You do not have permission to create orders.');
         }
         $validated = $request->validate([
@@ -1098,7 +1098,7 @@ $statusOptions = [
     }
 
         $admin = auth('admin')->user();
-        if (!$admin->hasRole(['organization_admin', 'branch_admin', 'super_admin'])) {
+        if (!$admin->can('update', $order)) {
             abort(403, 'You do not have permission to update orders.');
         }
         DB::beginTransaction();
