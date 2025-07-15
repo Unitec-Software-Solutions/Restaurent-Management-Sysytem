@@ -49,26 +49,6 @@
                     </select>
                 </div>
             @endif
-
-            <!-- Branch Filter -->
-            @if($showBranchFilter && !empty($branches))
-                <div>
-                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <select
-                        id="branch_id"
-                        name="branch_id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    >
-                        <option value="">All Branches</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" @selected($selectedBranch == $branch->id)>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            @endif
-
             <!-- Date Range -->
             @if($showDateRange)
                 <div class="grid grid-cols-2 gap-2">
@@ -96,6 +76,26 @@
                             autocomplete="off"
                             >
                     </div>
+                </div>
+            @endif
+
+
+            <!-- Branch Filter -->
+            @if($showBranchFilter && !empty($branches))
+                <div>
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                    <select
+                        id="branch_id"
+                        name="branch_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                        <option value="">All Branches</option>
+                        @foreach($branches as $branch)
+                            <option value="{{ $branch->id }}" @selected($selectedBranch == $branch->id)>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
             @endif
 
