@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-
+@section('header-title', 'Create Supplier')
 @section('content')
 <div class="p-4 sm:p-6">
     <!-- Main Card -->
