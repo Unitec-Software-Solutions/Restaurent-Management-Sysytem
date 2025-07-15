@@ -99,7 +99,7 @@
         <div class="h-16 lg:hidden"></div>
 
         <!-- Content Container -->
-        <div class="p-4 lg:p-6 bg-[#F3F4FF] min-h-screen">
+        <div class="pt-4 lg:pt-10 bg-[#F3F4FF] min-h-screen">
             <!-- Breadcrumbs -->
             {{-- @include('partials.breadcrumbs') // Disabled for now --}}
 
