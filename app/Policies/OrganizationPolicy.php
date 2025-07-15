@@ -5,58 +5,78 @@ namespace App\Policies;
 use App\Models\Admin;
 use App\Models\User;
 use App\Models\Organization;
+use App\Services\PermissionSystemService;
 
 class OrganizationPolicy
 {
+    protected PermissionSystemService $permissionService;
+
+    public function __construct(PermissionSystemService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
     public function viewAny(User|Admin $user): bool
     {
-        return $user->is_super_admin;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['organizations.view']);
     }
 
     public function create(User|Admin $user): bool
     {
-        return $user instanceof Admin && (bool) $user->is_super_admin;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['organizations.create']);
     }
 
     public function update(User|Admin $user, Organization $organization): bool
     {
-        return $user->is_super_admin || ($user->organization_id === $organization->id);
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['organizations.edit']) && $user->organization_id === $organization->id;
     }
 
     public function activate(User|Admin $user, Organization $organization): bool
     {
-        // Super admins can activate any organization
-        if ($user->is_super_admin) {
-            return true;
-        }
-        
-        // Organization admins can activate their own organization
-        if ($user->organization_id === $organization->id) {
-            return true;
-        }
-        
-        return false;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['organizations.activate']) && $user->organization_id === $organization->id;
     }
 
     public function deactivate(User|Admin $user, Organization $organization): bool
     {
-        return $user->is_super_admin;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['organizations.deactivate']) && $user->organization_id === $organization->id;
     }
     
     public function delete($user, Organization $organization)
     {
-        // Only super admins can delete organizations
         if ($user->is_super_admin) {
-            // Only allow deletion of inactive organizations
             return !$organization->is_active;
         }
-        
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['organizations.delete']) && !$organization->is_active && $user->organization_id === $organization->id;
     }
 
     public function regenerateKey(User|Admin $user, Organization $organization): bool
     {
-        // Only super admins can regenerate organization activation keys
-        return $user->is_super_admin;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['organizations.regenerate_key']) && $user->organization_id === $organization->id;
     }
 }

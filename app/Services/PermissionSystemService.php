@@ -8,8 +8,68 @@ use App\Models\Organization;
 use App\Models\Branch;
 use Illuminate\Support\Facades\DB;
 
-class PermissionSystemService
-{
+class PermissionSystemService {
+    /**
+     * Get enabled module keys for a given organization or branch (by subscription plan)
+     */
+    public function getEnabledModuleKeys($entity): array
+    {
+        // $entity can be Organization or Branch
+        if (!$entity) {
+            return [];
+        }
+        if (is_object($entity) && method_exists($entity, 'getSubscriptionPlanModules')) {
+            return $entity->getSubscriptionPlanModules();
+        }
+        if (is_object($entity) && property_exists($entity, 'subscription_plan_id') && $entity->subscription_plan_id) {
+            $plan = $entity->subscriptionPlan ?? null;
+            if ($plan && method_exists($plan, 'getModulesArray')) {
+                return $plan->getModulesArray();
+            }
+        }
+        return [];
+    }
+
+    /**
+     * Get all permissions available for a given entity (org/branch) based on enabled modules and plan tier
+     */
+    public function getAvailablePermissionsForEntity($entity, $permissionDefinitions, $modulesConfig): array
+    {
+        $enabledModules = $this->getEnabledModuleKeys($entity);
+        $permissions = [];
+        foreach ($enabledModules as $moduleKey) {
+            if (!isset($modulesConfig[$moduleKey])) continue;
+            $module = $modulesConfig[$moduleKey];
+            $tier = $entity->subscription_plan_tier ?? 'basic';
+            $tiers = $module['tiers'] ?? [];
+            $tierConfig = $tiers[$tier] ?? ($tiers['basic'] ?? []);
+            foreach (($tierConfig['permissions'] ?? []) as $perm) {
+                // Map to canonical permission name if needed
+                $permissions[$perm] = $permissionDefinitions[$moduleKey]['permissions'][$perm] ?? ucwords(str_replace(['.', '_', '-'], ' ', $perm));
+            }
+        }
+        return $permissions;
+    }
+
+    /**
+     * Filter permissions for a user/admin by their org/branch and subscription plan
+     */
+    public function filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig): array
+    {
+        if ($admin->is_super_admin) {
+            return $this->flattenPermissions($permissionDefinitions);
+        }
+        if ($admin->isOrganizationAdmin()) {
+            $entity = $admin->organization ?? null;
+        } elseif ($admin->isBranchAdmin()) {
+            $entity = $admin->branch ?? null;
+        } else {
+            return [];
+        }
+        if (!$entity) return [];
+        return $this->getAvailablePermissionsForEntity($entity, $permissionDefinitions, $modulesConfig);
+    }
+
     public function installScopedPermissions()
     {
         DB::transaction(function () {
@@ -516,25 +576,11 @@ class PermissionSystemService
     /**
      * Get available permissions based on admin scope
      */
+    // Deprecated: use filterPermissionsBySubscription instead
     public function getAvailablePermissions($admin, $permissionDefinitions): array
     {
-        if ($admin->is_super_admin) {
-            return $this->flattenPermissions($permissionDefinitions);
-        }
-
-        if ($admin->isOrganizationAdmin()) {
-            $excludedCategories = ['modules', 'settings'];
-            $excludedPermissions = ['organizations.create', 'organizations.delete'];
-            return $this->flattenPermissions($permissionDefinitions, $excludedCategories, $excludedPermissions);
-        }
-
-        if ($admin->isBranchAdmin()) {
-            $allowedCategories = ['orders', 'reservations', 'menus', 'inventory', 'kitchen', 'staff', 'reports', 'dashboard'];
-            $allowedPermissions = ['users.view', 'users.create', 'users.edit', 'roles.view', 'roles.assign'];
-            return $this->flattenPermissions($permissionDefinitions, [], [], $allowedCategories, $allowedPermissions);
-        }
-
-        return [];
+        $modulesConfig = config('modules');
+        return $this->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
     }
 
     /**

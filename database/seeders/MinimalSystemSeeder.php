@@ -40,38 +40,44 @@ class MinimalSystemSeeder extends Seeder
         DB::transaction(function () {
             // Step 1: Clear existing data
             $this->clearExistingData();
-            
-            // Step 2: Create system modules
-            $this->createSystemModules();
-            
-            // Step 3: Create permissions
+
+            // Step 2: Create system permissions
             $this->createSystemPermissions();
-            
+
+            // Step 3: Create system modules (with permission mapping)
+            $this->createSystemModules();
+
             // Step 4: Create super admin role
             $this->createSuperAdminRole();
-            
-            // Step 5: Create super admin user
+
+            // Step 5: Create default org/branch roles
+            $this->createDefaultOrgAndBranchRoles();
+
+            // Step 6: Create super admin user
             $this->createSuperAdmin();
-            
-            // Step 6: Create subscription plan
+
+            // Step 7: Create subscription plan
             $subscriptionPlan = $this->createSubscriptionPlan();
-            
-            // Step 7: Create organization
+
+            // Step 8: Create organization
             $organization = $this->createOrganization($subscriptionPlan);
-            
-            // Step 8: Create branch
+
+            // Step 9: Create branch
             $branch = $this->createBranch($organization);
-            
-            // Step 9: Create menu structure
+
+            // Step 10: Create example custom roles (pass real IDs)
+            $this->createExampleCustomRoles($branch->id, $organization->id);
+
+            // Step 11: Create menu structure
             $this->createMenuStructure($organization, $branch);
-            
-            // Step 10: Create customers
+
+            // Step 12: Create customers
             $this->createCustomers();
-            
-            // Step 11: Create tables for the branch
+
+            // Step 13: Create tables for the branch
             $this->createTables($branch);
-            
-            // Step 12: Create reservations and orders
+
+            // Step 14: Create reservations and orders
             $this->createReservationsAndOrders($branch);
         });
         
@@ -136,62 +142,207 @@ class MinimalSystemSeeder extends Seeder
     private function createSystemModules(): void
     {
         $this->command->info('  📦 Creating system modules...');
-        
         $modules = [
             [
                 'name' => 'Order Management',
                 'slug' => 'order',
                 'description' => 'Complete order processing and kitchen workflows',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'order.view', 'order.create', 'order.update', 'order.delete', 'order.manage',
+                    'order.process', 'order.cancel', 'order.refund', 'order.print_kot',
+                ]
             ],
             [
                 'name' => 'Reservation System',
                 'slug' => 'reservation',
                 'description' => 'Table booking and reservation management',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'reservation.view', 'reservation.create', 'reservation.update', 'reservation.delete',
+                    'reservation.manage', 'reservation.approve', 'reservation.cancel', 'reservation.checkin',
+                ]
             ],
             [
                 'name' => 'Inventory Management',
                 'slug' => 'inventory',
                 'description' => 'Stock control and supplier management',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'inventory.view', 'inventory.create', 'inventory.update', 'inventory.delete',
+                    'inventory.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.audit',
+                ]
             ],
             [
                 'name' => 'Menu Management',
                 'slug' => 'menu',
                 'description' => 'Menu items, categories, and pricing',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'menu.view', 'menu.create', 'menu.update', 'menu.delete', 'menu.manage',
+                    'menu.categories', 'menu.pricing', 'menu.schedule', 'menu.publish',
+                ]
             ],
             [
                 'name' => 'Customer Management',
                 'slug' => 'customer',
                 'description' => 'Customer database and loyalty programs',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'customer.view', 'customer.create', 'customer.update', 'customer.delete',
+                    'customer.manage', 'customer.loyalty', 'customer.communications',
+                ]
             ],
             [
                 'name' => 'Kitchen Operations',
                 'slug' => 'kitchen',
                 'description' => 'Kitchen stations, KOT management, and production',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'kitchen.view', 'kitchen.manage', 'kitchen.stations', 'kitchen.orders',
+                    'kitchen.status', 'kitchen.recipes', 'kitchen.production',
+                    'kot.view', 'kot.create', 'kot.update', 'kot.manage', 'kot.print',
+                ]
             ],
             [
                 'name' => 'Reports & Analytics',
                 'slug' => 'report',
                 'description' => 'Business intelligence and reporting',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'report.view', 'report.generate', 'report.export', 'report.sales',
+                    'report.inventory', 'report.staff', 'report.financial', 'report.dashboard',
+                ]
             ],
             [
                 'name' => 'System Administration',
                 'slug' => 'system',
                 'description' => 'System settings and administration',
-                'is_active' => true
+                'is_active' => true,
+                'permissions' => [
+                    'system.manage', 'system.settings', 'system.backup', 'system.logs',
+                    'organization.view', 'organization.create', 'organization.update', 'organization.manage',
+                    'branch.view', 'branch.create', 'branch.update', 'branch.manage',
+                    'user.view', 'user.create', 'user.update', 'user.delete', 'user.manage',
+                    'role.view', 'role.create', 'role.update', 'role.delete', 'role.manage',
+                    'permission.view', 'permission.manage',
+                    'staff.view', 'staff.create', 'staff.update', 'staff.delete', 'staff.manage',
+                    'staff.schedule', 'staff.attendance', 'staff.performance',
+                    'payment.view', 'payment.process', 'payment.refund', 'payment.manage',
+                    'billing.view', 'billing.create', 'billing.manage',
+                    'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update',
+                ]
             ]
         ];
 
         foreach ($modules as $moduleData) {
-            $module = Module::create($moduleData);
+            $permissions = $moduleData['permissions'] ?? [];
+            $module = Module::create([
+                'name' => $moduleData['name'],
+                'slug' => $moduleData['slug'],
+                'description' => $moduleData['description'],
+                'is_active' => $moduleData['is_active'],
+                'permissions' => $permissions
+            ]);
             $this->command->info("    ✓ Module: {$module->name}");
         }
+    }
+
+    /**
+     * Create default roles for organization and branch with relevant permissions
+     */
+    private function createDefaultOrgAndBranchRoles(): void
+    {
+        $this->command->info('  🏢 Creating default organization and branch roles...');
+
+        // Use PermissionSystemService to filter permissions by enabled modules in subscription plan
+        $permissionService = app(\App\Services\PermissionSystemService::class);
+        $permissionDefinitions = $permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+
+        // Organization Admin Role
+        $org = \App\Models\Organization::first();
+        $orgPerms = $permissionService->getAvailablePermissionsForEntity($org, $permissionDefinitions, $modulesConfig);
+        $orgAdminRole = \App\Models\Role::create([
+            'name' => 'Organization Admin',
+            'guard_name' => 'web',
+            'scope' => 'organization',
+            'is_system_role' => false
+        ]);
+        $orgAdminRole->syncPermissions(
+            \App\Models\Permission::whereIn('name', array_keys($orgPerms))
+                ->where('guard_name', 'web')
+                ->get()
+        );
+
+        // Branch Admin Role
+        $branch = \App\Models\Branch::first();
+        $branchPerms = $permissionService->getAvailablePermissionsForEntity($branch, $permissionDefinitions, $modulesConfig);
+        $branchAdminRole = \App\Models\Role::create([
+            'name' => 'Branch Admin',
+            'guard_name' => 'web',
+            'scope' => 'branch',
+            'is_system_role' => false
+        ]);
+        $branchAdminRole->syncPermissions(
+            \App\Models\Permission::whereIn('name', array_keys($branchPerms))
+                ->where('guard_name', 'web')
+                ->get()
+        );
+
+        $this->command->info('    ✓ Default org/branch roles created');
+    }
+
+    /**
+     * Create example custom roles for organization and branch
+     */
+    private function createExampleCustomRoles($branchId = null, $organizationId = null): void
+    {
+        $this->command->info('  🧩 Creating example custom roles...');
+        // Example: Kitchen Supervisor (branch)
+        $permissionService = app(\App\Services\PermissionSystemService::class);
+        $permissionDefinitions = $permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        if ($branchId) {
+            $branch = \App\Models\Branch::find($branchId);
+            $branchPerms = $permissionService->getAvailablePermissionsForEntity($branch, $permissionDefinitions, $modulesConfig);
+            $kitchenPerms = [
+                'kitchen.view', 'kitchen.manage', 'kitchen.stations', 'kitchen.orders',
+                'kot.view', 'kot.create', 'kot.update', 'kot.manage',
+            ];
+            $filteredKitchenPerms = array_intersect($kitchenPerms, array_keys($branchPerms));
+            $kitchenSupervisor = \App\Models\CustomRole::create([
+                'name' => 'Kitchen Supervisor',
+                'guard_name' => 'admin',
+                'branch_id' => $branchId,
+            ]);
+            $kitchenSupervisor->syncPermissions(
+                \App\Models\Permission::whereIn('name', $filteredKitchenPerms)
+                    ->where('guard_name', 'admin')
+                    ->get()
+            );
+        }
+        // Example: Inventory Clerk (organization)
+        if ($organizationId) {
+            $org = \App\Models\Organization::find($organizationId);
+            $orgPerms = $permissionService->getAvailablePermissionsForEntity($org, $permissionDefinitions, $modulesConfig);
+            $invPerms = [
+                'inventory.view', 'inventory.update', 'inventory.manage',
+            ];
+            $filteredInvPerms = array_intersect($invPerms, array_keys($orgPerms));
+            $inventoryClerk = \App\Models\CustomRole::create([
+                'name' => 'Inventory Clerk',
+                'guard_name' => 'admin',
+                'organization_id' => $organizationId,
+            ]);
+            $inventoryClerk->syncPermissions(
+                \App\Models\Permission::whereIn('name', $filteredInvPerms)
+                    ->where('guard_name', 'admin')
+                    ->get()
+            );
+        }
+
+        $this->command->info('    ✓ Example custom roles created');
     }
 
     /**
