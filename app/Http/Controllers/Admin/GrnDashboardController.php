@@ -105,47 +105,64 @@ class GrnDashboardController extends Controller
             $query->where('organization_id', $orgId);
         }
 
-        if ($request->filled('search') ) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('grn_number', 'like', "%{$search}%")
-                    ->orWhere('delivery_note_number', 'like', "%{$search}%")
-                    ->orWhere('invoice_number', 'like', "%{$search}%")
-                    ->orWhereHas('supplier', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('code', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('purchaseOrder', function ($q) use ($search) {
-                        $q->where('po_number', 'like', "%{$search}%");
-                    });
-            });
-        }
+    // Apply search filter (removed the code column search)
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function ($q) use ($search) {
+            $q->where('grn_number', 'like', "%{$search}%")
+                ->orWhere('delivery_note_number', 'like', "%{$search}%")
+                ->orWhere('invoice_number', 'like', "%{$search}%")
+                ->orWhereHas('supplier', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                    // Removed: ->orWhere('code', 'like', "%{$search}%");
+                })
+                ->orWhereHas('purchaseOrder', function ($q) use ($search) {
+                    $q->where('po_number', 'like', "%{$search}%");
+                });
+        });
+    }
 
-        // Always apply date range filter
-        $query->whereBetween('received_date', [$startDate, $endDate]);
 
+        // Apply status filter
         if ($request->filled('status') && $request->status != 'all') {
             $query->where('status', $request->status);
         }
 
+        // Apply branch filter
         if ($request->filled('branch_id')) {
             $query->where('branch_id', $request->branch_id);
         }
 
+        // Apply supplier filter
         if ($request->filled('supplier_id')) {
             $query->where('supplier_id', $request->supplier_id);
         }
 
+        // Apply payment status filter (new filter)
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        // Apply date range filter
+        $query->whereBetween('received_date', [$startDate, $endDate]);
+
+        // Sorting
         $sortBy = $request->input('sort_by', 'received_date');
         $sortDir = $request->input('sort_dir', 'desc');
         $query->orderBy($sortBy, $sortDir);
 
+        // Handle export
+        if ($request->has('export')) {
+            return $this->exportToExcel($request, $query, 'grn_export.xlsx', [
+                'GRN Number', 'Supplier', 'Branch', 'Status', 'Payment Status', 'Total Amount', 'Received Date'
+            ]);
+        }
+
         $grns = $query->paginate(10);
 
+        // Statistics query
         $statsQuery = GrnMaster::query();
         $this->applyOrganizationFilter($statsQuery, $orgId);
-
-        // Always apply date range filter for stats
         $statsQuery->whereBetween('received_date', [$startDate, $endDate]);
 
         $stats = [
@@ -159,8 +176,25 @@ class GrnDashboardController extends Controller
                 ->sum('total_amount'),
         ];
 
+        // Get filter options
         $branches = $this->applyOrganizationFilter(Branch::query(), $orgId)->active()->get();
         $suppliers = $this->applyOrganizationFilter(Supplier::query(), $orgId)->active()->get();
+
+        // Status options for filter
+        $statusOptions = [
+            GrnMaster::STATUS_PENDING => 'Pending',
+            GrnMaster::STATUS_VERIFIED => 'Verified',
+            GrnMaster::STATUS_REJECTED => 'Rejected',
+            GrnMaster::STATUS_PARTIAL => 'Partially Verified',
+            GrnMaster::STATUS_COMPLETED => 'Completed'
+        ];
+
+        // Payment status options for filter
+        $paymentStatusOptions = [
+            'pending' => 'Pending',
+            'partial' => 'Partial',
+            'paid' => 'Paid'
+        ];
 
         return view('admin.suppliers.grn.index', compact(
             'grns',
@@ -168,7 +202,9 @@ class GrnDashboardController extends Controller
             'branches',
             'suppliers',
             'startDate',
-            'endDate'
+            'endDate',
+            'statusOptions',
+            'paymentStatusOptions'
         ));
     }
 
