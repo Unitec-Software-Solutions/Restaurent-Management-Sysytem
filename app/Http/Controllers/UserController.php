@@ -105,11 +105,19 @@ class UserController extends Controller
         $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
 
         // Only show roles that are available for the current admin's org/branch/plan
-        $roles = \Spatie\Permission\Models\Role::where('guard_name', 'web')
+        $rolesQuery = \Spatie\Permission\Models\Role::with('permissions')
+            ->where('guard_name', 'web')
             ->whereHas('permissions', function($q) use ($availablePermissions) {
                 $q->whereIn('name', array_keys($availablePermissions));
-            })
-            ->get();
+            });
+        if ($admin->is_super_admin) {
+            // all roles
+        } elseif ($admin->isOrganizationAdmin()) {
+            $rolesQuery->where('organization_id', $admin->organization_id);
+        } else {
+            $rolesQuery->where('branch_id', $admin->branch_id);
+        }
+        $roles = $rolesQuery->get();
 
         if ($admin->is_super_admin) {
             $organizations = Organization::all();

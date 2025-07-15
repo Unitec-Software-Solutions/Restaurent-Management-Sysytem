@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\Gate;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\Module;
+use App\Models\Branch;
+use App\Models\Admin;
 use Illuminate\Support\Facades\Auth;
 use App\Services\PermissionSystemService;
+use Spatie\Permission\Models\Permission;
 
 class RoleController extends Controller
 {
@@ -25,19 +28,19 @@ class RoleController extends Controller
         $admin = Auth::guard('admin')->user();
         
         // Filter roles based on admin scope
-        $rolesQuery = \App\Models\Role::query();
+        $rolesQuery = Role::query();
 
         if ($admin->is_super_admin) {
             // Super admin sees all roles
-            $organizations = \App\Models\Organization::with('branches')->get();
+            $organizations = Organization::with('branches')->get();
         } elseif ($admin->isOrganizationAdmin()) {
             // Org admin sees only their org's roles
             $rolesQuery->where('organization_id', $admin->organization_id);
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->with('branches')->get();
+            $organizations = Organization::where('id', $admin->organization_id)->with('branches')->get();
         } else {
             // Branch admin sees only their branch's roles
             $rolesQuery->where('branch_id', $admin->branch_id);
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->with('branches')->get();
+            $organizations = Organization::where('id', $admin->organization_id)->with('branches')->get();
         }
 
         // Apply filters from request
@@ -50,7 +53,7 @@ class RoleController extends Controller
             $rolesQuery->where('organization_id', $selectedOrgId)->whereNull('branch_id');
         }
 
-        $roles = $rolesQuery->with('organization', 'branch')->get();
+        $roles = $rolesQuery->with(['organization', 'branch', 'permissions'])->get();
 
         return view('admin.roles.index', compact('organizations', 'roles', 'selectedOrgId', 'selectedBranchId'));
     }
@@ -61,15 +64,15 @@ class RoleController extends Controller
 
         // Get available organizations and branches based on admin scope
         if ($admin->is_super_admin) {
-            $organizations = \App\Models\Organization::with('branches')->get();
-            $branches = \App\Models\Branch::all();
+            $organizations = Organization::with('branches')->get();
+            $branches = Branch::all();
         } elseif ($admin->isOrganizationAdmin()) {
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->with('branches')->get();
-            $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
+            $organizations = Organization::where('id', $admin->organization_id)->with('branches')->get();
+            $branches = Branch::where('organization_id', $admin->organization_id)->get();
         } else {
             // Branch admin
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->with('branches')->get();
-            $branches = \App\Models\Branch::where('id', $admin->branch_id)->get();
+            $organizations = Organization::where('id', $admin->organization_id)->with('branches')->get();
+            $branches = Branch::where('id', $admin->branch_id)->get();
         }
 
         // Get permission definitions and role templates from the service
@@ -82,12 +85,16 @@ class RoleController extends Controller
         // Get available permissions based on admin scope
         $availablePermissions = $this->getAvailablePermissions($admin, $permissionDefinitions);
 
+        // Fetch all permissions for display (for super admin)
+        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'web')->get();
+
         return view('admin.roles.create', compact(
             'organizations', 
             'branches', 
             'permissionDefinitions',
             'availableTemplates',
-            'availablePermissions'
+            'availablePermissions',
+            'allPermissions'
         ));
     }
 
@@ -145,7 +152,7 @@ class RoleController extends Controller
         }
 
         // Validate unique role name within scope
-        $existingRole = \App\Models\Role::where('name', $request->name)
+        $existingRole = Role::where('name', $request->name)
             ->where('organization_id', $organizationId)
             ->where('branch_id', $branchId)
             ->first();
@@ -155,7 +162,7 @@ class RoleController extends Controller
         }
 
         // Create the role
-        $role = \App\Models\Role::create([
+        $role = Role::create([
             'name' => $request->name,
             'branch_id' => $branchId,
             'organization_id' => $organizationId,
@@ -171,7 +178,7 @@ class RoleController extends Controller
             $validPermissions = array_intersect($request->permissions, array_keys($availablePermissions));
             
             if (!empty($validPermissions)) {
-                $permissionIds = \App\Models\Permission::whereIn('name', $validPermissions)
+                $permissionIds = Permission::whereIn('name', $validPermissions)
                     ->pluck('id')->toArray();
                 $role->permissions()->sync($permissionIds);
             }
@@ -181,9 +188,12 @@ class RoleController extends Controller
             ->with('success', 'Role created successfully with ' . count($validPermissions ?? []) . ' permissions.');
     }
 
-    public function edit(\App\Models\Role $role)
+    public function edit(Role $role)
     {
         $admin = auth('admin')->user();
+
+        // Eager load permissions to ensure they are available in the view
+        $role->load('permissions');
 
         // Check if admin can edit this role
         if (!$admin->is_super_admin) {
@@ -194,25 +204,27 @@ class RoleController extends Controller
             }
         }
 
-        // Get available organizations and branches based on admin scope
         if ($admin->is_super_admin) {
-            $organizations = \App\Models\Organization::all();
-            $branches = \App\Models\Branch::where('organization_id', $role->organization_id)->get();
+            $organizations = Organization::all();
+            $branches = Branch::where('organization_id', $role->organization_id)->get();
         } elseif ($admin->isOrganizationAdmin()) {
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->get();
-            $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
+            $organizations = Organization::where('id', $admin->organization_id)->get();
+            $branches = Branch::where('organization_id', $admin->organization_id)->get();
         } else {
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->get();
-            $branches = \App\Models\Branch::where('id', $admin->branch_id)->get();
+            $organizations = Organization::where('id', $admin->organization_id)->get();
+            $branches = Branch::where('id', $admin->branch_id)->get();
         }
 
         // Get permission definitions and available permissions
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $availablePermissions = $this->getAvailablePermissions($admin, $permissionDefinitions);
-        
+
         // Get role templates and filter by scope
         $roleTemplates = $this->permissionService->getRoleTemplates();
         $availableTemplates = $this->filterTemplatesByScope($roleTemplates, $admin);
+
+        // Fetch all permissions for display (for super admin and edit UI)
+        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'web')->get();
 
         return view('admin.roles.edit', compact(
             'role', 
@@ -220,11 +232,12 @@ class RoleController extends Controller
             'branches', 
             'permissionDefinitions',
             'availablePermissions',
-            'availableTemplates'
+            'availableTemplates',
+            'allPermissions'
         ));
     }
 
-    public function update(Request $request, \App\Models\Role $role)
+    public function update(Request $request, Role $role)
     {
         $admin = auth('admin')->user();
 
@@ -250,7 +263,7 @@ class RoleController extends Controller
         $request->validate($rules);
 
         // Check for unique name within scope (excluding current role)
-        $existingRole = \App\Models\Role::where('name', $request->name)
+        $existingRole = Role::where('name', $request->name)
             ->where('organization_id', $role->organization_id)
             ->where('branch_id', $role->branch_id)
             ->where('id', '!=', $role->id)
@@ -273,7 +286,7 @@ class RoleController extends Controller
             // Filter requested permissions to only those available to this admin
             $validPermissions = array_intersect($request->permissions, array_keys($availablePermissions));
             
-            $permissionIds = \App\Models\Permission::whereIn('name', $validPermissions)
+            $permissionIds = Permission::whereIn('name', $validPermissions)
                 ->pluck('id')->toArray();
             $role->permissions()->sync($permissionIds);
         } else {
@@ -285,7 +298,7 @@ class RoleController extends Controller
             ->with('success', 'Role updated successfully.');
     }
 
-    public function destroy(\App\Models\Role $role)
+    public function destroy(Role $role)
     {
         $admin = auth('admin')->user();
 
@@ -299,7 +312,7 @@ class RoleController extends Controller
         }
 
         // Check if role is in use by admins or users
-        $adminsUsingRole = \App\Models\Admin::where('current_role_id', $role->id)->count();
+        $adminsUsingRole = Admin::where('current_role_id', $role->id)->count();
         
         // Also check if role is assigned via Spatie's role system
         $adminsWithSpatieRole = 0;
@@ -308,7 +321,7 @@ class RoleController extends Controller
         try {
             // Check admin guard if role has admin guard
             if ($role->guard_name === 'admin') {
-                $adminsWithSpatieRole = \App\Models\Admin::role($role->name, 'admin')->count();
+                $adminsWithSpatieRole = Admin::role($role->name, 'admin')->count();
             }
         } catch (\Exception $e) {
             // Role doesn't exist for admin guard, which is fine
@@ -317,7 +330,7 @@ class RoleController extends Controller
         try {
             // Check web guard if role has web guard
             if ($role->guard_name === 'web') {
-                $usersWithSpatieRole = \App\Models\User::role($role->name, 'web')->count();
+                $usersWithSpatieRole = User::role($role->name, 'web')->count();
             }
         } catch (\Exception $e) {
             // Role doesn't exist for web guard, which is fine
@@ -358,7 +371,7 @@ class RoleController extends Controller
     {
         $request->validate(['modules' => 'array']);
 
-        $permissions = \App\Models\Module::whereIn('id', $request->modules)
+        $permissions = Module::whereIn('id', $request->modules)
             ->with('permissions')
             ->get()
             ->pluck('permissions')
@@ -372,7 +385,7 @@ class RoleController extends Controller
             'permissions' => $role->permissions
         ]);
     }     
-    public function updatePermissions(Request $request, \App\Models\Role $role)
+    public function updatePermissions(Request $request, Role $role)
     {
         $role->syncPermissions($request->input('permissions', []));
         return redirect()->route('admin.roles.index')
@@ -381,8 +394,8 @@ class RoleController extends Controller
 
     public function permissions($id)
     {
-        $role = \App\Models\Role::findOrFail($id);
-        $permissions = \App\Models\Permission::all();
+        $role = Role::findOrFail($id);
+        $permissions = Permission::all();
         return view('admin.roles.permissions', compact('role', 'permissions'));
     }
 
@@ -395,8 +408,8 @@ class RoleController extends Controller
                 'role_id' => 'required|exists:roles,id'
             ]);
             
-            $user = \App\Models\User::findOrFail($request->user_id);
-            $role = \App\Models\Role::findOrFail($request->role_id);
+            $user = User::findOrFail($request->user_id);
+            $role = Role::findOrFail($request->role_id);
             
             $user->assignRole($role);
             
@@ -410,5 +423,24 @@ class RoleController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function show(Role $role)
+    {
+        $admin = auth('admin')->user();
+
+        // Authorization: Only allow if admin can view this role
+        if (!$admin->is_super_admin) {
+            if ($admin->isOrganizationAdmin() && $role->organization_id !== $admin->organization_id) {
+                abort(403, 'You can only view roles within your organization.');
+            } elseif ($admin->isBranchAdmin() && $role->branch_id !== $admin->branch_id) {
+                abort(403, 'You can only view roles within your branch.');
+            }
+        }
+
+        // Eager load permissions, organization, branch
+        $role->load(['permissions', 'organization', 'branch']);
+
+        return view('admin.roles.show', compact('role'));
     }
 }

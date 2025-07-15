@@ -99,9 +99,11 @@ class User extends Authenticatable
         return $this->hasRole('superadmin');
     }
 
-    public function is_org_admin()
+    public function isOrganizationAdmin()
     {
-        return $this->hasRole('organization_admin');
+        return !$this->is_super_admin
+            && !is_null($this->organization_id)
+            && is_null($this->branch_id);
     }
 
     public function is_branch_admin()
