@@ -36,10 +36,11 @@
                     ]"
                     :selectedStatus="request('origin_status', '')" --}}
                     {{-- :branches="$branches" --}}
+                    :showDateRange="true"
                     :selectedBranch="request('branch_id', '')"
                     :showBranchFilter="true"
                     :showStatusFilter="true"
-                    :showDateRange="true"
+
                     :customFilters="[
                         [
                             'name' => 'from_branch_id',
