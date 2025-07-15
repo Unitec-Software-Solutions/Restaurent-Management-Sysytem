@@ -21,28 +21,29 @@
         <!-- Filters -->
         <x-module-filters
             :searchValue="request('search', '')"
-            :statusOptions="[
+            {{-- :statusOptions="[
                 'pending' => 'Pending',
                 'received' => 'Received',
                 'verified' => 'Verified',
                 'completed' => 'Completed',
                 'cancelled' => 'Cancelled'
-            ]"
+            ]" --}}
+            :showDateRange="true"
             :selectedStatus="request('status', '')"
             :branches="$branches"
             :selectedBranch="request('branch_id', '')"
             :showBranchFilter="true"
             :showStatusFilter="true"
-            :showDateRange="true"
+
             :customFilters="[
                 [
                     'name' => 'supplier_id',
                     'label' => 'Supplier',
                     'type' => 'select',
                     'options' => $suppliers->pluck('name', 'id')->toArray(),
-                    'placeholder' => 'All Suppliers'
+                    'placeholder' => 'All Suppliers '
                 ],
-                [
+                {{-- [
                     'name' => 'payment_status',
                     'label' => 'Payment Status',
                     'type' => 'select',
@@ -52,7 +53,7 @@
                         'paid' => 'Paid'
                     ],
                     'placeholder' => 'All Statuses'
-                ]
+                ] --}}
             ]"
         />
 
