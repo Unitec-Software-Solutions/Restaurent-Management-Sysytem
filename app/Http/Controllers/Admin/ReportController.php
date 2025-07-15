@@ -10,7 +10,7 @@ class ReportController extends Controller
     public function index()
     {
         // TODO: Implement index logic
-        return view('admin.index');
+        return view('admin.reports.index');
     }
 
 }
