@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-
+@section('header-title', 'Supplier Details - ' . $supplier->name)
 @section('content')
     <div class="p-4 rounded-lg">
         <div class="max-w-7xl mx-auto">
