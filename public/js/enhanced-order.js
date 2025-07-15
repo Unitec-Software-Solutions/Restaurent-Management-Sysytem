@@ -7,7 +7,7 @@ class EnhancedOrderManager {
         this.stockCache = new Map();
         this.validationTimer = null;
         this.wsConnection = null;
-        
+
         this.initializeEventListeners();
         this.initializeWebSocket();
         this.loadInitialStockData();
@@ -55,7 +55,7 @@ class EnhancedOrderManager {
             }
         };
         */
-        
+
         // For now, simulate with periodic updates
         setInterval(() => this.simulateStockUpdate(), 60000); // Every minute
     }
@@ -70,7 +70,7 @@ class EnhancedOrderManager {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 }
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 this.updateStockSummary(data);
@@ -147,30 +147,30 @@ class EnhancedOrderManager {
             // Add to cart
             const itemData = this.extractItemData($card);
             this.cart.set(itemId, itemData);
-            
+
             $card.addClass('selected');
             $quantityControls.show();
-            
+
             // Enable quantity controls with proper button states
             const $qtyInput = $card.find('.item-qty');
             const $increaseBtn = $card.find('.qty-increase');
             const $decreaseBtn = $card.find('.qty-decrease');
-            
+
             $qtyInput.prop('disabled', false);
-            
+
             const currentValue = parseInt($qtyInput.val()) || 1;
             const maxValue = parseInt($qtyInput.attr('max')) || 99;
-            
+
             $decreaseBtn.prop('disabled', currentValue <= 1);
             $increaseBtn.prop('disabled', currentValue >= maxValue);
-            
+
         } else {
             // Remove from cart
             this.cart.delete(itemId);
-            
+
             $card.removeClass('selected');
             $quantityControls.hide();
-            
+
             // Reset quantity
             $card.find('.item-qty').val(1);
         }
@@ -187,18 +187,13 @@ class EnhancedOrderManager {
         const itemId = $button.data('item-id');
         const $qtyInput = $(`.item-qty[data-item-id="${itemId}"]`);
         const currentQty = parseInt($qtyInput.val()) || 1;
-        const maxQty = parseInt($qtyInput.attr('max')) || 99;
-        const newQty = Math.max(1, Math.min(maxQty, currentQty + delta));
-        
+        const newQty = Math.max(1, Math.min(99, currentQty + delta));
         $qtyInput.val(newQty);
-        
         // Update button states
         const $decreaseBtn = $(`.qty-decrease[data-item-id="${itemId}"]`);
         const $increaseBtn = $(`.qty-increase[data-item-id="${itemId}"]`);
-        
         $decreaseBtn.prop('disabled', newQty <= 1);
-        $increaseBtn.prop('disabled', newQty >= maxQty);
-        
+        $increaseBtn.prop('disabled', newQty >= 99);
         this.handleDirectQuantityChange({ target: $qtyInput[0] });
     }
 
@@ -208,24 +203,18 @@ class EnhancedOrderManager {
     handleDirectQuantityChange(event) {
         const $input = $(event.target);
         const itemId = $input.data('item-id');
-        const maxValue = parseInt($input.attr('max')) || 99;
-        let quantity = Math.max(1, Math.min(maxValue, parseInt($input.val()) || 1));
-        
+        let quantity = Math.max(1, Math.min(99, parseInt($input.val()) || 1));
         $input.val(quantity); // Ensure value is within bounds
-
         // Update button states
         const $decreaseBtn = $(`.qty-decrease[data-item-id="${itemId}"]`);
         const $increaseBtn = $(`.qty-increase[data-item-id="${itemId}"]`);
-        
         $decreaseBtn.prop('disabled', quantity <= 1);
-        $increaseBtn.prop('disabled', quantity >= maxValue);
-
+        $increaseBtn.prop('disabled', quantity >= 99);
         if (this.cart.has(itemId)) {
             const itemData = this.cart.get(itemId);
             itemData.quantity = quantity;
             itemData.total = itemData.price * quantity;
             this.cart.set(itemId, itemData);
-            
             this.updateCartDisplay();
             this.validateCartInBackground();
         }
@@ -277,7 +266,7 @@ class EnhancedOrderManager {
 
         this.cart.forEach((item, itemId) => {
             subtotal += item.total;
-            
+
             cartHTML += `
                 <div class="cart-item p-4 border-b" data-item-id="${itemId}">
                     <div class="flex justify-between items-start mb-2">
@@ -322,11 +311,11 @@ class EnhancedOrderManager {
      */
     removeFromCart(itemId) {
         this.cart.delete(itemId);
-        
+
         // Uncheck the item and hide controls
         const $checkbox = $(`.item-check[data-item-id="${itemId}"]`);
         $checkbox.prop('checked', false);
-        
+
         const $card = $checkbox.closest('.menu-item-card');
         $card.removeClass('selected');
         $card.find('.quantity-controls').hide();
@@ -389,14 +378,14 @@ class EnhancedOrderManager {
      */
     handleValidationResult(result) {
         const $alertsContainer = $('#stock-alerts');
-        
+
         if (result.valid && result.warnings.length === 0) {
             $alertsContainer.addClass('hidden');
             this.showAlert('success', 'Your cart has been validated successfully!');
             $('#place-order-btn').prop('disabled', false);
         } else {
             let message = '';
-            
+
             if (!result.valid) {
                 message += 'Some items are not available: ' + result.errors.join(', ');
                 $('#place-order-btn').prop('disabled', true);
@@ -435,7 +424,7 @@ class EnhancedOrderManager {
      */
     async showAlternatives(event) {
         const itemId = $(event.target).data('item-id');
-        
+
         try {
             const response = await fetch(`/admin/api/menu-alternatives/${itemId}`, {
                 headers: {
@@ -458,14 +447,14 @@ class EnhancedOrderManager {
      */
     displayAlternatives(alternatives) {
         const $content = $('#alternatives-content');
-        
+
         if (alternatives.length === 0) {
             $content.html('<p class="text-gray-500 text-center py-4">No alternatives available at the moment.</p>');
             return;
         }
 
         let html = '<div class="grid gap-4">';
-        
+
         alternatives.forEach(item => {
             html += `
                 <div class="border rounded-lg p-4 flex justify-between items-center">
@@ -480,7 +469,7 @@ class EnhancedOrderManager {
                 </div>
             `;
         });
-        
+
         html += '</div>';
         $content.html(html);
 
@@ -505,10 +494,10 @@ class EnhancedOrderManager {
      */
     async handleOrderSubmit(event) {
         event.preventDefault();
-        
+
         // Final validation before submission
         await this.validateCart();
-        
+
         if ($('#place-order-btn').prop('disabled')) {
             this.showAlert('error', 'Please resolve cart issues before placing the order.');
             return;
@@ -580,7 +569,7 @@ class EnhancedOrderManager {
 
         $card.attr('data-availability', itemData.status);
         $indicator.html(this.getAvailabilityBadge(itemData.status));
-        
+
         if (itemData.stock_percentage !== undefined) {
             $percentage.text(itemData.stock_percentage + '%');
             $bar.css({
@@ -612,10 +601,10 @@ class EnhancedOrderManager {
     handleStockUpdate(data) {
         // Update stock cache
         this.stockCache.set(data.branch_id, data);
-        
+
         // Update UI elements
         this.updateStockSummary(data.summary);
-        
+
         // Update individual item statuses
         if (data.updated_items) {
             data.updated_items.forEach(item => {
@@ -653,7 +642,7 @@ class EnhancedOrderManager {
         `;
 
         $('body').append(alertHTML);
-        
+
         // Auto-remove after 5 seconds
         setTimeout(() => {
             $('.alert-message').last().fadeOut(() => {

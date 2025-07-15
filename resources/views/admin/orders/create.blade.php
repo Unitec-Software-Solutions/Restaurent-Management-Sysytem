@@ -10,7 +10,7 @@
             </h2>
             <p class="text-blue-100 mt-1">Admin mode: Create order for customer</p>
         </div>
-        
+
         <!-- Card Body -->
         <div class="p-6">
             <form method="POST" action="{{ route('admin.orders.store') }}" class="space-y-6" id="admin-order-form">
@@ -68,7 +68,7 @@
                         <!-- Order Information Section -->
                         <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Order Information</h3>
-                            
+
                             <!-- Order Type Selection -->
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
@@ -88,7 +88,7 @@
                                 <select name="organization_id" id="organization_select" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border">
                                     <option value="">Choose Organization...</option>
                                     @foreach($organizations as $organization)
-                                        <option value="{{ $organization->id }}" 
+                                        <option value="{{ $organization->id }}"
                                             {{ (isset($organizationId) && $organizationId == $organization->id) || (isset($defaultOrganization) && $defaultOrganization == $organization->id) ? 'selected' : '' }}>
                                             {{ $organization->name }}
                                         </option>
@@ -106,7 +106,7 @@
                                     <option value="">Choose Branch...</option>
                                     @if(isset($branches))
                                         @foreach($branches as $branch)
-                                            <option value="{{ $branch->id }}" 
+                                            <option value="{{ $branch->id }}"
                                                 data-organization="{{ $branch->organization_id ?? $branch->organization->id ?? '' }}"
                                                 {{ (isset($branchId) && $branchId == $branch->id) || (isset($defaultBranch) && $defaultBranch == $branch->id) ? 'selected' : '' }}>
                                                 {{ $branch->name }}
@@ -127,10 +127,10 @@
 
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Order Time</label>
-                                <input type="datetime-local" name="order_time" 
+                                <input type="datetime-local" name="order_time"
                                     value="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}"
                                     min="{{ now()->format('Y-m-d\TH:i') }}"
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                     required>
                                 <p class="mt-1 text-sm text-gray-500">Default: 30 minutes from now</p>
                             </div>
@@ -138,8 +138,8 @@
                             <!-- Add Special Instructions Field -->
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Special Instructions <span class="text-gray-500 text-xs">(Optional)</span></label>
-                                <textarea name="special_instructions" 
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                <textarea name="special_instructions"
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                     rows="3"
                                     placeholder="Any special requests or instructions for your order..."></textarea>
                             </div>
@@ -148,24 +148,24 @@
                         <!-- Customer Information Section -->
                         <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Customer Information</h3>
-                            
+
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
-                                <input type="text" name="customer_name" 
+                                <input type="text" name="customer_name"
                                     value="{{ old('customer_name', isset($defaultCustomerName) ? $defaultCustomerName : '') }}"
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                     placeholder="Enter customer's full name"
                                     required>
                             </div>
 
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number <span class="text-red-500">*</span></label>
-                                <input type="tel" name="customer_phone" 
+                                <input type="tel" name="customer_phone"
                                     value="{{ old('customer_phone', isset($defaultPhone) ? $defaultPhone : '') }}"
-                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                     placeholder="Enter customer's phone number"
                                     required
-                                    pattern="[0-9+]{10,15}" 
+                                    pattern="[0-9+]{10,15}"
                                     title="Please enter a valid 10-15 digit phone number">
                                 <p class="mt-1 text-sm text-gray-500">
                                     Used for order notifications and customer records
@@ -176,7 +176,7 @@
 
                     <!-- Right Column - Menu Items -->                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200 h-fit">
                         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Menu Items</h3>
-                        
+
                         <div id="menu-loading" class="hidden text-center py-8">
                             <div class="inline-flex items-center">
                                 <svg class="animate-spin h-6 w-6 text-blue-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -199,14 +199,14 @@
                                 @foreach($items as $item)
                                 <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150 cursor-pointer {{ ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) ? 'opacity-50 cursor-not-allowed' : '' }}" onclick="toggleItemSelection('{{ $item->id }}')">
                                     <div class="flex items-center">
-                                        <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
-                                            type="checkbox" 
-                                            value="{{ $item->id }}" 
-                                            id="item_{{ $item->id }}" 
+                                        <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check"
+                                            type="checkbox"
+                                            value="{{ $item->id }}"
+                                            id="item_{{ $item->id }}"
                                             data-item-id="{{ $item->id }}"
-                                            {{ ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) ? 'disabled' : '' }}
+                                            @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled @endif
                                             onclick="event.stopPropagation();">
-                                        
+
                                         <label for="item_{{ $item->id }}" class="ml-3 flex-1 cursor-pointer">
                                             <div class="flex justify-between items-center">
                                                 <div class="flex items-center space-x-2">
@@ -220,34 +220,31 @@
                                             @if($item->item_type === 'KOT')
                                                 <div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>
                                             @elseif($item->item_type === 'Buy & Sell')
-                                                @if($item->current_stock > 0)
-                                                    <div class="text-xs text-green-600 font-medium mt-1">In Stock ({{ $item->current_stock }})</div>
-                                                @else
-                                                    <div class="text-xs text-red-600 font-medium mt-1 bg-red-50 px-2 py-1 rounded">❌ Out of Stock</div>
-                                                @endif
+                                                <div class="text-xs font-medium mt-1 {{ $item->current_stock > 0 ? 'text-green-600' : 'text-red-600 bg-red-50 px-2 py-1 rounded' }}">
+                                                    {{ $item->current_stock > 0 ? 'In Stock (' . $item->current_stock . ')' : '❌ Out of Stock' }}
+                                                </div>
                                             @endif
                                         </label>
-                                        
+
                                         <div class="flex items-center border border-gray-300 rounded overflow-hidden touch-friendly-controls">
                                             <button type="button"
                                                 class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
                                                 data-item-id="{{ $item->id }}"
                                                 onclick="event.stopPropagation();"
-                                                disabled>−</button>
+                                                @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled @endif>−</button>
                                             <input type="number"
                                                 min="1"
-                                                max="{{ ($item->item_type === 'Buy & Sell') ? $item->current_stock : 99 }}"
+                                                max="99"
                                                 value="1"
                                                 class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
                                                 data-item-id="{{ $item->id }}"
                                                 onclick="event.stopPropagation();"
-                                                disabled
-                                                readonly>
+                                                @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled readonly @else disabled readonly @endif>
                                             <button type="button"
                                                 class="qty-increase w-12 h-12 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-l border-gray-300"
                                                 data-item-id="{{ $item->id }}"
                                                 onclick="event.stopPropagation();"
-                                                disabled>+</button>
+                                                @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled @endif>+</button>
                                         </div>
                                     </div>
                                 </div>
@@ -323,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
             const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
             const itemContainer = this.closest('.bg-white');
-            
+
             if (this.checked) {
                 // Enable controls
                 qtyInput.disabled = false;
@@ -331,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 plusBtn.disabled = false;
                 minusBtn.disabled = false;                                // Set proper form field names for Laravel validation
                                 qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-                                
+
                                 // Create hidden input for menu_item_id to ensure it's submitted with form
                                 let hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
                                 if (!hiddenInput) {
@@ -342,10 +339,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                     hiddenInput.className = 'item-hidden-' + itemId;
                                     itemContainer.appendChild(hiddenInput);
                                 }
-                
+
                 // Visual feedback - highlight selected item
                 itemContainer.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
-                
+
                 updateButtonStates(itemId, qtyInput.value);
                 console.log('✅ Item selected:', itemId, 'Quantity:', qtyInput.value);
                 updateOrderSummary();
@@ -355,20 +352,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 qtyInput.setAttribute('readonly', 'readonly');
                 plusBtn.disabled = true;
                 minusBtn.disabled = true;
-                
+
                 // Remove form field names
                 qtyInput.removeAttribute('name');
                 qtyInput.value = 1;
-                
+
                 // Remove hidden input
                 const hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
                 if (hiddenInput) {
                     hiddenInput.remove();
                 }
-                
+
                 // Remove visual feedback
                 itemContainer.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
-                
+
                 console.log('❌ Item deselected:', itemId);
                 updateOrderSummary();
             }
@@ -393,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
             phoneInput.focus();
             return false;
         }
-        
+
         // Check if at least one item is selected
         const checkedItems = document.querySelectorAll('.item-check:checked');
         if (checkedItems.length === 0) {
@@ -406,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('- Branch ID:', branchSelect.value);
         console.log('- Selected Items:', checkedItems.length);
         console.log('- Customer Phone:', phoneInput.value);
-        
+
         // Add loading state to form
         const submitBtn = this.querySelector('button[type="submit"]');
         if (submitBtn) {
@@ -481,7 +478,7 @@ function initializeLocationHandling() {
  */
 function updateBranchOptions(organizationId) {
     const branchSelect = document.getElementById('branch_select');
-    
+
     if (!organizationId) {
         // Clear branches except default option
         branchSelect.innerHTML = '<option value="">Choose Branch...</option>';
@@ -497,14 +494,14 @@ function updateBranchOptions(organizationId) {
         .then(response => response.json())
         .then(data => {
             branchSelect.innerHTML = '<option value="">Choose Branch...</option>';
-            
+
             data.branches.forEach(branch => {
                 const option = document.createElement('option');
                 option.value = branch.id;
                 option.textContent = branch.name;
                 branchSelect.appendChild(option);
             });
-            
+
             branchSelect.disabled = false;
             clearMenuItems();
         })
@@ -529,7 +526,7 @@ function loadMenuItems(branchId, organizationId = null) {
 
     // Use API endpoint that loads from active menus only
     const url = `/api/menu-items/branch/${branchId}/active`;
-    
+
     fetch(url, {
         method: 'GET',
         headers: {
@@ -563,7 +560,7 @@ function showMenuLoading() {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
     const error = document.getElementById('menu-error');
-    
+
     container.style.display = 'none';
     loading.classList.remove('hidden');
     error.classList.add('hidden');
@@ -576,11 +573,11 @@ function showMenuError(message = 'Failed to load menu items') {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
     const error = document.getElementById('menu-error');
-    
+
     container.style.display = 'none';
     loading.classList.add('hidden');
     error.classList.remove('hidden');
-    
+
     if (message !== 'Failed to load menu items') {
         error.querySelector('p').textContent = message;
     }
@@ -593,11 +590,11 @@ function displayMenuItems(items) {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
     const error = document.getElementById('menu-error');
-    
+
     loading.classList.add('hidden');
     error.classList.add('hidden');
     container.style.display = 'block';
-    
+
     if (items.length === 0) {
         container.innerHTML = '<div class="text-center py-8 text-gray-500">No menu items available for this location.</div>';
         return;
@@ -609,7 +606,7 @@ function displayMenuItems(items) {
         const itemType = item.item_type || (item.type === 3 ? 'KOT' : 'Buy & Sell');
         const isKOTItem = itemType === 'KOT';
         const isDisabled = !isKOTItem && !item.can_order;
-        
+
         const stockDisplay = isKOTItem
             ? '<div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>'
             : (item.can_order && item.current_stock > 0)
@@ -623,14 +620,14 @@ function displayMenuItems(items) {
         html += `
             <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150 ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}" onclick="${isDisabled ? '' : 'toggleItemSelection(\'' + item.id + '\')'}">
                 <div class="flex items-center">
-                    <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check" 
-                        type="checkbox" 
-                        value="${item.id}" 
-                        id="item_${item.id}" 
+                    <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check"
+                        type="checkbox"
+                        value="${item.id}"
+                        id="item_${item.id}"
                         data-item-id="${item.id}"
                         ${isDisabled ? 'disabled' : ''}
                         onclick="event.stopPropagation();">
-                    
+
                     <label for="item_${item.id}" class="ml-3 flex-1 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center space-x-2">
@@ -641,7 +638,7 @@ function displayMenuItems(items) {
                         </div>
                         ${stockDisplay}
                     </label>
-                    
+
                     <div class="flex items-center border border-gray-300 rounded overflow-hidden touch-friendly-controls">
                         <button type="button"
                             class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
@@ -669,7 +666,7 @@ function displayMenuItems(items) {
     });
 
     container.innerHTML = html;
-    
+
     // Reinitialize event handlers for new items
     initializeQuantityControls();
     initializeItemCheckboxes();
@@ -681,7 +678,7 @@ function displayMenuItems(items) {
 function clearMenuItems() {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
-    
+
     if (loading) loading.classList.add('hidden');
     if (container) {
         container.style.display = 'block';
@@ -695,7 +692,7 @@ function clearMenuItems() {
 function showMenuError(message = 'Error loading menu items. Please try again.') {
     const container = document.getElementById('menu-items-container');
     const loading = document.getElementById('menu-loading');
-    
+
     loading.classList.add('hidden');
     container.style.display = 'block';
     container.innerHTML = `<div class="text-center py-8 text-red-500">${message}</div>`;
@@ -712,7 +709,7 @@ function initializeItemCheckboxes() {
             const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
             const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
             const itemContainer = this.closest('.bg-white');
-            
+
             if (this.checked) {
                 // Enable controls
                 qtyInput.disabled = false;
@@ -720,7 +717,7 @@ function initializeItemCheckboxes() {
                 plusBtn.disabled = false;
                 minusBtn.disabled = false;                                // Set proper form field names for Laravel validation
                                 qtyInput.setAttribute('name', 'items[' + itemId + '][quantity]');
-                                
+
                                 // Create hidden input for menu_item_id to ensure it's submitted with form
                                 let hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
                                 if (!hiddenInput) {
@@ -731,10 +728,10 @@ function initializeItemCheckboxes() {
                                     hiddenInput.className = 'item-hidden-' + itemId;
                                     itemContainer.appendChild(hiddenInput);
                                 }
-                
+
                 // Visual feedback - highlight selected item
                 itemContainer.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
-                
+
                 updateButtonStates(itemId, qtyInput.value);
                 console.log('✅ Item selected:', itemId, 'Quantity:', qtyInput.value);
                 updateOrderSummary();
@@ -744,20 +741,20 @@ function initializeItemCheckboxes() {
                 qtyInput.setAttribute('readonly', 'readonly');
                 plusBtn.disabled = true;
                 minusBtn.disabled = true;
-                
+
                 // Remove form field names
                 qtyInput.removeAttribute('name');
                 qtyInput.value = 1;
-                
+
                 // Remove hidden input
                 const hiddenInput = itemContainer.querySelector('.item-hidden-' + itemId);
                 if (hiddenInput) {
                     hiddenInput.remove();
                 }
-                
+
                 // Remove visual feedback
                 itemContainer.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
-                
+
                 console.log('❌ Item deselected:', itemId);
                 updateOrderSummary();
             }
@@ -770,7 +767,7 @@ function initializeItemCheckboxes() {
  */
 function initializeQuantityControls() {
     console.log('🔢 Initializing enhanced touch-friendly quantity controls...');
-    
+
     // Handle quantity increase buttons with enhanced touch feedback
     document.addEventListener('click', function(e) {
         if (e.target.closest('.qty-increase')) {
@@ -779,18 +776,18 @@ function initializeQuantityControls() {
             const button = e.target.closest('.qty-increase');
             const itemId = button.getAttribute('data-item-id');
             const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
-            
+
             if (qtyInput && !qtyInput.disabled && !button.disabled) {
                 const currentValue = parseInt(qtyInput.value) || 1;
                 const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
-                
+
                 if (currentValue < maxValue) {
                     qtyInput.value = currentValue + 1;
                     updateButtonStates(itemId, qtyInput.value);
                     console.log('➕ Quantity increased for item', itemId, 'to', qtyInput.value);
                     if (typeof updateCart === 'function') updateCart();
                     updateOrderSummary();
-                    
+
                     // Enhanced visual feedback for touch devices
                     button.style.transform = 'scale(0.9)';
                     button.style.backgroundColor = '#22c55e';
@@ -798,7 +795,7 @@ function initializeQuantityControls() {
                         button.style.transform = 'scale(1)';
                         button.style.backgroundColor = '';
                     }, 150);
-                    
+
                     // Haptic feedback for mobile devices (if supported)
                     if ('vibrate' in navigator) {
                         navigator.vibrate(50);
@@ -807,7 +804,7 @@ function initializeQuantityControls() {
             }
         }
     });
-    
+
     // Handle quantity decrease buttons with enhanced touch feedback
     document.addEventListener('click', function(e) {
         if (e.target.closest('.qty-decrease')) {
@@ -816,17 +813,17 @@ function initializeQuantityControls() {
             const button = e.target.closest('.qty-decrease');
             const itemId = button.getAttribute('data-item-id');
             const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
-            
+
             if (qtyInput && !qtyInput.disabled && !button.disabled) {
                 const currentValue = parseInt(qtyInput.value) || 1;
-                
+
                 if (currentValue > 1) {
                     qtyInput.value = currentValue - 1;
                     updateButtonStates(itemId, qtyInput.value);
                     console.log('➖ Quantity decreased for item', itemId, 'to', qtyInput.value);
                     if (typeof updateCart === 'function') updateCart();
                     updateOrderSummary();
-                    
+
                     // Enhanced visual feedback for touch devices
                     button.style.transform = 'scale(0.9)';
                     button.style.backgroundColor = '#ef4444';
@@ -834,7 +831,7 @@ function initializeQuantityControls() {
                         button.style.transform = 'scale(1)';
                         button.style.backgroundColor = '';
                     }, 150);
-                    
+
                     // Haptic feedback for mobile devices (if supported)
                     if ('vibrate' in navigator) {
                         navigator.vibrate(50);
@@ -843,7 +840,7 @@ function initializeQuantityControls() {
             }
         }
     });
-    
+
     // Prevent manual input changes since we want touch-only interaction
     document.addEventListener('keydown', function(e) {
         if (e.target.classList.contains('item-qty')) {
@@ -854,24 +851,24 @@ function initializeQuantityControls() {
             }
         }
     });
-    
+
     document.addEventListener('input', function(e) {
         if (e.target.classList.contains('item-qty')) {
             e.preventDefault(); // Prevent manual typing
         }
     });
-    
+
     // Handle blur event to ensure valid values
     document.addEventListener('blur', function(e) {
         if (e.target.classList.contains('item-qty')) {
             const qtyInput = e.target;
             let value = parseInt(qtyInput.value) || 1;
             const maxValue = parseInt(qtyInput.getAttribute('max')) || 99;
-            
+
             // Ensure value is within bounds
             if (value < 1) value = 1;
             if (value > maxValue) value = maxValue;
-            
+
             qtyInput.value = value;
             const itemId = qtyInput.getAttribute('data-item-id');
             updateButtonStates(itemId, value);
@@ -887,9 +884,9 @@ function updateButtonStates(itemId, value) {
     const decreaseBtn = document.querySelector(`.qty-decrease[data-item-id="${itemId}"]`);
     const increaseBtn = document.querySelector(`.qty-increase[data-item-id="${itemId}"]`);
     const qtyInput = document.querySelector(`.item-qty[data-item-id="${itemId}"]`);
-    
+
     const maxValue = parseInt(qtyInput?.getAttribute('max')) || 99;
-    
+
     if (decreaseBtn) {
         decreaseBtn.disabled = value <= 1 || qtyInput?.disabled;
     }
@@ -906,26 +903,26 @@ function updateOrderSummary() {
     const summaryContainer = document.getElementById('order-summary');
     const selectedItemsContainer = document.getElementById('selected-items');
     const totalItemsSpan = document.getElementById('total-items');
-    
+
     if (selectedItems.length === 0) {
         summaryContainer.style.display = 'none';
         return;
     }
-    
+
     summaryContainer.style.display = 'block';
     selectedItemsContainer.innerHTML = '';
-    
+
     let totalItems = 0;
-    
+
     selectedItems.forEach(function(checkbox) {
         const itemId = checkbox.getAttribute('data-item-id');
         const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
         const label = document.querySelector('label[for="item_' + itemId + '"]');
         const itemName = label.querySelector('.font-medium').textContent;
         const quantity = parseInt(qtyInput.value) || 1;
-        
+
         totalItems += quantity;
-        
+
         const summaryItem = document.createElement('div');
         summaryItem.className = 'flex justify-between items-center text-sm';
         summaryItem.innerHTML = `
@@ -934,7 +931,7 @@ function updateOrderSummary() {
         `;
         selectedItemsContainer.appendChild(summaryItem);
     });
-    
+
     totalItemsSpan.textContent = totalItems;
 }
 </script>
@@ -1006,7 +1003,7 @@ function updateOrderSummary() {
         height: 48px;
         font-size: 1.5rem;
     }
-    
+
     .touch-friendly-controls input[type="number"] {
         width: 64px;
         height: 48px;

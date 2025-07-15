@@ -665,22 +665,7 @@ class AdminOrderController extends Controller
      */
     public function destroy(Order $order)
     {
-        try {
-            if ($order->status === 'completed') {
-                return back()->with('error', 'Cannot delete completed orders.');
-            }
-
-            $order->orderItems()->delete();
-            $order->delete();
-
-            return redirect()->route('admin.orders.index')
-                ->with('success', 'Order deleted successfully!');
-
-        } catch (\Exception $e) {
-            Log::error('Order deletion failed: ' . $e->getMessage());
-
-            return back()->with('error', 'Failed to delete order.');
-        }
+        abort(403, 'Order deletion is forbidden for all roles.');
     }
 
     public function dashboard()
@@ -1030,111 +1015,159 @@ $statusOptions = [
      */
     public function destroyTakeaway(Order $order)
     {
-        try {
-            if ($order->status === 'completed') {
-                return back()->with('error', 'Cannot delete completed takeaway orders.');
-            }
-
-            $order->orderItems()->delete();
-            $order->delete();
-
-            return redirect()->route('admin.orders.index')
-                ->with('success', 'Takeaway order deleted successfully!');
-        } catch (\Exception $e) {
-            Log::error('Takeaway order deletion failed: ' . $e->getMessage());
-
-            return back()->with('error', 'Failed to delete takeaway order.');
-        }
+        abort(403, 'Order deletion is forbidden for all roles.');
     }
-
-       public function adminIndex()
-    {
-        // Get the admin's branch ID
-        $branchId = \Illuminate\Support\Facades\Auth::user()->branch_id;
-
-        // Fetch orders for the admin's branch
-        $orders = \App\Models\Order::with(['reservation', 'branch'])
-            ->where('branch_id', $branchId)
-            ->latest()
-            ->paginate(10);
-
-        return view('admin.orders.index', compact('orders'));
-    }
-
     /**
-     * Get available menu items from active menus for a branch
+     * Store a new order (admin)
      */
-    public function getAvailableMenuItemsLegacy(Request $request)
-    {
-        $branchId = $request->get('branch_id');
-        // $menuType = $request->get('menu_type', null); // optional filter by menu type
-
-        if (!$branchId) {
-            return response()->json(['error' => 'Branch ID is required'], 400);
-        }
-
-        // Get active menu for the branch
-        $activeMenu = Menu::getActiveMenuForBranch($branchId);
-
-        if (!$activeMenu) {
-            return response()->json([
-                'menu' => null,
-                'items' => [],
-                'message' => 'No active menu found for this branch'
-            ]);
-        }
-
-        // Get menu items with availability checks
-        $menuItems = $activeMenu->menuItems()
-            ->with(['menuCategory'])
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    'description' => $item->description,
-                    'price' => $item->price,
-                    'category_id' => $item->menu_category_id,
-                    'category_name' => $item->menuCategory?->name,
-                    'current_stock' => $item->current_stock,
-                    'is_available' => $item->getMenuAvailability(),
-                    'prep_time' => $item->prep_time,
-                    'image_url' => $item->image_url,
-                ];
-            });
-
-        return response()->json([
-            'menu' => [
-                'id' => $activeMenu->id,
-                'name' => $activeMenu->name,
-                'type' => $activeMenu->type,
-                'description' => $activeMenu->description,
-            ],
-            'items' => $menuItems,
-            'message' => 'Menu items loaded successfully'
-        ]);
-    }
-
-    /**
-     * Enhanced create order form with menu integration
-     */
-    public function enhancedCreate(Request $request)
+    public function store(Request $request)
     {
         $admin = auth('admin')->user();
+        if (!$admin->hasRole(['organization_admin', 'branch_admin', 'super_admin'])) {
+            abort(403, 'You do not have permission to create orders.');
+        }
+        $validated = $request->validate([
+            'branch_id' => 'required|exists:branches,id',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|min:10|max:15',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:item_master,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+        DB::beginTransaction();
+        try {
+            // Stock validation for all items
+            foreach ($validated['items'] as $item) {
+                $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $validated['branch_id']);
+                if ($item['quantity'] > $currentStock) {
+                    throw new \Exception('Insufficient stock for item ID ' . $item['item_id']);
+                }
+            }
+            // Create order
+            $order = Order::create([
+                'branch_id' => $validated['branch_id'],
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone'],
+                'status' => 'submitted',
+                'created_by' => $admin->id,
+                'order_date' => now(),
+            ]);
+            $subtotal = 0;
+            foreach ($validated['items'] as $item) {
+                $menuItem = \App\Models\ItemMaster::find($item['item_id']);
+                $lineTotal = $menuItem->selling_price * $item['quantity'];
+                $subtotal += $lineTotal;
+                \App\Models\OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['item_id'],
+                    'inventory_item_id' => $item['item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem->selling_price,
+                    'subtotal' => $lineTotal,
+                    'total_price' => $lineTotal
+                ]);
+                // Deduct stock atomically
+                \App\Models\ItemTransaction::create([
+                    'organization_id' => $order->branch->organization_id,
+                    'branch_id' => $validated['branch_id'],
+                    'inventory_item_id' => $item['item_id'],
+                    'transaction_type' => 'sales_order',
+                    'quantity' => -$item['quantity'],
+                    'cost_price' => $menuItem->buying_price,
+                    'unit_price' => $menuItem->selling_price,
+                    'reference_id' => $order->id,
+                    'reference_type' => 'Order',
+                    'created_by_user_id' => $admin->id,
+                    'notes' => "Stock deducted for Order #{$order->id} by admin",
+                    'is_active' => true,
+                ]);
+            }
+            $tax = $subtotal * 0.10;
+            $order->update([
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'total' => $subtotal + $tax,
+            ]);
+            DB::commit();
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', 'Order created successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to create order: ' . $e->getMessage());
+        }
+    }
 
-        // Get branches based on admin permissions
-        $branches = Branch::when(!$admin->is_super_admin && $admin->organization_id,
-            fn($q) => $q->where('organization_id', $admin->organization_id)
-        )->active()->get();
-
-        // Get active menus for all branches
-        $activeMenus = Menu::active()
-            ->with(['branch', 'menuItems'])
-            ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
-                $q->whereHas('branch', fn($subQ) => $subQ->where('organization_id', $admin->organization_id));
-            })
-            ->get()
-            ->groupBy('branch_id');
+        $admin = auth('admin')->user();
+        if (!$admin->hasRole(['organization_admin', 'branch_admin', 'super_admin'])) {
+            abort(403, 'You do not have permission to update orders.');
+        }
+        DB::beginTransaction();
+        try {
+            // Stock validation for all items
+            foreach ($validated['items'] as $item) {
+                $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $validated['branch_id']);
+                if ($item['quantity'] > $currentStock) {
+                    throw new \Exception('Insufficient stock for item ID ' . $item['item_id']);
+                }
+            }
+            // Update the order basic information
+            $order->update([
+                'status' => $validated['status'],
+                'order_type' => $validated['order_type'],
+                'branch_id' => $validated['branch_id'],
+                'order_time' => $validated['order_time'],
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone']
+            ]);
+            // Process order items if present in the request
+            if ($request->has('items') && is_array($request->items)) {
+                $order->orderItems()->delete();
+                $subtotal = 0;
+                foreach ($request->items as $itemId => $itemData) {
+                    if (isset($itemData['item_id'])) {
+                        $menuItem = \App\Models\ItemMaster::find($itemData['item_id']);
+                        $lineTotal = $menuItem->selling_price * ($itemData['quantity'] ?? 1);
+                        $subtotal += $lineTotal;
+                        \App\Models\OrderItem::create([
+                            'order_id' => $order->id,
+                            'menu_item_id' => $itemData['item_id'],
+                            'inventory_item_id' => $itemData['item_id'],
+                            'quantity' => $itemData['quantity'] ?? 1,
+                            'unit_price' => $menuItem->selling_price,
+                            'subtotal' => $lineTotal,
+                            'total_price' => $lineTotal
+                        ]);
+                        // Deduct stock atomically
+                        \App\Models\ItemTransaction::create([
+                            'organization_id' => $order->branch->organization_id,
+                            'branch_id' => $validated['branch_id'],
+                            'inventory_item_id' => $itemData['item_id'],
+                            'transaction_type' => 'sales_order',
+                            'quantity' => -($itemData['quantity'] ?? 1),
+                            'cost_price' => $menuItem->buying_price,
+                            'unit_price' => $menuItem->selling_price,
+                            'reference_id' => $order->id,
+                            'reference_type' => 'Order',
+                            'created_by_user_id' => $admin->id,
+                            'notes' => "Stock deducted for Order #{$order->id} by admin",
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+                $tax = $subtotal * 0.10;
+                $order->update([
+                    'subtotal' => $subtotal,
+                    'tax' => $tax,
+                    'total' => $subtotal + $tax
+                ]);
+            }
+            DB::commit();
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', 'Order updated successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to update order: ' . $e->getMessage());
+        }
 
         return view('admin.orders.enhanced-create', compact('branches', 'activeMenus'));
     }
