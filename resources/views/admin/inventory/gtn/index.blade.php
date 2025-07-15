@@ -26,68 +26,39 @@
                 }
             }">
                 <!-- Filters with Export -->
-                <x-module-filters :action="route('admin.inventory.gtn.index')" :export-permission="'export_gtn'" :export-filename="'gtn_export.xlsx'" class="mb-6" x-data="{}"
-                    @submit="document.getElementById('tab-input').value = tab">
-
+                <x-module-filters
+                    :searchValue="request('search', '')"
+                    {{-- :statusOptions="[
+                        'draft' => 'Draft',
+                        'confirmed' => 'Confirmed',
+                        'in_delivery' => 'In Delivery',
+                        'delivered' => 'Delivered'
+                    ]"
+                    :selectedStatus="request('origin_status', '')" --}}
+                    {{-- :branches="$branches" --}}
+                    :selectedBranch="request('branch_id', '')"
+                    :showBranchFilter="true"
+                    :showStatusFilter="true"
+                    :showDateRange="true"
+                    :customFilters="[
+                        [
+                            'name' => 'from_branch_id',
+                            'label' => 'From Branch',
+                            'type' => 'select',
+                            'options' => $branches->pluck('name', 'id')->toArray(),
+                            'placeholder' => 'All From Branches'
+                        ],
+                        [
+                            'name' => 'to_branch_id',
+                            'label' => 'To Branch',
+                            'type' => 'select',
+                            'options' => $branches->pluck('name', 'id')->toArray(),
+                            'placeholder' => 'All To Branches'
+                        ]
+                    ]"
+                >
                     <!-- Hidden input to keep track of tab -->
                     <input type="hidden" name="tab" id="tab-input" :value="tab">
-
-                    <div>
-                        <label for="from_branch_id" class="block text-sm font-medium text-gray-700 mb-1">From Branch</label>
-                        <select name="from_branch_id" id="from_branch_id"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">All Branches</option>
-                            @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}"
-                                    {{ request('from_branch_id') == $branch->id ? 'selected' : '' }}>
-                                    {{ $branch->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="to_branch_id" class="block text-sm font-medium text-gray-700 mb-1">To Branch</label>
-                        <select name="to_branch_id" id="to_branch_id"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">All Branches</option>
-                            @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}"
-                                    {{ request('to_branch_id') == $branch->id ? 'selected' : '' }}>
-                                    {{ $branch->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="origin_status" class="block text-sm font-medium text-gray-700 mb-1">Origin
-                            Status</label>
-                        <select name="origin_status" id="origin_status"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">All Origin Status</option>
-                            <option value="draft" {{ request('origin_status') == 'draft' ? 'selected' : '' }}>Draft
-                            </option>
-                            <option value="confirmed" {{ request('origin_status') == 'confirmed' ? 'selected' : '' }}>
-                                Confirmed</option>
-                            <option value="in_delivery" {{ request('origin_status') == 'in_delivery' ? 'selected' : '' }}>In
-                                Delivery</option>
-                            <option value="delivered" {{ request('origin_status') == 'delivered' ? 'selected' : '' }}>
-                                Delivered</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <input type="date" name="start_date" id="start_date"
-                                value="{{ request('start_date', $startDate ?? \Carbon\Carbon::now()->subDays(30)->format('Y-m-d')) }}"
-                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <input type="date" name="end_date" id="end_date"
-                                value="{{ request('end_date', $endDate ?? \Carbon\Carbon::now()->format('Y-m-d')) }}"
-                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                    </div>
                 </x-module-filters>
 
                 <!-- GTN List Tabs -->
