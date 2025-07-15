@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Item Categories')
-
+@section('header-title', 'Item Categories')
 @section('page-header')
     <div class="flex justify-between items-center">
         <div>
