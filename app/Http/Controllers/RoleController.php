@@ -191,20 +191,39 @@ class RoleController extends Controller
             'guard_name' => 'admin',
         ]);
 
+        \Log::info('[RoleController@store] Created role', [
+            'role_id' => $role->id,
+            'name' => $role->name,
+            'branch_id' => $branchId,
+            'organization_id' => $organizationId
+        ]);
+
         // Assign permissions
+        $assignedCount = 0;
         if ($request->permissions) {
             $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
             $availablePermissions = $this->getAvailablePermissions($admin, $permissionDefinitions);
             $validPermissions = array_intersect($request->permissions, array_keys($availablePermissions));
+            \Log::info('[RoleController@store] Assigning permissions', [
+                'role_id' => $role->id,
+                'requested_permissions' => $request->permissions,
+                'valid_permissions' => $validPermissions
+            ]);
             if (!empty($validPermissions)) {
                 $permissionIds = Permission::whereIn('name', $validPermissions)
                     ->pluck('id')->toArray();
                 $role->permissions()->sync($permissionIds);
+                $assignedCount = count($permissionIds);
             }
         }
 
+        \Log::info('[RoleController@store] Permissions assigned', [
+            'role_id' => $role->id,
+            'assigned_count' => $assignedCount
+        ]);
+
         return redirect()->route('admin.roles.index')
-            ->with('success', 'Role created successfully with ' . count($validPermissions ?? []) . ' permissions.');
+            ->with('success', 'Role created successfully with ' . $assignedCount . ' permissions.');
     }
 
     public function edit(Role $role)
@@ -310,14 +329,29 @@ class RoleController extends Controller
         }
         $role->update($updateData);
 
+        \Log::info('[RoleController@update] Updated role', [
+            'role_id' => $role->id,
+            'update_data' => $updateData
+        ]);
+
         // Remove empty string from permissions[] (from hidden input)
         $permissions = $request->permissions ?? [];
         $permissions = array_filter($permissions, function($p) { return !empty($p); });
 
         // Assign only valid permissions
         $validPermissions = array_intersect($permissions, array_keys($availablePermissions));
+        \Log::info('[RoleController@update] Assigning permissions', [
+            'role_id' => $role->id,
+            'requested_permissions' => $permissions,
+            'valid_permissions' => $validPermissions
+        ]);
         $permissionIds = Permission::whereIn('name', $validPermissions)->pluck('id')->toArray();
         $role->permissions()->sync($permissionIds);
+
+        \Log::info('[RoleController@update] Permissions assigned', [
+            'role_id' => $role->id,
+            'assigned_count' => count($permissionIds)
+        ]);
 
         return redirect()->route('admin.roles.index')
             ->with('success', 'Role updated successfully.');

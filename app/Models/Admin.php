@@ -328,7 +328,7 @@ class Admin extends Authenticatable
      */
     public function isLocked(): bool
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        return $this->locked_until && \Illuminate\Support\Carbon::parse($this->locked_until)->gt(now());
     }
 
     public function incrementFailedLogins(): void

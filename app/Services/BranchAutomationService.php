@@ -67,11 +67,18 @@ class BranchAutomationService
 
         $admin = Admin::create($adminData);
 
-        // Assign branch admin role (use firstOrCreate to ensure role exists)
-        $branchAdminRole = Role::firstOrCreate(
+        \Log::info('[BranchAutomationService@createBranchAdmin] Created branch admin', [
+            'admin_id' => $admin->id,
+            'branch_id' => $branch->id,
+            'organization_id' => $branch->organization_id
+        ]);
+
+        // Assign branch admin role (Spatie)
+        $branchAdminRole = \Spatie\Permission\Models\Role::firstOrCreate(
             [
                 'name' => 'Branch Administrator',
                 'organization_id' => $branch->organization_id,
+                'branch_id' => $branch->id,
                 'guard_name' => 'admin'
             ],
             [
@@ -79,8 +86,25 @@ class BranchAutomationService
                 'description' => 'Full administrative access to branch operations'
             ]
         );
+        $admin->syncRoles([$branchAdminRole]);
 
-        $admin->assignRole($branchAdminRole);
+        \Log::info('[BranchAutomationService@createBranchAdmin] Assigned Branch Administrator role', [
+            'admin_id' => $admin->id,
+            'role_id' => $branchAdminRole->id
+        ]);
+
+        // Assign permissions to the role based on subscription plan
+        if (class_exists('App\\Services\\PermissionSystemService')) {
+            $permissionService = app(\App\Services\PermissionSystemService::class);
+            $permissionDefinitions = $permissionService->getPermissionDefinitions();
+            $modulesConfig = config('modules');
+            $availablePermissions = $permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+            \Log::info('[BranchAutomationService@createBranchAdmin] Assigning permissions to Branch Administrator role', [
+                'role_id' => $branchAdminRole->id,
+                'permissions' => array_keys($availablePermissions)
+            ]);
+            $branchAdminRole->syncPermissions(array_keys($availablePermissions));
+        }
 
         return $admin;
     }
@@ -91,7 +115,7 @@ class BranchAutomationService
     protected function createCustomizedKitchenStations(Branch $branch): void
     {
         Log::info("Creating kitchen stations for branch: {$branch->name} (ID: {$branch->id}, Type: {$branch->type})");
-        
+
         $stationTemplates = $this->getStationTemplatesByBranchType($branch->type);
         Log::info("Found " . count($stationTemplates) . " station templates for type: {$branch->type}");
 
@@ -125,7 +149,7 @@ class BranchAutomationService
             ];
 
             Log::info("Creating kitchen station with data: " . json_encode($stationData));
-            
+
             try {
                 $station = KitchenStation::create($stationData);
                 Log::info("Successfully created kitchen station: {$station->name} (ID: {$station->id})");
@@ -134,7 +158,7 @@ class BranchAutomationService
                 Log::error("Station data: " . json_encode($stationData));
             }
         }
-        
+
         $stationCount = KitchenStation::where('branch_id', $branch->id)->count();
         Log::info("Total kitchen stations for branch {$branch->id}: {$stationCount}");
     }
@@ -199,29 +223,13 @@ class BranchAutomationService
      */
     protected function assignBranchPermissions(Admin $admin, Branch $branch): void
     {
-        // Get branch-specific permissions based on organization's subscription
-        $subscription = $branch->organization->currentSubscription;
-
-        if ($subscription && $subscription->plan) {
-            $availableModules = collect($subscription->plan->modules)->pluck('name');
-
-            // Assign permissions based on available modules
-            $permissions = [];
-
-            if ($availableModules->contains('pos')) {
-                $permissions = array_merge($permissions, ['pos.operate', 'pos.transactions']);
-            }
-
-            if ($availableModules->contains('kitchen')) {
-                $permissions = array_merge($permissions, ['kitchen.view', 'kitchen.manage']);
-            }
-
-            if ($availableModules->contains('inventory')) {
-                $permissions = array_merge($permissions, ['inventory.view', 'inventory.manage']);
-            }
-
-            // Sync permissions
-            $admin->syncPermissions($permissions);
+        // Use PermissionSystemService to filter permissions by subscription
+        if (class_exists('App\\Services\\PermissionSystemService')) {
+            $permissionService = app(\App\Services\PermissionSystemService::class);
+            $permissionDefinitions = $permissionService->getPermissionDefinitions();
+            $modulesConfig = config('modules');
+            $availablePermissions = $permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+            $admin->syncPermissions(array_keys($availablePermissions));
         }
     }
 
@@ -236,20 +244,20 @@ class BranchAutomationService
         return $typePrefix . '-' . $branchCode . '-' . $sequenceCode;
     }
 
-    
+
     public function setupBranchResources(Branch $branch): void
     {
         // Create inventory items from head office master items
         $this->createBranchInventory($branch);
-        
+
         // Create default kitchen stations if not head office
         if (!$branch->is_head_office) {
             $this->createDefaultKitchenStations($branch);
         }
-        
+
         // Setup branch-specific settings
         $this->setupBranchSettings($branch);
-        
+
         Log::info('Branch resources setup completed', [
             'branch_id' => $branch->id,
             'organization_id' => $branch->organization_id
@@ -311,7 +319,7 @@ class BranchAutomationService
     protected function createDefaultKitchenStations(Branch $branch): void
     {
         $defaultStations = $branch->getDefaultKitchenStations();
-        
+
         foreach ($defaultStations as $stationData) {
             KitchenStation::create(array_merge($stationData, [
                 'branch_id' => $branch->id,
