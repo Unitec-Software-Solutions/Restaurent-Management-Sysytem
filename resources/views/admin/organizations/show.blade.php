@@ -1,9 +1,10 @@
 @extends('layouts.admin')
 
 @section('title', 'Organization Details - ' . $organization->name)
-
+@section('header-title', 'Organization Details - ' . $organization->name)
 @section('content')
-<div class="container-fluid py-6">
+
+    <div class="container-fluid py-8 p-4">
     <!-- Header -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div class="flex justify-between items-center">
@@ -20,13 +21,13 @@
                     </a>
                 @endcan
                 @can('update', $organization)
-                    <a href="{{ route('admin.organizations.edit', $organization) }}" 
+                    <a href="{{ route('admin.organizations.edit', $organization) }}"
                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-edit mr-2"></i>
                         Edit Organization
                     </a>
                 @endcan
-                <a href="{{ route('admin.organizations.index') }}" 
+                <a href="{{ route('admin.organizations.index') }}"
                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Back to List
@@ -98,8 +99,8 @@
                             <div class="flex flex-wrap gap-1 mt-1">
                                 @foreach($stationTypes as $type => $count)
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium
-                                        {{ $type == 'cooking' ? 'bg-red-100 text-red-700' : 
-                                           ($type == 'prep' ? 'bg-yellow-100 text-yellow-700' : 
+                                        {{ $type == 'cooking' ? 'bg-red-100 text-red-700' :
+                                           ($type == 'prep' ? 'bg-yellow-100 text-yellow-700' :
                                            ($type == 'service' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700')) }}">
                                         {{ $count }} {{ ucfirst($type) }}
                                     </span>
@@ -226,8 +227,8 @@
                                         <div class="flex flex-wrap gap-1 mt-1">
                                             @foreach($stats['head_office']->kitchenStations->take(3) as $station)
                                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                                    {{ $station->type == 'cooking' ? 'bg-red-100 text-red-800' : 
-                                                       ($station->type == 'prep' ? 'bg-yellow-100 text-yellow-800' : 
+                                                    {{ $station->type == 'cooking' ? 'bg-red-100 text-red-800' :
+                                                       ($station->type == 'prep' ? 'bg-yellow-100 text-yellow-800' :
                                                        ($station->type == 'service' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800')) }}">
                                                     <i class="fas fa-fire mr-1"></i>
                                                     {{ $station->name }}
@@ -253,7 +254,7 @@
                                 $orgAdmin = $organization->admins->where('branch_id', null)->first();
                                 $branchAdmin = $organization->admins->where('branch_id', '!=', null)->first();
                             @endphp
-                            
+
                             @if($orgAdmin)
                             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                 <h4 class="text-sm font-semibold text-blue-800 mb-2 flex items-center">
@@ -475,7 +476,7 @@
                         <i class="fas fa-plus mr-2"></i>Create User
                     </a>
                 </div>
-                
+
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -697,7 +698,7 @@
                                     </span>
                                 </h3>
                             </div>
-                            
+
                             <div class="p-6">
                                 @if($branch->kitchenStations->count() > 0)
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -712,7 +713,7 @@
                                                         {{ $station->is_active ? 'Active' : 'Inactive' }}
                                                     </span>
                                                 </div>
-                                                
+
                                                 <dl class="space-y-2 text-sm">
                                                     <div>
                                                         <dt class="font-medium text-gray-600">Code:</dt>
@@ -721,9 +722,9 @@
                                                     <div>
                                                         <dt class="font-medium text-gray-600">Type:</dt>
                                                         <dd class="text-gray-900">
-                                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
-                                                                {{ $station->type == 'cooking' ? 'bg-red-100 text-red-800' : 
-                                                                   ($station->type == 'prep' ? 'bg-yellow-100 text-yellow-800' : 
+                                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
+                                                                {{ $station->type == 'cooking' ? 'bg-red-100 text-red-800' :
+                                                                   ($station->type == 'prep' ? 'bg-yellow-100 text-yellow-800' :
                                                                    ($station->type == 'service' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800')) }}">
                                                                 {{ ucfirst($station->type) }}
                                                             </span>
@@ -760,7 +761,7 @@
                             </div>
                         </div>
                     @endforeach
-                    
+
                     @if($organization->branches->count() == 0)
                         <div class="text-center py-8">
                             <i class="fas fa-store text-4xl text-gray-300 mb-4"></i>
@@ -804,7 +805,7 @@
                                 {{ $organization->is_active ? 'Active' : 'Inactive' }}
                             </span>
                         </div>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <dl class="space-y-3">
@@ -824,7 +825,7 @@
                                     </div>
                                 </dl>
                             </div>
-                            
+
                             <div class="flex items-center justify-center">
                                 @if(!$organization->is_active)
                                     <a href="{{ route('admin.organizations.activate.form', $organization) }}"
@@ -846,7 +847,7 @@
                     <!-- Activation Key Management -->
                     <div class="bg-white border border-gray-200 rounded-lg p-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Activation Key Management</h3>
-                        
+
                         {{-- Debug Info --}}
                         @if(config('app.debug'))
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
@@ -857,7 +858,7 @@
                             </p>
                         </div>
                         @endif
-                        
+
                         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                             <div class="flex items-center">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
@@ -867,24 +868,24 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Current Activation Key</label>
                                 <div class="flex items-center gap-3">
-                                    <input type="password" 
-                                           id="activation-key-show" 
-                                           value="{{ $organization->activation_key ?? '-' }}" 
-                                           readonly 
+                                    <input type="password"
+                                           id="activation-key-show"
+                                           value="{{ $organization->activation_key ?? '-' }}"
+                                           readonly
                                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 font-mono">
-                                    <button type="button" 
-                                            onclick="toggleShowKeyVisibility()" 
+                                    <button type="button"
+                                            onclick="toggleShowKeyVisibility()"
                                             class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
                                             title="Show/Hide Key">
                                         <i id="show-key-icon" class="fas fa-eye"></i>
                                     </button>
-                                    <button type="button" 
-                                            onclick="copyShowActivationKey()" 
+                                    <button type="button"
+                                            onclick="copyShowActivationKey()"
                                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
                                             title="Copy Key">
                                         <i class="fas fa-copy"></i>
@@ -893,7 +894,7 @@
                                     <form action="{{ route('admin.organizations.regenerate-key', $organization) }}" method="POST" class="inline">
                                         @csrf
                                         @method('PUT')
-                                        <button type="submit" 
+                                        <button type="submit"
                                                 onclick="return confirm('Are you sure you want to regenerate the activation key? This will invalidate the current key and require organizations to use the new key for activation.')"
                                                 class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
                                                 title="Regenerate Key">
@@ -919,7 +920,7 @@
                     <!-- Quick Actions -->
                     <div class="bg-white border border-gray-200 rounded-lg p-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <a href="{{ route('admin.organizations.edit', $organization) }}"
                                class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
@@ -928,7 +929,7 @@
                                     <p class="text-sm font-medium text-gray-900">Edit Organization</p>
                                 </div>
                             </a>
-                            
+
                             <a href="{{ route('admin.branches.create', ['organization' => $organization->id]) }}"
                                class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
                                 <div class="text-center">
@@ -936,7 +937,7 @@
                                     <p class="text-sm font-medium text-gray-900">Add Branch</p>
                                 </div>
                             </a>
-                            
+
                             <a href="{{ route('admin.users.create', ['organization' => $organization->id]) }}"
                                class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
                                 <div class="text-center">
@@ -959,16 +960,16 @@ function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.add('hidden');
     });
-    
+
     // Remove active class from all tab buttons
     document.querySelectorAll('.tab-button').forEach(button => {
         button.classList.remove('active', 'border-indigo-500', 'text-indigo-600');
         button.classList.add('border-transparent', 'text-gray-500');
     });
-    
+
     // Show selected tab content
     document.getElementById('content-' + tabName).classList.remove('hidden');
-    
+
     // Add active class to selected tab button
     const activeButton = document.getElementById('tab-' + tabName);
     activeButton.classList.add('active', 'border-indigo-500', 'text-indigo-600');
@@ -978,7 +979,7 @@ function showTab(tabName) {
 function copyToClipboard(elementId) {
     const element = document.getElementById(elementId);
     const text = element.textContent;
-    
+
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => {
             showCopySuccess(element);
@@ -997,11 +998,11 @@ function fallbackCopyTextToClipboard(text, element) {
     textArea.style.top = "0";
     textArea.style.left = "0";
     textArea.style.position = "fixed";
-    
+
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    
+
     try {
         const successful = document.execCommand('copy');
         if (successful) {
@@ -1010,17 +1011,17 @@ function fallbackCopyTextToClipboard(text, element) {
     } catch (err) {
         console.error('Fallback: Could not copy text: ', err);
     }
-    
+
     document.body.removeChild(textArea);
 }
 
 function showCopySuccess(element) {
     const button = element.nextElementSibling;
     const originalIcon = button.innerHTML;
-    
+
     button.innerHTML = '<i class="fas fa-check text-xs text-green-600"></i>';
     button.classList.add('text-green-600');
-    
+
     setTimeout(() => {
         button.innerHTML = originalIcon;
         button.classList.remove('text-green-600');
@@ -1031,7 +1032,7 @@ function showCopySuccess(element) {
 function toggleShowKeyVisibility() {
     const input = document.getElementById('activation-key-show');
     const icon = document.getElementById('show-key-icon');
-    
+
     if (input.type === 'password') {
         input.type = 'text';
         icon.classList.remove('fa-eye');
@@ -1046,7 +1047,7 @@ function toggleShowKeyVisibility() {
 function copyShowActivationKey() {
     const input = document.getElementById('activation-key-show');
     const text = input.value;
-    
+
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => {
             showActivationKeyCopySuccess();
@@ -1065,11 +1066,11 @@ function fallbackCopyActivationKey(text) {
     textArea.style.top = "0";
     textArea.style.left = "0";
     textArea.style.position = "fixed";
-    
+
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    
+
     try {
         const successful = document.execCommand('copy');
         if (successful) {
@@ -1078,18 +1079,18 @@ function fallbackCopyActivationKey(text) {
     } catch (err) {
         console.error('Fallback: Could not copy text: ', err);
     }
-    
+
     document.body.removeChild(textArea);
 }
 
 function showActivationKeyCopySuccess() {
     const copyButton = document.querySelector('button[onclick="copyShowActivationKey()"]');
     const originalIcon = copyButton.innerHTML;
-    
+
     copyButton.innerHTML = '<i class="fas fa-check text-green-600"></i>';
     copyButton.classList.add('bg-green-500');
     copyButton.classList.remove('bg-blue-500');
-    
+
     setTimeout(() => {
         copyButton.innerHTML = originalIcon;
         copyButton.classList.remove('bg-green-500');
