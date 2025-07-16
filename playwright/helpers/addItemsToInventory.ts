@@ -32,7 +32,7 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Ite
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    await page.goto('https://rms.test/admin/inventory/items/create', { timeout: 60000 });
+    await page.goto('https://restaurant-management-system.test/admin/inventory/items/create', { timeout: 60000 });
     // Wait for the heading to ensure the page is loaded
     await page.getByRole('heading', { name: 'Add New Items', level: 2 }).waitFor({ timeout: 15000 });
 

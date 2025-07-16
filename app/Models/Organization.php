@@ -23,7 +23,6 @@ class Organization extends Model
         'business_type',
         'is_active',
         'subscription_plan_id',
-        'plan_snapshot',
         'discount_percentage',
         'activation_key',
         'activated_at',
@@ -33,7 +32,6 @@ class Organization extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'activated_at' => 'datetime',
-        'plan_snapshot' => 'array',
         'discount_percentage' => 'decimal:2'
     ];
 

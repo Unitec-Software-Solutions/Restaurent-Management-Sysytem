@@ -3,6 +3,8 @@
 @section('title', 'Orders Management')
 
 @section('content')
+{{-- Debug: Uncomment to inspect orders and branches variables --}}
+{{-- @php dd($orders, $branches ?? null); @endphp --}}
 <div class="p-6">
     <!-- Header Section -->
     <div class="mb-6">
@@ -249,7 +251,7 @@
                                         </a>
                                     @endif
 
-                                  
+
 
                                     <!-- Print KOT if order has KOT items -->
                                     @php

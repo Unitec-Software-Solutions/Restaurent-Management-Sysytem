@@ -19,33 +19,47 @@ use App\Traits\Exportable;
 use App\Enums\OrderType;
 use App\Services\NotificationService;
 use App\Services\OrderNumberService;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
-use App\Services\MenuSafetyService;
-use App\Services\EnhancedOrderService;
-use App\Services\EnhancedMenuSchedulingService;
 
 class AdminOrderController extends Controller
 {
-    use Exportable;
 
-    protected $menuSafetyService;
-    protected $enhancedOrderService;
-    protected $menuSchedulingService;
-    protected $notificationService;
+    /**
+     * Generate and download KOT PDF (Kitchen Order Ticket) for admin
+     */
 
-    public function __construct(
-        MenuSafetyService $menuSafetyService,
-        EnhancedOrderService $enhancedOrderService,
-        EnhancedMenuSchedulingService $menuSchedulingService,
-        NotificationService $notificationService
-    ) {
-        $this->menuSafetyService = $menuSafetyService;
-        $this->enhancedOrderService = $enhancedOrderService;
-        $this->menuSchedulingService = $menuSchedulingService;
-        $this->notificationService = $notificationService;
+    /**
+     * Generate and download KOT PDF (Kitchen Order Ticket) for admin
+     */
+    public function printKOTPDF($orderId)
+    {
+        $order = Order::with([
+            'orderItems.menuItem',
+            'branch',
+            'reservation',
+            'customer'
+        ])->findOrFail($orderId);
+
+        // Mark KOT as generated
+        $order->update(['kot_generated' => true]);
+
+        // Use DomPDF (Barryvdh\DomPDF)
+        $pdf = PDF::loadView('admin.orders.kot-pdf', compact('order'));
+        $pdf->setPaper([0, 0, 226.77, 600], 'portrait');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'DejaVu Sans Mono',
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/'),
+            'tempDir' => storage_path('app/temp/'),
+            'chroot' => public_path(),
+        ]);
+        $filename = 'KOT-' . ($order->order_number ?? $order->id) . '-' . now()->format('YmdHis') . '.pdf';
+        return $pdf->download($filename);
     }
 
     public function index(Request $request)
@@ -97,7 +111,9 @@ class AdminOrderController extends Controller
         return [$case->value => $case->name];
     })->toArray();
 
-    return view('admin.orders.index', compact('orders', 'statusOptions', 'orderTypes'));
+    // Always pass branches for filter dropdown
+    $branches = $this->getAdminAccessibleBranches($admin);
+    return view('admin.orders.index', compact('orders', 'statusOptions', 'orderTypes', 'branches'));
 }
 
 public function create()

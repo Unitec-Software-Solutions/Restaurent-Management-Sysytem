@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
+
     public function up(): void
     {
         Schema::create('organizations', function (Blueprint $table) {
@@ -24,10 +24,10 @@ return new class extends Migration
             $table->string('activation_key')->unique();
             $table->boolean('is_active')->default(false);
             $table->timestamp('activated_at')->nullable();
-            $table->json('business_hours')->nullable(); // PostgreSQL JSON column
+            $table->json('business_hours')->nullable(); 
             $table->timestamps();
             $table->softDeletes();
-            
+
             // PostgreSQL indexes for performance
             $table->index(['is_active']);
             $table->index(['registration_number']);
