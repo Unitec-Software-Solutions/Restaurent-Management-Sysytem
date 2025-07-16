@@ -3,7 +3,7 @@
 @section('content')
 <div class="p-6">
     <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+        
         <p class="text-gray-600">Welcome back to your restaurant management system</p>
     </div>
         
