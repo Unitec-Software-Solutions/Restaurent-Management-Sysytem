@@ -49,9 +49,159 @@ class AdminOrderController extends Controller
     }
 
     public function index(Request $request)
-    {
-        // Implementation here
+{
+    $admin = auth('admin')->user();
+    $search = $request->input('search');
+    $status = $request->input('status');
+    $orderType = $request->input('order_type');
+
+    $orders = Order::with(['branch', 'orderItems.menuItem'])
+        ->when($search, function ($query, $search) {
+            $query->where(function ($q) use ($search) {
+                foreach ($this->getSearchableColumns() as $column) {
+                    $q->orWhere($column, 'like', '%' . $search . '%');
+                }
+                $q->orWhereHas('orderItems.menuItem', function ($itemQuery) use ($search) {
+                    $itemQuery->where('name', 'like', '%' . $search . '%');
+                });
+            });
+        })
+        ->when($status, function ($query, $status) {
+            $query->where('status', $status);
+        })
+        ->when($orderType, function ($query, $orderType) {
+            $query->where('order_type', $orderType);
+        })
+        ->when(!$admin->is_super_admin, function ($query) use ($admin) {
+            if ($admin->branch_id) {
+                $query->where('branch_id', $admin->branch_id);
+            } elseif ($admin->organization_id) {
+                $query->whereHas('branch', function ($q) use ($admin) {
+                    $q->where('organization_id', $admin->organization_id);
+                });
+            }
+        })
+        ->orderBy('order_time', 'desc')
+        ->paginate(25);
+
+    $statusOptions = [
+        'pending' => 'Pending',
+        'confirmed' => 'Confirmed',
+        'preparing' => 'Preparing',
+        'ready' => 'Ready',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled'
+    ];
+
+    $orderTypes = collect(OrderType::cases())->mapWithKeys(function ($case) {
+        return [$case->value => $case->name];
+    })->toArray();
+
+    return view('admin.orders.index', compact('orders', 'statusOptions', 'orderTypes'));
+}
+
+public function create()
+{
+    $admin = auth('admin')->user();
+    if (!$admin->can('create', Order::class)) {
+        abort(403, 'You do not have permission to create orders.');
     }
+
+    $branches = $this->getAdminAccessibleBranches($admin);
+    if ($branches->isEmpty()) {
+        return redirect()->route('admin.dashboard')->with('error', 'No branches available. Please contact your administrator.');
+    }
+
+    $menuItems = collect([]);
+    $categories = collect([]);
+
+    // If admin is restricted to one branch, preload menu items
+    if ($admin->branch_id) {
+        $activeMenu = Menu::getActiveMenuForBranch($admin->branch_id);
+        if ($activeMenu) {
+            $menuItems = $activeMenu->availableMenuItems()->with('itemMaster')->get();
+        }
+
+        $categories = ItemCategory::where('organization_id', $admin->organization_id)
+            ->active()
+            ->get();
+    }
+
+    $statusOptions = [
+        'pending' => 'Pending',
+        'confirmed' => 'Confirmed',
+        'preparing' => 'Preparing',
+        'ready' => 'Ready',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled'
+    ];
+
+    return view('admin.orders.create', compact('branches', 'menuItems', 'categories', 'statusOptions'));
+}
+
+public function show(Order $order)
+{
+    $admin = auth('admin')->user();
+
+    // Authorization check
+    if (!$admin->is_super_admin) {
+        if ($admin->branch_id && $order->branch_id !== $admin->branch_id) {
+            abort(403, 'Access denied to this order');
+        } elseif ($admin->organization_id && (!$order->branch || $order->branch->organization_id !== $admin->organization_id)) {
+            abort(403, 'Access denied to this order');
+        }
+    }
+
+    $order->load([
+        'orderItems.menuItem.itemMaster',
+        'branch.organization',
+        'createdByAdmin'
+    ]);
+
+    // Prepare data for view
+    $orderDetails = [
+        'id' => $order->id,
+        'order_number' => $order->order_number,
+        'customer_name' => $order->customer_name,
+        'customer_phone' => $order->customer_phone,
+        'status' => $order->status,
+        'order_type' => $order->order_type,
+        'order_time' => $order->order_time->format('M d, Y h:i A'),
+        'subtotal' => number_format((float)$order->subtotal, 2),
+        'tax' => number_format((float)$order->tax, 2),
+        'total' => number_format((float)$order->total, 2),
+        'branch_name' => $order->branch->name,
+        'created_by' => $order->createdByAdmin->name ?? 'System',
+        'special_instructions' => $order->special_instructions,
+        'items' => $order->orderItems->map(function ($item) {
+            return [
+                'name' => $item->menuItem->name,
+                'quantity' => $item->quantity,
+                'unit_price' => number_format($item->unit_price, 2),
+                'total' => number_format($item->total_price, 2),
+                'special_instructions' => $item->special_instructions
+            ];
+        })
+    ];
+
+    return view('admin.orders.show', compact('order', 'orderDetails'));
+}
+
+// Helper method to get accessible branches (already used in other methods)
+protected function getAdminAccessibleBranches($admin)
+{
+    if ($admin->is_super_admin) {
+        return Branch::active()->get();
+    } elseif ($admin->organization_id) {
+        $query = Branch::where('organization_id', $admin->organization_id)->active();
+        if ($admin->branch_id) {
+            $query->where('id', $admin->branch_id);
+        }
+        return $query->get();
+    } else {
+        return collect([]);
+    }
+}
 
     public function store(Request $request)
     {
