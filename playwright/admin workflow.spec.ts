@@ -10,19 +10,19 @@ import { createSupplier } from './helpers/createSupplier';
 import { addItemsToInventory } from './helpers/addItemsToInventory';
 
 test('Admin Workflow 🚀', async ({ page }) => {
-    await loginAsSuperAdmin(page);
+    // await loginAsSuperAdmin(page);
     // await createSubscriptionPlan(page);
     // await createOrganization(page);
 });
 
 test('create Organization 🏢', async ({ page }) => {
     await loginAsSuperAdmin(page);
-    // await createOrganization(page);
+    await createOrganization(page);
 });
 
 test('Activate Branch 🔑', async ({ page }) => {
     await loginAsSuperAdmin(page);
-    // await activateBranch(page);
+    await activateBranch(page);
 });
 
 test('Create Supplier 🚚', async ({ page }) => {
