@@ -75,18 +75,30 @@
                             <label for="production_date" class="block text-sm font-medium text-gray-700 mb-2">
                                 Production Date <span class="text-red-500">*</span>
                             </label>
-                            <input type="date" name="production_date" id="production_date" required
+                            <div class="relative">
+                                <input
+                                datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+                                type="text"
+                                name="production_date"
+                                id="production_date"
+                                required
                                 value="{{ old('production_date', now()->addDay()->toDateString()) }}"
                                 min="{{ now()->format('Y-m-d') }}"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-calendar-alt text-gray-400"></i>
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <label for="production_notes" class="block text-sm font-medium text-gray-700 mb-2">
                                 Production Notes
                             </label>
-                            <textarea name="production_notes" id="production_notes" rows="3"
+                            <textarea name="production_notes" id="production_notes" rows="1"
                                 placeholder="Special instructions for production team..."
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('production_notes') }}</textarea>
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                                style="max-height: 10rem; overflow-y: auto;"
+                                oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 160) + 'px';">{{ old('production_notes') }}</textarea>
                         </div>
                     </div>
                 </div>

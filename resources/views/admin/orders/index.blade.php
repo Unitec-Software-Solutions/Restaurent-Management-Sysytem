@@ -24,7 +24,8 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <form method="GET" action="{{ route('admin.orders.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" action="{{ route('admin.orders.index') }}"
+        class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Search -->
             <div>
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -50,7 +51,7 @@
             <div>
                 <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    <option value="">All Statuses</option>
+                    <option value="">All Status</option>
                     <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                     <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
                     <option value="preparing" {{ request('status') == 'preparing' ? 'selected' : '' }}>Preparing</option>
@@ -68,19 +69,17 @@
             </div>
         </form>
 
-        <!-- Today's Orders Filter -->
-        <div class="mb-4">
-            <div class="flex items-center space-x-4">
-                <button onclick="filterTodayOrders()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-calendar-day mr-2"></i> Today's Orders
-                </button>
-                <button onclick="filterKOTOrders()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-fire mr-2"></i> KOT Orders
-                </button>
-                <button onclick="clearFilters()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-times mr-2"></i> Clear Filters
-                </button>
-            </div>
+        <!-- Additional Buttons -->
+        <div class="flex justify-start mt-4 space-x-2">
+            <button onclick="filterTodayOrders()" type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-calendar-day mr-2"></i> Today's Orders
+            </button>
+            <button onclick="filterKOTOrders()" type="button" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-fire mr-2"></i> KOT Orders
+            </button>
+            <button onclick="clearFilters()" type="button" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-times mr-2"></i> Clear Filters
+            </button>
         </div>
     </div>
 

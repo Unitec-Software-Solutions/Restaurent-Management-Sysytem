@@ -1,31 +1,31 @@
 <aside id="sidebar"
-    class="fixed top-0 left-0 z-40 w-64 h-full pt-16 bg-[#515DEF] border-r border-[#515DEF] dark:border-[#515DEF] transition-transform duration-300 ease-in-out transform -translate-x-full lg:translate-x-0"
+    class="fixed top-0 left-0 z-40 w-64 h-full bg-[#515DEF] border-r border-[#515DEF] dark:border-[#515DEF] transition-transform duration-300 ease-in-out transform -translate-x-full lg:translate-x-0"
     aria-label="Sidebar">
 
     <div class="flex flex-col h-full text-white">
+        {{-- Logo/Header --}}
+        <div class="flex items-center gap-2 px-4 bg-[#515DEF] border-b border-[#6A71F0]" style="min-height:60px;">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#515DEF]" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+            </div>
+            <span class="text-white font-bold text-xl">RM SYSTEMS</span>
+        </div>
+
         {{-- Scrollable top section --}}
         <div class="flex-1 overflow-y-auto">
-            {{-- Logo/Header --}}
-            <div class="flex items-center gap-2 px-4 py-4">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#515DEF]" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                </div>
-                <span class="text-white font-bold text-xl">RM SYSTEMS</span>
-            </div>
-
             {{-- Navigation --}}
-            <div class="px-4 pb-4">
+            <div class="px-2 pt-2 pb-2">
                 <ul class="space-y-2">
                     @foreach ($menuItems as $item)
                         {{-- Regular menu items with enhanced badge and sub-item support --}}
                         <li>
                             @if(\Illuminate\Support\Facades\Route::has($item['route']))
                                 <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
-                                    class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200
+                                    class="flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors duration-200
                                     {{ request()->routeIs($item['route'] . '*')
                                         ? 'bg-white text-gray-700 border-white'
                                         : 'bg-transparent text-white border-white hover:bg-white/10' }}"
@@ -126,19 +126,6 @@
                         </li>
                     @endforeach
                 </ul>
-
-                {{-- Debug Information (only in development) --}}
-                {{-- @if (config('app.debug'))
-                    <div class="mt-6 p-3 bg-black/20 rounded-lg">
-                        <h4 class="text-xs font-semibold mb-2 text-white/80">Debug Info</h4>
-                        <div class="text-xs text-white/60 space-y-1">
-                            <div>Guard: {{ auth()->getDefaultDriver() }}</div>
-                            <div>User: {{ $currentUser ? $currentUser->name : 'Not authenticated' }}</div>
-                            <div>Routes: {{ count($menuItems) }} available</div>
-                            <div id="auth-status" class="text-green-400">Checking...</div>
-                        </div>
-                    </div>
-                @endif --}}
             </div>
         </div>
 

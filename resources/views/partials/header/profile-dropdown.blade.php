@@ -24,11 +24,11 @@
             x-transition:leave-end="transform opacity-0 scale-95"
             class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg dark:bg-gray-700 z-50">
             <div class="py-1">
-                <a href="{{ route('admin.profile.index') }}"
+                <a href="#profile"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     <i class="fas fa-user-circle mr-2"></i> Your Profile
                 </a>
-                <a href="{{ route('admin.settings.index') }}"
+                <a href="#settings"
                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600">
                     <i class="fas fa-cog mr-2"></i> Settings
                 </a>

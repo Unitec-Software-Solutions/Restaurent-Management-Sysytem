@@ -1,10 +1,12 @@
 @extends('layouts.admin')
 
 @section('title', 'Users')
-
+@section('header-title', 'Users Management')
 @section('content')
-<div class="bg-white rounded shadow p-6">
-    <div class="flex justify-between items-center mb-4">
+    <div class="p-4 rounded-lg">
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h2 class="text-2xl font-semibold">Users</h2>
         <a href="{{ route('admin.users.create') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
             + Create User
@@ -83,7 +85,7 @@
                         @if($user->branch)
                             <div class="text-sm text-gray-900">{{ $user->branch->name }}</div>
                             <div class="text-xs text-gray-500">
-                                Status: 
+                                Status:
                                 <span class="font-medium {{ $user->branch->is_active ? 'text-green-600' : 'text-red-600' }}">
                                     {{ $user->branch->is_active ? 'Active' : 'Inactive' }}
                                 </span>

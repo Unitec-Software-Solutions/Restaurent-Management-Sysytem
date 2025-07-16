@@ -46,6 +46,7 @@
             <!-- Action buttons container -->
             <div class="flex items-center space-x-3">
                 <!-- Profile dropdown or other actions can go here -->
+                {{-- @include('partials.header.profile-dropdown') --}}
             </div>
         </div>
     </div>

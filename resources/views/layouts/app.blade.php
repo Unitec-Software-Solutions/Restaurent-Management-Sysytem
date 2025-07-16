@@ -6,7 +6,7 @@
     <title>@yield('title', config('app.name'))</title>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+    {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script> --}}
     <script src="https://kit.fontawesome.com/a2e0e6fa71.js" crossorigin="anonymous"></script>
     <style>
         @keyframes fade-in {

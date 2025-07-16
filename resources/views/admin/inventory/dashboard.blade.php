@@ -81,6 +81,30 @@
                 </div>
             </div>
 
+            {{-- Stock Management --}}
+            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Stock Release</h2>
+                    <p class="text-gray-500 text-sm">Stock Release and Management</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ route('admin.inventory.stock.index') }}"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-box mr-2"></i> View Stock levels
+                    </a>
+
+                    <a href="{{ route('admin.inventory.stock.transactions.index') }}"
+                        class="bg-green-50 border border-green-600 text-green-700 hover:bg-green-100 px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-history mr-2"></i> relese stock 
+                    </a>
+
+                    {{-- <a href="{{ route('admin.inventory.stock.create') }}"
+                        class="bg-white border border-red-600 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-plus mr-2"></i> Add Stock { dev }
+                    </a> --}}
+                </div>
+            </div>
+
             {{-- Goods Received Notes --}}
             <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
                 <div>

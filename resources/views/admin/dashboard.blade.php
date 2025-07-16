@@ -1,9 +1,9 @@
 @extends('layouts.admin')
-
+@section('header-title', 'RMS Dashboard')
 @section('content')
 <div class="p-6">
     <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+        
         <p class="text-gray-600">Welcome back to your restaurant management system</p>
     </div>
         
@@ -233,16 +233,7 @@
                 <p class="text-2xl font-bold mt-2">432</p>
             </div>
         </div>
-        
-        <!-- test routes here  -->
-        {{-- <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Test - </h2> 
-            <a href="{{ route('admin.reservations.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Reservations</a>
-            <a href="{{ route('admin.customers.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Customers</a>
-            <a href="{{ route('admin.digital-menu.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Digital Menu</a>
-            <a href="{{ route('admin.settings.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Settings</a>
-            <a href="{{ route('admin.reports.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Reports</a>
-            <a href="{{ route('admin.orders.index') }}" class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded">Orders</a> --}}
+
 
         </div>
     </div>

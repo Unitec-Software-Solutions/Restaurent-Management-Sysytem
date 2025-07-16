@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Modules Management')
-
+@section('header-title', 'Modules Management')
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
@@ -10,7 +10,7 @@
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Modules Management</h1>
             <p class="text-gray-600 mt-1">Manage system modules and their permissions</p>
         </div>
-        <a href="{{ route('admin.modules.create') }}" 
+        <a href="{{ route('admin.modules.create') }}"
            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center transition shadow-sm">
             <i class="fas fa-plus mr-2"></i> Add Module
         </a>
@@ -24,11 +24,11 @@
     @endif
 
     <!-- Filters with Export -->
-    <x-module-filters 
+    <x-module-filters
         :action="route('admin.modules.index')"
         :export-permission="'export_modules'"
         :export-filename="'modules_export.xlsx'">
-        
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">

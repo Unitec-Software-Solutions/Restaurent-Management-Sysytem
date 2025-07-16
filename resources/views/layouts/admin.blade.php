@@ -9,7 +9,7 @@
 
     <!-- Styles -->
     {{-- <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" /> --}}
-    <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" />
+    {{-- <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" /> --}}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
 
     <!-- CSRF Token -->
@@ -19,32 +19,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Scripts -->
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    @vite(['resources/sass/app.scss', 'resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Enhanced Sidebar Assets -->
     @vite(['resources/css/sidebar.css', 'resources/js/sidebar.js'])
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: "#eff6ff",
-                            100: "#dbeafe",
-                            200: "#bfdbfe",
-                            300: "#93c5fd",
-                            400: "#60a5fa",
-                            500: "#3b82f6",
-                            600: "#2563eb",
-                            700: "#1d4ed8",
-                            800: "#1e40af",
-                            900: "#1e3a8a"
-                        }
-
-                    }
-                }
-            }
         };
     </script>
     <style>
@@ -99,7 +80,7 @@
         <div class="h-16 lg:hidden"></div>
 
         <!-- Content Container -->
-        <div class="pt-4 lg:pt-10 bg-[#F3F4FF] min-h-screen">
+        <div class="pt-10 lg:pt-10 bg-[#F3F4FF] min-h-screen">
             <!-- Breadcrumbs -->
             {{-- @include('partials.breadcrumbs') // Disabled for now --}}
 
@@ -119,7 +100,7 @@
 
     <!-- Logout Modal -->
     @include('partials.modals.logout-modal')
-    @include('partials.header.profile-dropdown')
+    {{-- @include('partials.header.profile-dropdown') --}}
 
     <!-- Scripts -->
     <script>
@@ -158,7 +139,6 @@
     <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     @stack('scripts')
 </body>
 

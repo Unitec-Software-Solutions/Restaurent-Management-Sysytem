@@ -2,9 +2,10 @@
 @extends('layouts.admin')
 
 @section('title', 'Subscription Plans')
+@section('header-title', 'Subscription Plans')
 
 @section('content')
-<div class="container-fluid py-6">
+    <div class="pt-6 p-6 rounded-lg">
     <!-- Flash Messages -->
     @if(session('success'))
         <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg">

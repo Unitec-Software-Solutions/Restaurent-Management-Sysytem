@@ -680,7 +680,7 @@ class AdminSidebar extends Component
                 'title' => 'Kitchen',
                 'route' => 'admin.kitchen.index',
                 'route_params' => [],
-                'icon' => 'fas fa-hat-chef',
+                'icon' => 'fas fa-kitchen-set',
                 'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'kitchen.view',
                 'badge' => $this->getActiveKOTsCount(),

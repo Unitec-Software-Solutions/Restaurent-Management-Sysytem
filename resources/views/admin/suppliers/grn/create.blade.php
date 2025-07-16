@@ -136,7 +136,8 @@
                             *</label>
                         <div class="relative">
                             <input
-                            type="date"
+                            datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+                            type="text"
                             name="received_date"
                             id="received_date"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -146,7 +147,7 @@
                         </div>
                     </div>
 
-                    
+
 
                     <div>
                         <label for="delivery_note_number" class="block text-sm font-medium text-gray-700 mb-1">Delivery Note
