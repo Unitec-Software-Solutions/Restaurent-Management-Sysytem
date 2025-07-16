@@ -249,15 +249,7 @@
                                         </a>
                                     @endif
 
-                                    <!-- Delete button - only show if not completed -->
-                                    @if($order->status !== 'completed')
-                                        <button onclick="confirmDeleteOrder({{ $order->id }})"
-                                                class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded-md flex items-center"
-                                                title="Delete Order">
-                                            <i class="fas fa-trash mr-1"></i>
-                                            <span>Delete</span>
-                                        </button>
-                                    @endif
+                                  
 
                                     <!-- Print KOT if order has KOT items -->
                                     @php

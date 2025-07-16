@@ -287,7 +287,7 @@ class AdminOrderController extends Controller
     {
         return [
             'available' => true,
-            'available_quantity' => 999,
+            'available_quantity' => 999999,
             'message' => 'Item available'
         ];
     }
@@ -348,5 +348,21 @@ class AdminOrderController extends Controller
         }
     }
 
-
+    public function destroy($id, Request $request)
+    {
+        $order = Order::findOrFail($id);
+        $reservationId = $request->input('reservation_id', $order->reservation_id);
+        // Deletion of orders is forbidden for all admin roles
+        abort(403, 'Order deletion is forbidden for all admin roles.');
+        return redirect()->route('orders.index', ['reservation_id' => $reservationId])
+            ->with('success', 'Order deleted successfully.');
+    }
+    public function destroyTakeaway($id)
+    {
+        $order = Order::findOrFail($id);
+        $order->orderItems()->delete();
+        $order->delete();
+        return redirect()->route('orders.index')
+            ->with('success', 'Takeaway order deleted successfully.');
+    }
 }

@@ -37,7 +37,7 @@ class OrderPolicy
         }
 
         // Admin can view orders from their branch/organization
-        return $admin->branch_id === $order->branch_id || 
+        return $admin->branch_id === $order->branch_id ||
                $admin->organization_id === $order->organization_id;
     }
 
@@ -50,7 +50,7 @@ class OrderPolicy
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['orders.create']) && $admin->hasPermissionTo('create orders');
+        return isset($availablePermissions['orders.create']) && $admin->hasPermissionTo('orders.create');
     }
 
     /**
@@ -94,15 +94,8 @@ class OrderPolicy
      */
     public function delete(Admin $admin, Order $order): bool
     {
-        if ($order->status !== Order::STATUS_PENDING) {
-            return false;
-        }
-        if ($admin->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['orders.delete']) && $admin->hasPermissionTo('delete orders') &&
-            ($admin->branch_id === $order->branch_id || $admin->organization_id === $order->organization_id);
+        // Deletion of orders is forbidden for all users
+        return false;
     }
 
     /**
@@ -110,6 +103,7 @@ class OrderPolicy
      */
     public function restore(Admin $admin, Order $order): bool
     {
+        // Restoration of orders is forbidden for all users
         return false;
     }
 
@@ -118,6 +112,7 @@ class OrderPolicy
      */
     public function forceDelete(Admin $admin, Order $order): bool
     {
+        // Permanent deletion of orders is forbidden for all users
         return false;
     }
 }

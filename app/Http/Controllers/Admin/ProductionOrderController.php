@@ -86,6 +86,7 @@ class ProductionOrderController extends Controller
      */
     public function store(Request $request)
     {
+        $userId = Auth::id();
         $userExists = \DB::table('users')->where('id', $userId)->exists();
         $createdBy = $userExists ? $userId : null;
 
@@ -97,7 +98,7 @@ class ProductionOrderController extends Controller
             'notes' => 'nullable|string|max:1000'
         ]);
 
-        DB::transaction(function () use ($request) {
+        DB::transaction(function () use ($request, $createdBy) {
             $productionOrder = ProductionOrder::create([
                 'organization_id' => Auth::user()->organization_id,
                 'production_order_number' => $this->generateOrderNumber(),
@@ -724,6 +725,7 @@ class ProductionOrderController extends Controller
                     ->whereIn('id', $request->selected_requests)
                     ->get();
 
+                $userId = Auth::id();
                 $userExists = \DB::table('users')->where('id', $userId)->exists();
                 $byuser = $userExists ? $userId : null;
                 if ($selectedRequests->isEmpty()) {
