@@ -4,6 +4,7 @@
 @section('title', 'Create User')
 
 @section('content')
+    <div class="p-4 rounded-lg">
 <div class="bg-white rounded shadow p-6">
     @if($organizations->isEmpty())
         <div class="mb-4 bg-yellow-100 text-yellow-800 p-3 rounded flex items-center justify-between">
@@ -133,6 +134,7 @@
         </form>
     @endif
 </div>
+</div>
 
 @php
     $branchesArray = [];
@@ -166,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const option = new Option(branch.name, branch.id);
                 branchSelect.appendChild(option);
             });
-            
+
             // Preselect if there was a previous selection
             const oldBranchId = "{{ old('branch_id') }}";
             if (oldBranchId) {
