@@ -7,8 +7,9 @@
     <div class="pt-6 p-6 rounded-lg">
     <div class="bg-white rounded-2xl shadow-lg">
         <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
-            <h1 class="text-2xl font-bold">Create New Subscription Plan</h1>
-            <p class="mt-1 opacity-90">Define a new subscription tier with modules and features</p>
+            <h1 class="text-2xl text-gray-900 font-bold">Create New Subscription Plan</h1>
+            <p class="mt-1 text-gray-800 opacity-90">Define a new subscription tier with modules and features</p>
+        </div>
         </div>
 
         <!-- Error Display -->
@@ -23,11 +24,11 @@
             </div>
         @endif
 
-        <form action="{{ route('admin.subscription-plans.store') }}" method="POST" class="p-8 space-y-8">
+        <form action="{{ route('admin.subscription-plans.store') }}" method="POST" class="pt-4">
             @csrf
-
+        <div class="bg-white p-6 rounded-2xl shadow-lg">
             <!-- Basic Information -->
-            <div class="space-y-6">
+            <div class="space-y-1">
                 <h2 class="text-xl font-semibold text-gray-900 border-b pb-2">Basic Information</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -40,7 +41,10 @@
 
                     <div>
                         <label class="block mb-2 font-semibold text-gray-700" for="currency">Currency <span class="text-red-500">*</span></label>
-                        <select id="currency" name="currency" class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <select data-dropdown-toggle="dropdownDelay" data-dropdown-delay="500" data-dropdown-trigger="hover"
+                        id="currency"
+                        name="currency"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                             @foreach(\App\Helpers\CurrencyHelper::getAllCurrencies() as $code => $name)
                                 <option value="{{ $code }}" {{ old('currency', 'LKR') == $code ? 'selected' : '' }}>{{ $name }}</option>
                             @endforeach
@@ -57,7 +61,7 @@
                 </div>
             </div>
 
-        </div>
+
 
         <!-- Modules Selection -->
         <div class="bg-gray-50 p-4 rounded-lg">
@@ -75,7 +79,7 @@
                     @foreach($modules as $module)
                         <label class="flex items-start space-x-3 bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 transition">
                             <input type="checkbox" name="modules[]" value="{{ $module->id }}"
-                                   class="mt-1 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                   class="mt-1 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500"
                                    {{ in_array($module->id, old('modules', [])) ? 'checked' : '' }}>
                             <div class="flex-1">
                                 <div class="font-medium text-gray-900">{{ $module->name }}</div>
@@ -126,7 +130,7 @@
             <div class="flex items-center space-x-4">
                 <label class="flex items-center">
                     <input type="checkbox" name="is_trial" value="1"
-                           class="text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                           class="text-indigo-600 bg-gray-200 border-gray-500 rounded focus:ring-indigo-500"
                            {{ old('is_trial') ? 'checked' : '' }}>
                     <span class="ml-2 text-sm text-gray-700">Enable trial period</span>
                 </label>
