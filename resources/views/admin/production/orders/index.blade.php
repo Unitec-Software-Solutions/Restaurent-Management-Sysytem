@@ -177,12 +177,11 @@
                         Range</label>
                     <div class="grid grid-cols-2 gap-2">
                         <input
-                                                    datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
-
-                        type="text"
-                        name="date_from"
-                        id="date_from"
-                        value="{{ request('date_from', now()->subDays(30)->toDateString()) }}"
+                            datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+                            type="text"
+                            name="date_from"
+                            id="date_from"
+                            value="{{ request('date_from', now()->subDays(30)->toDateString()) }}"
                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             >
                         <input
