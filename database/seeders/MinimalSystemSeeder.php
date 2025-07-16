@@ -277,13 +277,13 @@ class MinimalSystemSeeder extends Seeder
     {
         $this->command->info('  👑 Creating super admin role...');
 
-        // Create Super Admin role
-        $superAdminRole = Role::create([
+        // Create or update Super Admin role
+        $superAdminRole = Role::firstOrCreate([
             'name' => 'Super Administrator',
             'guard_name' => 'admin'
         ]);
 
-        // Assign ALL permissions to Super Admin
+        // Always assign ALL permissions to Super Admin
         $allPermissions = Permission::where('guard_name', 'admin')->get();
         $superAdminRole->syncPermissions($allPermissions);
 
@@ -297,36 +297,44 @@ class MinimalSystemSeeder extends Seeder
     {
         $this->command->info('  🔑 Creating super admin user...');
 
-        // Create super admin user (system level - no organization)
-        $superAdmin = Admin::create([
-            'name' => 'Super Administrator',
-            'email' => 'superadmin@rms.com',
-            'password' => Hash::make('SuperAdmin123!'),
-            'phone' => '+94 11 000 0000',
-            'job_title' => 'System Administrator',
-            'department' => 'System Administration',
-            'organization_id' => null, // System level admin
-            'branch_id' => null,
-            'is_super_admin' => true,
-            'is_active' => true,
-            'status' => 'active',
-            'email_verified_at' => now(),
-            'preferences' => json_encode([
-                'timezone' => 'UTC',
-                'language' => 'en',
-                'theme' => 'light',
-                'notifications' => true
-            ])
-        ]);
+        // Create or update super admin user (system level - no organization)
+        $superAdmin = Admin::firstOrCreate(
+            [
+                'email' => 'superadmin@rms.com'
+            ],
+            [
+                'name' => 'Super Administrator',
+                'password' => Hash::make('SuperAdmin123!'),
+                'phone' => '+94 11 000 0000',
+                'job_title' => 'System Administrator',
+                'department' => 'System Administration',
+                'organization_id' => null, // System level admin
+                'branch_id' => null,
+                'is_super_admin' => true,
+                'is_active' => true,
+                'status' => 'active',
+                'email_verified_at' => now(),
+                'preferences' => json_encode([
+                    'timezone' => 'UTC',
+                    'language' => 'en',
+                    'theme' => 'light',
+                    'notifications' => true
+                ])
+            ]
+        );
 
-        // Assign Super Admin role
+        // Assign Super Admin role and all permissions
         $superAdminRole = Role::where('name', 'Super Administrator')
             ->where('guard_name', 'admin')
             ->first();
 
-        if ($superAdminRole) {
+        if ($superAdminRole && !$superAdmin->hasRole($superAdminRole)) {
             $superAdmin->assignRole($superAdminRole);
         }
+
+        // Give all permissions directly as well (defensive)
+        $allPermissions = Permission::where('guard_name', 'admin')->get();
+        $superAdmin->syncPermissions($allPermissions);
 
         $this->command->info('    ✓ Super Admin user created');
         $this->command->info('    📧 Email: superadmin@rms.com');
