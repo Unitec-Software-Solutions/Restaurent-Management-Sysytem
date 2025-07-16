@@ -205,9 +205,9 @@ class MinimalSystemSeeder extends Seeder
             // System Administration
             'system.manage', 'system.settings', 'system.backup', 'system.logs',
 
-            // Order Management
-            'order.view', 'order.create', 'order.update', 'order.delete', 'order.manage',
-            'order.process', 'order.cancel', 'order.refund', 'order.print_kot',
+            // Order Management (policy: orders.*)
+            'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
+            // Note: orders.delete is forbidden in policy, so not included
 
             // Reservation Management
             'reservation.view', 'reservation.create', 'reservation.update', 'reservation.delete',
@@ -234,13 +234,17 @@ class MinimalSystemSeeder extends Seeder
             'report.view', 'report.generate', 'report.export', 'report.sales',
             'report.inventory', 'report.staff', 'report.financial', 'report.dashboard',
 
-            // Organization & Branch Management
-            'organization.view', 'organization.create', 'organization.update', 'organization.manage',
-            'branch.view', 'branch.create', 'branch.update', 'branch.manage',
+            // Organization & Branch Management (policy: organizations.*, branches.*)
+            'organizations.view', 'organizations.create', 'organizations.edit', 'organizations.activate', 'organizations.deactivate', 'organizations.delete', 'organizations.regenerate_key',
+            'branches.view', 'branches.edit', 'branches.create', 'branches.activate', 'branches.deactivate', 'branches.delete', 'branches.regenerate_key',
 
-            // User Management
-            'user.view', 'user.create', 'user.update', 'user.delete', 'user.manage',
-            'role.view', 'role.create', 'role.update', 'role.delete', 'role.manage',
+            // User Management (policy: users.*)
+            'users.view', 'users.create', 'users.edit', 'users.delete', 'users.roles',
+
+            // Role Management (policy: roles.*)
+            'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.manage',
+
+            // Permission Management
             'permission.view', 'permission.manage',
 
             // Staff Management
@@ -252,7 +256,10 @@ class MinimalSystemSeeder extends Seeder
             'billing.view', 'billing.create', 'billing.manage',
 
             // Dashboard & Profile
-            'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update'
+            'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update',
+
+            // Module Management (policy: modules.*)
+            'modules.view', 'modules.create', 'modules.edit', 'modules.delete', 'modules.restore', 'modules.force_delete',
         ];
 
         $created = 0;
