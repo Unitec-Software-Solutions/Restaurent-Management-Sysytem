@@ -33,6 +33,6 @@ class Kernel extends ConsoleKernel
         })->daily();
 
         $schedule->command('subscriptions:check')->daily();
-        $schedule->command('sync:system-permissions')->daily();
+        $schedule->command('permissions:sync-system')->daily();
     }
 }
