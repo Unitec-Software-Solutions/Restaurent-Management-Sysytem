@@ -40,9 +40,14 @@
                 <!-- Request Details Section -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                        <label for="required_date" class="block text-sm font-medium text-gray-700 mb-1">Required Date
-                            *</label>
-                        <input type="date" id="required_date" name="required_date"
+                        <label for="required_date" class="block text-sm font-medium text-gray-700 mb-1">
+                            Required Date*
+                        </label>
+                        <input
+                            datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+                            type="text"
+                            id="required_date"
+                            name="required_date"
                             value="{{ old('required_date', now()->addDay()->format('Y-m-d')) }}"
                             min="{{ now()->addDay()->format('Y-m-d') }}"
                             class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -55,11 +60,48 @@
                         @php
                             $user = Auth::user();
                             $userBranchId = $user->branch_id;
-                            $isAdmin = $userBranchId === null; // Admin users have no specific branch
+                            $isSuperAdmin = $user->is_super_admin;
+                            $isOrgAdmin = !$isSuperAdmin && $userBranchId === null;
                         @endphp
 
-                        @if ($isAdmin)
-                            <!-- Admin can select branch -->
+                        @if ($isSuperAdmin)
+                            <!-- Super Admin can bypass filtering and select any branch -->
+                            <select name="branch_id" id="branchSelect" required
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="">Select Branch</option>
+                                @php
+                                    $branches = \App\Models\Branch::where('is_active', true)
+                                        ->orderBy('name')
+                                        ->get();
+                                @endphp
+                                @foreach ($branches as $branch)
+                                    <option value="{{ $branch->id }}" data-org-id="{{ $branch->organization_id }}"
+                                        {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                        {{ $branch->name }}
+                                        @if ($branch->is_head_office)
+                                            (Head Office)
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            <input type="hidden" name="organization_id" id="organizationIdInput" value="{{ old('organization_id') }}">
+                            <p class="text-xs text-gray-500 mt-1">Select any branch (Super Admin access)</p>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    var branchSelect = document.getElementById('branchSelect');
+                                    var orgInput = document.getElementById('organizationIdInput');
+                                    function updateOrgId() {
+                                        var selected = branchSelect.options[branchSelect.selectedIndex];
+                                        var orgId = selected.getAttribute('data-org-id') || '';
+                                        orgInput.value = orgId;
+                                    }
+                                    branchSelect.addEventListener('change', updateOrgId);
+                                    // Set on page load if already selected
+                                    updateOrgId();
+                                });
+                            </script>
+                        @elseif ($isOrgAdmin)
+                            <!-- Organization Admin can select branches within their organization -->
                             <select name="branch_id" required
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                                 <option value="">Select Branch</option>
@@ -79,9 +121,10 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <p class="text-xs text-gray-500 mt-1">Select the branch requesting these items</p>
+                            <input type="hidden" name="organization_id" value="{{ $user->organization_id }}">
+                            <p class="text-xs text-gray-500 mt-1">Select a branch within your organization</p>
                         @else
-                            <!-- Branch user - branch is pre-selected -->
+                            <!-- Branch Admin - branch is pre-selected -->
                             @php
                                 $userBranch = \App\Models\Branch::find($userBranchId);
                                 $branchName = $userBranch ? $userBranch->name : 'Unknown Branch';
@@ -89,6 +132,7 @@
                             <input type="text" value="{{ $branchName }}"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100" readonly>
                             <input type="hidden" name="branch_id" value="{{ $userBranchId }}">
+                            <input type="hidden" name="organization_id" value="{{ $user->organization_id }}">
                             <p class="text-xs text-gray-500 mt-1">Your branch (automatically selected)</p>
                         @endif
                     </div>
@@ -162,19 +206,19 @@
                                             <div class="mt-2 flex items-center space-x-4 text-sm">
                                                 @php
                                                     // For stock display, use user's branch if they have one, otherwise show HQ stock for admins
-$stockBranchId = $user->branch_id ?? null;
-if ($stockBranchId) {
-    $currentStock = \App\Models\ItemTransaction::stockOnHand(
-        $item->id,
-        $stockBranchId,
-    );
-    $stockLocation = $userBranch
-        ? $userBranch->name
-        : 'Current Branch';
-} else {
-    // Admin user - show message about selecting branch first
-    $currentStock = 0;
-    $stockLocation = 'Select branch to view stock';
+                                                    $stockBranchId = $user->branch_id ?? null;
+                                                    if ($stockBranchId) {
+                                                        $currentStock = \App\Models\ItemTransaction::stockOnHand(
+                                                            $item->id,
+                                                            $stockBranchId,
+                                                        );
+                                                        $stockLocation = $userBranch
+                                                            ? $userBranch->name
+                                                            : 'Current Branch';
+                                                    } else {
+                                                        // Admin user - show message about selecting branch first
+                                                        $currentStock = 0;
+                                                        $stockLocation = 'Select branch to view stock';
                                                     }
                                                 @endphp
 
