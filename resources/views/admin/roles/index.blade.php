@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Roles Management')
-
+@section('header-title', 'Roles Management')
 @section('content')
     <div class="p-4 rounded-lg">
 
