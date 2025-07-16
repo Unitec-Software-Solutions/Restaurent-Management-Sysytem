@@ -99,7 +99,7 @@
         <div class="h-16 lg:hidden"></div>
 
         <!-- Content Container -->
-        <div class="pt-4 lg:pt-10 bg-[#F3F4FF] min-h-screen">
+        <div class="pt-10 lg:pt-10 bg-[#F3F4FF] min-h-screen">
             <!-- Breadcrumbs -->
             {{-- @include('partials.breadcrumbs') // Disabled for now --}}
 
@@ -119,7 +119,7 @@
 
     <!-- Logout Modal -->
     @include('partials.modals.logout-modal')
-    @include('partials.header.profile-dropdown')
+    {{-- @include('partials.header.profile-dropdown') --}}
 
     <!-- Scripts -->
     <script>
