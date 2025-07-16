@@ -176,10 +176,24 @@
                     <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Production Date
                         Range</label>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
-                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input
+                                                    datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+
+                        type="text"
+                        name="date_from"
+                        id="date_from"
+                        value="{{ request('date_from', now()->subDays(30)->toDateString()) }}"
+                            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                        <input
+                            datepicker datepicker-buttons datepicker-autoselect-today datepicker-format="yyyy-mm-dd"
+                        type="text"
+                        name="date_to"
+                        id="date_to"
+                        value="{{ request('date_to', now()->toDateString()) }}"
+
+                        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
                     </div>
                 </div>
             </form>
