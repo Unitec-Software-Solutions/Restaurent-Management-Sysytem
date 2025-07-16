@@ -1,8 +1,10 @@
 @extends('layouts.admin')
+
 @section('title', 'Create Subscription Plan')
+@section('header-title', 'Create Subscription Plan')
 
 @section('content')
-<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="pt-6 p-6 rounded-lg">
     <div class="bg-white rounded-2xl shadow-lg">
         <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
             <h1 class="text-2xl font-bold">Create New Subscription Plan</h1>
@@ -27,7 +29,7 @@
             <!-- Basic Information -->
             <div class="space-y-6">
                 <h2 class="text-xl font-semibold text-gray-900 border-b pb-2">Basic Information</h2>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block mb-2 font-semibold text-gray-700" for="name">Plan Name <span class="text-red-500">*</span></label>
