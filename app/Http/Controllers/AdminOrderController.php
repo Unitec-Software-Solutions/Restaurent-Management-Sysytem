@@ -11,6 +11,10 @@ use App\Models\OrderItem;
 use App\Models\Menu;
 use App\Models\MenuItem;
 use App\Models\Kot;
+use App\Models\ItemCategory;
+use App\Models\ItemTransaction;
+use App\Models\Organization;
+use App\Models\StockReservation;
 use App\Traits\Exportable;
 use App\Enums\OrderType;
 use App\Services\NotificationService;
@@ -43,6 +47,8 @@ class AdminOrderController extends Controller
         $this->menuSchedulingService = $menuSchedulingService;
         $this->notificationService = $notificationService;
     }
+
+
 
     public function index(Request $request)
     {
@@ -84,6 +90,83 @@ class AdminOrderController extends Controller
     }
 
     /**
+     * Store a new order (admin) - allows negative stock, with permission checks and stock deduction logic
+     */
+    public function store(Request $request)
+    {
+        $admin = auth('admin')->user();
+        if (!$admin || !$admin->can('create', Order::class)) {
+            abort(403, 'You do not have permission to create orders.');
+        }
+
+        $data = $request->validate([
+            'order_type' => 'required|string',
+            'branch_id' => 'required|exists:branches,id',
+            'order_time' => 'required|date',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'required|string|max:20',
+            'items' => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'special_instructions' => 'nullable|string|max:1000',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $order = Order::create([
+                'branch_id' => $data['branch_id'],
+                'customer_name' => $data['customer_name'],
+                'customer_phone' => $data['customer_phone'],
+                'order_type' => $data['order_type'],
+                'order_time' => $data['order_time'],
+                'special_instructions' => $data['special_instructions'] ?? null,
+                'status' => 'pending',
+                'created_by' => $admin->id,
+                'order_date' => now(),
+            ]);
+
+            $subtotal = 0;
+            foreach ($data['items'] as $item) {
+                $menuItem = MenuItem::find($item['menu_item_id']);
+                $lineTotal = ($menuItem?->price ?? 0) * $item['quantity'];
+                $subtotal += $lineTotal;
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['menu_item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem?->price ?? 0,
+                    'subtotal' => $lineTotal,
+                    'total_price' => $lineTotal,
+                ]);
+
+                // Deduct stock, allow negative stock
+                if ($menuItem && $menuItem->itemMaster) {
+                    $itemMaster = $menuItem->itemMaster;
+                    $currentStock = $itemMaster->current_stock ?? 0;
+                    $newStock = $currentStock - $item['quantity'];
+                    $itemMaster->current_stock = $newStock;
+                    $itemMaster->save();
+                }
+            }
+
+            $tax = $subtotal * 0.10;
+            $order->update([
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'total' => $subtotal + $tax,
+            ]);
+
+            DB::commit();
+            return redirect()->route('admin.orders.show', $order)
+                ->with('success', "Order created successfully!");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', "Failed to create order: {$e->getMessage()}");
+        }
+    }
+
+    /**
      * Get searchable columns for orders
      */
     protected function getSearchableColumns(): array
@@ -120,7 +203,7 @@ class AdminOrderController extends Controller
         $activeMenu = null;
         $menuItems = collect([]);
         if ($order->branch_id) {
-            $activeMenu = \App\Models\Menu::getActiveMenuForBranch($order->branch_id);
+            $activeMenu = Menu::getActiveMenuForBranch($order->branch_id);
             if ($activeMenu) {
                 // Only available menu items for this menu
                 $menuItems = $activeMenu->availableMenuItems()->with('itemMaster')->get();
@@ -129,7 +212,7 @@ class AdminOrderController extends Controller
 
         // Fallback: if no active menu, show all active menu items for org/branch
         if ($menuItems->isEmpty()) {
-            $menuItems = \App\Models\ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
+            $menuItems = ItemMaster::select('id', 'name', 'selling_price as price', 'description', 'attributes')
                 ->where('is_menu_item', true)
                 ->where('is_active', true)
                 ->when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
@@ -140,12 +223,12 @@ class AdminOrderController extends Controller
 
         // Add stock information for each menu item
         foreach ($menuItems as $item) {
-            $item->current_stock = \App\Models\ItemTransaction::stockOnHand($item->id, $order->branch_id);
+            $item->current_stock = ItemTransaction::stockOnHand($item->id, $order->branch_id);
             $item->is_low_stock = $item->current_stock <= ($item->reorder_level ?? 10);
         }
 
         // Get categories
-        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+        $categories = ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
                 $q->where('organization_id', $admin->organization_id);
             })
             ->active()
@@ -219,13 +302,13 @@ class AdminOrderController extends Controller
                     // Create new order items
                     $subtotal = 0;
                     foreach ($selectedItems as $itemData) {
-                        $menuItem = \App\Models\ItemMaster::find($itemData['item_id']);
+                        $menuItem = ItemMaster::find($itemData['item_id']);
                         if (!$menuItem) continue;
 
                         $lineTotal = $menuItem->selling_price * $itemData['quantity'];
                         $subtotal += $lineTotal;
 
-                        \App\Models\OrderItem::create([
+                        OrderItem::create([
                             'order_id' => $order->id,
                             'menu_item_id' => $itemData['item_id'],
                             'inventory_item_id' => $itemData['item_id'],
@@ -313,7 +396,7 @@ class AdminOrderController extends Controller
             ->get();
 
         // Get categories
-        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+        $categories = ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
                 $q->where('organization_id', $admin->organization_id);
             })
             ->active()
@@ -459,7 +542,7 @@ class AdminOrderController extends Controller
 
         // Get organizations if super admin
         $organizations = $admin->is_super_admin ?
-            \App\Models\Organization::where('is_active', true)->get() :
+            Organization::where('is_active', true)->get() :
             collect([$admin->organization]);
 
         return view('admin.orders.create', [
@@ -517,7 +600,7 @@ class AdminOrderController extends Controller
 
     public function reservationIndex(Request $request)
     {
-        $query = \App\Models\Order::with(['reservation', 'branch'])
+        $query = Order::with(['reservation', 'branch'])
             ->where('order_type', 'dine_in_admin');
 
         // Filter by reservation_id if provided
@@ -526,13 +609,13 @@ class AdminOrderController extends Controller
         }
 
         $orders = $query->latest()->paginate(10);
-        $branches = \App\Models\Branch::all();
+        $branches = Branch::all();
         return view('admin.orders.index', compact('orders', 'branches'));
     }
 
     public function takeawayIndex()
     {
-        $orders = \App\Models\Order::with(['branch'])
+        $orders = Order::with(['branch'])
             ->where('order_type', 'like', 'takeaway%')
             ->latest()
             ->paginate(10);
@@ -708,7 +791,7 @@ $statusOptions = [
                 // Get the associated ItemMaster for stock checking if available
                 $itemMaster = $menuItem->itemMaster;
                 if ($itemMaster && $itemMaster->is_perishable) {
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($itemMaster->id, $data['branch_id']);
+                    $currentStock = ItemTransaction::stockOnHand($itemMaster->id, $data['branch_id']);
                     if ($currentStock < $item['quantity']) {
                         $stockErrors[] = "Insufficient stock for {$menuItem->name}. Available: {$currentStock}, Required: {$item['quantity']}";
                     }
@@ -765,7 +848,7 @@ $statusOptions = [
 
             // Create order items
             foreach ($orderItems as $itemData) {
-                \App\Models\OrderItem::create([
+                OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $itemData['menu_item']->id, // MenuItem ID
                     'inventory_item_id' => $itemData['menu_item']->itemMaster ? $itemData['menu_item']->itemMaster->id : null, // ItemMaster ID if available
@@ -778,7 +861,7 @@ $statusOptions = [
 
                 // Deduct stock for perishable items (Buy & Sell items)
                 if ($itemData['menu_item']->itemMaster && $itemData['menu_item']->itemMaster->is_perishable) {
-                    \App\Models\ItemTransaction::create([
+                    ItemTransaction::create([
                         'organization_id' => $branch->organization_id,
                         'branch_id' => $data['branch_id'],
                         'inventory_item_id' => $itemData['menu_item']->itemMaster->id,
@@ -1118,12 +1201,12 @@ $statusOptions = [
 
         // Add stock information for each menu item
         foreach ($menuItems as $item) {
-            $item->current_stock = \App\Models\ItemTransaction::stockOnHand($item->id, $order->branch_id);
+            $item->current_stock = ItemTransaction::stockOnHand($item->id, $order->branch_id);
             $item->is_low_stock = $item->current_stock <= ($item->reorder_level ?? 10);
         }
 
         // Get categories
-        $categories = \App\Models\ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
+        $categories = ItemCategory::when(!$admin->is_super_admin && $admin->organization_id, function($q) use ($admin) {
                 $q->where('organization_id', $admin->organization_id);
             })
             ->active()
@@ -1169,7 +1252,7 @@ $statusOptions = [
                 $inventoryItem = ItemMaster::find($item['item_id']);
                 if (!$inventoryItem) continue;
 
-                $currentStock = \App\Models\ItemTransaction::stockOnHand($item['item_id'], $validated['branch_id']);
+                $currentStock = ItemTransaction::stockOnHand($item['item_id'], $validated['branch_id']);
                 $currentOrderQty = $order->items->where('menu_item_id', $item['item_id'])->first()->quantity ?? 0;
                 $netRequirement = $item['quantity'] - $currentOrderQty;
 
@@ -1185,7 +1268,7 @@ $statusOptions = [
             // Reverse previous stock deductions if order was processed
             if ($order->stock_deducted && $order->status !== 'draft') {
                 foreach ($order->items as $orderItem) {
-                    \App\Models\ItemTransaction::create([
+                    ItemTransaction::create([
                         'organization_id' => $order->branch->organization_id,
                         'branch_id' => $order->branch_id,
                         'inventory_item_id' => $orderItem->menu_item_id,
@@ -1224,7 +1307,7 @@ $statusOptions = [
                 ]);
 
                 // Deduct stock for new quantities
-                \App\Models\ItemTransaction::create([
+                ItemTransaction::create([
                     'organization_id' => $order->branch->organization_id,
                     'branch_id' => $validated['branch_id'],
                     'inventory_item_id' => $item['item_id'],
@@ -1489,7 +1572,7 @@ $statusOptions = [
     {
         // Create stock reservation (if StockReservation model exists)
         if (class_exists('App\Models\StockReservation')) {
-            \App\Models\StockReservation::createReservation($itemId, $orderId, $quantity);
+            StockReservation::createReservation($itemId, $orderId, $quantity);
         }
     }
 
@@ -1598,7 +1681,7 @@ $statusOptions = [
                 $stockStatus = 'available';
 
                 if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id) {
-                    $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
+                    $currentStock = ItemTransaction::stockOnHand($item->item_master_id, $branchId);
                     $canOrder = $currentStock > 0;
 
                     if ($currentStock <= 0) {
@@ -1894,8 +1977,8 @@ $statusOptions = [
 
         if ($admin->is_super_admin) {
             // Super admin can see all organizations and branches like customer
-            $organizations = \App\Models\Organization::where('is_active', true)->get();
-            $branches = \App\Models\Branch::with('organization')
+            $organizations = Organization::where('is_active', true)->get();
+            $branches = Branch::with('organization')
                 ->where('is_active', true)
                 ->get();
 
@@ -2034,7 +2117,7 @@ $statusOptions = [
     /**
      * Get branches for organization (API endpoint for admin orders)
      */
-    public function getBranchesForOrganization(Request $request)
+    public function getBranches(Request $request)
     {
         try {
             $admin = auth('admin')->user();
