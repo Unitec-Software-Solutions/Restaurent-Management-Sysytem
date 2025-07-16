@@ -195,8 +195,8 @@
                         </div>
 
                         <div id="menu-items-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                            @if(isset($items) && $items->count() > 0)
-                                @foreach($items as $item)
+                            @if(isset($menuItems) && $menuItems->count() > 0)
+                                @foreach($menuItems as $item)
                                 <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150 cursor-pointer {{ ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) ? 'opacity-50 cursor-not-allowed' : '' }}" onclick="toggleItemSelection('{{ $item->id }}')">
                                     <div class="flex items-center">
                                         <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check"
