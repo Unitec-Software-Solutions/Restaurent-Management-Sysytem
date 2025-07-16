@@ -205,25 +205,24 @@ class MinimalSystemSeeder extends Seeder
             // System Administration
             'system.manage', 'system.settings', 'system.backup', 'system.logs',
 
-            // Order Management (policy: orders.*)
+            // Order Management (plural, as in policies)
             'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
             // Note: orders.delete is forbidden in policy, so not included
 
             // Reservation Management
-            'reservation.view', 'reservation.create', 'reservation.update', 'reservation.delete',
-            'reservation.manage', 'reservation.approve', 'reservation.cancel', 'reservation.checkin',
+            'reservations.view', 'reservations.create', 'reservations.edit', 'reservations.cancel',
 
             // Inventory Management
-            'inventory.view', 'inventory.create', 'inventory.update', 'inventory.delete',
+            'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete',
             'inventory.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.audit',
 
             // Menu Management
-            'menu.view', 'menu.create', 'menu.update', 'menu.delete', 'menu.manage',
+            'menu.view', 'menu.create', 'menu.edit', 'menu.delete', 'menu.manage',
             'menu.categories', 'menu.pricing', 'menu.schedule', 'menu.publish',
 
             // Customer Management
-            'customer.view', 'customer.create', 'customer.update', 'customer.delete',
-            'customer.manage', 'customer.loyalty', 'customer.communications',
+            'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+            'customers.manage', 'customers.loyalty', 'customers.communications',
 
             // Kitchen Operations
             'kitchen.view', 'kitchen.manage', 'kitchen.stations', 'kitchen.orders',
@@ -231,35 +230,32 @@ class MinimalSystemSeeder extends Seeder
             'kot.view', 'kot.create', 'kot.update', 'kot.manage', 'kot.print',
 
             // Reports & Analytics
-            'report.view', 'report.generate', 'report.export', 'report.sales',
-            'report.inventory', 'report.staff', 'report.financial', 'report.dashboard',
+            'reports.view', 'reports.generate', 'reports.export', 'reports.sales',
+            'reports.inventory', 'reports.staff', 'reports.financial', 'reports.dashboard',
 
-            // Organization & Branch Management (policy: organizations.*, branches.*)
+            // Organization & Branch Management (plural, as in policies)
             'organizations.view', 'organizations.create', 'organizations.edit', 'organizations.activate', 'organizations.deactivate', 'organizations.delete', 'organizations.regenerate_key',
             'branches.view', 'branches.edit', 'branches.create', 'branches.activate', 'branches.deactivate', 'branches.delete', 'branches.regenerate_key',
 
-            // User Management (policy: users.*)
+            // User Management (plural, as in policies)
             'users.view', 'users.create', 'users.edit', 'users.delete', 'users.roles',
 
-            // Role Management (policy: roles.*)
+            // Role Management
             'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.manage',
 
             // Permission Management
-            'permission.view', 'permission.manage',
+            'permissions.view', 'permissions.manage',
 
             // Staff Management
-            'staff.view', 'staff.create', 'staff.update', 'staff.delete', 'staff.manage',
+            'staff.view', 'staff.create', 'staff.edit', 'staff.delete', 'staff.manage',
             'staff.schedule', 'staff.attendance', 'staff.performance',
 
             // Financial Management
-            'payment.view', 'payment.process', 'payment.refund', 'payment.manage',
-            'billing.view', 'billing.create', 'billing.manage',
+            'payments.view', 'payments.process', 'payments.refund', 'payments.manage',
+            'billings.view', 'billings.create', 'billings.manage',
 
             // Dashboard & Profile
             'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update',
-
-            // Module Management (policy: modules.*)
-            'modules.view', 'modules.create', 'modules.edit', 'modules.delete', 'modules.restore', 'modules.force_delete',
         ];
 
         $created = 0;
