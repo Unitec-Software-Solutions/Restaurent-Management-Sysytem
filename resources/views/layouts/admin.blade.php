@@ -19,32 +19,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Scripts -->
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    @vite(['resources/sass/app.scss', 'resources/css/app.css', 'resources/js/app.js'])
 
     <!-- Enhanced Sidebar Assets -->
     @vite(['resources/css/sidebar.css', 'resources/js/sidebar.js'])
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: "#eff6ff",
-                            100: "#dbeafe",
-                            200: "#bfdbfe",
-                            300: "#93c5fd",
-                            400: "#60a5fa",
-                            500: "#3b82f6",
-                            600: "#2563eb",
-                            700: "#1d4ed8",
-                            800: "#1e40af",
-                            900: "#1e3a8a"
-                        }
-
-                    }
-                }
-            }
         };
     </script>
     <style>
