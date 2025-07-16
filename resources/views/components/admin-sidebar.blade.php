@@ -25,7 +25,7 @@
                         <li>
                             @if(\Illuminate\Support\Facades\Route::has($item['route']))
                                 <a href="{{ route($item['route'], $item['route_params'] ?? []) }}"
-                                    class="flex items-center gap-3 px-4 py-2 rounded-xl border transition-colors duration-200
+                                    class="flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors duration-200
                                     {{ request()->routeIs($item['route'] . '*')
                                         ? 'bg-white text-gray-700 border-white'
                                         : 'bg-transparent text-white border-white hover:bg-white/10' }}"
