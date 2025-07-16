@@ -24,11 +24,12 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <form method="GET" action="{{ route('admin.orders.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" action="{{ route('admin.orders.index') }}"
+        class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Search -->
             <div>
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input type="text" name="search" id="search" value="{{ request('search') }}" 
+                <input type="text" name="search" id="search" value="{{ request('search') }}"
                        placeholder="Customer name, phone, or order ID"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
             </div>
@@ -50,7 +51,7 @@
             <div>
                 <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    <option value="">All Statuses</option>
+                    <option value="">All Status</option>
                     <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                     <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
                     <option value="preparing" {{ request('status') == 'preparing' ? 'selected' : '' }}>Preparing</option>
@@ -68,19 +69,17 @@
             </div>
         </form>
 
-        <!-- Today's Orders Filter -->
-        <div class="mb-4">
-            <div class="flex items-center space-x-4">
-                <button onclick="filterTodayOrders()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-calendar-day mr-2"></i> Today's Orders
-                </button>
-                <button onclick="filterKOTOrders()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-fire mr-2"></i> KOT Orders
-                </button>
-                <button onclick="clearFilters()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-times mr-2"></i> Clear Filters
-                </button>
-            </div>
+        <!-- Additional Buttons -->
+        <div class="flex justify-start mt-4 space-x-2">
+            <button onclick="filterTodayOrders()" type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-calendar-day mr-2"></i> Today's Orders
+            </button>
+            <button onclick="filterKOTOrders()" type="button" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-fire mr-2"></i> KOT Orders
+            </button>
+            <button onclick="clearFilters()" type="button" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-times mr-2"></i> Clear Filters
+            </button>
         </div>
     </div>
 
@@ -109,11 +108,11 @@
                                     <div class="flex-shrink-0 w-10 h-10">
                                         @php
                                             // Fix: Convert enum to string value for comparison
-                                            $orderTypeValue = $order->order_type instanceof \App\Enums\OrderType 
-                                                ? $order->order_type->value 
+                                            $orderTypeValue = $order->order_type instanceof \App\Enums\OrderType
+                                                ? $order->order_type->value
                                                 : (string) $order->order_type;
                                         @endphp
-                                        
+
                                         @if(str_contains($orderTypeValue, 'takeaway'))
                                             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                                                 <i class="fas fa-shopping-bag text-blue-600"></i>
@@ -232,27 +231,27 @@
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex items-center justify-end space-x-3">
                                     <!-- View button -->
-                                    <a href="{{ route('admin.orders.show', $order) }}" 
-                                       class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                    <a href="{{ route('admin.orders.show', $order) }}"
+                                       class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2.5 py-1.5 rounded-md flex items-center"
                                        title="View Order">
                                         <i class="fas fa-eye mr-1"></i>
                                         <span>View</span>
                                     </a>
-                                    
+
                                     <!-- Edit button - only for pending or confirmed orders -->
                                     @if(in_array($order->status, ['pending', 'confirmed', 'submitted']))
-                                        <a href="{{ route('admin.orders.edit', $order) }}" 
-                                           class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                        <a href="{{ route('admin.orders.edit', $order) }}"
+                                           class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-2.5 py-1.5 rounded-md flex items-center"
                                            title="Edit Order">
                                             <i class="fas fa-edit mr-1"></i>
                                             <span>Edit</span>
                                         </a>
                                     @endif
-                                    
+
                                     <!-- Delete button - only show if not completed -->
                                     @if($order->status !== 'completed')
-                                        <button onclick="confirmDeleteOrder({{ $order->id }})" 
-                                                class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded-md flex items-center" 
+                                        <button onclick="confirmDeleteOrder({{ $order->id }})"
+                                                class="bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1.5 rounded-md flex items-center"
                                                 title="Delete Order">
                                             <i class="fas fa-trash mr-1"></i>
                                             <span>Delete</span>
@@ -269,7 +268,7 @@
                                 </div>
                                 <h3 class="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
                                 <p class="text-gray-500 mb-4">Get started by creating your first order.</p>
-                                <a href="{{ route('admin.orders.create') }}" 
+                                <a href="{{ route('admin.orders.create') }}"
                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
                                     <i class="fas fa-plus mr-2"></i> Create Order
                                 </a>
@@ -345,17 +344,17 @@ function confirmDeleteOrder(orderId) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/admin/orders/${orderId}`;
-        
+
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = '_token';
         csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
+
         const methodField = document.createElement('input');
         methodField.type = 'hidden';
         methodField.name = '_method';
         methodField.value = 'DELETE';
-        
+
         form.appendChild(csrfToken);
         form.appendChild(methodField);
         document.body.appendChild(form);
