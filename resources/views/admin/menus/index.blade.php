@@ -1,13 +1,36 @@
 @extends('layouts.admin')
-
+@section('title', 'Menu Management')
+@section('header-title', 'Menu Management')
 @section('content')
-<div class="p-6">
+<div class="container mx-auto px-4 py-8">
     <!-- Header Section -->
-    <div class="mb-6">
+
+    <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-utensils text-2xl text-indigo-500"></i>
+                    <h1 class="text-2xl font-bold text-gray-900">Menu Management</h1>
+                </div>
+                <p class="text-gray-600 mt-1">Manage restaurant menus and scheduling</p>
+            </div>
+            <div class="flex gap-3">
+                <a href="{{ route('admin.menus.calendar') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-calendar mr-2"></i> Calendar View
+                </a>
+                <a href="{{ route('admin.menus.create') }}" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i> Create Menu
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {{-- <div class="mb-6">
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Menu Management</h1>
-                <p class="text-gray-600">Manage restaurant menus and scheduling</p>
+                <p class="text-gray-600"></p>
             </div>
             <div class="flex gap-3">
                 <a href="{{ route('admin.menus.calendar') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
@@ -18,7 +41,7 @@
                 </a>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -91,7 +114,7 @@
                                     <h4 class="font-medium text-gray-900">{{ $menu->name }}</h4>
                                     <p class="text-sm text-gray-500">{{ $menu->branch->name ?? 'All Branches' }}</p>
                                 </div>
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full
                                     {{ $menu->type === 'breakfast' ? 'bg-yellow-100 text-yellow-800' : '' }}
                                     {{ $menu->type === 'lunch' ? 'bg-orange-100 text-orange-800' : '' }}
                                     {{ $menu->type === 'dinner' ? 'bg-blue-100 text-blue-800' : '' }}
