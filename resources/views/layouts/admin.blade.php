@@ -78,7 +78,6 @@
 
 <body class="bg-[#F3F4FF] dark:bg-gray-900 h-full">
 
-
     <!-- Enhanced Sidebar -->
     @auth
         <x-admin-sidebar />
