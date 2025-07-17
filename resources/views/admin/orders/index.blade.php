@@ -258,7 +258,7 @@
                                             <i class="fas fa-trash mr-1"></i>
                                             <span>Delete</span>
                                         </button>
-
+                                    @endif
 
 
                                     <!-- Print KOT if order has KOT items -->
