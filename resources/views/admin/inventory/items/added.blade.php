@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('header-title', 'Recently Added Items')
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
 
         <!-- Main Content Card -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">

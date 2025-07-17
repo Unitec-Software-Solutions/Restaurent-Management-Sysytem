@@ -3,7 +3,7 @@
 @section('header-title', 'Edit Inventory Item: ' . $item->name)
 
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         {{-- <!-- Header with KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <!-- Total Items Card -->
@@ -200,12 +200,12 @@
                                 <i class="fas fa-utensils mr-2"></i>
                                 Menu Item Properties
                             </h4>
-                            
+
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <!-- Cuisine Type -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Cuisine Type</label>
-                                    <select name="menu_attributes[cuisine_type]" 
+                                    <select name="menu_attributes[cuisine_type]"
                                             class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="">Select Cuisine</option>
                                         <option value="sri_lankan" {{ (old('menu_attributes.cuisine_type', $item->attributes['cuisine_type'] ?? '') == 'sri_lankan') ? 'selected' : '' }}>Sri Lankan</option>
@@ -225,7 +225,7 @@
                                 <!-- Spice Level -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Spice Level</label>
-                                    <select name="menu_attributes[spice_level]" 
+                                    <select name="menu_attributes[spice_level]"
                                             class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="">Select Level</option>
                                         <option value="mild" {{ (old('menu_attributes.spice_level', $item->attributes['spice_level'] ?? '') == 'mild') ? 'selected' : '' }}>Mild</option>
@@ -247,7 +247,7 @@
                                 <!-- Serving Size -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Serving Size</label>
-                                    <select name="menu_attributes[serving_size]" 
+                                    <select name="menu_attributes[serving_size]"
                                             class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="">Select Size</option>
                                         <option value="small" {{ (old('menu_attributes.serving_size', $item->attributes['serving_size'] ?? '') == 'small') ? 'selected' : '' }}>Small</option>
@@ -260,7 +260,7 @@
                                 <!-- Dietary Restrictions -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Dietary</label>
-                                    <select name="menu_attributes[dietary_type]" 
+                                    <select name="menu_attributes[dietary_type]"
                                             class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="">Select Type</option>
                                         <option value="vegetarian" {{ (old('menu_attributes.dietary_type', $item->attributes['dietary_type'] ?? '') == 'vegetarian') ? 'selected' : '' }}>Vegetarian</option>
@@ -276,7 +276,7 @@
                                 <!-- Availability -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Available During</label>
-                                    <select name="menu_attributes[availability]" 
+                                    <select name="menu_attributes[availability]"
                                             class="menu-attribute-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="">Select Availability</option>
                                         <option value="all_day" {{ (old('menu_attributes.availability', $item->attributes['availability'] ?? '') == 'all_day') ? 'selected' : '' }}>All Day</option>
