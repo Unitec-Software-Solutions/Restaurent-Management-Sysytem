@@ -12,6 +12,19 @@
                 @endforeach
             </select>
         </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700">Permissions</label>
+            @php
+                $oldPermissions = old('permissions', isset($user) && $user->permissions ? $user->permissions->pluck('name')->toArray() : []);
+            @endphp
+            @foreach($allPermissions as $permission)
+                <div class="flex items-center">
+                    <input type="checkbox" name="permissions[]" value="{{ $permission->name }}"
+                        {{ in_array($permission->name, $oldPermissions) ? 'checked' : '' }} class="mr-2">
+                    <label class="text-sm text-gray-600">{{ $permission->name }}</label>
+                </div>
+            @endforeach
+        </div>
         <div class="flex justify-end">
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Assign Role</button>
         </div>

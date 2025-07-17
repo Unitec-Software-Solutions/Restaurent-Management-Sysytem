@@ -352,34 +352,22 @@ class MenuItemController extends Controller
     public function edit(MenuItem $menuItem)
     {
         $admin = Auth::guard('admin')->user();
-        
-        // Check access permissions
         if (!$admin->is_super_admin && $menuItem->organization_id !== $admin->organization_id) {
             abort(403);
         }
-
         $categories = MenuCategory::active()
-                                 ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                     $q->where('organization_id', $admin->organization_id);
-                                 })
-                                 ->orderBy('name')
-                                 ->get();
-
+            ->when(!$admin->is_super_admin, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->orderBy('name')
+            ->get();
         $kitchenStations = KitchenStation::active()
-                                        ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                            $q->where('organization_id', $admin->organization_id);
-                                        })
-                                        ->orderBy('name')
-                                        ->get();
-
-        $organizations = $admin->is_super_admin ? Organization::active()->get() : collect([$admin->organization]);
-        
-        $branches = Branch::active()
-                         ->where('organization_id', $menuItem->organization_id)
-                         ->orderBy('name')
-                         ->get();
-
-        return view('admin.menu-items.edit', compact('menuItem', 'categories', 'kitchenStations', 'organizations', 'branches'));
+            ->when(!$admin->is_super_admin, function($q) use ($admin) {
+                $q->where('organization_id', $admin->organization_id);
+            })
+            ->orderBy('name')
+            ->get();
+        return view('admin.menu-items.edit', compact('menuItem', 'categories', 'kitchenStations'));
     }
 
     /**
@@ -409,7 +397,7 @@ class MenuItemController extends Controller
             'station' => 'nullable|string|max:100',
             'kitchen_station_id' => 'nullable|exists:kitchen_stations,id',
             'calories' => 'nullable|integer|min:0',
-            'allergens' => 'nullable|array',
+            'allergens' => 'nullable|string',
             'ingredients' => 'nullable|string|max:1000',
             'special_instructions' => 'nullable|string|max:1000',
             'notes' => 'nullable|string|max:1000',
@@ -424,22 +412,22 @@ class MenuItemController extends Controller
             'requires_preparation' => 'boolean',
         ]);
 
-        // Handle image upload
+        // Handle allergens as JSON array
+        if (isset($validated['allergens'])) {
+            $validated['allergens'] = json_decode($validated['allergens'], true) ?? [];
+        }
+
         if ($request->hasFile('image')) {
-            // Delete old image if exists
             if ($menuItem->image_path) {
                 Storage::disk('public')->delete($menuItem->image_path);
             }
-            
             $imagePath = $request->file('image')->store('menu-items', 'public');
             $validated['image_path'] = $imagePath;
         }
 
         $menuItem->update($validated);
 
-        return redirect()
-            ->route('admin.menu-items.show', $menuItem)
-            ->with('success', 'Menu item updated successfully.');
+        return redirect()->route('admin.menu-items.show', $menuItem)->with('success', 'Menu item updated successfully.');
     }
 
     /**
@@ -639,37 +627,8 @@ class MenuItemController extends Controller
                                         ->orderBy('name')
                                         ->get();
 
-        // Get item master records suitable for KOT items with enhanced filtering
-        $itemMasterRecords = ItemMaster::with(['itemCategory'])
-                                      ->where('is_active', true)
-                                      ->where('is_menu_item', true)
-                                      ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                          $q->where('organization_id', $admin->organization_id);
-                                      })
-                                      // Exclude items that already have KOT menu items
-                                      ->whereDoesntHave('menuItems', function($q) {
-                                          $q->where('type', MenuItem::TYPE_KOT);
-                                      })
-                                      // Enhanced filtering for KOT suitability
-                                      ->where(function($q) {
-                                          // Items marked as KOT production type
-                                          $q->where('item_type', 'kot_production')
-                                            // OR items that require production
-                                            ->orWhere('requires_production', true)
-                                            // OR items with specific types that need preparation
-                                            ->orWhere('item_type', 'prepared')
-                                            ->orWhere('item_type', 'cooked')
-                                            ->orWhere('item_type', 'recipe')
-                                            ->orWhere('item_type', 'dish')
-                                            // OR items with preparation attributes in JSON
-                                            ->orWhere(function($subQ) {
-                                                $subQ->whereJsonContains('attributes->requires_preparation', true)
-                                                     ->orWhereNotNull('attributes->prep_time_minutes')
-                                                     ->orWhereNotNull('attributes->cooking_instructions');
-                                            });
-                                      })
-                                      ->orderBy('name')
-                                      ->get();
+        // For KOT creation, do not retrieve from item master; allow manual entry
+        $itemMasterRecords = collect();
 
         return view('admin.menu-items.create-kot', compact('menuCategories', 'kitchenStations', 'itemMasterRecords', 'organizations', 'branches'));
     }
@@ -838,299 +797,58 @@ class MenuItemController extends Controller
 
     /**
      * REFINED: Create KOT-specific menu items with enhanced validation and attributes
+     * Updated: Manual KOT creation does NOT require item master ids
      */
     public function createKotItems(Request $request)
     {
         $admin = Auth::guard('admin')->user();
         
-        $validated = $request->validate([
-            'item_master_ids' => 'required|array|min:1',
-            'item_master_ids.*' => 'exists:item_master,id',
+        $rules = [
+            'name' => 'required|string|max:255',
             'menu_category_id' => 'required|exists:menu_categories,id',
             'preparation_time' => 'nullable|integer|min:1|max:240',
             'kitchen_station_id' => 'nullable|exists:kitchen_stations,id',
-            'is_available' => 'boolean'
-        ]);
+            'description' => 'nullable|string|max:1000',
+            'is_available' => 'boolean',
+        ];
+        if ($admin->is_super_admin) {
+            $rules['organization_id'] = 'required|exists:organizations,id';
+            $rules['branch_id'] = 'nullable|exists:branches,id';
+        }
+        $validated = $request->validate($rules);
 
-        $itemMasterIds = $validated['item_master_ids'];
-        $categoryId = $validated['menu_category_id'];
-        $defaultPrepTime = $validated['preparation_time'] ?? 15;
-        $kitchenStationId = $validated['kitchen_station_id'] ?? null;
-        $isAvailable = $validated['is_available'] ?? true;
-        
-        // Get the selected item master records with enhanced filtering for KOT suitability
-        $itemMasters = ItemMaster::whereIn('id', $itemMasterIds)
-                                ->where('is_menu_item', true)
-                                ->where('is_active', true)
-                                ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                    $q->where('organization_id', $admin->organization_id);
-                                })
-                                ->get();
+        $validated['type'] = MenuItem::TYPE_KOT;
+        $validated['requires_preparation'] = true;
+        $validated['is_active'] = true;
+        $validated['organization_id'] = $admin->is_super_admin ? $request->organization_id : $admin->organization_id;
+        $validated['branch_id'] = $admin->is_super_admin ? $request->branch_id : $admin->branch_id;
+        $validated['station'] = 'Kitchen';
+        if (empty($validated['preparation_time'])) {
+            $validated['preparation_time'] = 15;
+        }
+        if (empty($validated['is_available'])) {
+            $validated['is_available'] = true;
+        }
+        $validated['price'] = $request->input('price', 0);
+        $validated['currency'] = 'LKR';
+        $validated['spice_level'] = $request->input('spice_level', 'mild');
+        // Generate item code for KOT
+        $validated['item_code'] = $this->generateKotItemCode();
 
-        $created = 0;
-        $skipped = 0;
-        $errors = [];
-
-        foreach ($itemMasters as $itemMaster) {
-            try {
-                // Check if KOT menu item already exists for this item master
-                $exists = MenuItem::where('item_master_id', $itemMaster->id)
-                                 ->where('type', MenuItem::TYPE_KOT)
-                                 ->where('organization_id', $itemMaster->organization_id)
-                                 ->exists();
-
-                if ($exists) {
-                    $skipped++;
-                    continue;
-                }
-
-                // Enhanced validation for KOT items
-                if (!$itemMaster->selling_price || $itemMaster->selling_price <= 0) {
-                    $errors[] = "Item '{$itemMaster->name}' has invalid selling price";
-                    continue;
-                }
-
-                // Determine kitchen station
-                $finalKitchenStationId = $kitchenStationId ?? $this->getDefaultKitchenStation($itemMaster);
-
-                // Create KOT menu item with enhanced attributes
-                MenuItem::create([
-                    'organization_id' => $itemMaster->organization_id,
-                    'branch_id' => $itemMaster->branch_id,
-                    'menu_category_id' => $categoryId,
-                    'item_master_id' => $itemMaster->id,
-                    'name' => $itemMaster->name,
-                    'unicode_name' => $itemMaster->unicode_name,
-                    'description' => $itemMaster->description,
-                    'item_code' => $itemMaster->item_code ?: $this->generateKotItemCode(),
-                    'price' => $itemMaster->selling_price,
-                    'cost_price' => $itemMaster->buying_price,
-                    'type' => MenuItem::TYPE_KOT,
-                    'is_available' => $isAvailable,
-                    'is_active' => true,
-                    'requires_preparation' => true,
-                    'preparation_time' => $this->extractPreparationTime($itemMaster, $defaultPrepTime),
-                    'station' => 'Kitchen', // Default station for bulk imports
-                    'kitchen_station_id' => $finalKitchenStationId,
-                    
-                    // Enhanced KOT-specific attributes
-                    'spice_level' => $this->extractSpiceLevel($itemMaster),
-                    'is_vegetarian' => $this->extractDietaryInfo($itemMaster, 'vegetarian'),
-                    'is_vegan' => $this->extractDietaryInfo($itemMaster, 'vegan'),
-                    'allergen_info' => $this->extractAllergenInfo($itemMaster),
-                    'ingredients' => $itemMaster->attributes['main_ingredients'] ?? null,
-                    'nutritional_info' => $this->extractNutritionalInfo($itemMaster),
-                    'customization_options' => $this->extractCustomizationOptions($itemMaster),
-                ]);
-
-                $created++;
-
-            } catch (\Exception $e) {
-                $errors[] = "Failed to create KOT item for '{$itemMaster->name}': " . $e->getMessage();
-            }
+        // Final safety check for organization_id
+        if (empty($validated['organization_id'])) {
+            return redirect()->back()->withErrors(['organization_id' => 'Organization must be specified.'])->withInput();
         }
 
-        // Prepare response message
-        $message = "Created {$created} KOT menu items successfully.";
-        if ($skipped > 0) {
-            $message .= " Skipped {$skipped} items that already exist as KOT items.";
-        }
-        if (!empty($errors)) {
-            $message .= " Errors: " . implode(', ');
-        }
+        $menuItem = MenuItem::create($validated);
 
         return redirect()
-            ->route('admin.menu-items.index')
-            ->with($created > 0 ? 'success' : 'warning', $message);
+            ->route('admin.menu-items.show', $menuItem)
+            ->with('success', 'KOT menu item created successfully.');
     }
 
     /**
-     * Extract nutritional information from item master
-     */
-    private function extractNutritionalInfo(ItemMaster $itemMaster): ?array
-    {
-        $attributes = is_array($itemMaster->attributes) ? $itemMaster->attributes : [];
-        
-        $nutritionalInfo = [];
-        
-        if (isset($attributes['calories'])) {
-            $nutritionalInfo['calories'] = $attributes['calories'];
-        }
-        
-        if (isset($attributes['nutritional_facts'])) {
-            $nutritionalInfo = array_merge($nutritionalInfo, $attributes['nutritional_facts']);
-        }
-        
-        return empty($nutritionalInfo) ? null : $nutritionalInfo;
-    }
-
-    /**
-     * Extract customization options for KOT items
-     */
-    private function extractCustomizationOptions(ItemMaster $itemMaster): ?array
-    {
-        $attributes = is_array($itemMaster->attributes) ? $itemMaster->attributes : [];
-        
-        $customizations = [];
-        
-        // Extract spice level options
-        if (isset($attributes['spice_customizable']) && $attributes['spice_customizable']) {
-            $customizations['spice_level'] = [
-                'type' => 'select',
-                'label' => 'Spice Level',
-                'options' => ['mild', 'medium', 'hot', 'very_hot'],
-                'default' => $attributes['default_spice_level'] ?? 'medium'
-            ];
-        }
-        
-        // Extract size options
-        if (isset($attributes['size_options'])) {
-            $customizations['size'] = [
-                'type' => 'select',
-                'label' => 'Size',
-                'options' => $attributes['size_options'],
-                'price_modifiers' => $attributes['size_price_modifiers'] ?? []
-            ];
-        }
-        
-        // Extract add-ons
-        if (isset($attributes['available_addons'])) {
-            $customizations['addons'] = [
-                'type' => 'multiselect',
-                'label' => 'Add-ons',
-                'options' => $attributes['available_addons']
-            ];
-        }
-        
-        return empty($customizations) ? null : $customizations;
-    }
-
-    /**
-     * Extract preparation time from item master attributes
-     */
-    private function extractPreparationTime(ItemMaster $itemMaster, int $defaultTime = 15): int
-    {
-        $attributes = is_array($itemMaster->attributes) ? $itemMaster->attributes : [];
-        
-        if (isset($attributes['prep_time_minutes'])) {
-            return (int) $attributes['prep_time_minutes'];
-        }
-        
-        if (isset($attributes['preparation_time'])) {
-            return (int) $attributes['preparation_time'];
-        }
-        
-        // Default based on item type
-        $typeDefaults = [
-            'prepared' => 20,
-            'cooked' => 25,
-            'recipe' => 30,
-            'dish' => 20,
-            'beverage' => 5,
-            'finished_product' => 0
-        ];
-        
-        return $typeDefaults[$itemMaster->item_type] ?? $defaultTime;
-    }
-
-    /**
-     * Extract spice level from item master
-     */
-    private function extractSpiceLevel(ItemMaster $itemMaster): ?string
-    {
-        $attributes = is_array($itemMaster->attributes) ? $itemMaster->attributes : [];
-        
-        if (isset($attributes['spice_level'])) {
-            return $attributes['spice_level'];
-        }
-        
-        if (isset($attributes['default_spice_level'])) {
-            return $attributes['default_spice_level'];
-        }
-        
-        return null;
-    }
-
-    /**
-     * Extract dietary information from item master
-     */
-    private function extractDietaryInfo(ItemMaster $itemMaster, string $type): bool
-    {
-        $attributes = is_array($itemMaster->attributes) ? $itemMaster->attributes : [];
-        
-        if (isset($attributes['dietary_info'][$type])) {
-            return (bool) $attributes['dietary_info'][$type];
-        }
-        
-        if (isset($attributes['is_' . $type])) {
-            return (bool) $attributes['is_' . $type];
-        }
-        
-        // Check if mentioned in description
-        if ($itemMaster->description) {
-            $description = strtolower($itemMaster->description);
-            return str_contains($description, $type);
-        }
-        
-        return false;
-    }
-
-    /**
-     * Extract allergen information from item master
-     */
-    private function extractAllergenInfo(ItemMaster $itemMaster): ?array
-    {
-        $attributes = is_array($itemMaster->attributes) ? $itemMaster->attributes : [];
-        
-        if (isset($attributes['allergens'])) {
-            return is_array($attributes['allergens']) ? $attributes['allergens'] : [];
-        }
-        
-        if (isset($attributes['allergen_info'])) {
-            return is_array($attributes['allergen_info']) ? $attributes['allergen_info'] : [];
-        }
-        
-        return null;
-    }
-
-    /**
-     * Get default kitchen station for item
-     */
-    private function getDefaultKitchenStation(ItemMaster $itemMaster): ?int
-    {
-        $admin = Auth::guard('admin')->user();
-        
-        // Try to find station based on item type
-        $stationMapping = [
-            'cooked' => 'Main Kitchen',
-            'prepared' => 'Prep Station',
-            'beverage' => 'Beverage Station',
-            'dish' => 'Main Kitchen',
-            'recipe' => 'Main Kitchen'
-        ];
-        
-        $preferredStationName = $stationMapping[$itemMaster->item_type] ?? 'Main Kitchen';
-        
-        $station = KitchenStation::where('name', 'ILIKE', "%{$preferredStationName}%")
-                                ->when(!$admin->is_super_admin, function($q) use ($admin) {
-                                    $q->where('organization_id', $admin->organization_id);
-                                })
-                                ->first();
-        
-        return $station ? $station->id : null;
-    }
-
-    /**
-     * Generate KOT item code
-     */
-    private function generateKotItemCode(): string
-    {
-        $count = MenuItem::where('type', MenuItem::TYPE_KOT)->count();
-        return 'KOT-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Get activated menu items for order creation
+     * Get menu items for order creation
      * Only returns menu items from activated menus
      */
     public function getActivatedMenuItems(Request $request)
@@ -1311,6 +1029,15 @@ class MenuItemController extends Controller
         }
         
         return true;
+    }
+
+    /**
+     * Generate a unique KOT item code (e.g., KOT-0001)
+     */
+    private function generateKotItemCode(): string
+    {
+        $count = \App\Models\MenuItem::where('type', \App\Models\MenuItem::TYPE_KOT)->count();
+        return 'KOT-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
     }
 
 }

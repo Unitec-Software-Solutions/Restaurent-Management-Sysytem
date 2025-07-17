@@ -118,10 +118,10 @@ class ReservationWorkflowController extends Controller
 
         // Get dine-in order types
         $orderTypes = collect(OrderType::dineInTypes())->map(function($type) {
-            return [
+            return array(
                 'value' => $type->value,
                 'label' => $type->getLabel(),
-            ];
+            );
         });
 
         return view('reservations.create-order', compact(
@@ -356,24 +356,12 @@ class ReservationWorkflowController extends Controller
     /**
      * Get branches for organization (AJAX)
      */
-    public function getBranchesForOrganization(Request $request, $organizationId)
+    public function getBranchesForOrganization($organizationId)
     {
-        if (!$organizationId) {
-            return response()->json(['branches' => []]);
-        }
-
-        // Check admin permissions
-        $admin = auth('admin')->user();
-        if ($admin && !$admin->is_super_admin && $admin->organization_id !== (int)$organizationId) {
-            return response()->json(['error' => 'Access denied'], 403);
-        }
-
-        $branches = Branch::where('organization_id', $organizationId)
+        // Only return active branches
+        $branches = \App\Models\Branch::where('organization_id', $organizationId)
             ->where('is_active', true)
-            ->select('id', 'name', 'address', 'phone')
-            ->orderBy('name')
-            ->get();
-
+            ->get(['id', 'name', 'address', 'opening_time', 'closing_time', 'phone']);
         return response()->json(['branches' => $branches]);
     }
 
@@ -416,12 +404,10 @@ class ReservationWorkflowController extends Controller
             $itemType = $item->type ?? MenuItem::TYPE_KOT;
             $currentStock = 0;
             $canOrder = true;
-            
             if ($itemType === MenuItem::TYPE_BUY_SELL && $item->item_master_id) {
                 $currentStock = \App\Models\ItemTransaction::stockOnHand($item->item_master_id, $branchId);
                 $canOrder = $currentStock > 0;
             }
-            
             return [
                 'id' => $item->id,
                 'name' => $item->name,
@@ -470,7 +456,7 @@ class ReservationWorkflowController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
-            'order_time' => 'required|date|after_or_equal:now',
+            'order_time' => 'required|date',
             'order_type' => 'required|string|in:' . implode(',', array_column(OrderType::takeawayTypes(), 'value')),
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
@@ -736,7 +722,7 @@ class ReservationWorkflowController extends Controller
         if ($admin) {
             $defaults = [
                 'phone' => $admin->phone ?? '',
-                'datetime' => now()->addHour()->format('Y-m-d\TH:i'),
+                'datetime' => now()->format('Y-m-d\TH:i'),
                 'name' => $customer->name ?? '',
                 'email' => $customer->email ?? ''
             ];
@@ -748,13 +734,29 @@ class ReservationWorkflowController extends Controller
             ->orderBy('capacity')
             ->get();
 
+        // Get branch phone number
+        $branchPhone = $branch->phone;
+
+        // Get stewards for the branch
+        $stewards = \App\Models\Employee::where('branch_id', $branch->id)
+            ->where('is_active', true)
+            ->where(function($q) {
+                $q->where('role', 'steward')
+                  ->orWhereHas('roles', function($r) {
+                      $r->where('name', 'steward');
+                  });
+            })
+            ->get();
+
         return view('reservations.create', compact(
             'reservationType',
             'branch',
             'fees', 
             'customer',
             'defaults',
-            'tables'
+            'tables',
+            'branchPhone',
+            'stewards'
         ));
     }
 
@@ -952,7 +954,7 @@ class ReservationWorkflowController extends Controller
             'datetime' => now()->format('Y-m-d\TH:i'),
             'customer_name' => '',
             'customer_email' => '',
-            'order_time' => now()->addMinutes(30)->format('Y-m-d\TH:i'),
+            'order_time' => now()->format('Y-m-d\TH:i'),
             'branch_id' => null,
             'organization_id' => null
         ];

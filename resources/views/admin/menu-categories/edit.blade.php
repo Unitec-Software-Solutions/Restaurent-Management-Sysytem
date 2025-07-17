@@ -153,6 +153,27 @@
                 </div>
             @endif
 
+            <!-- Add Menu Items Option if No Items Exist -->
+            @if($menuCategory->menuItems->count() == 0)
+                <div class="bg-yellow-50 rounded-lg p-6 mb-6 flex flex-col items-center">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-utensils text-2xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No menu items in this category</h3>
+                    <p class="text-gray-500 mb-4">Add menu items to organize your offerings</p>
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center mb-2">
+                        <a href="{{ route('admin.menu-items.create-kot') }}?organization_id={{ $menuCategory->organization_id }}&branch_id={{ $menuCategory->branch_id }}&category_id={{ $menuCategory->id }}"
+                           class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                            <i class="fas fa-fire mr-2"></i>Create KOT Items
+                        </a>
+                        <button onclick="openCreateFromItemMasterModal()"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-link mr-2"></i>From Item Master
+                        </button>
+                    </div>
+                </div>
+            @endif
+
             <!-- Form Actions -->
             <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
                 <a href="{{ route('admin.menu-categories.show', $menuCategory) }}" 

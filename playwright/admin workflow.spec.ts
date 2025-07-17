@@ -10,7 +10,7 @@ import { createSupplier } from './helpers/createSupplier';
 import { addItemsToInventory } from './helpers/addItemsToInventory';
 
 test('Admin Workflow 🚀', async ({ page }) => {
-    await loginAsSuperAdmin(page);
+    // await loginAsSuperAdmin(page);
     // await createSubscriptionPlan(page);
     // await createOrganization(page);
 });

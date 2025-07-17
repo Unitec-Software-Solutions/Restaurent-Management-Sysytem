@@ -104,38 +104,39 @@ class UserController extends Controller
         $availableTemplates = $this->permissionService->filterTemplatesByScope($roleTemplates, $admin);
         $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
 
-        // Get organizations, branches, and roles based on admin scope
+        // Only show roles that are available for the current admin's org/branch/plan
+        $rolesQuery = \Spatie\Permission\Models\Role::with('permissions')
+            ->where('guard_name', 'web')
+            ->whereHas('permissions', function($q) use ($availablePermissions) {
+                $q->whereIn('name', array_keys($availablePermissions));
+            });
+        if ($admin->is_super_admin) {
+            // all roles
+        } elseif ($admin->isOrganizationAdmin()) {
+            $rolesQuery->where('organization_id', $admin->organization_id);
+        } else {
+            $rolesQuery->where('branch_id', $admin->branch_id);
+        }
+        $roles = $rolesQuery->get();
+
         if ($admin->is_super_admin) {
             $organizations = Organization::all();
             $allBranches = Branch::with('organization')->get();
             $branches = $allBranches;
-            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')->get();
             $adminTypes = [
                 'org_admin' => 'Organization Admin',
                 'branch_admin' => 'Branch Admin'
             ];
-
         } elseif ($admin->isOrganizationAdmin()) {
             $organizations = Organization::where('id', $admin->organization_id)->get();
             $branches = Branch::where('organization_id', $admin->organization_id)->get();
-            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')
-                ->where('organization_id', $admin->organization_id)
-                ->orWhere('name', 'Super Administrator') // But they can't assign it
-                ->get();
-                
             $adminTypes = [
                 'org_admin' => 'Organization Admin',
                 'branch_admin' => 'Branch Admin'
             ];
         } else {
-            // Branch admin
             $organizations = Organization::where('id', $admin->organization_id)->get();
             $branches = Branch::where('id', $admin->branch_id)->get();
-            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')
-                ->where('branch_id', $admin->branch_id)
-                ->orWhereIn('name', ['Branch Administrator'])
-                ->get();
-                
             $adminTypes = [
                 'branch_admin' => 'Branch Admin'
             ];
@@ -195,28 +196,28 @@ class UserController extends Controller
             'permissions.*' => 'exists:permissions,id',
         ]);
 
-        $role = \Spatie\Permission\Models\Role::findOrFail($request->role_id);
+        $role = \Spatie\Permission\Models\Role::where('guard_name', 'web')->findOrFail($request->role_id);
         $admin = auth('admin')->user();
 
-        // Validate role assignment permissions
-        if (!$admin->is_super_admin) {
-            if ($role->name === 'Super Administrator') {
-                return back()->withErrors(['role_id' => 'You cannot assign Super Administrator role.']);
-            }
-            
-            if ($admin->isBranchAdmin() && !in_array($role->name, [
-                'Branch Administrator'
-            ])) {
-                return back()->withErrors(['role_id' => 'You can only assign branch-level roles.']);
+        // Validate role assignment permissions (must be in available roles)
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+        $rolePermissions = $role->permissions->pluck('name')->toArray();
+        foreach ($rolePermissions as $perm) {
+            if (!isset($availablePermissions[$perm])) {
+                return back()->withErrors(['role_id' => 'You cannot assign a role with permissions outside your plan/modules.']);
             }
         }
 
         // Validate permission assignments
+        $requestedPermissions = collect();
         if ($request->permissions) {
-            $requestedPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $request->permissions)->get();
-            
+            $requestedPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $request->permissions)
+                ->where('guard_name', 'web')
+                ->get();
             foreach ($requestedPermissions as $permission) {
-                if (!$admin->is_super_admin && !$admin->can($permission->name)) {
+                if (!isset($availablePermissions[$permission->name])) {
                     return back()->withErrors([
                         'permissions' => "You cannot assign permission: {$permission->name}"
                     ]);
@@ -240,7 +241,7 @@ class UserController extends Controller
         $user->assignRole($role);
 
         // Assign additional permissions if specified
-        if ($request->permissions) {
+        if ($requestedPermissions->count()) {
             $user->givePermissionTo($requestedPermissions->pluck('name')->toArray());
         }
 

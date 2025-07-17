@@ -3,6 +3,8 @@
 @section('title', 'Orders Management')
 
 @section('content')
+{{-- Debug: Uncomment to inspect orders and branches variables --}}
+{{-- @php dd($orders, $branches ?? null); @endphp --}}
 <div class="p-6">
     <!-- Header Section -->
     <div class="mb-6">
@@ -256,6 +258,21 @@
                                             <i class="fas fa-trash mr-1"></i>
                                             <span>Delete</span>
                                         </button>
+
+
+
+                                    <!-- Print KOT if order has KOT items -->
+                                    @php
+                                        $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
+                                            $q->where('type', \App\Models\MenuItem::TYPE_KOT);
+                                        })->exists();
+                                    @endphp
+
+                                    @if($hasKotItems)
+                                        <a href="{{ route('admin.orders.print-kot-pdf', $order) }}"
+                                           class="text-red-600 hover:text-red-900" title="KOT">
+                                            <i class="fas fa-file-pdf"></i> KOT
+                                        </a>
                                     @endif
                                 </div>
                             </td>

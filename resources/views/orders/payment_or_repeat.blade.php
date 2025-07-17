@@ -1,4 +1,3 @@
-<?php
 @extends('layouts.app')
 
 @section('title', 'Payment or Repeat Order')
@@ -14,7 +13,7 @@
                     <p class="text-gray-600 mt-1">Choose to proceed with payment or repeat this order</p>
                 </div>
                 <div class="text-right">
-                    <span class="px-3 py-1 text-xs font-semibold rounded-full 
+                    <span class="px-3 py-1 text-xs font-semibold rounded-full
                         {{ ($order->status ?? '') === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
                         {{ ($order->status ?? '') === 'confirmed' ? 'bg-green-100 text-green-800' : '' }}
                         {{ ($order->status ?? '') === 'cancelled' ? 'bg-red-100 text-red-800' : '' }}">
@@ -27,7 +26,7 @@
         <!-- Order Summary Card -->
         <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Order Summary</h2>
-            
+
             @if(isset($order->orderItems) && $order->orderItems->count() > 0)
                 <div class="space-y-3">
                     @foreach($order->orderItems as $item)
@@ -37,7 +36,7 @@
                                     {{ $item->menuItem->name ?? 'Unknown Item' }}
                                 </h3>
                                 <p class="text-sm text-gray-500">
-                                    Quantity: {{ $item->quantity ?? 0 }} × 
+                                    Quantity: {{ $item->quantity ?? 0 }} ×
                                     ${{ number_format($item->price ?? 0, 2) }}
                                 </p>
                             </div>
@@ -49,7 +48,7 @@
                         </div>
                     @endforeach
                 </div>
-                
+
                 <div class="mt-4 pt-4 border-t border-gray-200">
                     <div class="flex justify-between items-center">
                         <span class="text-lg font-semibold text-gray-900">Total:</span>
@@ -72,7 +71,7 @@
         <!-- Action Buttons -->
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">What would you like to do?</h2>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Proceed to Payment -->
                 <div class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
@@ -82,10 +81,10 @@
                         </div>
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">Proceed to Payment</h3>
                         <p class="text-gray-600 mb-4">Complete this order by proceeding to payment</p>
-                        
+
                         <form action="{{ route('orders.payment', $order->id ?? 0) }}" method="POST">
                             @csrf
-                            <button type="submit" 
+                            <button type="submit"
                                 class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
                                 <i class="fas fa-arrow-right mr-2"></i>
                                 Proceed to Payment
@@ -102,10 +101,10 @@
                         </div>
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">Repeat Order</h3>
                         <p class="text-gray-600 mb-4">Create a new order with the same items</p>
-                        
+
                         <form action="{{ route('orders.repeat', $order->id ?? 0) }}" method="POST">
                             @csrf
-                            <button type="submit" 
+                            <button type="submit"
                                 class="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
                                 <i class="fas fa-plus mr-2"></i>
                                 Repeat Order
@@ -117,7 +116,7 @@
 
             <!-- Back Button -->
             <div class="mt-6 text-center">
-                <a href="{{ route('orders.index') }}" 
+                <a href="{{ route('orders.index') }}"
                    class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Back to Orders

@@ -209,21 +209,31 @@ class MinimalSystemSeeder extends Seeder
             'order.view', 'order.create', 'order.update', 'order.delete', 'order.manage',
             'order.process', 'order.cancel', 'order.refund', 'order.print_kot',
 
+
+            // Order Management (plural, as in policies)
+            'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
+            // Note: orders.delete is forbidden in policy, so not included
+
             // Reservation Management
             'reservation.view', 'reservation.create', 'reservation.update', 'reservation.delete',
             'reservation.manage', 'reservation.approve', 'reservation.cancel', 'reservation.checkin',
 
+            'reservations.view', 'reservations.create', 'reservations.edit', 'reservations.cancel',
+
             // Inventory Management
-            'inventory.view', 'inventory.create', 'inventory.update', 'inventory.delete',
+            'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete',
             'inventory.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.audit',
 
             // Menu Management
-            'menu.view', 'menu.create', 'menu.update', 'menu.delete', 'menu.manage',
+            'menu.view', 'menu.create', 'menu.edit', 'menu.delete', 'menu.manage',
             'menu.categories', 'menu.pricing', 'menu.schedule', 'menu.publish',
 
             // Customer Management
             'customer.view', 'customer.create', 'customer.update', 'customer.delete',
             'customer.manage', 'customer.loyalty', 'customer.communications',
+
+            'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+            'customers.manage', 'customers.loyalty', 'customers.communications',
 
             // Kitchen Operations
             'kitchen.view', 'kitchen.manage', 'kitchen.stations', 'kitchen.orders',
@@ -243,16 +253,35 @@ class MinimalSystemSeeder extends Seeder
             'role.view', 'role.create', 'role.update', 'role.delete', 'role.manage',
             'permission.view', 'permission.manage',
 
+            'reports.view', 'reports.generate', 'reports.export', 'reports.sales',
+            'reports.inventory', 'reports.staff', 'reports.financial', 'reports.dashboard',
+
+            // Organization & Branch Management (plural, as in policies)
+            'organizations.view', 'organizations.create', 'organizations.edit', 'organizations.activate', 'organizations.deactivate', 'organizations.delete', 'organizations.regenerate_key',
+            'branches.view', 'branches.edit', 'branches.create', 'branches.activate', 'branches.deactivate', 'branches.delete', 'branches.regenerate_key',
+
+            // User Management (plural, as in policies)
+            'users.view', 'users.create', 'users.edit', 'users.delete', 'users.roles',
+
+            // Role Management
+            'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.manage',
+
+            // Permission Management
+            'permissions.view', 'permissions.manage',
+
             // Staff Management
-            'staff.view', 'staff.create', 'staff.update', 'staff.delete', 'staff.manage',
+            'staff.view', 'staff.create', 'staff.edit', 'staff.delete', 'staff.manage',
             'staff.schedule', 'staff.attendance', 'staff.performance',
 
             // Financial Management
             'payment.view', 'payment.process', 'payment.refund', 'payment.manage',
             'billing.view', 'billing.create', 'billing.manage',
 
+            'payments.view', 'payments.process', 'payments.refund', 'payments.manage',
+            'billings.view', 'billings.create', 'billings.manage',
+
             // Dashboard & Profile
-            'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update'
+            'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update',
         ];
 
         $created = 0;
@@ -276,11 +305,14 @@ class MinimalSystemSeeder extends Seeder
 
         // Create Super Admin role
         $superAdminRole = Role::create([
+
+        // Create or update Super Admin role
+        $superAdminRole = Role::firstOrCreate([
             'name' => 'Super Administrator',
             'guard_name' => 'admin'
         ]);
 
-        // Assign ALL permissions to Super Admin
+        // Always assign ALL permissions to Super Admin
         $allPermissions = Permission::where('guard_name', 'admin')->get();
         $superAdminRole->syncPermissions($allPermissions);
 
@@ -316,14 +348,46 @@ class MinimalSystemSeeder extends Seeder
             ])
         ]);
 
-        // Assign Super Admin role
+        // Create or update super admin user (system level - no organization)
+        $superAdmin = Admin::firstOrCreate(
+            [
+                'email' => 'superadmin@rms.com'
+            ],
+            [
+                'name' => 'Super Administrator',
+                'password' => Hash::make('SuperAdmin123!'),
+                'phone' => '+94 11 000 0000',
+                'job_title' => 'System Administrator',
+                'department' => 'System Administration',
+                'organization_id' => null, // System level admin
+                'branch_id' => null,
+                'is_super_admin' => true,
+                'is_active' => true,
+                'status' => 'active',
+                'email_verified_at' => now(),
+                'preferences' => json_encode([
+                    'timezone' => 'UTC',
+                    'language' => 'en',
+                    'theme' => 'light',
+                    'notifications' => true
+                ])
+            ]
+        );
+
+        // Assign Super Admin role and all permissions
         $superAdminRole = Role::where('name', 'Super Administrator')
             ->where('guard_name', 'admin')
             ->first();
 
         if ($superAdminRole) {
+
+        if ($superAdminRole && !$superAdmin->hasRole($superAdminRole)) {
             $superAdmin->assignRole($superAdminRole);
         }
+
+        // Give all permissions directly as well (defensive)
+        $allPermissions = Permission::where('guard_name', 'admin')->get();
+        $superAdmin->syncPermissions($allPermissions);
 
         $this->command->info('    ✓ Super Admin user created');
         $this->command->info('    📧 Email: superadmin@rms.com');

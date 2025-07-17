@@ -7,7 +7,7 @@
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold">Order Summary</h2>
                 @if(isset($orderType))
-                    <span class="px-3 py-1 text-sm font-semibold rounded-full 
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full
                         {{ $orderType === 'reservation' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
                         {{ ucfirst($orderType) }} Order
                     </span>
@@ -26,11 +26,11 @@
                             <p class="mt-1 text-orange-700">Kitchen Order Ticket has been generated for kitchen preparation items.</p>
                             @if(session('kot_print_url'))
                                 <div class="mt-2 flex gap-2">
-                                    <button onclick="printKOT('{{ session('kot_print_url') }}')" 
+                                    <button onclick="printKOT('{{ session('kot_print_url') }}')"
                                             class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
                                         <i class="fas fa-print mr-2"></i> Print KOT
                                     </button>
-                                    <a href="{{ route('orders.print-kot-pdf', $order) }}" 
+                                    <a href="{{ route('orders.print-kot-pdf', $order) }}"
                                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
                                         <i class="fas fa-file-pdf mr-2"></i> Download PDF
                                     </a>
@@ -54,7 +54,7 @@
                     </div>
                 </div>
             @endif
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <p class="font-semibold">Order #{{ $order->order_number ?? $order->id }}</p>
@@ -85,7 +85,7 @@
                     <div>
                         <p class="font-medium">{{ $item->menuItem->name }}</p>
                         <p class="text-sm">Qty: {{ $item->quantity }}</p>
-                        
+
                         <!-- Menu Item Type Indicators -->
                         @if($item->menuItem->type === \App\Models\MenuItem::TYPE_BUY_SELL)
                             <div class="stock-indicator" data-stock="{{ $item->menuItem->stock ?? 0 }}" data-item="{{ $item->menuItem->id }}">
@@ -138,7 +138,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="action-buttons space-x-4 flex flex-col md:flex-row gap-2">
                     <!-- Submit Order: redirect to OrderConfirmationController -->
                     <form action="{{ route(request()->routeIs('orders.takeaway.*') ? 'orders.takeaway.submit' : 'orders.store', $order) }}" method="POST" class="inline" id="order-form">
@@ -149,12 +149,12 @@
                             <i class="fas fa-check mr-2"></i>Submit Order
                         </button>
                     </form>
-                    
+
                     <!-- Update Order: redirect to OrderEditController -->
                     <a href="{{ route(request()->routeIs('orders.takeaway.*') ? 'orders.takeaway.edit' : 'orders.edit', $order) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg flex items-center" id="update-order-btn" data-order-id="{{ $order->id }}">
                         <i class="fas fa-edit mr-2"></i>Update Order
                     </a>
-                    
+
                     <!-- Add Another: redirect to OrderCreateController -->
                     @if(isset($reservation) && $reservation)
                         <a href="{{ route('orders.create', ['reservation' => $reservation->id]) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center" id="add-another-order-btn" data-reservation-id="{{ $reservation->id }}">
@@ -169,11 +169,7 @@
             @else
                 <p class="text-green-500 font-semibold">Order Submitted</p>
             @endif
-            <form action="{{ request()->routeIs('orders.takeaway.*') ? route('orders.takeaway.destroy', $order) : route('orders.destroy', $order) }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" onclick="return confirm('Delete this order?')">Delete Order</button>
-            </form>
+
         </div>
     </div>
 </div>
@@ -186,14 +182,14 @@ document.querySelectorAll('.payment-option').forEach(option => {
         document.querySelectorAll('.payment-option').forEach(opt => {
             opt.classList.remove('bg-blue-50', 'border-blue-500');
         });
-        
+
         // Add active class to selected option
         this.classList.add('bg-blue-50', 'border-blue-500');
-        
+
         // Set payment method value
         const method = this.dataset.method;
         document.getElementById('selected_payment_method').value = method;
-        
+
         // Enable submit button
         document.getElementById('submit-order-btn').disabled = false;
         document.getElementById('submit-order-btn').classList.remove('opacity-50', 'cursor-not-allowed');
@@ -219,7 +215,7 @@ function printKOT(kotUrl) {
         const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
         const selectedPaymentField = document.getElementById('selected_payment_method');
         const submitButton = document.getElementById('submit-order-btn');
-        
+
         paymentMethods.forEach(method => {
             method.addEventListener('change', function() {
                 selectedPaymentField.value = this.value;

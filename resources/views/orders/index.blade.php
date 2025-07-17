@@ -15,7 +15,7 @@
                 @endif
             </h1>
             <div class="flex gap-3">
-                <a href="{{ route('orders.create', ['reservation' => $reservationId]) }}" 
+                <a href="{{ route('orders.create', ['reservation' => $reservationId]) }}"
                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-plus mr-2"></i> New Order
                 </a>
@@ -27,14 +27,14 @@
             <form method="GET" class="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <input type="hidden" name="reservation_id" value="{{ $reservationId }}">
                 <input type="hidden" name="phone" value="{{ $phone }}">
-                
+
                 <!-- Date Range Filter -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                     <input type="date" name="start_date" value="{{ $filters['startDate'] }}"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                     <input type="date" name="end_date" value="{{ $filters['endDate'] }}"
@@ -80,7 +80,7 @@
 
                 <!-- Export Actions -->
                 <div class="flex items-end space-x-2">
-                    <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" 
+                    <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}"
                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                         <i class="fas fa-file-csv mr-2"></i> CSV
                     </a>
@@ -139,7 +139,7 @@
                 Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }} of {{ $orders->total() ?? 0 }} orders
             </p>
         </div>
-        
+
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
@@ -200,7 +200,9 @@
                             </span>
                             <div class="text-xs text-gray-500 mt-1">
                                 @if($order->kot_generated)
-                                    <i class="fas fa-check text-green-500"></i> KOT
+                                    <a href="{{ route('orders.print-kot-pdf', $order) }}" class="text-orange-600 hover:text-orange-900 bg-none border-none cursor-pointer" title="Print KOT PDF">
+                                        <i class="fas fa-print"></i> KOT Print
+                                    </a>
                                 @endif
                                 @if($order->bill_generated)
                                     <i class="fas fa-check text-blue-500"></i> Bill
@@ -226,47 +228,40 @@
                         <!-- Actions -->
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex space-x-2">
-                                <a href="{{ route('orders.show', $order->id) }}" 
+                                <a href="{{ route('orders.show', $order->id) }}"
                                    class="text-indigo-600 hover:text-indigo-900" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                
+
                                 @if($order->status === 'submitted')
-                                    <a href="{{ route('orders.mark-preparing', $order->id) }}" 
+                                    <a href="{{ route('orders.mark-preparing', $order->id) }}"
                                        class="text-yellow-600 hover:text-yellow-900" title="Start Preparing">
                                         <i class="fas fa-play"></i>
                                     </a>
                                 @elseif($order->status === 'preparing')
-                                    <a href="{{ route('orders.mark-ready', $order->id) }}" 
+                                    <a href="{{ route('orders.mark-ready', $order->id) }}"
                                        class="text-blue-600 hover:text-blue-900" title="Mark Ready">
                                         <i class="fas fa-check"></i>
                                     </a>
                                 @elseif($order->status === 'ready')
-                                    <a href="{{ route('orders.complete', $order->id) }}" 
+                                    <a href="{{ route('orders.complete', $order->id) }}"
                                        class="text-green-600 hover:text-green-900" title="Complete & Bill">
                                         <i class="fas fa-file-invoice"></i>
                                     </a>
                                 @endif
 
-                                @if(!$order->kot_generated && in_array($order->status, ['submitted', 'preparing']))
-                                    <a href="{{ route('orders.print-kot', $order->id) }}" 
-                                       class="text-purple-600 hover:text-purple-900" title="Print KOT">
-                                        <i class="fas fa-print"></i>
-                                    </a>
-                                @endif
-
                                 @if($order->status === 'completed' || $order->bill_generated)
-                                    <a href="{{ route('orders.print-bill', $order->id) }}" 
+                                    <a href="{{ route('orders.print-bill', $order->id) }}"
                                        class="text-green-600 hover:text-green-900" title="Print Bill">
                                         <i class="fas fa-receipt"></i>
                                     </a>
                                 @endif
 
-                                <a href="{{ route('orders.edit', $order->id) }}" 
+                                <a href="{{ route('orders.edit', $order->id) }}"
                                    class="text-gray-600 hover:text-gray-900" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                            </div>
+
                         </td>
                     </tr>
                     @empty
@@ -316,17 +311,17 @@
                     </td>
                     <td class="px-4 py-3 text-center">
                         <div class="flex justify-center space-x-2">
-                            <a href="{{ route(('orders.summary'), $order->id) }}" 
-                               class="text-blue-500 hover:text-blue-700" 
+                            <a href="{{ route(('orders.summary'), $order->id) }}"
+                               class="text-blue-500 hover:text-blue-700"
                                title="View Order">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                 </svg>
                             </a>
-                            
-                            <a href="{{ route('orders.edit', $order->id) }}?reservation_id={{ $reservationId }}" 
-                               class="text-yellow-500 hover:text-yellow-700" 
+
+                            <a href="{{ route('orders.edit', $order->id) }}?reservation_id={{ $reservationId }}"
+                               class="text-yellow-500 hover:text-yellow-700"
                                title="Edit Order">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
@@ -337,7 +332,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <input type="hidden" name="reservation_id" value="{{ $reservationId }}">
-                                <button type="submit" 
+                                <button type="submit"
                                         class="text-red-500 hover:text-red-700"
                                         onclick="return confirm('Delete this order permanently?')"
                                         title="Delete Order">
@@ -366,4 +361,45 @@
     </div>
     @endif
 </div>
+
+<!-- Print KOT if order has KOT items -->
+@php
+    $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
+        $q->where('type', \App\Models\MenuItem::TYPE_KOT);
+    })->exists();
+@endphp
+
+@if($hasKotItems)
+    <div class="flex gap-1">
+        <button onclick="printKOT({{ $order->id }})"
+                class="text-orange-600 hover:text-orange-900" title="Print KOT">
+            <i class="fas fa-print"></i> KOT
+        </button>
+        <a href="{{ route('admin.orders.print-kot-pdf', $order) }}"
+           class="text-red-600 hover:text-red-900" title="Download KOT PDF">
+            <i class="fas fa-file-pdf"></i> PDF
+        </a>
+    </div>
+@endif
 @endsection
+
+<script>
+function printKOT(orderId) {
+    // Check if order has KOT items before printing
+    fetch(`/admin/orders/${orderId}/check-kot`, {
+        // ...
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.hasKotItems) {
+            // Open KOT print window
+            window.open(`/admin/orders/${orderId}/print-kot`, '_blank', 'width=800,height=600');
+        } else {
+            alert('This order has no items that require kitchen preparation (KOT items).');
+        }
+    })
+    .catch(() => {
+        alert('Failed to check KOT items');
+    });
+}
+</script>
