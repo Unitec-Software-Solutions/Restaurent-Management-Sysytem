@@ -5,7 +5,7 @@
 @section('title', 'Edit Organization')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="max-w-2xl mx-auto bg-white rounded-xl shadow p-8">
         <h1 class="text-2xl font-bold mb-6">Edit Organization</h1>
         <a href="{{ route('admin.organizations.index') }}"
