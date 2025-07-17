@@ -3,7 +3,7 @@
 @section('title', 'Edit Admin')
 @section('header-title', 'Edit Admin')
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-bold text-gray-900">Edit Admin: {{ $admin->name }}</h1>
