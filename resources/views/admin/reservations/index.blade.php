@@ -3,7 +3,7 @@
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <!-- Page Header -->
-    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+    <div class="rounded-lg ">
         <div class="flex justify-between items-center mb-4">
             <h1 class="text-2xl font-bold">Reservation Management</h1>
             <div class="flex gap-3">
@@ -65,11 +65,6 @@
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
             </div>
         </x-module-filters>
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Reservations Table -->
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
