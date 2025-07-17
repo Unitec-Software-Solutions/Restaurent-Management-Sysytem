@@ -3,7 +3,7 @@
 
 @section('header-title', 'Allocate Payment to Goods Received Note')
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-6">
             <a href="{{ route('admin.grn.show', $grn->grn_id) }}"
                 class="flex items-center text-indigo-600 hover:text-indigo-800">
