@@ -1,32 +1,46 @@
 @extends('layouts.admin')
 
+@section('title', 'Reservation Management')
+@section('header-title', 'Reservation Management')
+
 @section('content')
 <div class="container mx-auto px-4 py-8">
+
+    <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <div class="flex items-center gap-2">
+                    {{-- <i class="fas fa-user-shield text-2xl text-indigo-500"></i> --}}
+                    <h1 class="text-2xl font-bold text-gray-900">Reservation Management</h1>
+                </div>
+                <p class="text-gray-600 mt-1">Manage Reservations and their Orders</p>
+            </div>
+            <a href="{{ route('admin.reservations.create') }}"
+               class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-plus mr-2"></i>
+                Create Reservation
+            </a>
+        </div>
+    </div>
+
     <!-- Page Header -->
     <div class="rounded-lg ">
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="text-2xl font-bold">Reservation Management</h1>
-            <div class="flex gap-3">
-                <a href="{{ route('admin.reservations.create') }}" 
-                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-plus mr-2"></i> New Reservation
-                </a>
-            </div>
-        </div>
+
 
         <!-- Filters with Export -->
-        <x-module-filters 
+        <x-module-filters
             :action="route('admin.reservations.index')"
             :export-permission="'export_reservations'"
             :export-filename="'reservations_export.xlsx'">
-            
+
             <!-- Date Range Filter -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                 <input type="date" name="start_date" value="{{ $filters['startDate'] }}"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                 <input type="date" name="end_date" value="{{ $filters['endDate'] }}"
@@ -60,7 +74,7 @@
             <!-- Phone Search -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input type="text" name="phone" value="{{ $filters['phone'] }}" 
+                <input type="text" name="phone" value="{{ $filters['phone'] }}"
                        placeholder="Search by phone"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
             </div>
@@ -89,22 +103,28 @@
                             #{{ $reservation->id }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">{{ $reservation->name }}</div>
-                            <div class="text-sm text-gray-500">{{ $reservation->branch->name ?? 'N/A' }}</div>
+                            <div class="text-sm font-medium text-gray-900">
+                                @if($reservation->branch && $reservation->branch->is_head_office)
+                                    {{ Str::limit($reservation->branch->organization->name, 5, '') }} - HQ
+                                @else
+                                    {{ $reservation->name }}
+                                @endif
+                            </div>
+                            <div class="text-sm text-gray-500">{{ Str::limit($reservation->branch->name ?? 'N/A', 20, '...') }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{{ $reservation->phone }}</div>
                             <div class="text-sm text-gray-500">{{ $reservation->email ?? 'N/A' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ \Carbon\Carbon::parse($reservation->date)->format('M d, Y') }}</div>
-                            <div class="text-sm text-gray-500">{{ $reservation->start_time }} - {{ $reservation->end_time }}</div>
+                            <div class="text-sm text-gray-900">{{ \Carbon\Carbon::parse($reservation->date)->format('Y M d') }}</div>
+                            <div class="text-sm text-gray-500">{{ \Carbon\Carbon::parse($reservation->start_time)->format('H:i') }} to {{ \Carbon\Carbon::parse($reservation->end_time)->format('H:i') }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {{ $reservation->number_of_people }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full
                                 {{ $reservation->status === 'confirmed' ? 'bg-green-100 text-green-800' : '' }}
                                 {{ $reservation->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
                                 {{ $reservation->status === 'cancelled' ? 'bg-red-100 text-red-800' : '' }}">
@@ -127,20 +147,20 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex flex-col gap-1">
-                                <a href="{{ route('admin.reservations.show', $reservation) }}" 
+                                <a href="{{ route('admin.reservations.show', $reservation) }}"
                                    class="text-blue-600 hover:text-blue-900">
                                     <i class="fas fa-eye mr-1"></i> View
                                 </a>
-                                <a href="{{ route('admin.reservations.edit', $reservation) }}" 
+                                <a href="{{ route('admin.reservations.edit', $reservation) }}"
                                    class="text-yellow-600 hover:text-yellow-900">
                                     <i class="fas fa-edit mr-1"></i> Edit
                                 </a>
-                                <a href="{{ route('admin.orders.reservations.index', ['reservation_id' => $reservation->id]) }}" 
+                                <a href="{{ route('admin.orders.reservations.index', ['reservation_id' => $reservation->id]) }}"
                                    class="text-green-600 hover:text-green-900">
                                     <i class="fas fa-utensils mr-1"></i> Orders
                                 </a>
                                 @routeexists('admin.orders.orders.reservations.create')
-                                    <a href="{{ route('admin.orders.orders.reservations.create', ['reservation' => $reservation->id]) }}" 
+                                    <a href="{{ route('admin.orders.orders.reservations.create', ['reservation' => $reservation->id]) }}"
                                        class="text-purple-600 hover:text-purple-900">
                                         <i class="fas fa-plus mr-1"></i> Add Order
                                     </a>
