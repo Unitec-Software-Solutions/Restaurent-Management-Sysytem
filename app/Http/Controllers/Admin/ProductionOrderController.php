@@ -12,8 +12,8 @@ use App\Models\ProductionRequestItem;
 use App\Models\ProductionSession;
 use App\Models\ProductionOrderIngredient;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\ProductionRecipe;
 use App\Models\ItemMaster;
 
@@ -73,13 +73,13 @@ class ProductionOrderController extends Controller
     /**
      * Show the form for creating a new production order
      */
-    public function create(Request $request)
-    {
-        // Get aggregated approved production requests
-        $aggregatedItems = $this->getAggregatedItems($request);
+    // public function create(Request $request)
+    // {
+    //     // Get aggregated approved production requests
+    //     $aggregatedItems = $this->getAggregatedItems($request);
 
-        return view('admin.production.orders.create', compact('aggregatedItems'));
-    }
+    //     return view('admin.production.orders.create', compact('aggregatedItems'));
+    // }
 
     /**
      * Store a newly created production order
@@ -87,7 +87,7 @@ class ProductionOrderController extends Controller
     public function store(Request $request)
     {
         $userId = Auth::id();
-        $userExists = \DB::table('users')->where('id', $userId)->exists();
+        $userExists = DB::table('users')->where('id', $userId)->exists();
         $createdBy = $userExists ? $userId : null;
 
         $request->validate([
@@ -726,7 +726,7 @@ class ProductionOrderController extends Controller
                     ->get();
 
                 $userId = Auth::id();
-                $userExists = \DB::table('users')->where('id', $userId)->exists();
+                $userExists = DB::table('users')->where('id', $userId)->exists();
                 $byuser = $userExists ? $userId : null;
                 if ($selectedRequests->isEmpty()) {
                     throw new \Exception('No valid approved requests found.');
