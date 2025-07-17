@@ -2,7 +2,7 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded shadow p-6">
         <form action="{{ route('admin.roles.update', $role) }}" method="POST">
             @csrf
