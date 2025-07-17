@@ -4,7 +4,7 @@
 @section('title', 'Create User')
 
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
 <div class="bg-white rounded shadow p-6">
     @if($organizations->isEmpty())
         <div class="mb-4 bg-yellow-100 text-yellow-800 p-3 rounded flex items-center justify-between">
