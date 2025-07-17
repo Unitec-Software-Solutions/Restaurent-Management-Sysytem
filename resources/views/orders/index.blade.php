@@ -376,6 +376,7 @@
             <i class="fas fa-print"></i> KOT
         </button>
         <a href="{{ route('admin.orders.print-kot-pdf', $order) }}"
+
            class="text-red-600 hover:text-red-900" title="Download KOT PDF">
             <i class="fas fa-file-pdf"></i> PDF
         </a>
@@ -403,3 +404,4 @@ function printKOT(orderId) {
     });
 }
 </script>
+
