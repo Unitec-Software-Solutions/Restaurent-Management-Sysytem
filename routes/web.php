@@ -1061,12 +1061,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/management', [App\Http\Controllers\DashboardController::class, 'management'])->name('dashboard.management');
 });
 
-
-
-
-
-
-
 // Include reservation workflow routes
 require __DIR__.'/reservation_workflow.php';
 
