@@ -2,12 +2,12 @@
 
 @section('header-title', 'Create Supplier Payment')
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <x-nav-buttons :items="[
             ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
             ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
             ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
-            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
+            ['name' => 'Supplier Payments', 'link' => '#', 'disabled' => true],
         ]" active="Supplier Payments" />
 
         <div class="bg-white rounded-xl shadow-sm p-6">

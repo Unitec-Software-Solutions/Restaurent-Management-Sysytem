@@ -2,20 +2,20 @@
 
 @section('header-title', 'Purchase Orders Management')
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <x-nav-buttons :items="[
             ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
             ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
             ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
-            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
+            ['name' => 'Supplier Payments', 'link' => '#', 'disabled' => true],
         ]" active="Purchase Orders" />
 
         <!-- Filters with Export -->
-        <x-module-filters 
+        <x-module-filters
             :action="route('admin.purchase-orders.index')"
             :export-permission="'export_purchase_orders'"
             :export-filename="'purchase_orders_export.xlsx'">
-            
+
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select name="status" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -63,8 +63,9 @@
                         class="bg-indigo-600 hover:bg-indigo-700 opacity-50 cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center pointer-events-none">
                         <i class="fas fa-file-export mr-2"></i> Export
                     </a>
+                    {{-- <a href="{{ route('admin.purchase-orders.create') }}" --}}
                     <a href="{{ route('admin.purchase-orders.create') }}"
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center">
+                        class="bg-green-600 hover:bg-green-700  opacity-50 cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center pointer-events-none justify-center">
                         <i class="fas fa-plus mr-2"></i> New PO
                     </a>
                 </div>

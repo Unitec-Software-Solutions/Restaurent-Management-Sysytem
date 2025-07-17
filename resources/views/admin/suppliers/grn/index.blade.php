@@ -5,7 +5,7 @@
 
 @section('content')
     <!-- Page Content -->
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <!-- Header with buttons                         inventory path                              -->
         <div class="sticky top-0 z-10 mb-6">
             <x-nav-buttons :items="[

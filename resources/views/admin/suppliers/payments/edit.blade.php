@@ -3,7 +3,7 @@
 @section('header-title', 'Edit Supplier Payment')
 
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <!-- Back and Header -->
         <div class="flex justify-between items-center mb-6">
             <a href="{{ route('admin.payments.show', $payment->id) }}"
