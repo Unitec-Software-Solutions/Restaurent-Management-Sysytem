@@ -2,9 +2,9 @@
 @section('header-title', 'Reports')
 @section('content')
 <div >
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <h1 class="text-2xl font-bold text-gray-800 mb-6">Reports - Sample Page</h1>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <!-- Sales Report Card -->
             <div class="bg-white rounded-lg shadow p-6">
@@ -14,7 +14,7 @@
                     <p class="text-gray-500">Sales chart will be displayed here</p>
                 </div>
             </div>
-            
+
             <!-- Inventory Report Card -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-semibold text-gray-800 mb-4">Inventory Report</h2>
@@ -24,7 +24,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Report Filters -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Generate Custom Report</h2>
