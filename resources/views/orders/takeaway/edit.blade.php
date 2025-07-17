@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <div class="bg-blue-600 px-6 py-4 text-white">
             <h2 class="text-2xl font-bold">Edit Takeaway Order #{{ $order->order_number ?? $order->id }}</h2>
             <p class="text-blue-100 mt-1">
-                Status: <span class="font-semibold">{{ ucfirst($order->status) }}</span> | 
+                Status: <span class="font-semibold">{{ ucfirst($order->status) }}</span> |
                 Total: <span class="font-semibold">LKR {{ number_format($order->total_amount ?? $order->total, 2) }}</span>
             </p>
         </div>
@@ -21,7 +21,7 @@
                         <label for="branch_id" class="block text-sm font-medium text-gray-700">Branch</label>
                         <select name="branch_id" id="branch_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" required>
                             @foreach($branches as $branch)
-                                <option value="{{ $branch->id }}" 
+                                <option value="{{ $branch->id }}"
                                     {{ $order->branch_id == $branch->id ? 'selected' : '' }}>
                                     {{ $branch->name }}
                                 </option>
@@ -30,9 +30,9 @@
                     </div>
                     <div class="space-y-2">
                         <label for="order_time" class="block text-sm font-medium text-gray-700">Pickup Time</label>
-                        <input type="datetime-local" name="order_time" id="order_time" 
+                        <input type="datetime-local" name="order_time" id="order_time"
                                class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                               value="{{ old('order_time', $order->order_time ? \Carbon\Carbon::parse($order->order_time)->format('Y-m-d\TH:i') : '') }}" 
+                               value="{{ old('order_time', $order->order_time ? \Carbon\Carbon::parse($order->order_time)->format('Y-m-d\TH:i') : '') }}"
                                required>
                     </div>
                 </div>
@@ -40,16 +40,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div class="space-y-2">
                         <label for="customer_name" class="block text-sm font-medium text-gray-700">Customer Name</label>
-                        <input type="text" name="customer_name" id="customer_name" 
+                        <input type="text" name="customer_name" id="customer_name"
                                class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                               value="{{ old('customer_name', $order->customer_name) }}" 
+                               value="{{ old('customer_name', $order->customer_name) }}"
                                required>
                     </div>
                     <div class="space-y-2">
                         <label for="customer_phone" class="block text-sm font-medium text-gray-700">Customer Phone</label>
-                        <input type="tel" name="customer_phone" id="customer_phone" 
+                        <input type="tel" name="customer_phone" id="customer_phone"
                                class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                               value="{{ old('customer_phone', $order->customer_phone) }}" 
+                               value="{{ old('customer_phone', $order->customer_phone) }}"
                                required>
                     </div>
                 </div>
@@ -71,10 +71,10 @@
                                     </select>
                                 </div>
                                 <div class="col-span-6 md:col-span-3">
-                                    <input type="number" name="items[{{ $index }}][quantity]" 
+                                    <input type="number" name="items[{{ $index }}][quantity]"
                                            class="quantity block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                           min="1" 
-                                           value="{{ $item['quantity'] }}" 
+                                           min="1"
+                                           value="{{ $item['quantity'] }}"
                                            required>
                                 </div>
                                 <div class="col-span-6 md:col-span-3">
@@ -157,7 +157,7 @@
                         </select>
                     </div>
                     <div class="col-span-6 md:col-span-3">
-                        <input type="number" name="items[${index}][quantity]" 
+                        <input type="number" name="items[${index}][quantity]"
                                class="quantity block w-full shadow-sm sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                min="1" value="1" required>
                     </div>

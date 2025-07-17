@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <!-- Header -->
         <div class="bg-green-600 px-6 py-4 text-white">
             <h2 class="text-2xl font-bold">Order Confirmation</h2>
         </div>
-        
+
         <div class="p-6">
             <!-- Success Alert -->
             <div class="rounded-md bg-green-50 p-4 mb-6">

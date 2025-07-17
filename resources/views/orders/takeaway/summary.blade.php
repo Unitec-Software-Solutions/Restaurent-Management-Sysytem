@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <!-- Card Header -->
         <div class="bg-gradient-to-r from-green-600 to-green-800 px-6 py-4">
@@ -86,7 +86,7 @@
                                 <i class="fas fa-info-circle text-gray-400 mr-2"></i>
                                 Status:
                             </span>
-                            <span class="px-3 py-1 rounded-full text-xs font-medium 
+                            <span class="px-3 py-1 rounded-full text-xs font-medium
                                 {{ $order->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
                                 {{ $order->status === 'submitted' ? 'bg-blue-100 text-blue-800' : '' }}
                                 {{ $order->status === 'preparing' ? 'bg-orange-100 text-orange-800' : '' }}
@@ -190,10 +190,10 @@
                         <h4 class="text-lg font-semibold text-gray-800 mb-2">Ready to confirm your order?</h4>
                         <p class="text-gray-600 text-sm">Review your items above and confirm to send your order to the kitchen.</p>
                     </div>
-                    
+
                     <div class="flex flex-col sm:flex-row gap-4 justify-center">
                         <!-- Edit Order Button -->
-                        <a href="{{ route('orders.takeaway.edit', $order->id) }}" 
+                        <a href="{{ route('orders.takeaway.edit', $order->id) }}"
                            class="flex-1 max-w-xs inline-flex items-center justify-center px-6 py-4 bg-blue-600 border border-transparent rounded-lg font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 touch-manipulation">
                             <i class="fas fa-edit mr-3 text-lg"></i>
                             <span class="text-lg">Edit Order</span>
@@ -202,20 +202,20 @@
                         <!-- Confirm Order Button -->
                         <form action="{{ route('orders.takeaway.submit', $order->id) }}" method="POST" class="flex-1 max-w-xs">
                             @csrf
-                            <button type="submit" 
+                            <button type="submit"
                                     class="w-full inline-flex items-center justify-center px-6 py-4 bg-green-600 border border-transparent rounded-lg font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 touch-manipulation confirm-order-btn">
                                 <i class="fas fa-check-circle mr-3 text-lg"></i>
                                 <span class="text-lg">Confirm Order</span>
                             </button>
                         </form>
                     </div>
-                    
+
                     <!-- Cancel Order Button -->
                     <div class="mt-4 text-center">
                         <form action="{{ route('orders.takeaway.destroy', ['order' => $order->id]) }}" method="POST" class="inline-block">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" 
+                            <button type="submit"
                                     class="inline-flex items-center px-4 py-2 text-red-600 hover:text-red-800 transition-colors touch-manipulation"
                                     onclick="return confirm('Are you sure you want to cancel this order?')">
                                 <i class="fas fa-times mr-2"></i>
@@ -234,17 +234,17 @@
                         <h4 class="text-xl font-semibold text-gray-800 mb-2">Order Confirmed!</h4>
                         <p class="text-gray-600">Your order has been sent to the kitchen. We'll notify you when it's ready for pickup.</p>
                     </div>
-                    
+
                     <div class="flex flex-col sm:flex-row gap-4 justify-center">
                         <!-- Dashboard Button -->
-                        <a href="{{ route('home') }}" 
+                        <a href="{{ route('home') }}"
                            class="flex-1 max-w-xs inline-flex items-center justify-center px-6 py-4 bg-blue-600 border border-transparent rounded-lg font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 touch-manipulation">
                             <i class="fas fa-tachometer-alt mr-3 text-lg"></i>
                             <span class="text-lg">Go to Dashboard</span>
                         </a>
 
                         <!-- New Order Button -->
-                        <a href="{{ route('orders.takeaway.create') }}" 
+                        <a href="{{ route('orders.takeaway.create') }}"
                            class="flex-1 max-w-xs inline-flex items-center justify-center px-6 py-4 bg-green-600 border border-transparent rounded-lg font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 touch-manipulation">
                             <i class="fas fa-plus mr-3 text-lg"></i>
                             <span class="text-lg">New Order</span>
@@ -264,20 +264,20 @@ document.addEventListener('DOMContentLoaded', function() {
     if (confirmBtn) {
         confirmBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            
+
             const confirmation = confirm('Are you sure you want to confirm this order? Once confirmed, it will be sent to the kitchen for preparation.');
-            
+
             if (confirmation) {
                 // Add loading state
                 this.disabled = true;
                 this.innerHTML = '<i class="fas fa-spinner fa-spin mr-3 text-lg"></i><span class="text-lg">Confirming...</span>';
-                
+
                 // Submit the form
                 this.closest('form').submit();
             }
         });
     }
-    
+
     // Auto-refresh for order status updates (if needed)
     @if($order->status !== 'pending')
     setInterval(function() {
@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
         min-height: 50px;
         font-size: 1.1rem;
     }
-    
+
     .touch-manipulation i {
         font-size: 1.2rem;
     }
