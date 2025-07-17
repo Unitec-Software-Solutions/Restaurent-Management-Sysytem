@@ -1,13 +1,13 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <!-- Card Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
             <h2 class="text-2xl font-bold text-white">Create Takeaway Order (Admin)</h2>
         </div>
-        
+
         <!-- Card Body -->
         <div class="p-6">
             <form method="POST" action="{{ route('admin.orders.takeaway.store') }}" class="space-y-6" id="admin-takeaway-form">
@@ -62,13 +62,13 @@
                 @endif
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    
+
                     <div class="space-y-6">
-                       
+
                         <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Order Information</h3>
-                            
-                            
+
+
                             <div class="mb-4 bg-blue-50 p-3 rounded-lg border border-blue-200">
                                 <div class="flex items-center">
                                     <i class="fas fa-shopping-bag text-blue-600 mr-2"></i>
@@ -116,7 +116,7 @@
                                     <option value="">Choose Branch...</option>
                                     @if(isset($branches))
                                         @foreach($branches as $branch)
-                                            <option value="{{ $branch->id }}" 
+                                            <option value="{{ $branch->id }}"
                                                 data-organization="{{ $branch->organization_id ?? $branch->organization->id ?? '' }}"
                                                 data-phone="{{ $branch->phone ?? '' }}"
                                                 {{ (isset($defaultBranch) && $defaultBranch == $branch->id) ? 'selected' : '' }}>
@@ -129,14 +129,14 @@
                                     @endif
                                 </select>
                             </div>
-                            
+
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Time</label>
-                                <input type="datetime-local" 
-                                       name="order_time" 
+                                <input type="datetime-local"
+                                       name="order_time"
                                        id="order_time"
-                                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
-                                       value="{{ old('order_time', now()->addMinutes(30)->format('Y-m-d\TH:i')) }}" 
+                                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
+                                       value="{{ old('order_time', now()->addMinutes(30)->format('Y-m-d\TH:i')) }}"
                                        min="{{ now()->format('Y-m-d\TH:i') }}"
                                        required>
                             </div>
@@ -144,9 +144,9 @@
                             <!-- Special Instructions -->
                             <div class="mb-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Special Instructions</label>
-                                <textarea name="special_instructions" 
+                                <textarea name="special_instructions"
                                           id="special_instructions"
-                                          rows="3" 
+                                          rows="3"
                                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                           placeholder="Any special instructions for the order...">{{ old('special_instructions') }}</textarea>
                             </div>
@@ -155,15 +155,15 @@
                         <!-- Customer Information Section -->
                         <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Customer Information</h3>
-                            
+
                             <div class="grid grid-cols-1 gap-4">
                                 <!-- Customer Name -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                                    <input type="text" 
-                                           name="customer_name" 
+                                    <input type="text"
+                                           name="customer_name"
                                            id="customer_name"
-                                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                            value="{{ old('customer_name', isset($defaultCustomerName) ? $defaultCustomerName : 'Customer with Order #PENDING') }}"
                                            placeholder="Enter customer name"
                                            required>
@@ -173,10 +173,10 @@
                                 <!-- Customer Phone -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Customer Phone</label>
-                                    <input type="tel" 
-                                           name="customer_phone" 
+                                    <input type="tel"
+                                           name="customer_phone"
                                            id="customer_phone"
-                                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border" 
+                                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 border"
                                            value="{{ old('customer_phone', isset($defaultPhone) ? $defaultPhone : '0000000000') }}"
                                            placeholder="Enter customer phone number"
                                            required>
@@ -190,7 +190,7 @@
                     <div>
                         <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Select Menu Items</h3>
-                            
+
                             <!-- Menu Items Loading State -->
                             <div id="menu-items-loading" class="text-center py-8">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -225,7 +225,7 @@
                         <div class="lg:flex-1">
                             <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
                                 <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">Order Summary</h3>
-                                
+
                                 <div id="order-summary" class="space-y-2">
                                     <div class="text-gray-500 text-center py-4">
                                         <i class="fas fa-shopping-cart text-2xl mb-2"></i>
@@ -252,14 +252,14 @@
 
                         <!-- Submit Button -->
                         <div class="lg:w-64">
-                            <button type="submit" 
+                            <button type="submit"
                                     id="place-order-btn"
                                     class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                     disabled>
                                 <i class="fas fa-check mr-2"></i>
                                 Place Order
                             </button>
-                            
+
                             <p class="text-sm text-gray-500 mt-2 text-center">
                                 Please select at least one menu item
                             </p>
@@ -283,20 +283,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const orderSummary = document.getElementById('order-summary');
     const placeOrderBtn = document.getElementById('place-order-btn');
     const itemsInputsContainer = document.getElementById('items-inputs');
-    
+
     let selectedItems = {};
-    
+
     // Load menu items for the current branch
     function loadMenuItems() {
         loadingDiv.style.display = 'block';
         menuItemsContainer.style.display = 'none';
         noMenuDiv.style.display = 'none';
-        
+
         fetch(`/api/menu-items/branch/${branchId}/active`)
             .then(response => response.json())
             .then(data => {
                 loadingDiv.style.display = 'none';
-                
+
                 if (data.success && data.items && data.items.length > 0) {
                     renderMenuItems(data.items);
                     menuItemsContainer.style.display = 'block';
@@ -310,11 +310,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 noMenuDiv.style.display = 'block';
             });
     }
-    
+
     // Render menu items
     function renderMenuItems(items) {
         menuItemsContainer.innerHTML = '';
-        
+
         items.forEach(item => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'bg-white p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors';
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             menuItemsContainer.appendChild(itemDiv);
         });
-        
+
         // Add event listeners for quantity buttons
         document.querySelectorAll('.quantity-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -351,38 +351,38 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     // Update item quantity
     function updateQuantity(itemId, change) {
         if (!selectedItems[itemId]) {
             selectedItems[itemId] = { quantity: 0 };
         }
-        
+
         selectedItems[itemId].quantity = Math.max(0, selectedItems[itemId].quantity + change);
-        
+
         if (selectedItems[itemId].quantity === 0) {
             delete selectedItems[itemId];
         }
-        
+
         updateUI(itemId);
         updateOrderSummary();
         updateSubmitButton();
     }
-    
+
     // Update UI for specific item
     function updateUI(itemId) {
         const quantityDisplay = document.querySelector(`.quantity-display[data-item-id="${itemId}"]`);
         const minusBtn = document.querySelector(`.minus-btn[data-item-id="${itemId}"]`);
-        
+
         const quantity = selectedItems[itemId]?.quantity || 0;
         quantityDisplay.textContent = quantity;
         minusBtn.disabled = quantity === 0;
     }
-    
+
     // Update order summary
     function updateOrderSummary() {
         const hasItems = Object.keys(selectedItems).length > 0;
-        
+
         if (!hasItems) {
             orderSummary.innerHTML = `
                 <div class="text-gray-500 text-center py-4">
@@ -393,11 +393,11 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTotals(0, 0, 0);
             return;
         }
-        
+
         // Get item prices from the rendered menu items
         let summaryHTML = '';
         let subtotal = 0;
-        
+
         Object.keys(selectedItems).forEach(itemId => {
             const item = selectedItems[itemId];
             const itemElement = document.querySelector(`[data-item-id="${itemId}"]`).closest('.bg-white');
@@ -405,9 +405,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const itemPriceText = itemElement.querySelector('.text-blue-600').textContent;
             const itemPrice = parseFloat(itemPriceText.replace('LKR ', ''));
             const itemTotal = itemPrice * item.quantity;
-            
+
             subtotal += itemTotal;
-            
+
             summaryHTML += `
                 <div class="flex justify-between items-center py-2 border-b border-gray-200">
                     <div>
@@ -418,29 +418,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         });
-        
+
         orderSummary.innerHTML = summaryHTML;
-        
+
         const tax = subtotal * 0.10;
         const total = subtotal + tax;
         updateTotals(subtotal, tax, total);
-        
+
         // Update hidden form inputs
         updateFormInputs();
     }
-    
+
     // Update totals display
     function updateTotals(subtotal, tax, total) {
         document.getElementById('subtotal-amount').textContent = `LKR ${subtotal.toFixed(2)}`;
         document.getElementById('tax-amount').textContent = `LKR ${tax.toFixed(2)}`;
         document.getElementById('total-amount').textContent = `LKR ${total.toFixed(2)}`;
     }
-    
+
     // Update submit button state
     function updateSubmitButton() {
         const hasItems = Object.keys(selectedItems).length > 0;
         placeOrderBtn.disabled = !hasItems;
-        
+
         const helpText = placeOrderBtn.nextElementSibling;
         if (hasItems) {
             helpText.textContent = 'Ready to place order';
@@ -450,32 +450,32 @@ document.addEventListener('DOMContentLoaded', function() {
             helpText.className = 'text-sm text-gray-500 mt-2 text-center';
         }
     }
-    
+
     // Update form inputs
     function updateFormInputs() {
         itemsInputsContainer.innerHTML = '';
-        
+
         Object.keys(selectedItems).forEach((itemId, index) => {
             const item = selectedItems[itemId];
-            
+
             const menuItemInput = document.createElement('input');
             menuItemInput.type = 'hidden';
             menuItemInput.name = `items[${index}][menu_item_id]`;
             menuItemInput.value = itemId;
-            
+
             const quantityInput = document.createElement('input');
             quantityInput.type = 'hidden';
             quantityInput.name = `items[${index}][quantity]`;
             quantityInput.value = item.quantity;
-            
+
             itemsInputsContainer.appendChild(menuItemInput);
             itemsInputsContainer.appendChild(quantityInput);
         });
-        
+
         // Append to form
         document.querySelector('form').appendChild(itemsInputsContainer);
     }
-    
+
     // Load menu items on page load
     loadMenuItems();
 });
