@@ -282,7 +282,6 @@
                                         </button>
                                     @endif
 
-
                                     <!-- Print KOT if order has KOT items -->
                                     @php
                                         $hasKotItems = $order->orderItems()->whereHas('menuItem', function($q) {
