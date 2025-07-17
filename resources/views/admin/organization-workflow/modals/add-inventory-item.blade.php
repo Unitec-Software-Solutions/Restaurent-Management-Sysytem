@@ -54,8 +54,21 @@
                                     <option value="l">Liters (l)</option>
                                     <option value="ml">Milliliters (ml)</option>
                                     <option value="pcs">Pieces (pcs)</option>
-                                    <option value="box">Box</option>
-                                    <option value="pack">Pack</option>
+                                    <option value="plate">Plate (plate)</option>
+                                    <option value="bottle">Bottle (bottle)</option>
+                                    <option value="packet">Packet (packet)</option>
+                                    <option value="box">Box (box)</option>
+                                    <option value="pack">Pack (pack)</option>
+                                    <option value="dozen">Dozen (dozen)</option>
+                                    <option value="carton">Carton (carton)</option>
+                                    <option value="roll">Roll (roll)</option>
+                                    <option value="bundle">Bundle (bundle)</option>
+                                    <option value="sachet">Sachet (sachet)</option>
+                                    <option value="barrel">Barrel (barrel)</option>
+                                    <option value="jar">Jar (jar)</option>
+                                    <option value="tube">Tube (tube)</option>
+                                    <option value="tray">Tray (tray)</option>
+                                    <option value="case">Case (case)</option>
                                 </select>
                             </div>
                         </div>
@@ -93,13 +106,13 @@
 <script>
 function submitInventoryForm(event) {
     event.preventDefault();
-    
+
     const formData = new FormData(event.target);
     const data = {};
     formData.forEach((value, key) => {
         data[key] = value;
     });
-    
+
     fetch('/admin/organizations/{{ $organization->id ?? "0" }}/inventory', {
         method: 'POST',
         headers: {
