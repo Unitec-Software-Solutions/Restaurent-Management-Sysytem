@@ -751,6 +751,7 @@ Route::post('inventory/items/restore', [ItemMasterController::class, 'restore'])
 // Menu routes - properly ordered to avoid conflicts
 Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
 Route::get('menus/list', [App\Http\Controllers\Admin\MenuController::class, 'list'])->middleware(['auth:admin'])->name('admin.menus.list');
+Route::get('menus/manager', [App\Http\Controllers\Admin\MenuController::class, 'manager'])->middleware(['auth:admin'])->name('admin.menus.manager');
 Route::get('menus/create', [App\Http\Controllers\Admin\MenuController::class, 'create'])->middleware(['auth:admin'])->name('admin.menus.create');
 Route::post('menus/store', [App\Http\Controllers\Admin\MenuController::class, 'store'])->middleware(['auth:admin'])->name('admin.menus.store');
 Route::get('menus/bulk-create', [App\Http\Controllers\Admin\MenuController::class, 'bulkCreate'])->middleware(['auth:admin'])->name('admin.menus.bulk-create');
