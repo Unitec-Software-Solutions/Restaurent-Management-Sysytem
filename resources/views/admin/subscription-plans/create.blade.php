@@ -4,13 +4,18 @@
 @section('header-title', 'Create Subscription Plan')
 
 @section('content')
-    <div class="pt-6 p-6 rounded-lg">
-    <div class="bg-white rounded-2xl shadow-lg">
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
-            <h1 class="text-2xl text-gray-900 font-bold">Create New Subscription Plan</h1>
-            <p class="mt-1 text-gray-800 opacity-90">Define a new subscription tier with modules and features</p>
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <div class="flex items-center gap-2">
+                    {{-- <i class="fas fa-user-shield text-2xl text-indigo-500"></i> --}}
+                    <h1 class="text-2xl font-bold text-gray-900">Create New Subscription Plan</h1>
+                </div>
+                <p class="text-gray-600 mt-1">Define a new subscription tier with modules and features</p>
+            </div>
         </div>
-        </div>
+    </div>
 
         <!-- Error Display -->
         @if($errors->any())
