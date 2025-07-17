@@ -498,8 +498,7 @@ class Admin extends Authenticatable
      */
     public function isOrganizationAdmin()
     {
-        
-        return !$this->is_super_admin
+            return !$this->is_super_admin
             && !is_null($this->organization_id)
             && is_null($this->branch_id);
     }
@@ -513,4 +512,5 @@ class Admin extends Authenticatable
             && !empty($this->organization_id)
             && !empty($this->branch_id);
     }
+
 }
