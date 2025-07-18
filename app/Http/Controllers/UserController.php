@@ -31,15 +31,16 @@ class UserController extends Controller
     {
         $admin = Auth::guard('admin')->user();
 
+        // Always use Spatie roles relationship for admins
         if ($admin->isSuperAdmin()) {
-            $admins = \App\Models\Admin::with(['organization', 'branch'])->get();
+            $admins = \App\Models\Admin::with(['roles', 'organization', 'branch'])->get();
         } elseif ($admin->isOrganizationAdmin()) {
             $admins = \App\Models\Admin::where('organization_id', $admin->organization_id)
-                ->with(['organization', 'branch'])
+                ->with(['roles', 'organization', 'branch'])
                 ->get();
         } else {
             $admins = \App\Models\Admin::where('branch_id', $admin->branch_id)
-                ->with(['organization', 'branch'])
+                ->with(['roles', 'organization', 'branch'])
                 ->get();
         }
 
@@ -142,7 +143,15 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('create', User::class);
+        // Allow super admin to create and manage all admin users
+        $admin = auth('admin')->user();
+        if (!$admin) {
+            abort(403, 'You do not have permission to create admin users.');
+        }
+        // Only restrict non-super admins
+        if (!$admin->is_super_admin && !$admin->can('create', \App\Models\Admin::class)) {
+            abort(403, 'You do not have permission to create admin users.');
+        }
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -157,7 +166,7 @@ class UserController extends Controller
         $role = Role::where('guard_name', 'admin')->findOrFail($request->role_id);
         $admin = auth('admin')->user();
 
-        // Validate role assignment permissions (must be in available roles)
+        // Validate role assignment permissions
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
@@ -214,38 +223,34 @@ class UserController extends Controller
     }
 
     // Show form to edit a user
-    public function edit(User $user)
+    public function edit(\App\Models\Admin $admin)
     {
-        $this->authorize('update', $user);
-
-        $admin = auth('admin')->user();
-
-        $user->load(['roles.permissions']);
-
+        $currentAdmin = auth('admin')->user();
+        $admin->load(['roles.permissions']);
         $organizations = collect();
         $branches = collect();
         $allBranches = collect();
         $roles = collect();
 
-        if ($admin->isSuperAdmin()) {
+        if ($currentAdmin->isSuperAdmin()) {
             $organizations = Organization::all();
             $allBranches = Branch::with('organization')->get();
             $branches = $allBranches;
             $roles = Role::where('guard_name', 'admin')->get();
-        } elseif ($admin->isOrganizationAdmin()) {
-            $organizations = Organization::where('id', $admin->organization_id)->get();
-            $branches = Branch::where('organization_id', $admin->organization_id)->get();
+        } elseif ($currentAdmin->isOrganizationAdmin()) {
+            $organizations = Organization::where('id', $currentAdmin->organization_id)->get();
+            $branches = Branch::where('organization_id', $currentAdmin->organization_id)->get();
             $allBranches = $branches;
-            $roles = Role::where('organization_id', $admin->organization_id)->where('guard_name', 'admin')->get();
+            $roles = Role::where('organization_id', $currentAdmin->organization_id)->where('guard_name', 'admin')->get();
         } else {
-            $organizations = Organization::where('id', $admin->organization_id)->get();
-            $branches = Branch::where('id', $admin->branch_id)->get();
+            $organizations = Organization::where('id', $currentAdmin->organization_id)->get();
+            $branches = Branch::where('id', $currentAdmin->branch_id)->get();
             $allBranches = $branches;
-            $roles = Role::where('branch_id', $admin->branch_id)->where('guard_name', 'admin')->get();
+            $roles = Role::where('branch_id', $currentAdmin->branch_id)->where('guard_name', 'admin')->get();
         }
 
         return view('admin.users.edit', compact(
-            'user',
+            'admin',
             'organizations',
             'branches',
             'allBranches',
@@ -290,14 +295,13 @@ class UserController extends Controller
 
         $user->update($data);
 
-        // Assign role using Spatie's assignRole method
+        // Assign role using Spatie's pivot table
         if ($request->filled('role_id')) {
             $role = Role::where('guard_name', 'admin')->find($request->role_id);
             if ($role) {
-                $user->syncRoles([$role->name]);
+                $user->roles()->sync([$role->id]);
             }
         }
-
         // Reload user with roles for edit and index views
         $user->load(['roles']);
 
@@ -421,9 +425,9 @@ class UserController extends Controller
         return optional($user->role->permissions)->pluck('name')->contains($permission);
     }
 
-    public function show(User $user)
+    public function show(\App\Models\Admin $admin)
     {
-        $user->load(['creator']);
-        return view('admin.users.summary', compact('user'));
+        $admin->load(['roles', 'organization', 'branch', 'creator']);
+        return view('admin.users.summary', compact('admin'));
     }
 }
