@@ -225,28 +225,30 @@ class UserController extends Controller
     // Show form to edit a user
     public function edit(\App\Models\Admin $admin)
     {
-        $currentAdmin = auth('admin')->user();
-        $admin->load(['roles.permissions']);
+        $this->authorize('update', $admin);
+        $adminUser = auth('admin')->user();
+        $admin->load(['roles', 'organization', 'branch']);
+
         $organizations = collect();
         $branches = collect();
         $allBranches = collect();
         $roles = collect();
 
-        if ($currentAdmin->isSuperAdmin()) {
+        if ($adminUser->isSuperAdmin()) {
             $organizations = Organization::all();
             $allBranches = Branch::with('organization')->get();
             $branches = $allBranches;
             $roles = Role::where('guard_name', 'admin')->get();
-        } elseif ($currentAdmin->isOrganizationAdmin()) {
-            $organizations = Organization::where('id', $currentAdmin->organization_id)->get();
-            $branches = Branch::where('organization_id', $currentAdmin->organization_id)->get();
+        } elseif ($adminUser->isOrganizationAdmin()) {
+            $organizations = Organization::where('id', $adminUser->organization_id)->get();
+            $branches = Branch::where('organization_id', $adminUser->organization_id)->get();
             $allBranches = $branches;
-            $roles = Role::where('organization_id', $currentAdmin->organization_id)->where('guard_name', 'admin')->get();
+            $roles = Role::where('organization_id', $adminUser->organization_id)->where('guard_name', 'admin')->get();
         } else {
-            $organizations = Organization::where('id', $currentAdmin->organization_id)->get();
-            $branches = Branch::where('id', $currentAdmin->branch_id)->get();
+            $organizations = Organization::where('id', $adminUser->organization_id)->get();
+            $branches = Branch::where('id', $adminUser->branch_id)->get();
             $allBranches = $branches;
-            $roles = Role::where('branch_id', $currentAdmin->branch_id)->where('guard_name', 'admin')->get();
+            $roles = Role::where('branch_id', $adminUser->branch_id)->where('guard_name', 'admin')->get();
         }
 
         return view('admin.users.edit', compact(
