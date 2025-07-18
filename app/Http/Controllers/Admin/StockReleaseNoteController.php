@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class StockReleaseNoteController extends Controller
 {
@@ -94,6 +95,13 @@ class StockReleaseNoteController extends Controller
         $isSuperAdmin = $admin->is_super_admin ?? false;
         $orgId = $isSuperAdmin ? $request->organization_id : $admin->organization_id;
 
+        Log::info('SRN Store Request', [
+            'user_id' => $admin->id,
+            'is_super_admin' => $isSuperAdmin,
+            'org_id' => $orgId,
+            'request_data' => $request->all()
+        ]);
+
         $request->validate([
             'branch_id' => 'required|exists:branches,id',
             'release_type' => 'required|string|max:50',
@@ -103,14 +111,25 @@ class StockReleaseNoteController extends Controller
             'items.*.release_quantity' => 'required|numeric|min:0.01',
         ]);
 
-        // Validate stock for each item
         foreach ($request->items as $itemData) {
             $itemId = $itemData['item_id'];
             $releaseQty = $itemData['release_quantity'];
             $currentStock = ItemTransaction::stockOnHand($itemId, $request->branch_id);
 
+            Log::info('SRN Item Stock Check', [
+                'item_id' => $itemId,
+                'release_quantity' => $releaseQty,
+                'current_stock' => $currentStock
+            ]);
+
             if ($releaseQty > $currentStock) {
                 $item = ItemMaster::find($itemId);
+                Log::warning('SRN Insufficient Stock', [
+                    'item_id' => $itemId,
+                    'item_name' => $item ? $item->name : null,
+                    'requested' => $releaseQty,
+                    'available' => $currentStock
+                ]);
                 return view('errors.generic', [
                     'errorTitle' => 'Insufficient Stock',
                     'errorCode' => '400',
@@ -129,6 +148,11 @@ class StockReleaseNoteController extends Controller
         DB::beginTransaction();
 
         try {
+            Log::info('SRN Creating Master Record', [
+                'srn_number' => $request->srn_number,
+                'branch_id' => $request->branch_id,
+                'organization_id' => $orgId
+            ]);
             $note = StockReleaseNoteMaster::create([
                 'srn_number' => $request->srn_number ?? 'SRN-' . now()->format('YmdHis'),
                 'branch_id' => $request->branch_id,
@@ -150,6 +174,12 @@ class StockReleaseNoteController extends Controller
                 $item = ItemMaster::find($itemData['item_id']);
                 $lineTotal = ($itemData['release_quantity'] ?? 0) * ($item->selling_price ?? 0);
 
+                Log::info('SRN Creating Item', [
+                    'srn_id' => $note->id,
+                    'item_id' => $item->id,
+                    'release_quantity' => $itemData['release_quantity']
+                ]);
+
                 StockReleaseNoteItem::create([
                     'srn_id' => $note->id,
                     'item_id' => $item->id,
@@ -164,11 +194,15 @@ class StockReleaseNoteController extends Controller
                     'notes' => $itemData['notes'] ?? null,
                 ]);
 
-                // Determine transaction type and sign
                 $transactionType = $this->getTransactionTypeForRelease($request->release_type);
                 $quantity = $this->getSignedQuantity($transactionType, $itemData['release_quantity']);
 
-                // Create item transaction for stock calculation
+                Log::info('SRN Creating ItemTransaction', [
+                    'item_id' => $item->id,
+                    'transaction_type' => $transactionType,
+                    'quantity' => $quantity
+                ]);
+
                 ItemTransaction::create([
                     'organization_id' => $orgId,
                     'branch_id' => $request->branch_id,
@@ -194,10 +228,20 @@ class StockReleaseNoteController extends Controller
 
             DB::commit();
 
+            Log::info('SRN Created Successfully', [
+                'srn_id' => $note->id,
+                'total_amount' => $totalAmount
+            ]);
+
             return redirect()->route('admin.inventory.srn.index')
                 ->with('success', 'Stock release note created and transactions recorded.');
         } catch (Exception $e) {
             DB::rollBack();
+            Log::error('SRN Store Exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
             return view('errors.generic', [
                 'errorTitle' => 'Stock Release Failed',
                 'errorCode' => '500',
