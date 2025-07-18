@@ -491,7 +491,7 @@ class Admin extends Authenticatable
     {
         return [
             'total_logins' => 0, // Would be tracked in audit logs
-            'last_login' => $this->last_login_at?->diffForHumans() ?? 'Never',
+            'last_login' => optional(\Illuminate\Support\Carbon::parse($this->last_login_at))->diffForHumans() ?? 'Never',
             'account_status' => $this->status_badge['text'],
             'role_status' => $this->role_badge['text'],
             'permissions_count' => $this->getAllPermissions()->count(),
