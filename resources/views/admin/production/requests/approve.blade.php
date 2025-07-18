@@ -15,7 +15,7 @@
                     ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
                     ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
                     ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
-                    ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
+                    // ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
                 ]" active="Production Requests" />
             </div>
         </div>
