@@ -1,8 +1,10 @@
 import { Page } from '@playwright/test';
 
 export async function activateBranch(page: Page) {
-  // Go to branch summary
   await page.goto('https://rms.test/admin/branches/1/summary');
+  await page.getByRole('textbox', { name: 'Email' }).fill('superadmin@rms.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('SuperAdmin123!');
+  await page.getByRole('button', { name: 'Login' }).click();
 
   // Handle dialog and click "Copy"
   page.once('dialog', async dialog => {
