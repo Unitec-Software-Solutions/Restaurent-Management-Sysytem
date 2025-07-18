@@ -272,6 +272,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/{release}/edit', [StockReleaseNoteController::class, 'edit'])->whereNumber('release')->name('edit');
                 Route::put('/{release}', [StockReleaseNoteController::class, 'update'])->whereNumber('release')->name('update');
                 Route::delete('/{release}', [StockReleaseNoteController::class, 'destroy'])->whereNumber('release')->name('destroy');
+
+                // AJAX endpoints fetch items of that branch with stock
+                Route::get('/items-with-stock', [StockReleaseNoteController::class, 'itemsWithStock'])->name('items-with-stock');
             });
 
         });
