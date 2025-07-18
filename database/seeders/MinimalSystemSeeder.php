@@ -57,7 +57,7 @@ class MinimalSystemSeeder extends Seeder
             $subscriptionPlan = $this->createSubscriptionPlan(); // Create subscription plan
 
             // Step 7: Create organization, org admin, branch, and branch admin automatically
-            $this->createOrganizationWithAdmins($subscriptionPlan); // Create organization with admins
+            // $this->createOrganizationWithAdmins($subscriptionPlan); // Create organization with admins
 
             // Step 8: Create branch
             // $branch = $this->createBranch($organization);
