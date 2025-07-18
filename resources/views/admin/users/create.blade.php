@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const option = new Option(branch.name, branch.id);
                 branchSelect.appendChild(option);
             });
-            
+
             // Preselect if there was a previous selection
             const oldBranchId = "{{ old('branch_id') }}";
             if (oldBranchId) {
