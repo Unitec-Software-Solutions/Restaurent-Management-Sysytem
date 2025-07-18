@@ -55,6 +55,6 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Ite
     await page.locator('input[name="items[0][current_stock]"]').fill(item.stockLevel);
     await page.getByRole('button', { name: ' Save All Items' }).click();
     // Wait for navigation or success message if needed
-    await page.waitForTimeout(300); // Short wait for UI stability
+    // await page.waitForTimeout(300); // Short wait for UI stability
   }
 }
