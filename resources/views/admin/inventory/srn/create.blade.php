@@ -23,21 +23,52 @@
             <form action="{{ route('admin.inventory.srn.store') }}" method="POST" class="p-6" id="srnForm">
                 @csrf
 
+                <!-- Organization Selection for Super Admin -->
                 @if (Auth::guard('admin')->user()->is_super_admin)
-                    <div class="mb-6">
-                        <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">Organization *</label>
-                        <select id="organization_id" name="organization_id"
-                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            required>
-                            <option value="">Select Organization</option>
-                            @foreach ($organizations as $org)
-                                <option value="{{ $org->id }}"
-                                    {{ old('organization_id', request('organization_id')) == $org->id ? 'selected' : '' }}>
-                                    {{ $org->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Super admin must select organization</p>
+                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div class="flex items-center mb-3">
+                            <i class="fas fa-building text-blue-600 mr-2"></i>
+                            <h3 class="text-lg font-semibold text-blue-900">Organization Selection</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Target Organization <span class="text-red-500">*</span>
+                                </label>
+                                <select name="organization_id" id="organization_id" required
+                                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select Organization</option>
+                                    @foreach ($organizations as $org)
+                                        <option value="{{ $org->id }}"
+                                            {{ old('organization_id', request('organization_id')) == $org->id ? 'selected' : '' }}>
+                                            {{ $org->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('organization_id')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex items-end">
+                                <div class="text-sm text-blue-700">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    SRN will be created for the selected organization
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <!-- Display current organization for non-super admins -->
+                    <div class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div class="flex items-center">
+                            <i class="fas fa-building text-gray-600 mr-2"></i>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-700">Organization</h3>
+                                <p class="text-gray-900 font-semibold">
+                                    {{ Auth::guard('admin')->user()->organization->name }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 @endif
 
@@ -212,6 +243,10 @@
                             </option>`
                         ).join('');
                     select.value = currentValue;
+                    // Re-attach change event for stock update
+                    select.onchange = function() { handleItemChange(this); };
+                    // If an item is already selected, update stock display immediately
+                    handleItemChange(select);
                 });
             }
 
