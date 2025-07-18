@@ -82,7 +82,11 @@ class StockReleaseNoteController extends Controller
                 });
         }
 
-        return view('admin.inventory.srn.create', compact('branches', 'items', 'branchId', 'organizations'));
+        // SRN number generation
+        $latest = StockReleaseNoteMaster::orderByDesc('id')->first();
+        $nextSrnNumber = $latest ? 'SRN-' . str_pad($latest->id + 1, 6, '0', STR_PAD_LEFT) : 'SRN-000001';
+
+        return view('admin.inventory.srn.create', compact('branches', 'items', 'branchId', 'organizations', 'nextSrnNumber'));
     }
 
     /**
@@ -96,9 +100,9 @@ class StockReleaseNoteController extends Controller
         $orgId = $isSuperAdmin ? $request->organization_id : $admin->organization_id;
 
         Log::info('SRN Store Request', [
-            'user_id' => $admin->id,
+            'user_id' => $admin->id ?? 'N/A',
             'is_super_admin' => $isSuperAdmin,
-            'org_id' => $orgId,
+            'org_id' => $orgId ?? 'N/A',
             'request_data' => $request->all()
         ]);
 
@@ -112,9 +116,9 @@ class StockReleaseNoteController extends Controller
         ]);
 
         foreach ($request->items as $itemData) {
-            $itemId = $itemData['item_id'];
-            $releaseQty = $itemData['release_quantity'];
-            $currentStock = ItemTransaction::stockOnHand($itemId, $request->branch_id);
+            $itemId = $itemData['item_id'] ?? 'N/A';
+            $releaseQty = $itemData['release_quantity'] ?? 'N/A';
+            $currentStock = ItemTransaction::stockOnHand($itemId, $request->branch_id ?? 'N/A');
 
             Log::info('SRN Item Stock Check', [
                 'item_id' => $itemId,
@@ -126,7 +130,7 @@ class StockReleaseNoteController extends Controller
                 $item = ItemMaster::find($itemId);
                 Log::warning('SRN Insufficient Stock', [
                     'item_id' => $itemId,
-                    'item_name' => $item ? $item->name : null,
+                    'item_name' => $item ? $item->name : 'N/A',
                     'requested' => $releaseQty,
                     'available' => $currentStock
                 ]);
@@ -134,7 +138,7 @@ class StockReleaseNoteController extends Controller
                     'errorTitle' => 'Insufficient Stock',
                     'errorCode' => '400',
                     'errorHeading' => 'Insufficient Stock',
-                    'errorMessage' => "Item '{$item->name}' has only {$currentStock} units in stock. Requested: {$releaseQty}.",
+                    'errorMessage' => "Item '" . ($item ? $item->name : 'N/A') . "' has only {$currentStock} units in stock. Requested: {$releaseQty}.",
                     'headerClass' => 'bg-gradient-warning',
                     'errorIcon' => 'fas fa-box-open',
                     'mainIcon' => 'fas fa-box-open',
@@ -149,75 +153,78 @@ class StockReleaseNoteController extends Controller
 
         try {
             Log::info('SRN Creating Master Record', [
-                'srn_number' => $request->srn_number,
-                'branch_id' => $request->branch_id,
-                'organization_id' => $orgId
+                'srn_number' => $request->srn_number ?? 'N/A',
+                'branch_id' => $request->branch_id ?? 'N/A',
+                'organization_id' => $orgId ?? 'N/A',
+                'released_by_user_id' => ($admin && $admin->id) ? $admin->id : null,
+                'created_by' => ($admin && $admin->id) ? $admin->id : null
             ]);
             $note = StockReleaseNoteMaster::create([
                 'srn_number' => $request->srn_number ?? 'SRN-' . now()->format('YmdHis'),
-                'branch_id' => $request->branch_id,
-                'organization_id' => $orgId,
-                'released_by_user_id' => $admin->id,
+                'branch_id' => $request->branch_id ?? null,
+                'organization_id' => $orgId ?? null,
+                'released_by_user_id' => ($admin && $admin->id) ? $admin->id : null,
                 'released_at' => now(),
-                'release_date' => $request->release_date,
-                'release_type' => $request->release_type,
-                'notes' => $request->notes,
+                'release_date' => $request->release_date ?? null,
+                'release_type' => $request->release_type ?? 'N/A',
+                'notes' => $request->notes ?? 'N/A',
                 'is_active' => true,
-                'created_by' => $admin->id,
-                'status' => 'Pending',
+                'created_by' => ($admin && $admin->id) ? $admin->id : null,
+                'status' => 'Pending', // Assuming 'Pending' is the initial status  // Completed
                 'total_amount' => 0,
             ]);
 
             $totalAmount = 0;
 
             foreach ($request->items as $itemData) {
-                $item = ItemMaster::find($itemData['item_id']);
-                $lineTotal = ($itemData['release_quantity'] ?? 0) * ($item->selling_price ?? 0);
+                $item = ItemMaster::find($itemData['item_id'] ?? null);
+                $lineTotal = ($itemData['release_quantity'] ?? 0) * ($item ? $item->selling_price : 0);
 
                 Log::info('SRN Creating Item', [
-                    'srn_id' => $note->id,
-                    'item_id' => $item->id,
-                    'release_quantity' => $itemData['release_quantity']
+                    'srn_id' => $note->id ?? 'N/A',
+                    'item_id' => $item ? $item->id : 'N/A',
+                    'release_quantity' => $itemData['release_quantity'] ?? 'N/A'
                 ]);
 
+                // Create StockReleaseNoteItem
                 StockReleaseNoteItem::create([
-                    'srn_id' => $note->id,
-                    'item_id' => $item->id,
-                    'item_code' => $item->item_code,
-                    'item_name' => $item->name,
-                    'release_quantity' => $itemData['release_quantity'],
-                    'unit_of_measurement' => $item->unit_of_measurement,
-                    'release_price' => $item->selling_price,
+                    'srn_id' => $note->id ?? null,
+                    'item_id' => $item ? $item->id : null,
+                    'item_code' => $item ? $item->item_code : 'N/A',
+                    'item_name' => $item ? $item->name : 'N/A',
+                    'release_quantity' => $itemData['release_quantity'] ?? 0,
+                    'unit_of_measurement' => $item ? $item->unit_of_measurement : 'N/A',
+                    'release_price' => $item ? $item->selling_price : 0,
                     'line_total' => $lineTotal,
                     'batch_no' => $itemData['batch_no'] ?? null,
                     'expiry_date' => $itemData['expiry_date'] ?? null,
-                    'notes' => $itemData['notes'] ?? null,
+                    'notes' => $itemData['notes'] ?? 'N/A',
                 ]);
 
-                $transactionType = $this->getTransactionTypeForRelease($request->release_type);
-                $quantity = $this->getSignedQuantity($transactionType, $itemData['release_quantity']);
+                $transactionType = $this->getTransactionTypeForRelease($request->release_type ?? 'N/A');
+                $quantity = $this->getSignedQuantity($transactionType, $itemData['release_quantity'] ?? 0);
 
                 Log::info('SRN Creating ItemTransaction', [
-                    'item_id' => $item->id,
+                    'item_id' => $item ? $item->id : 'N/A',
                     'transaction_type' => $transactionType,
                     'quantity' => $quantity
                 ]);
 
                 ItemTransaction::create([
-                    'organization_id' => $orgId,
-                    'branch_id' => $request->branch_id,
-                    'inventory_item_id' => $item->id,
-                    'item_master_id' => $item->id,
+                    'organization_id' => $orgId ?? null,
+                    'branch_id' => $request->branch_id ?? null,
+                    'inventory_item_id' => $item ? $item->id : null,
+                    'item_master_id' => $item ? $item->id : null,
                     'transaction_type' => $transactionType,
                     'quantity' => $quantity,
-                    'unit_price' => $item->selling_price,
+                    'unit_price' => $item ? $item->selling_price : 0,
                     'total_amount' => $lineTotal,
                     'reference_type' => 'stock_release_note',
-                    'reference_id' => $note->id,
+                    'reference_id' => $note->id ?? null,
                     'batch_number' => $itemData['batch_no'] ?? null,
                     'expiry_date' => $itemData['expiry_date'] ?? null,
-                    'notes' => $itemData['notes'] ?? null,
-                    'created_by_user_id' => $admin->id,
+                    'notes' => $itemData['notes'] ?? 'N/A',
+                    'created_by_user_id' => ($admin && $admin->id) ? $admin->id : null,
                     'is_active' => true,
                 ]);
 
@@ -229,7 +236,7 @@ class StockReleaseNoteController extends Controller
             DB::commit();
 
             Log::info('SRN Created Successfully', [
-                'srn_id' => $note->id,
+                'srn_id' => $note->id ?? 'N/A',
                 'total_amount' => $totalAmount
             ]);
 
