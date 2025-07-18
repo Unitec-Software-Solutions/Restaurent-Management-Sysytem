@@ -288,19 +288,19 @@ class UserController extends Controller
             $data['password'] = Hash::make($request->password);
         }
 
-        $user->update($data);
+        $admin->update($data);
 
-        // Assign role using Spatie's pivot table
+        // Assign role using Spatie's pivot table for Admin model
         if ($request->filled('role_id')) {
             $role = Role::where('guard_name', 'admin')->find($request->role_id);
             if ($role) {
-                $user->roles()->sync([$role->id]);
+                $admin->roles()->sync([$role->id]);
             }
         }
-        // Reload user with roles for edit and index views
-        $user->load(['roles']);
+        // Reload admin with roles for edit and index views
+        $admin->load(['roles']);
 
-        return redirect()->route('admin.users.index')->with('success', 'User updated successfully');
+        return redirect()->route('admin.users.index')->with('success', 'Admin updated successfully');
     }
 
     // Show form to assign/change a role for a user
