@@ -43,12 +43,13 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Admin\{
     PurchaseOrderController
 };
-// GRN/GTN controllers
+// GRN/GTN/SRN controllers
 use App\Http\Controllers\Admin\
 {
     //GrnController,
     GrnDashboardController,
     GoodsTransferNoteController,
+    StockReleaseNoteController,
     // GoodsTransferItemController,
     // GrnItemController,
 };
@@ -60,7 +61,7 @@ use App\Http\Controllers\Admin\
     ItemCategoryController,
     ItemMasterController,
     ItemTransactionController,
-    ItemStockController,
+    // ItemStockController (what the heck is this?)
 };
 
 
@@ -263,7 +264,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
 
-
+            Route::prefix('srn')->name('srn.')->group(function () {
+                Route::get('/', [StockReleaseNoteController::class, 'index'])->name('index');
+                Route::get('/create', [StockReleaseNoteController::class, 'create'])->name('create');
+                Route::post('/', [StockReleaseNoteController::class, 'store'])->name('store');
+                Route::get('/{release}', [StockReleaseNoteController::class, 'show'])->whereNumber('release')->name('show');
+                Route::get('/{release}/edit', [StockReleaseNoteController::class, 'edit'])->whereNumber('release')->name('edit');
+                Route::put('/{release}', [StockReleaseNoteController::class, 'update'])->whereNumber('release')->name('update');
+                Route::delete('/{release}', [StockReleaseNoteController::class, 'destroy'])->whereNumber('release')->name('destroy');
+            });
 
         });
 
