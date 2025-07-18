@@ -105,11 +105,11 @@
                                 required>
                                 <option value="">Select Release Type</option>
                                 <option value="wastage" @selected(old('release_type')=='wastage')>Wastage</option>
-                                <option value="sale" @selected(old('release_type')=='sale')>Sale</option>
-                                <option value="transfer" @selected(old('release_type')=='transfer')>Transfer</option>
+                                {{-- <option value="sale" @selected(old('release_type')=='sale')>Sale</option>
+                                <option value="transfer" @selected(old('release_type')=='transfer')>Transfer</option> --}}
                                 <option value="usage" @selected(old('release_type')=='usage')>Usage</option>
-                                <option value="kit" @selected(old('release_type')=='kit')>Kit</option>
-                                <option value="staff_usage" @selected(old('release_type')=='staff_usage')>Staff Usage</option>
+                                {{-- <option value="kit" @selected(old('release_type')=='kit')>Kit</option>
+                                <option value="staff_usage" @selected(old('release_type')=='staff_usage')>Staff Usage</option> --}}
                                 <option value="internal_usage" @selected(old('release_type')=='internal_usage')>Internal Usage</option>
                                 <option value="other" @selected(old('release_type')=='other')>Other</option>
                             </select>
