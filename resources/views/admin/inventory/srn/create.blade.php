@@ -311,22 +311,23 @@
             }
 
             function fetchBranchesForOrganization(orgId) {
-                branchSelect.innerHTML = '<option value="">Loading branches...</option>';
-                fetch(`/admin/api/organizations/${orgId}/branches`)
-                    .then(response => response.json())
-                    .then(data => {
-                        branchSelect.innerHTML = '<option value="">Select Branch</option>';
-                        data.forEach(branch => {
-                            branchSelect.innerHTML += `<option value="${branch.id}">${branch.name}</option>`;
-                        });
-                        branchSelect.value = '';
-                        itemsContainer.innerHTML = '';
-                        itemsContainer.appendChild(defaultPlaceholderRow);
-                        addItemBtn.disabled = true;
-                        addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                        availableItems = [];
-                        updateItemSelectOptions();
+            branchSelect.innerHTML = '<option value="">Loading branches...</option>';
+            fetch(`/admin/api/organizations/${orgId}/branches`)
+                .then(response => response.json())
+                .then(data => {
+                    branchSelect.innerHTML = '<option value="">Select Branch</option>';
+                    // FIX: Use data.branches instead of data
+                    (data.branches || []).forEach(branch => {
+                        branchSelect.innerHTML += `<option value="${branch.id}">${branch.name}</option>`;
                     });
+                    branchSelect.value = '';
+                    itemsContainer.innerHTML = '';
+                    itemsContainer.appendChild(defaultPlaceholderRow);
+                    addItemBtn.disabled = true;
+                    addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    availableItems = [];
+                    updateItemSelectOptions();
+                });
             }
 
             function fetchItemsWithStock(branchId, orgId = null) {
