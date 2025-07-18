@@ -24,7 +24,7 @@ return new class extends Migration
             $table->timestamp('verified_at')->nullable(); // timestamp when the stock release note was verified
 
             $table->date('release_date')->nullable(); // date of stock release
-            $table->string('release_type', 50)->nullable(); // e.g. 'wastage', 'sale', 'transfer'
+            $table->string('release_type', 50)->nullable(); // e.g. 'wastage', 'sale', 'transfer' , to kitchen station
 
             $table->decimal('total_amount', 12, 2)->default(0.00)->nullable();
             $table->string('status', 50)->default('Pending')->nullable(); // Pending, Verified, Rejected
