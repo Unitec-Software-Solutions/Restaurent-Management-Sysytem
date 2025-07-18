@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('branch_id')->nullable()->constrained('branches');
             $table->foreignId('organization_id')->nullable()->constrained('organizations');
 
-            $table->foreignId('released_by_user_id')->nullable()->constrained('users'); // user who released the stock
+            $table->foreignId('released_by_user_id')->nullable(); // user who released the stock
             $table->timestamp('released_at')->nullable(); // timestamp when the stock was released
 
             $table->foreignId('received_by_user_id')->nullable(); // if stock was released to a user, then who received the stock, if applicable
