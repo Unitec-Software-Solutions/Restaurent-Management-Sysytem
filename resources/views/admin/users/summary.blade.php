@@ -47,8 +47,8 @@
     </div>
     <div class="mt-6 flex justify-end">
         <a href="{{ route('admin.users.index') }}" class="bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300">Back to Users</a>
-        @can('update', $user)
-            <a href="{{ route('admin.users.edit', $user) }}" class="ml-3 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Edit</a>
+        @can('update', $admin)
+            <a href="{{ route('admin.users.edit', $admin) }}" class="ml-3 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Edit</a>
         @endcan
     </div>
 @endsection
