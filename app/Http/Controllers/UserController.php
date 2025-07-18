@@ -44,7 +44,7 @@ class UserController extends Controller
                 ->get();
         }
 
-        return view('admin.users.index', ['users' => $admins]);
+        return view('admin.users.index', ['admins' => $admins]);
     }
 
     // Show form to create a new user
@@ -429,7 +429,7 @@ class UserController extends Controller
 
     public function show(\App\Models\Admin $admin)
     {
-        $admin->load(['roles', 'organization', 'branch', 'creator']);
+        $admin->load(['roles', 'organization', 'branch']);
         return view('admin.users.summary', compact('admin'));
     }
 }
