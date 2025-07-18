@@ -15,14 +15,13 @@ test.skip('Admin Workflow 🚀', async ({ page }) => {
     // await createOrganization(page);
 });
 
-test('create Organization 🏢', async ({ page }) => {
+test('Create Organization 🏢', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await createOrganization(page);
 });
 
 test('Activate Branch 🔑', async ({ page }) => {
-    await loginAsSuperAdmin(page);
-    await activateBranch(page);
+        await activateBranch(page);
 });
 
 test('Create Supplier 🚚', async ({ page }) => {
