@@ -25,12 +25,12 @@ class UserController extends Controller
     public function __construct(PermissionSystemService $permissionService)
     {
         $this->permissionService = $permissionService;
-    }
+        }
+
 
     public function index()
     {
-        $admin = Auth::guard('admin')->user();
-
+        $admin = auth('admin')->user();
         // Always use Spatie roles relationship for admins
         if ($admin->isSuperAdmin()) {
             $admins = \App\Models\Admin::with(['roles', 'organization', 'branch'])->get();
@@ -43,7 +43,6 @@ class UserController extends Controller
                 ->with(['roles', 'organization', 'branch'])
                 ->get();
         }
-
         return view('admin.users.index', ['admins' => $admins]);
     }
 
@@ -51,13 +50,9 @@ class UserController extends Controller
     public function create(Request $request)
     {
         $this->authorize('create', User::class);
-
         $admin = auth('admin')->user();
 
-        // Get permission definitions and role templates
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $roleTemplates = $this->permissionService->getRoleTemplates();
-        $availableTemplates = $this->permissionService->filterTemplatesByScope($roleTemplates, $admin);
         $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
 
         // Only show roles that are available for the current admin's org/branch/plan
@@ -103,6 +98,7 @@ class UserController extends Controller
 
         // Group permissions for better UI
         $permissionGroups = $this->groupPermissions($availablePermissions);
+        $availableTemplates = [];
 
         return view('admin.users.create', compact(
             'organizations',
@@ -254,26 +250,26 @@ class UserController extends Controller
     }
 
     // Update a user
-    public function update(Request $request, User $user)
+    public function update(Request $request, \App\Models\Admin $admin)
     {
-        $this->authorize('update', $user);
+        $this->authorize('update', $admin);
+        $currentAdmin = Auth::guard('admin')->user();
 
-        $admin = Auth::guard('admin')->user();
 
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
                 'required',
                 'email',
-                Rule::unique('users')->ignore($user->id),
+                Rule::unique('admins')->ignore($admin->id),
             ],
             'branch_id' => [
                 'nullable',
-                Rule::exists('branches', 'id')->where(function ($query) use ($admin) {
-                    if (!$admin->is_super_admin && $admin->organization_id) {
-                        $query->where('organization_id', $admin->organization_id);
+                Rule::exists('branches', 'id')->where(function ($query) use ($currentAdmin) {
+                    if (!$currentAdmin->is_super_admin && $currentAdmin->organization_id) {
+                        $query->where('organization_id', $currentAdmin->organization_id);
                     }
-                })
+                }),
             ],
             'password' => 'nullable|string|min:8|confirmed',
         ]);
@@ -303,126 +299,63 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'Admin updated successfully');
     }
 
-    // Show form to assign/change a role for a user
-    public function assignRoleForm(User $user)
+    // Show form to assign/change a role for an admin
+    public function assignRoleForm(\App\Models\Admin $admin)
     {
-        $this->authorize('assignRole', $user);
-
-        $admin = Auth::guard('admin')->user();
-        $roles = Role::query();
-
-        if (!$admin->is_super_admin && $admin->organization_id) {
-            $roles->where('organization_id', $admin->organization_id);
+        $this->authorize('assignRole', $admin);
+        $currentAdmin = Auth::guard('admin')->user();
+        $rolesQuery = Role::query();
+        if (!$currentAdmin->is_super_admin && $currentAdmin->organization_id) {
+            $rolesQuery->where('organization_id', $currentAdmin->organization_id);
         }
-
-        $roles = $roles->get();
-
-        return view('admin.users.assign-role', compact('user', 'roles'));
+        $roles = $rolesQuery->get();
+        return view('admin.users.assign-role', compact('admin', 'roles'));
     }
 
-    // Assign/change a role for a user
-    public function assignRole(Request $request, User $user)
+    // Assign/change a role for an admin
+    public function assignRole(Request $request, \App\Models\Admin $admin)
     {
-        $this->authorize('assignRole', $user);
-
-        $admin = Auth::guard('admin')->user();
-
+        $this->authorize('assignRole', $admin);
+        $currentAdmin = Auth::guard('admin')->user();
         $request->validate([
             'role_id' => [
                 'required',
-                Rule::exists('roles', 'id')->where(function ($query) use ($admin) {
-                    if (!$admin->is_super_admin && $admin->organization_id) {
-                        $query->where('organization_id', $admin->organization_id);
+                Rule::exists('roles', 'id')->where(function ($query) use ($currentAdmin) {
+                    if (!$currentAdmin->is_super_admin && $currentAdmin->organization_id) {
+                        $query->where('organization_id', $currentAdmin->organization_id);
                     }
                 })
             ],
         ]);
-
-        $user->update(['role_id' => $request->role_id]);
-
+        $role = Role::find($request->role_id);
+        if ($role) {
+            $admin->roles()->sync([$role->id]);
+        }
         return redirect()->route('admin.users.index')->with('success', 'Role assigned successfully');
     }
 
-    // Delete a user
-    public function destroy(User $user)
+    // Delete an admin
+    public function destroy(\App\Models\Admin $admin)
     {
-        $this->authorize('delete', $user);
-
-        if (optional(Auth::guard('admin')->user())->id === $user->id) {
+        $this->authorize('delete', $admin);
+        if (optional(Auth::guard('admin')->user())->id === $admin->id) {
             return redirect()->back()->with('error', 'You cannot delete your own account');
         }
 
-        $user->delete();
+        $admin->delete();
 
         return redirect()->route('admin.users.index')->with('success', 'User deleted successfully');
     }
 
-    public function invite(Request $request, Organization $organization)
-    {
-        Gate::authorize('invite', [User::class, $organization]);
-        $request->validate([
-            'email' => 'required|email',
-            'branch_id' => 'nullable|exists:branches,id,organization_id,'.$organization->id,
-            'role_id' => 'required|exists:roles,id,organization_id,'.$organization->id
-        ]);
-        $invitationToken = Str::random(40);
-        $user = $organization->users()->create([
-            'email' => $request->email,
-            'branch_id' => $request->branch_id,
-            'role_id' => $request->role_id,
-            'invitation_token' => $invitationToken,
-            'password' => Hash::make(Str::random(24)),
-        ]);
-        Mail::to($request->email)->send(new UserInvitation($user));
-        return response()->json(['message' => 'Invitation sent']);
-    }
 
-    public function completeRegistration(Request $request)
-    {
-        $request->validate([
-            'token' => 'required|string',
-            'name' => 'required|string|max:255',
-            'password' => 'required|string|min:8|confirmed'
-        ]);
-        $user = User::where('invitation_token', $request->token)
-                    ->whereNull('email_verified_at')
-                    ->firstOrFail();
-        $user->update([
-            'name' => $request->name,
-            'password' => Hash::make($request->password),
-            'email_verified_at' => now(),
-            'invitation_token' => null
-        ]);
-        return response()->json(['message' => 'Registration completed']);
-    }
-
-    public function updateRole(Request $request, User $user)
-    {
-        Gate::authorize('updateRole', $user);
-        $request->validate([
-            'role_id' => 'required|exists:roles,id,organization_id,'.$user->organization_id
-        ]);
-        $user->update(['role_id' => $request->role_id]);
-        return response()->json($user);
-    }
-
-    public function deactivate(User $user)
-    {
-        Gate::authorize('deactivate', $user);
-        $user->update(['is_active' => false]);
-        return response()->json(['message' => 'User deactivated']);
-    }
-
-    public function hasPermission($permission)
-    {
-        $user = Auth::guard('admin')->user();
-        if (!$user || !is_object($user->role)) return false;
-        return optional($user->role->permissions)->pluck('name')->contains($permission);
-    }
+    // All User model methods removed. Only Admin management remains.
 
     public function show(\App\Models\Admin $admin)
     {
         $admin->load(['roles', 'organization', 'branch']);
         return view('admin.users.summary', compact('admin'));
     }
+
 }
+
+
