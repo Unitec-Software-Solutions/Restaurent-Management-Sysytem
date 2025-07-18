@@ -291,6 +291,17 @@ class UserController extends Controller
 
         $user->update($data);
 
+        // Assign role using Spatie's assignRole method
+        if ($request->filled('role_id')) {
+            $role = \Spatie\Permission\Models\Role::where('guard_name', 'admin')->find($request->role_id);
+            if ($role) {
+                $user->syncRoles([$role->name]);
+            }
+        }
+
+        // Reload user with roles for edit and index views
+        $user->load(['roles']);
+
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully');
     }
 
