@@ -50,18 +50,21 @@ class StockReleaseNoteController extends Controller
     public function create(Request $request)
     {
         $admin = Auth::guard('admin')->user();
-        $branches = $admin->is_super_admin
-            ? Branch::all()
-            : Branch::where('organization_id', $admin->organization_id)->get();
+        $isSuperAdmin = $admin->is_super_admin;
+        $organizations = $isSuperAdmin ? \App\Models\Organization::active()->get() : collect();
+
+        $orgId = $isSuperAdmin
+            ? $request->get('organization_id')
+            : $admin->organization_id;
+
+        $branches = $isSuperAdmin
+            ? ($orgId ? Branch::where('organization_id', $orgId)->get() : collect())
+            : Branch::where('organization_id', $orgId)->get();
 
         $branchId = $request->old('branch_id') ?? $request->get('branch_id');
         $items = [];
 
-        if ($branchId) {
-            $orgId = $admin->is_super_admin
-                ? Branch::find($branchId)->organization_id
-                : $admin->organization_id;
-
+        if ($branchId && $orgId) {
             $items = ItemMaster::where('organization_id', $orgId)
                 ->where('is_active', true)
                 ->get()
@@ -78,7 +81,7 @@ class StockReleaseNoteController extends Controller
                 });
         }
 
-        return view('admin.inventory.srn.create', compact('branches', 'items', 'branchId'));
+        return view('admin.inventory.srn.create', compact('branches', 'items', 'branchId', 'organizations'));
     }
 
     /**
@@ -377,4 +380,39 @@ class StockReleaseNoteController extends Controller
         return in_array($transactionType, $outTypes) ? -abs($quantity) : abs($quantity);
     }
 
+    /**
+     * AJAX endpoint for items with stock for branch/org
+     */
+    public function itemsWithStock(Request $request)
+    {
+        $admin = Auth::guard('admin')->user();
+        $isSuperAdmin = $admin->is_super_admin;
+        $orgId = $isSuperAdmin
+            ? $request->get('organization_id')
+            : $admin->organization_id;
+
+        $branchId = $request->get('branch_id');
+        if (!$branchId) {
+            return response()->json([]);
+        }
+
+        $items = ItemMaster::where('organization_id', $orgId)
+            ->where('is_active', true)
+            ->get()
+            ->map(function ($item) use ($branchId) {
+                $stock = ItemTransaction::stockOnHand($item->id, $branchId);
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'item_code' => $item->item_code,
+                    'unit_of_measurement' => $item->unit_of_measurement,
+                    'current_stock' => $stock,
+                    'selling_price' => $item->selling_price,
+                ];
+            })
+            ->filter(fn($item) => $item['current_stock'] > 0)
+            ->values();
+
+        return response()->json($items);
+    }
 }
