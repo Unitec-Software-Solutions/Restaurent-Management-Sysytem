@@ -60,11 +60,11 @@ class UserController extends Controller
         $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
 
         // Only show roles that are available for the current admin's org/branch/plan
-        $rolesQuery = \Spatie\Permission\Models\Role::with('permissions')
+        $rolesQuery = Role::with('permissions')
             ->where('guard_name', 'admin'); // Use 'admin' guard for system users
 
-        if ($admin->is_super_admin) {
-            // all roles
+        if ($admin->isSuperAdmin()) {
+            // all roles for admin guard
         } elseif ($admin->isOrganizationAdmin()) {
             $rolesQuery->where('organization_id', $admin->organization_id);
         } else {
@@ -74,7 +74,7 @@ class UserController extends Controller
 
         // Fallback: If no roles found, show all roles for admin guard
         if ($roles->isEmpty()) {
-            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')->get();
+            $roles = Role::where('guard_name', 'admin')->get();
         }
 
         if ($admin->is_super_admin) {
@@ -154,7 +154,7 @@ class UserController extends Controller
             'permissions.*' => 'exists:permissions,id',
         ]);
 
-        $role = \Spatie\Permission\Models\Role::where('guard_name', 'web')->findOrFail($request->role_id);
+        $role = Role::where('guard_name', 'admin')->findOrFail($request->role_id);
         $admin = auth('admin')->user();
 
         // Validate role assignment permissions (must be in available roles)
@@ -171,8 +171,8 @@ class UserController extends Controller
         // Validate permission assignments
         $requestedPermissions = collect();
         if ($request->permissions) {
-            $requestedPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $request->permissions)
-                ->where('guard_name', 'web')
+            $requestedPermissions = Permission::whereIn('id', $request->permissions)
+                ->where('guard_name', 'admin')
                 ->get();
             foreach ($requestedPermissions as $permission) {
                 if (!isset($availablePermissions[$permission->name])) {
