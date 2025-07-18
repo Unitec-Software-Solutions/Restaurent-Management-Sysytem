@@ -14,6 +14,15 @@ class Admin extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, SoftDeletes;
 
+    /**
+     * The roles that belong to the admin.
+     */
+    public function roles()
+    {
+        return $this->belongsToMany(\Spatie\Permission\Models\Role::class, 'admin_role', 'admin_id', 'role_id');
+    }
+    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+
     protected $fillable = [
         'name',
         'email',
@@ -498,7 +507,7 @@ class Admin extends Authenticatable
      */
     public function isOrganizationAdmin()
     {
-        
+
         return !$this->is_super_admin
             && !is_null($this->organization_id)
             && is_null($this->branch_id);
