@@ -126,7 +126,7 @@
                                         <td class="px-4 py-3 text-center">
                                             <span class="inline-block px-2 py-1 rounded-full text-xs font-medium
                                                 @if($note->status == 'Pending') bg-yellow-100 text-yellow-800
-                                                @elseif($note->status == 'Completed') bg-green-100 text-green-800
+                                                @elseif($note->status == 'Verified') bg-green-100 text-green-800
                                                 @elseif($note->status == 'Rejected') bg-red-100 text-red-800
                                                 @else bg-gray-100 text-gray-800 @endif">
                                                 {{ $note->status }}
