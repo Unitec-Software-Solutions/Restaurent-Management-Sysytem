@@ -94,7 +94,7 @@ class OrderPolicy
      */
     public function delete(Admin $admin, Order $order): bool
     {
-        // Deletion of orders is forbidden for all users
+        // Deletion of orders is forbidden for all users to maintain data integrity
         return false;
     }
 
