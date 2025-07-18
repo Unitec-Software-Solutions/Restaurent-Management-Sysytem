@@ -33,14 +33,14 @@ class UserController extends Controller
         $admin = Auth::guard('admin')->user();
 
         if ($admin->isSuperAdmin()) {
-            $users = User::with(['roles.permissions', 'organization', 'branch'])->get();
+            $users = User::with(['roles', 'organization', 'branch', 'creator'])->get();
         } elseif ($admin->isOrganizationAdmin()) {
             $users = User::where('organization_id', $admin->organization_id)
-                ->with(['roles.permissions', 'organization', 'branch'])
+                ->with(['roles', 'organization', 'branch', 'creator'])
                 ->get();
         } else {
             $users = User::where('branch_id', $admin->branch_id)
-                ->with(['roles.permissions', 'organization', 'branch'])
+                ->with(['roles', 'organization', 'branch', 'creator'])
                 ->get();
         }
 
@@ -184,7 +184,7 @@ class UserController extends Controller
             }
         }
 
-        // Create the user
+        // Create the user (no custom role columns)
         $user = User::create([
             'organization_id' => $request->organization_id ?? $admin->organization_id,
             'name' => $request->name,
@@ -192,8 +192,8 @@ class UserController extends Controller
             'phone_number' => $request->phone_number,
             'password' => Hash::make($request->password),
             'branch_id' => $request->branch_id,
-            'role_id' => $request->role_id,
             'created_by' => $admin->id,
+            'is_active' => true,
         ]);
 
         // Assign role to the user (using Spatie)
@@ -293,7 +293,7 @@ class UserController extends Controller
 
         // Assign role using Spatie's assignRole method
         if ($request->filled('role_id')) {
-            $role = \Spatie\Permission\Models\Role::where('guard_name', 'admin')->find($request->role_id);
+            $role = Role::where('guard_name', 'admin')->find($request->role_id);
             if ($role) {
                 $user->syncRoles([$role->name]);
             }
