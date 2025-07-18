@@ -53,7 +53,44 @@ class MinimalSystemSeeder extends Seeder
                 ]);
             }
 
-            // Only seed permissions, do not assign to roles here
+            // Step 4: Create subscription plan FIRST
+            $subscriptionPlan = SubscriptionPlan::create([
+                'name' => 'Premium Plan',
+                'price' => 99.99,
+                'currency' => 'USD',
+                'description' => 'Full-featured restaurant management plan',
+                'is_trial' => false,
+                'trial_period_days' => 30,
+                'max_branches' => 10,
+                'max_employees' => 100,
+                'modules' => [1, 2, 3, 4, 5, 6, 7, 8],
+                'features' => [
+                    'unlimited_orders',
+                    'advanced_reporting',
+                    'inventory_management',
+                    'multi_branch_support',
+                    'customer_management',
+                    'pos_integration'
+                ],
+                'is_active' => true
+            ]);
+
+            // Step 5: Create organization using correct plan ID
+            $organization = Organization::create([
+                'name' => 'Delicious Bites Restaurant',
+                'email' => 'admin@deliciousbites.com',
+                'phone' => '+94 11 123 4567',
+                'address' => '123 Main Street, Colombo 03, Sri Lanka',
+                'contact_person' => 'John Manager',
+                'contact_person_designation' => 'General Manager',
+                'contact_person_phone' => '+94 77 123 4567',
+                'business_type' => 'restaurant',
+                'subscription_plan_id' => $subscriptionPlan->id,
+                'discount_percentage' => 5.00,
+                'is_active' => true,
+                'activated_at' => now(),
+                'password' => Hash::make('DeliciousBites123!')
+            ]);
         });
 
         $this->command->info('✅ Minimal system foundation created successfully');
