@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="bg-white rounded shadow p-6">
-    <form action="{{ route('admin.users.update', $user) }}" method="POST">
+    <form action="{{ route('admin.users.update', $admin) }}" method="POST">
         @csrf
         @method('PUT')
 
@@ -14,9 +14,9 @@
                 <select id="organization_id" name="organization_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     <option value="">Select Organization</option>
                     @foreach($organizations as $organization)
-                        <option value="{{ $organization->id }}" {{ old('organization_id', $user->organization_id) == $organization->id ? 'selected' : '' }}>
-                            {{ $organization->name }}
-                        </option>
+                    <option value="{{ $organization->id }}" {{ old('organization_id', $admin->organization_id) == $organization->id ? 'selected' : '' }}>
+                        {{ $organization->name }}
+                    </option>
                     @endforeach
                 </select>
             </div>
@@ -34,9 +34,9 @@
                 <select id="branch_id" name="branch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     <option value="">Select Branch</option>
                     @foreach($branches as $branch)
-                        <option value="{{ $branch->id }}" {{ old('branch_id', $user->branch_id) == $branch->id ? 'selected' : '' }}>
-                            {{ $branch->name }}
-                        </option>
+                    <option value="{{ $branch->id }}" {{ old('branch_id', $admin->branch_id) == $branch->id ? 'selected' : '' }}>
+                        {{ $branch->name }}
+                    </option>
                     @endforeach
                 </select>
             </div>
@@ -54,21 +54,21 @@
             <select name="role_id" id="role_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                 <option value="">Select Role</option>
                 @foreach($roles as $role)
-                    <option value="{{ $role->id }}" {{ $user->roles->contains($role) ? 'selected' : '' }}>{{ $role->name }}</option>
+                    <option value="{{ $role->id }}" {{ $admin->roles->contains($role) ? 'selected' : '' }}>{{ $role->name }}</option>
                 @endforeach
             </select>
         </div>
 
         <div class="mb-4">
             <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
-            <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <input type="text" id="name" name="name" value="{{ old('name', $admin->name) }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
             @error('name')
                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
             @enderror
         </div>
         <div class="mb-4">
             <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <input type="email" id="email" name="email" value="{{ old('email', $admin->email) }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
             @error('email')
                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
             @enderror
@@ -133,8 +133,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // On page load, preselect organization and branch if editing
-    const oldOrgId = "{{ old('organization_id', $user->organization_id) }}";
-    const oldBranchId = "{{ old('branch_id', $user->branch_id) }}";
+    const oldOrgId = "{{ old('organization_id', $admin->organization_id) }}";
+    const oldBranchId = "{{ old('branch_id', $admin->branch_id) }}";
     if (oldOrgId) {
         orgSelect.value = oldOrgId;
         populateBranches(oldOrgId, oldBranchId);
