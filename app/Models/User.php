@@ -28,8 +28,6 @@ class User extends Authenticatable
         'is_guest',
         'organization_id',
         'branch_id',
-        'role_id',
-        'is_admin',
         'is_super_admin',
         'created_by'
     ];
@@ -72,7 +70,6 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_registered' => 'boolean',
             'is_guest' => 'boolean',
-            'is_admin' => 'boolean',
             'is_super_admin' => 'boolean',
         ];
     }
@@ -98,52 +95,27 @@ class User extends Authenticatable
 
     public function isSuperAdmin()
     {
-        return $this->hasRole('superadmin');
+        return $this->hasRole('Super Admin');
     }
 
     public function isOrganizationAdmin()
     {
-        return !$this->is_super_admin
+        return !$this->isSuperAdmin()
             && !is_null($this->organization_id)
             && is_null($this->branch_id);
     }
 
-    public function is_branch_admin()
+    public function isBranchAdmin()
     {
-        return $this->hasRole('branch_admin');
+        return $this->hasRole('Branch Admin');
     }
 
-    public function hasCustomRole($roleName)
-    {
-        return $this->role && $this->role->name === $roleName;
-    }
-
-    public function canAssignRoles()
-    {
-        return $this->is_admin || $this->hasPermission('users.assign_roles');
-    }
-
-    public function hasPermission($permission)
-    {
-        if ($this->is_superadmin) return true;
-        if ($this->role && $this->role->permissions) {
-            return $this->role->permissions->pluck('name')->contains($permission);
-        }
-        return false;
-    }
-
-    public function userRole()
-    {
-        return $this->belongsTo(Role::class, 'role_id');
-    }
+    // Removed legacy custom role and permission logic. Use Spatie methods only.
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function isAdmin()
-    {
-        return (bool) $this->is_admin;
-    }
+    // Removed legacy isAdmin. Use Spatie roles/permissions only.
 }
