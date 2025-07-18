@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Mail\UserInvitation;
 use App\Models\Branch;
 use App\Models\Organization;
-use App\Models\Role;
 use App\Models\User;
-use App\Services\PermissionSystemService;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Services\PermissionSystemService;
 
 class UserController extends Controller
 {
@@ -32,14 +33,14 @@ class UserController extends Controller
         $admin = Auth::guard('admin')->user();
 
         if ($admin->isSuperAdmin()) {
-            $users = User::with(['roles', 'organization', 'branch'])->get();
+            $users = User::with(['roles.permissions', 'organization', 'branch'])->get();
         } elseif ($admin->isOrganizationAdmin()) {
             $users = User::where('organization_id', $admin->organization_id)
-                ->with(['roles', 'branch'])
+                ->with(['roles.permissions', 'organization', 'branch'])
                 ->get();
         } else {
             $users = User::where('branch_id', $admin->branch_id)
-                ->with(['roles'])
+                ->with(['roles.permissions', 'organization', 'branch'])
                 ->get();
         }
 
@@ -220,6 +221,8 @@ class UserController extends Controller
 
         $admin = auth('admin')->user();
 
+        $user->load(['roles.permissions']);
+
         $organizations = collect();
         $branches = collect();
         $allBranches = collect();
@@ -229,17 +232,17 @@ class UserController extends Controller
             $organizations = Organization::all();
             $allBranches = Branch::with('organization')->get();
             $branches = $allBranches;
-            $roles = Role::all();
+            $roles = Role::where('guard_name', 'admin')->get();
         } elseif ($admin->isOrganizationAdmin()) {
             $organizations = Organization::where('id', $admin->organization_id)->get();
             $branches = Branch::where('organization_id', $admin->organization_id)->get();
             $allBranches = $branches;
-            $roles = Role::where('organization_id', $admin->organization_id)->get();
+            $roles = Role::where('organization_id', $admin->organization_id)->where('guard_name', 'admin')->get();
         } else {
             $organizations = Organization::where('id', $admin->organization_id)->get();
             $branches = Branch::where('id', $admin->branch_id)->get();
             $allBranches = $branches;
-            $roles = Role::where('branch_id', $admin->branch_id)->get();
+            $roles = Role::where('branch_id', $admin->branch_id)->where('guard_name', 'admin')->get();
         }
 
         return view('admin.users.edit', compact(
@@ -288,7 +291,7 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return redirect()->route('users.index')->with('success', 'User updated successfully');
+        return redirect()->route('admin.users.index')->with('success', 'User updated successfully');
     }
 
     // Show form to assign/change a role for a user
@@ -328,7 +331,7 @@ class UserController extends Controller
 
         $user->update(['role_id' => $request->role_id]);
 
-        return redirect()->route('users.index')->with('success', 'Role assigned successfully');
+        return redirect()->route('admin.users.index')->with('success', 'Role assigned successfully');
     }
 
     // Delete a user
@@ -342,7 +345,7 @@ class UserController extends Controller
 
         $user->delete();
 
-        return redirect()->route('users.index')->with('success', 'User deleted successfully');
+        return redirect()->route('admin.users.index')->with('success', 'User deleted successfully');
     }
 
     public function invite(Request $request, Organization $organization)
