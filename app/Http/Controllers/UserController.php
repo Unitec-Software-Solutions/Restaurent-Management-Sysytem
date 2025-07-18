@@ -29,63 +29,18 @@ class UserController extends Controller
 
     public function index()
     {
-        $this->authorize('viewAny', User::class);
+        $admin = Auth::guard('admin')->user();
 
-        $admin = auth('admin')->user();
-
-        if ($admin->is_super_admin) {
-            // Super admin: see all users (excluding guests when column exists)
-            $query = User::with([
-                'userRole', 
-                'branch.organization', 
-                'creator', 
-                'organization', 
-                'roles',
-                'permissions'
-            ]);
-            
-            // Only filter by is_guest if the column exists
-            if (Schema::hasColumn('users', 'is_guest')) {
-                $query->where('is_guest', false);
-            }
-            
-            $users = $query->orderBy('created_at', 'desc')->paginate(20);
+        if ($admin->isSuperAdmin()) {
+            $users = User::with(['roles', 'organization', 'branch'])->get();
         } elseif ($admin->isOrganizationAdmin()) {
-            // Org admin: see all users in their organization (excluding guests when column exists)
-            $query = User::where('organization_id', $admin->organization_id)
-                ->with([
-                    'userRole', 
-                    'branch.organization', 
-                    'creator', 
-                    'organization', 
-                    'roles',
-                    'permissions'
-                ]);
-                
-            // Only filter by is_guest if the column exists
-            if (Schema::hasColumn('users', 'is_guest')) {
-                $query->where('is_guest', false);
-            }
-            
-            $users = $query->orderBy('created_at', 'desc')->paginate(20);
+            $users = User::where('organization_id', $admin->organization_id)
+                ->with(['roles', 'branch'])
+                ->get();
         } else {
-            // Branch admin: see all users in their branch (excluding guests when column exists)
-            $query = User::where('branch_id', $admin->branch_id)
-                ->with([
-                    'userRole', 
-                    'branch.organization', 
-                    'creator', 
-                    'organization', 
-                    'roles',
-                    'permissions'
-                ]);
-                
-            // Only filter by is_guest if the column exists
-            if (Schema::hasColumn('users', 'is_guest')) {
-                $query->where('is_guest', false);
-            }
-            
-            $users = $query->orderBy('created_at', 'desc')->paginate(20);
+            $users = User::where('branch_id', $admin->branch_id)
+                ->with(['roles'])
+                ->get();
         }
 
         return view('admin.users.index', compact('users'));
@@ -106,10 +61,8 @@ class UserController extends Controller
 
         // Only show roles that are available for the current admin's org/branch/plan
         $rolesQuery = \Spatie\Permission\Models\Role::with('permissions')
-            ->where('guard_name', 'web')
-            ->whereHas('permissions', function($q) use ($availablePermissions) {
-                $q->whereIn('name', array_keys($availablePermissions));
-            });
+            ->where('guard_name', 'admin'); // Use 'admin' guard for system users
+
         if ($admin->is_super_admin) {
             // all roles
         } elseif ($admin->isOrganizationAdmin()) {
@@ -118,6 +71,11 @@ class UserController extends Controller
             $rolesQuery->where('branch_id', $admin->branch_id);
         }
         $roles = $rolesQuery->get();
+
+        // Fallback: If no roles found, show all roles for admin guard
+        if ($roles->isEmpty()) {
+            $roles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')->get();
+        }
 
         if ($admin->is_super_admin) {
             $organizations = Organization::all();
@@ -164,18 +122,18 @@ class UserController extends Controller
     private function groupPermissions($permissions)
     {
         $groups = [];
-        
+
         foreach ($permissions as $permission => $description) {
             $category = explode('.', $permission)[0];
             $categoryName = ucwords(str_replace('_', ' ', $category)) . ' Management';
-            
+
             if (!isset($groups[$categoryName])) {
                 $groups[$categoryName] = [
                     'title' => $categoryName,
                     'permissions' => []
                 ];
             }
-            
+
             $groups[$categoryName]['permissions'][$permission] = $description;
         }
 
@@ -268,20 +226,20 @@ class UserController extends Controller
         $roles = collect();
 
         if ($admin->isSuperAdmin()) {
-            $organizations = \App\Models\Organization::all();
-            $allBranches = \App\Models\Branch::with('organization')->get();
+            $organizations = Organization::all();
+            $allBranches = Branch::with('organization')->get();
             $branches = $allBranches;
-            $roles = \App\Models\Role::all();
+            $roles = Role::all();
         } elseif ($admin->isOrganizationAdmin()) {
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->get();
-            $branches = \App\Models\Branch::where('organization_id', $admin->organization_id)->get();
+            $organizations = Organization::where('id', $admin->organization_id)->get();
+            $branches = Branch::where('organization_id', $admin->organization_id)->get();
             $allBranches = $branches;
-            $roles = \App\Models\Role::where('organization_id', $admin->organization_id)->get();
+            $roles = Role::where('organization_id', $admin->organization_id)->get();
         } else {
-            $organizations = \App\Models\Organization::where('id', $admin->organization_id)->get();
-            $branches = \App\Models\Branch::where('id', $admin->branch_id)->get();
+            $organizations = Organization::where('id', $admin->organization_id)->get();
+            $branches = Branch::where('id', $admin->branch_id)->get();
             $allBranches = $branches;
-            $roles = \App\Models\Role::where('branch_id', $admin->branch_id)->get();
+            $roles = Role::where('branch_id', $admin->branch_id)->get();
         }
 
         return view('admin.users.edit', compact(
@@ -299,7 +257,7 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         $admin = Auth::guard('admin')->user();
-        
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => [
@@ -340,11 +298,11 @@ class UserController extends Controller
 
         $admin = Auth::guard('admin')->user();
         $roles = Role::query();
-        
+
         if (!$admin->is_super_admin && $admin->organization_id) {
             $roles->where('organization_id', $admin->organization_id);
         }
-        
+
         $roles = $roles->get();
 
         return view('admin.users.assign-role', compact('user', 'roles'));
