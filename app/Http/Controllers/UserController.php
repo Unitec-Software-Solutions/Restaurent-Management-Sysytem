@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\Services\PermissionSystemService;
@@ -33,18 +32,18 @@ class UserController extends Controller
         $admin = Auth::guard('admin')->user();
 
         if ($admin->isSuperAdmin()) {
-            $users = User::with(['roles', 'organization', 'branch', 'creator'])->get();
+            $admins = \App\Models\Admin::with(['organization', 'branch'])->get();
         } elseif ($admin->isOrganizationAdmin()) {
-            $users = User::where('organization_id', $admin->organization_id)
-                ->with(['roles', 'organization', 'branch', 'creator'])
+            $admins = \App\Models\Admin::where('organization_id', $admin->organization_id)
+                ->with(['organization', 'branch'])
                 ->get();
         } else {
-            $users = User::where('branch_id', $admin->branch_id)
-                ->with(['roles', 'organization', 'branch', 'creator'])
+            $admins = \App\Models\Admin::where('branch_id', $admin->branch_id)
+                ->with(['organization', 'branch'])
                 ->get();
         }
 
-        return view('admin.users.index', compact('users'));
+        return view('admin.users.index', ['users' => $admins]);
     }
 
     // Show form to create a new user
@@ -147,7 +146,7 @@ class UserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => 'required|email|max:255|unique:admins,email',
             'phone_number' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
             'role_id' => 'required|exists:roles,id',
@@ -184,8 +183,8 @@ class UserController extends Controller
             }
         }
 
-        // Create the user (no custom role columns)
-        $user = User::create([
+        // Create the admin user
+        $adminUser = \App\Models\Admin::create([
             'organization_id' => $request->organization_id ?? $admin->organization_id,
             'name' => $request->name,
             'email' => $request->email,
@@ -196,22 +195,22 @@ class UserController extends Controller
             'is_active' => true,
         ]);
 
-        // Assign role to the user (using Spatie)
-        $user->assignRole($role);
+        // Assign role to the admin (using Spatie)
+        $adminUser->assignRole($role);
 
         // Assign additional permissions if specified
         if ($requestedPermissions->count()) {
-            $user->givePermissionTo($requestedPermissions->pluck('name')->toArray());
+            $adminUser->givePermissionTo($requestedPermissions->pluck('name')->toArray());
         }
 
-        Log::info('User created with role and permissions', [
-            'user_id' => $user->id,
+        Log::info('Admin created with role and permissions', [
+            'admin_id' => $adminUser->id,
             'role' => $role->name,
             'permissions' => $requestedPermissions->pluck('name')->toArray() ?? [],
             'created_by' => $admin->id
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', 'User created successfully with assigned role and permissions.');
+        return redirect()->route('admin.users.index')->with('success', 'Admin created successfully with assigned role and permissions.');
     }
 
     // Show form to edit a user
