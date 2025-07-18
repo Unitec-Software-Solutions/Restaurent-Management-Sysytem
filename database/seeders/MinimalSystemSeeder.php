@@ -201,12 +201,11 @@ class MinimalSystemSeeder extends Seeder
     {
         $this->command->info('  🔐 Creating system permissions...');
 
-        // Collect all permissions from all sources
+        // Collect all permissions from PermissionSystemService, sidebar/menu, blade, and legacy arrays
         $allPermissions = [];
-
-        // 1. PermissionSystemService definitions
         $service = new \App\Services\PermissionSystemService();
         $defs = $service->getPermissionDefinitions();
+        // Flatten all permission definitions
         foreach ($defs as $cat) {
             if (isset($cat['permissions'])) {
                 foreach ($cat['permissions'] as $perm => $desc) {
@@ -215,7 +214,7 @@ class MinimalSystemSeeder extends Seeder
             }
         }
 
-        // 2. Scan sidebar/menu definitions
+        // Scan sidebar/menu definitions
         foreach ([app_path('View/Components/AdminSidebar.php'), app_path('View/Components/Sidebar.php')] as $sidebarPath) {
             if (file_exists($sidebarPath)) {
                 $code = file_get_contents($sidebarPath);
@@ -226,7 +225,7 @@ class MinimalSystemSeeder extends Seeder
             }
         }
 
-        // 3. Scan Blade menu-item usage
+        // Scan Blade menu-item usage
         $bladeFiles = glob(resource_path('views/**/*.blade.php'));
         foreach ($bladeFiles as $file) {
             $code = file_get_contents($file);
@@ -236,7 +235,7 @@ class MinimalSystemSeeder extends Seeder
             }
         }
 
-        // 4. Add legacy array permissions (if any)
+        // Add legacy array permissions (if any)
         $legacyPermissions = [
             'system.manage', 'system.settings', 'system.backup', 'system.logs',
             'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
@@ -255,10 +254,9 @@ class MinimalSystemSeeder extends Seeder
             $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
         }
 
-        // 5. Sync all permissions
+        // Sync all permissions
         $created = 0;
         foreach ($allPermissions as $name => $desc) {
-            // Only insert name and guard_name, skip description for compatibility
             Permission::firstOrCreate([
                 'name' => $name,
                 'guard_name' => 'admin'
@@ -434,31 +432,6 @@ class MinimalSystemSeeder extends Seeder
         $this->command->info('    ✓ Branch Admin created: branchadmin@deliciousbites.com');
     }
 
-    /**
-     * Create menu structure with categories and items
-    // Removed duplicate assignUserRolePermissions function
-        $this->createItemCategories($organization);
-
-        // Create 2 menus
-        $breakfastMenu = $this->createMenu($organization, $branch, 'Breakfast Menu', 'morning');
-        $dinnerMenu = $this->createMenu($organization, $branch, 'Dinner Menu', 'evening');
-
-        // Create menu categories for each menu
-        $breakfastCategories = $this->createMenuCategories($organization, $branch, 'breakfast');
-        $dinnerCategories = $this->createMenuCategories($organization, $branch, 'dinner');
-
-        // Create menu items for breakfast menu
-        $this->createMenuItems($organization, $branch, $breakfastCategories, 'breakfast');
-
-        // Create menu items for dinner menu
-        $this->createMenuItems($organization, $branch, $dinnerCategories, 'dinner');
-
-        $this->command->info('    ✓ Menu structure created with 2 menus and 10 items total');
-    }
-
-    /**
-     * Create item categories for inventory
-     */
     private function createItemCategories(Organization $organization): void
     {
         $defaultCategories = [
@@ -876,53 +849,16 @@ class MinimalSystemSeeder extends Seeder
      */
     private function assignRolePermissions(): void
     {
-        // Super Admin: all permissions
-        $superAdminRole = Role::where('name', 'Super Administrator')->where('guard_name', 'admin')->first();
-        if ($superAdminRole) {
-            $allPermissions = Permission::where('guard_name', 'admin')->pluck('id')->toArray();
-            $superAdminRole->syncPermissions($allPermissions);
-        }
+        // Use PermissionSystemService role templates for RBAC assignment
+        $service = new \App\Services\PermissionSystemService();
+        $roleTemplates = $service->getRoleTemplates();
 
-        // Organization Admin: all org-level permissions except order.create
-        $orgAdminRole = Role::where('name', 'Organization Administrator')->where('guard_name', 'admin')->first();
-        if ($orgAdminRole) {
-            $orgPermissions = Permission::where('guard_name', 'admin')
-                ->where(function($q) {
-                    $q->where('name', 'like', 'organizations.%')
-                      ->orWhere('name', 'like', 'branches.%')
-                      ->orWhere('name', 'like', 'users.%')
-                      ->orWhere('name', 'like', 'menus.%')
-                      ->orWhere('name', 'like', 'inventory.%')
-                      ->orWhere('name', 'like', 'suppliers.%')
-                      ->orWhere('name', 'like', 'reservations.%')
-                      ->orWhere('name', 'like', 'kitchen.%')
-                      ->orWhere('name', 'like', 'reports.%')
-                      ->orWhere('name', 'like', 'staff.%')
-                      ->orWhere('name', 'like', 'subscription.%')
-                      ->orWhere('name', 'like', 'settings.%');
-                })
-                ->where('name', '!=', 'orders.create')
-                ->pluck('id')->toArray();
-            $orgAdminRole->syncPermissions($orgPermissions);
-        }
-
-        // Branch Admin: all branch-level permissions
-        $branchAdminRole = Role::where('name', 'Branch Administrator')->where('guard_name', 'admin')->first();
-        if ($branchAdminRole) {
-            $branchPermissions = Permission::where('guard_name', 'admin')
-                ->where(function($q) {
-                    $q->where('name', 'like', 'branches.%')
-                      ->orWhere('name', 'like', 'users.%')
-                      ->orWhere('name', 'like', 'menus.%')
-                      ->orWhere('name', 'like', 'orders.%')
-                      ->orWhere('name', 'like', 'inventory.%')
-                      ->orWhere('name', 'like', 'reservations.%')
-                      ->orWhere('name', 'like', 'kitchen.%')
-                      ->orWhere('name', 'like', 'staff.%')
-                      ->orWhere('name', 'like', 'reports.%');
-                })
-                ->pluck('id')->toArray();
-            $branchAdminRole->syncPermissions($branchPermissions);
+        foreach ($roleTemplates as $roleName => $template) {
+            $role = Role::where('name', $roleName)->where('guard_name', 'admin')->first();
+            if ($role) {
+                $permissions = Permission::whereIn('name', $template['permissions'])->pluck('id')->toArray();
+                $role->syncPermissions($permissions);
+            }
         }
     }
 
