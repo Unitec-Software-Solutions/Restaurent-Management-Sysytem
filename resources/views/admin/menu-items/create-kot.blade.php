@@ -13,7 +13,7 @@
             <p class="text-gray-600">Manually define kitchen order ticket (KOT) items for kitchen preparation. These items are not imported from inventory, but created specifically for kitchen production.</p>
         </div>
         <div class="flex gap-3">
-            <a href="{{ route('admin.menu-items.enhanced.index') }}" 
+            <a href="{{ route('admin.menu-items.enhanced.index') }}"
                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
                 <i class="fas fa-arrow-left mr-2"></i>Back to Menu Items
             </a>
@@ -90,7 +90,9 @@
                     @endforeach
                 </select>
                 @error('menu_category_id')
-                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @error('menu_category_id')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 @enderror
             </div>
         @endif
@@ -150,7 +152,7 @@
                     <label for="preparation_time" class="block text-sm font-medium text-gray-700 mb-1">
                         Preparation Time (minutes)
                     </label>
-                    <input type="number" id="preparation_time" name="preparation_time" 
+                    <input type="number" id="preparation_time" name="preparation_time"
                            value="{{ old('preparation_time', 15) }}" min="1" max="240"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
                     <p class="text-sm text-gray-500 mt-1">Time required to prepare this item</p>
@@ -184,7 +186,7 @@
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Options</h3>
             <label class="flex items-center">
-                <input type="checkbox" id="is_available" name="is_available" value="1" 
+                <input type="checkbox" id="is_available" name="is_available" value="1"
                        class="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                        {{ old('is_available', true) ? 'checked' : '' }}>
                 <span class="ml-2 text-sm text-gray-900">Make item available immediately</span>
@@ -299,7 +301,7 @@
                 <i class="fas fa-info-circle mr-2"></i>
                 This item will be created as a KOT menu item with preparation required.
             </div>
-            <button type="submit" 
+            <button type="submit"
                     class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
                 <i class="fas fa-fire mr-2"></i>Create KOT Item
             </button>

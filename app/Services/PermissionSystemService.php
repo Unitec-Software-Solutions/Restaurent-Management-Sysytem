@@ -95,7 +95,7 @@ class PermissionSystemService {
                     'reports.view_all'
                 ]
             ],
-            
+
             // Branch Level - Only essential admin roles
             'branch_admin' => [
                 'name' => 'Branch Administrator',
@@ -109,8 +109,8 @@ class PermissionSystemService {
                     'reports.view_branch'
                 ]
             ]
-            
-            // Note: Other operational roles (shift manager, cashier, waiter, kitchen staff) 
+
+            // Note: Other operational roles (shift manager, cashier, waiter, kitchen staff)
             // should be created manually as needed by organization/branch admins
             // to avoid cluttering the system with unused roles
         ];
@@ -192,12 +192,12 @@ class PermissionSystemService {
     {
         // Organization admins inherit all branch permissions for their org
         $orgRoles = Role::where('scope', 'organization')->get();
-        
+
         foreach ($orgRoles as $orgRole) {
             $branchPermissions = Permission::whereIn('name', [
                 'branch.view', 'staff.manage', 'inventory.manage', 'orders.manage'
             ])->get();
-            
+
             $orgRole->givePermissionTo($branchPermissions);
         }
     }
@@ -206,11 +206,11 @@ class PermissionSystemService {
     {
         // Check if user has permission for specific action on resource
         $permission = "{$resource}.{$action}";
-        
+
         if ($user->can($permission)) {
             return $this->validateScope($user, $resource);
         }
-        
+
         return false;
     }
 
@@ -566,26 +566,15 @@ class PermissionSystemService {
                     'dashboard.view', 'dashboard.manage'
                 ]
             ]
-            
-            // Note: Operational roles like Kitchen Manager, Operations Manager, Staff Member 
-            // should be created manually by organization/branch admins as needed,
-            // not automatically provided as templates to reduce noise
         ];
     }
 
-    /**
-     * Get available permissions based on admin scope
-     */
-    // Deprecated: use filterPermissionsBySubscription instead
     public function getAvailablePermissions($admin, $permissionDefinitions): array
     {
         $modulesConfig = config('modules');
         return $this->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
     }
 
-    /**
-     * Flatten permission definitions into a simple array
-     */
     private function flattenPermissions($permissionDefinitions, $excludedCategories = [], $excludedPermissions = [], $allowedCategories = [], $allowedPermissions = []): array
     {
         $permissions = [];
@@ -616,9 +605,6 @@ class PermissionSystemService {
         return $permissions;
     }
 
-    /**
-     * Filter role templates based on admin scope
-     */
     public function filterTemplatesByScope($roleTemplates, $admin): array
     {
         if ($admin->is_super_admin) {

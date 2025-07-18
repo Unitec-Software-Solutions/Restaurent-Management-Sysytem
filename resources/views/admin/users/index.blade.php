@@ -47,7 +47,9 @@
         <tbody class="bg-white divide-y divide-gray-200">
             @forelse($users as $index => $user)
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $users->firstItem() + $index }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ $index + 1 }}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-10 w-10">
@@ -158,8 +160,6 @@
             @endforelse
         </tbody>
     </table>
-    <div class="mt-4">
-        {{ $users->links() }}
-    </div>
+    <!-- Pagination removed: $users is not paginated -->
 </div>
 @endsection

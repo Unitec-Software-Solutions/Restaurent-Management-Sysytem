@@ -27,22 +27,56 @@ class SyncSystemPermissions extends Command
      */
     public function handle()
     {
-        $definitions = Permission::getSystemPermissions();
-        $count = 0;
-        foreach ($definitions as $category => $perms) {
-            foreach ($perms as $name => $desc) {
-                $perm = SpatiePermission::firstOrCreate(
-                    [
-                        'name' => $name,
-                        'guard_name' => 'admin',
-                    ],
-                    [
-                        'description' => $desc,
-                    ]
-                );
-                $count++;
-                $this->info("Synced permission: $name");
+        $allPermissions = [];
+
+        // 1. Get from Permission::getSystemPermissions()
+        foreach (\App\Models\Permission::getSystemPermissions() as $group) {
+            foreach ($group as $perm => $desc) {
+                $allPermissions[$perm] = $desc;
             }
+        }
+
+        // 2. Get from PermissionSystemService definitions
+        $service = new \App\Services\PermissionSystemService();
+        $defs = $service->getPermissionDefinitions();
+        foreach ($defs as $cat) {
+            if (isset($cat['permissions'])) {
+                foreach ($cat['permissions'] as $perm => $desc) {
+                    $allPermissions[$perm] = $desc;
+                }
+            }
+        }
+
+        // 3. Scan sidebar/menu definitions
+        foreach ([app_path('View/Components/AdminSidebar.php'), app_path('View/Components/Sidebar.php')] as $sidebarPath) {
+            if (file_exists($sidebarPath)) {
+                $code = file_get_contents($sidebarPath);
+                preg_match_all('/permission[\'\"]?\s*=>\s*[\'\"]([^\'\"]+)[\'\"]/', $code, $matches);
+                foreach ($matches[1] as $perm) {
+                    $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
+                }
+            }
+        }
+
+        // 4. Scan Blade menu-item usage
+        $bladeFiles = glob(resource_path('views/**/*.blade.php'));
+        foreach ($bladeFiles as $file) {
+            $code = file_get_contents($file);
+            preg_match_all('/can\([\'\"]([^\'\"]+)[\'\"]\)/', $code, $matches);
+            foreach ($matches[1] as $perm) {
+                $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
+            }
+        }
+
+        // 5. Sync all permissions
+        $count = 0;
+        foreach ($allPermissions as $name => $desc) {
+            \Spatie\Permission\Models\Permission::firstOrCreate(
+                ['name' => $name, 'guard_name' => 'admin'],
+                ['description' => $desc]
+            );
+            $count++;
+            $this->info("Synced permission: $name");
         }
         $this->info("Total permissions synced: $count");
         return 0;

@@ -45,7 +45,7 @@
                                             @endforeach
                                         </select>
                                         @error('organization_id')
-                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('organization_id') }}</p>
                                         @enderror
                                     </div>
                                 </div>
