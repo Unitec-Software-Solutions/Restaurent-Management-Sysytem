@@ -51,20 +51,12 @@
 
         <div class="mb-4">
             <label for="role_id" class="block text-sm font-medium text-gray-700">Role</label>
-            <select id="role_id" name="role_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+            <select name="role_id" id="role_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                 <option value="">Select Role</option>
                 @foreach($roles as $role)
-                    @if($role->name === 'Super Admin' && !auth('admin')->user()->isSuperAdmin())
-                        @continue
-                    @endif
-                    <option value="{{ $role->id }}" {{ $user->roles->pluck('id')->contains($role->id) ? 'selected' : '' }}>
-                        {{ $role->name }}
-                    </option>
+                    <option value="{{ $role->id }}" {{ $user->roles->contains($role) ? 'selected' : '' }}>{{ $role->name }}</option>
                 @endforeach
             </select>
-            @error('role_id')
-                <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-            @enderror
         </div>
 
         <div class="mb-4">
