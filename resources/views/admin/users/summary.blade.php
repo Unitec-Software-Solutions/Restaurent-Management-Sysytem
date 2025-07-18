@@ -11,7 +11,19 @@
         <div class="mb-4"><strong>Phone Number:</strong> <span>{{ $user->phone_number ?? '-' }}</span></div>
         <div class="mb-4"><strong>Organization:</strong> <span>{{ $user->organization->name ?? '-' }}</span></div>
         <div class="mb-4"><strong>Branch:</strong> <span>{{ $user->branch->name ?? '-' }}</span></div>
-        <div class="mb-4"><strong>Role:</strong> <span>{{ $user->userRole->name ?? '-' }}</span></div>
+        <div class="mb-4"><strong>Role(s):</strong>
+            @if($user->roles && $user->roles->count() > 0)
+                <div class="flex flex-wrap gap-1">
+                    @foreach($user->roles as $role)
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                            {{ $role->name }}
+                        </span>
+                    @endforeach
+                </div>
+            @else
+                <span class="text-gray-400 text-sm">No roles</span>
+            @endif
+        </div>
         <div class="mb-4"><strong>Status:</strong>
             <span class="{{ $user->is_active ? 'text-green-600' : 'text-red-600' }}">
                 {{ $user->is_active ? 'Active' : 'Inactive' }}
