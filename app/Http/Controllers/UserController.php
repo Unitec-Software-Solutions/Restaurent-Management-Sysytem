@@ -143,15 +143,8 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        // Allow super admin to create and manage all admin users
         $admin = auth('admin')->user();
-        if (!$admin) {
-            abort(403, 'You do not have permission to create admin users.');
-        }
-        // Only restrict non-super admins
-        if (!$admin->is_super_admin && !$admin->can('create', \App\Models\Admin::class)) {
-            abort(403, 'You do not have permission to create admin users.');
-        }
+        $this->authorize('create', \App\Models\Admin::class);
 
         $request->validate([
             'name' => 'required|string|max:255',
