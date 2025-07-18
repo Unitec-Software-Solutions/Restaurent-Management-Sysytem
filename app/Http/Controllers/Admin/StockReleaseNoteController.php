@@ -115,6 +115,8 @@ class StockReleaseNoteController extends Controller
             'items.*.release_quantity' => 'required|numeric|min:0.01',
         ]);
 
+
+        // Only validate stock, do not create transactions yet
         foreach ($request->items as $itemData) {
             $itemId = $itemData['item_id'] ?? 'N/A';
             $releaseQty = $itemData['release_quantity'] ?? 'N/A';
@@ -176,6 +178,7 @@ class StockReleaseNoteController extends Controller
 
             $totalAmount = 0;
 
+
             foreach ($request->items as $itemData) {
                 $item = ItemMaster::find($itemData['item_id'] ?? null);
                 $lineTotal = ($itemData['release_quantity'] ?? 0) * ($item ? $item->selling_price : 0);
@@ -186,7 +189,7 @@ class StockReleaseNoteController extends Controller
                     'release_quantity' => $itemData['release_quantity'] ?? 'N/A'
                 ]);
 
-                // Create StockReleaseNoteItem
+                // Create StockReleaseNoteItem only, not ItemTransaction
                 StockReleaseNoteItem::create([
                     'srn_id' => $note->id ?? null,
                     'item_id' => $item ? $item->id : null,
@@ -201,33 +204,6 @@ class StockReleaseNoteController extends Controller
                     'notes' => $itemData['notes'] ?? 'N/A',
                 ]);
 
-                $transactionType = $this->getTransactionTypeForRelease($request->release_type ?? 'N/A');
-                $quantity = $this->getSignedQuantity($transactionType, $itemData['release_quantity'] ?? 0);
-
-                Log::info('SRN Creating ItemTransaction', [
-                    'item_id' => $item ? $item->id : 'N/A',
-                    'transaction_type' => $transactionType,
-                    'quantity' => $quantity
-                ]);
-
-                ItemTransaction::create([
-                    'organization_id' => $orgId ?? null,
-                    'branch_id' => $request->branch_id ?? null,
-                    'inventory_item_id' => $item ? $item->id : null,
-                    'item_master_id' => $item ? $item->id : null,
-                    'transaction_type' => $transactionType,
-                    'quantity' => $quantity,
-                    'unit_price' => $item ? $item->selling_price : 0,
-                    'total_amount' => $lineTotal,
-                    'reference_type' => 'stock_release_note',
-                    'reference_id' => $note->id ?? null,
-                    'batch_number' => $itemData['batch_no'] ?? null,
-                    'expiry_date' => $itemData['expiry_date'] ?? null,
-                    'notes' => $itemData['notes'] ?? 'N/A',
-                    'created_by_user_id' => ($admin && $admin->id) ? $admin->id : null,
-                    'is_active' => true,
-                ]);
-
                 $totalAmount += $lineTotal;
             }
 
@@ -240,8 +216,125 @@ class StockReleaseNoteController extends Controller
                 'total_amount' => $totalAmount
             ]);
 
+            return redirect()->route('admin.inventory.srn.show', $note->id)
+                ->with('success', 'Stock release note created.');
+        }
+        catch (Exception $e) {
+            DB::rollBack();
+            Log::error('SRN Store Exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            return view('errors.generic', [
+                'errorTitle' => 'Stock Release Failed',
+                'errorCode' => '500',
+                'errorHeading' => 'Stock Release Failed',
+                'errorMessage' => $e->getMessage(),
+                'headerClass' => 'bg-gradient-warning',
+                'errorIcon' => 'fas fa-box-open',
+                'mainIcon' => 'fas fa-box-open',
+                'iconBgClass' => 'bg-yellow-100',
+                'iconColor' => 'text-yellow-500',
+                'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]',
+            ]);
+        }
+    }
+
+    /**
+     * Verify the specified stock release note and create item transactions.
+     */
+    public function verify(Request $request, $id)
+    {
+        $admin = Auth::guard('admin')->user();
+        $note = StockReleaseNoteMaster::with(['items', 'branch', 'organization'])->findOrFail($id);
+
+        if (!$admin->is_super_admin && $note->organization_id !== $admin->organization_id) {
+            abort(403, 'Unauthorized access');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Check stock again before verification
+            foreach ($note->items as $itemData) {
+                $itemId = $itemData->item_id ?? 'N/A';
+                $releaseQty = $itemData->release_quantity ?? 'N/A';
+                $currentStock = ItemTransaction::stockOnHand($itemId, $note->branch_id ?? 'N/A');
+                if ($releaseQty > $currentStock) {
+                    DB::rollBack();
+                    $item = ItemMaster::find($itemId);
+                    return view('errors.generic', [
+                        'errorTitle' => 'Insufficient Stock',
+                        'errorCode' => '400',
+                        'errorHeading' => 'Insufficient Stock',
+                        'errorMessage' => "Item '" . ($item ? $item->name : 'N/A') . "' has only {$currentStock} units in stock. Requested: {$releaseQty}.",
+                        'headerClass' => 'bg-gradient-warning',
+                        'errorIcon' => 'fas fa-box-open',
+                        'mainIcon' => 'fas fa-box-open',
+                        'iconBgClass' => 'bg-yellow-100',
+                        'iconColor' => 'text-yellow-500',
+                        'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]',
+                    ]);
+                }
+            }
+
+            // Create ItemTransactions for each item
+            foreach ($note->items as $itemData) {
+                $item = ItemMaster::find($itemData->item_id ?? null);
+                $lineTotal = ($itemData->release_quantity ?? 0) * ($item ? $item->selling_price : 0);
+                $transactionType = $this->getTransactionTypeForRelease($note->release_type ?? 'N/A');
+                $quantity = $this->getSignedQuantity($transactionType, $itemData->release_quantity ?? 0);
+
+                ItemTransaction::create([
+                    'organization_id' => $note->organization_id ?? null,
+                    'branch_id' => $note->branch_id ?? null,
+                    'inventory_item_id' => $item ? $item->id : null,
+                    'item_master_id' => $item ? $item->id : null,
+                    'transaction_type' => $transactionType,
+                    'quantity' => $quantity,
+                    'unit_price' => $item ? $item->selling_price : 0,
+                    'total_amount' => $lineTotal,
+                    'reference_type' => 'stock_release_note',
+                    'reference_id' => $note->id ?? null,
+                    'batch_number' => $itemData->batch_no ?? null,
+                    'expiry_date' => $itemData->expiry_date ?? null,
+                    'notes' => $itemData->notes ?? 'N/A',
+                    'created_by_user_id' => ($admin && $admin->id) ? $admin->id : null,
+                    'is_active' => true,
+                ]);
+            }
+
+            $note->update(['status' => 'Verified', 'verified_by_user_id' => $admin->id, 'verified_at' => now()]);
+            DB::commit();
+            return redirect()->route('admin.inventory.srn.show', $note->id)
+                ->with('success', 'Stock release note verified and transactions recorded.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return view('errors.generic', [
+                'errorTitle' => 'Verification Failed',
+                'errorCode' => '500',
+                'errorHeading' => 'Stock Release Verification Failed',
+                'errorMessage' => $e->getMessage(),
+                'headerClass' => 'bg-gradient-warning',
+                'errorIcon' => 'fas fa-box-open',
+                'mainIcon' => 'fas fa-box-open',
+                'iconBgClass' => 'bg-yellow-100',
+                'iconColor' => 'text-yellow-500',
+                'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]',
+            ]);
+
+
+            $note->update(['total_amount' => $totalAmount]);
+
+            DB::commit();
+
+            Log::info('SRN Created Successfully', [
+                'srn_id' => $note->id ?? 'N/A',
+                'total_amount' => $totalAmount
+            ]);
+
             return redirect()->route('admin.inventory.srn.index')
-                ->with('success', 'Stock release note created and transactions recorded.');
+                ->with('success', 'Stock release note created.');
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('SRN Store Exception', [
