@@ -30,7 +30,7 @@ class SyncSystemPermissions extends Command
         $allPermissions = [];
 
         // 1. Get from Permission::getSystemPermissions()
-        foreach (\App\Models\Permission::getSystemPermissions() as $group) {
+        foreach (Permission::getSystemPermissions() as $group) {
             foreach ($group as $perm => $desc) {
                 $allPermissions[$perm] = $desc;
             }
@@ -71,7 +71,7 @@ class SyncSystemPermissions extends Command
         // 5. Sync all permissions
         $count = 0;
         foreach ($allPermissions as $name => $desc) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(
+            Permission::firstOrCreate(
                 ['name' => $name, 'guard_name' => 'admin'],
                 ['description' => $desc]
             );
