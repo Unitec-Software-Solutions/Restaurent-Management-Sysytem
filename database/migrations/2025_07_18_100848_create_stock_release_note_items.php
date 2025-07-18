@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('stock_release_note_items', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('srn_id')->nullable()->constrained('stock_release_note_master', 'srn_id')->cascadeOnDelete();
+            $table->foreignId('srn_id')->nullable()->constrained('stock_release_note_master')->cascadeOnDelete();
             $table->foreignId('item_id')->nullable()->constrained('item_master')->cascadeOnDelete();
 
             // Item identification
