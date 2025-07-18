@@ -275,6 +275,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
                 // AJAX endpoints fetch items of that branch with stock
                 Route::get('/items-with-stock', [StockReleaseNoteController::class, 'itemsWithStock'])->name('items-with-stock');
+
+                // Verification endpoint
+                Route::post('/{release}/verify', [StockReleaseNoteController::class, 'verify'])->whereNumber('release')->name('verify');
             });
 
         });
