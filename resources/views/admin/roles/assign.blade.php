@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="bg-white rounded shadow p-6 max-w-md mx-auto">
-    <form action="{{ route('roles.assign', $user->id) }}" method="POST">
+    <form action="{{ route('roles.assign', (isset($user) && isset($user->id)) ? $user->id : '') }}" method="POST">
         @csrf
         <div class="mb-4">
             <label for="role_id" class="block text-sm font-medium text-gray-700">Select Role</label>
