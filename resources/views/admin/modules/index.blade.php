@@ -4,7 +4,7 @@
 @section('header-title', 'Modules Management')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <!-- Header -->
     {{-- <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>

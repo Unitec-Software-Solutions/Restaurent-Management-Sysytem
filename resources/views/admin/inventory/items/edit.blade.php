@@ -3,7 +3,7 @@
 @section('header-title', 'Edit Inventory Item: ' . $item->name)
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         {{-- <!-- Header with KPI Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <!-- Total Items Card -->

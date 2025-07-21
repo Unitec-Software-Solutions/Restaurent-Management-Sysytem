@@ -3,7 +3,7 @@
 @section('title', 'Users')
 @section('header-title', 'Users Management')
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
 
     <!-- Header Section -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">

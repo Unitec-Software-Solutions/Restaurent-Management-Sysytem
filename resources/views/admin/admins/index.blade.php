@@ -3,7 +3,7 @@
 @section('title', 'Manage Admins')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-md">
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">

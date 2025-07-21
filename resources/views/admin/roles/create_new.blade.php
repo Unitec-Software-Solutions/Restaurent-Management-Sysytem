@@ -3,7 +3,7 @@
 @section('title', 'Create Role')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="mb-6">
         <h1 class="text-2xl font-bold mb-2">Create New Role</h1>
         <p class="text-gray-600">Define a new role with specific permissions for your organization or branch</p>

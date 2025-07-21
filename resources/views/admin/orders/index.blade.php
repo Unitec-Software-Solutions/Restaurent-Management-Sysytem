@@ -4,7 +4,7 @@
 @section('header-title', 'Orders Management')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
 {{-- Debug: Uncomment to inspect orders and branches variables --}}
 {{-- @php dd($orders, $branches ?? null); @endphp --}}
 

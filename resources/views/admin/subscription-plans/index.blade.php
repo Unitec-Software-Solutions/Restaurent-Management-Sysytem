@@ -5,7 +5,7 @@
 @section('header-title', 'Subscription Plans')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <!-- Header Section -->
     <!-- Flash Messages -->
     @if(session('success'))

@@ -3,7 +3,7 @@
 @section('title', 'Menu Manager')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <!-- Header Section -->
     <div class="mb-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

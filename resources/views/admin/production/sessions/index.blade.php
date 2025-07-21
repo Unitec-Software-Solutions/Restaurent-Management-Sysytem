@@ -5,7 +5,7 @@
 @section('header-title', 'Production Sessions')
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <!-- Header with navigation buttons -->
         <div class="justify-between items-center mb-4">
             <div class="rounded-lg">

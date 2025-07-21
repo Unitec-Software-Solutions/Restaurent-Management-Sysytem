@@ -3,7 +3,7 @@
 @section('title', 'Create Stock Transaction')
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-sm p-6">
             <!-- Header -->
             <div class="mb-6">

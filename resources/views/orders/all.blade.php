@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">
             <h1 class="text-2xl font-bold mb-4">All Orders</h1>
             <form method="GET" class="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">

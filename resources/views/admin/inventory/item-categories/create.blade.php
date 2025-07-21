@@ -3,7 +3,7 @@
 @section('title', 'Create Item Category')
 @section('header-title', 'Create Item Category')
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <!-- Main Content Card -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Card Header -->

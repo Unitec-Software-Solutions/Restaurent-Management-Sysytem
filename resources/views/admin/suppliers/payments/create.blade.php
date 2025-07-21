@@ -2,7 +2,7 @@
 
 @section('header-title', 'Create Supplier Payment')
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <x-nav-buttons :items="[
             ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
             ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],

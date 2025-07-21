@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <!-- Card Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">

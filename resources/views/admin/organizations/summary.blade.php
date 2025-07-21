@@ -3,7 +3,7 @@
 @section('title', 'Organization Summary')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organization Summary</h1>
 

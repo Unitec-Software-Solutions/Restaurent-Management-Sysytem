@@ -33,7 +33,7 @@
     </div>
 @endif --}}
 
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-2xl font-bold">Order #{{ $order->id }}</h1>

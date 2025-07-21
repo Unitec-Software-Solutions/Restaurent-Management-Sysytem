@@ -2,7 +2,7 @@
 @section('header-title', 'Reports')
 @section('content')
 <div >
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <h1 class="text-2xl font-bold text-gray-800 mb-6">Reports - Sample Page</h1>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

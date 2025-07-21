@@ -6,7 +6,7 @@
 @section('header-title', 'Item Inventory Dashboard')
 
 @section('content')
-    <div class="p-4 space-y-8">
+    <div class="mx-auto px-4 py-8">
         <!-- Navigation Buttons -->
         <div class="rounded-lg">
             <x-nav-buttons :items="[

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <div class="bg-blue-600 px-6 py-4 text-white">
             <h2 class="text-2xl font-bold">Edit Takeaway Order #{{ $order->order_number ?? $order->id }}</h2>

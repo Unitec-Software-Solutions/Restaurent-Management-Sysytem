@@ -3,7 +3,7 @@
 @section('title', isset($module) ? 'Edit Module' : 'Add Module')
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
 
 <div class="bg-white rounded shadow p-6 max-w-lg mx-auto">
     <form action="{{ isset($module) ? route('admin.modules.update', $module) : route('admin.modules.store') }}" method="POST">

@@ -3,7 +3,7 @@
 @section('header-title', 'Stock Management')
 {{-- @section('header-subtitle', 'Overview of your metrics') --}}
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <!-- Header with buttons -->
         <x-nav-buttons :items="[
             ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],

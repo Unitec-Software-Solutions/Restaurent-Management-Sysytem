@@ -1,17 +1,17 @@
 @extends('layouts.app')
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold">Order #{{ $order->id ?? '' }}</h1>
             <div class="flex gap-2">
-                <a href="{{ route('orders.edit', $order->id) }}" 
+                <a href="{{ route('orders.edit', $order->id) }}"
                    class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
                     Edit Order
                 </a>
                 <form action="{{ route('orders.destroy', $order->id) }}" method="POST">
                     @csrf @method('DELETE')
-                    <button type="submit" 
+                    <button type="submit"
                             class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                             onclick="return confirm('Delete this order?')">
                         Delete Order

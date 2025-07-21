@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('header-title', 'Edit Supplier')
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Header -->
             <div class="p-6 border-b">
