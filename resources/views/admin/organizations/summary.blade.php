@@ -176,7 +176,7 @@
             </li>
             <li>
                 <span class="font-semibold">Trial:</span>
-                {{ optional($organization->subscriptions->last())->is_trial ? 'Yes' : 'No' }}
+                {{ data_get($organization->subscriptions->last(), 'is_trial') ? 'Yes' : 'No' }}
             </li>
         </ul>
     </div>
