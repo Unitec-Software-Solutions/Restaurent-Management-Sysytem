@@ -146,7 +146,18 @@ class RoleController extends Controller
 
         // Always sync permissions by ID (never by name)
         $permissions = $validated['permissions'] ?? [];
+        \Log::debug('Attempting to sync permissions to role (store)', [
+            'role_id' => $role->id,
+            'permissions_from_request' => $permissions,
+        ]);
         $role->syncPermissions($permissions);
+
+        // Reload permissions relationship to access permissions
+        $role = $role->fresh('permissions');
+        \Log::info('Role permissions after sync (store)', [
+            'role_id' => $role->id,
+            'permissions' => $role->permissions()->pluck('id', 'name')->toArray()
+        ]);
 
         return redirect()->route('admin.roles.index')->with('success', 'Role created successfully.');
     }
@@ -262,12 +273,15 @@ class RoleController extends Controller
 
         // Always sync permissions by ID (never by name)
         $permissions = $validated['permissions'] ?? [];
+        \Log::debug('Attempting to sync permissions to role (update)', [
+            'role_id' => $role->id,
+            'permissions_from_request' => $permissions,
+        ]);
         $role->syncPermissions($permissions);
 
         // Reload permissions relationship to access permissions
         $role = $role->fresh('permissions');
-
-        Log::info('Role permissions after sync', [
+        \Log::info('Role permissions after sync (update)', [
             'role_id' => $role->id,
             'permissions' => $role->permissions()->pluck('id', 'name')->toArray()
         ]);
