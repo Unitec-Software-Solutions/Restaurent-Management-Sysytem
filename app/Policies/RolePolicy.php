@@ -16,6 +16,7 @@ class RolePolicy
     public function manage(User $user, Role $role)
     {
         if ($user->is_super_admin) return true;
+        if (method_exists($role, 'trashed') && $role->trashed()) return false;
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
@@ -27,6 +28,7 @@ class RolePolicy
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        // Only allow if there are non-deleted roles
         return isset($availablePermissions['roles.view']);
     }
     public function create($user)
@@ -40,6 +42,7 @@ class RolePolicy
     public function update($user, $role)
     {
         if ($user->is_super_admin) return true;
+        if (method_exists($role, 'trashed') && $role->trashed()) return false;
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
@@ -48,6 +51,7 @@ class RolePolicy
     public function view($user, $role)
     {
         if ($user->is_super_admin) return true;
+        if ($role->deleted_at) return false;
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
@@ -56,6 +60,7 @@ class RolePolicy
     public function delete($user, $role)
     {
         if ($user->is_super_admin) return true;
+        if ($role->deleted_at) return false;
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
