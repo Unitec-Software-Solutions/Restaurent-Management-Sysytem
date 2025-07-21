@@ -6,6 +6,7 @@ use App\Mail\UserInvitation;
 use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\User;
+use App\Models\Admin;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Http\Request;
@@ -274,7 +275,9 @@ class UserController extends Controller
         if (!empty($roleId)) {
             $role = Role::where('guard_name', 'admin')->find($roleId);
             if ($role) {
-                $admin->syncRoles([$role]);
+                // Use assignRole for single role assignment (Spatie)
+                $admin->roles()->detach();
+                $admin->assignRole($role);
             }
         }
 
@@ -285,7 +288,7 @@ class UserController extends Controller
         $customPermissions = [];
         $permissionIds = $request->input('permissions', []);
         if (is_array($permissionIds) && count($permissionIds) > 0) {
-            $customPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $permissionIds)->pluck('name')->toArray();
+            $customPermissions = Permission::whereIn('id', $permissionIds)->pluck('name')->toArray();
         }
 
         // Merge and sync all permissions (by name)
@@ -298,13 +301,13 @@ class UserController extends Controller
     // Show form to assign/change a role for an admin
     public function assignRoleForm(\App\Models\Admin $admin)
     {
-        $roles = \App\Models\Role::where('guard_name', 'admin')->get();
-        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get();
+        $roles = Role::where('guard_name', 'admin')->get();
+        $allPermissions = Permission::where('guard_name', 'admin')->get();
         return view('admin.users.assign-role', compact('admin', 'roles', 'allPermissions'));
     }
 
     // Store assigned role and permissions for an admin
-    public function assignRoleStore(Request $request, \App\Models\Admin $admin)
+    public function assignRoleStore(Request $request, Admin $admin)
     {
         $request->validate([
             'role_id' => 'required|exists:roles,id',
@@ -313,7 +316,7 @@ class UserController extends Controller
         ]);
 
         $roleId = $request->input('role_id');
-        $role = \App\Models\Role::where('guard_name', 'admin')->findOrFail($roleId);
+        $role = Role::where('guard_name', 'admin')->findOrFail($roleId);
         $admin->syncRoles([$role]);
 
         // Get role permissions (by name)
@@ -323,7 +326,7 @@ class UserController extends Controller
         $customPermissions = [];
         $permissionIds = $request->input('permissions', []);
         if (is_array($permissionIds) && count($permissionIds) > 0) {
-            $customPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $permissionIds)->pluck('name')->toArray();
+            $customPermissions =Permission::whereIn('id', $permissionIds)->pluck('name')->toArray();
         }
 
         // Merge and sync all permissions (by name)
