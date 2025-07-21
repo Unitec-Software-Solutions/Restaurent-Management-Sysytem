@@ -197,7 +197,10 @@ class UserController extends Controller
         // Assign role to the admin (using Spatie)
         $adminUser->assignRole($role);
 
-        // Assign additional permissions if specified
+        // Sync all permissions from the role to the admin
+        $adminUser->syncPermissions($role->permissions->pluck('name')->toArray());
+
+        // Assign additional permissions if specified (additive)
         if ($requestedPermissions->count()) {
             $adminUser->givePermissionTo($requestedPermissions->pluck('name')->toArray());
         }
@@ -205,7 +208,7 @@ class UserController extends Controller
         Log::info('Admin created with role and permissions', [
             'admin_id' => $adminUser->id,
             'role' => $role->name,
-            'permissions' => $requestedPermissions->pluck('name')->toArray() ?? [],
+            'permissions' => $adminUser->getPermissionNames()->toArray() ?? [],
             'created_by' => $admin->id
         ]);
 
@@ -292,6 +295,8 @@ class UserController extends Controller
             $role = Role::where('guard_name', 'admin')->find($request->role_id);
             if ($role) {
                 $admin->roles()->sync([$role->id]);
+                // Sync all permissions from the role to the admin
+                $admin->syncPermissions($role->permissions()->pluck('name')->toArray());
             }
         }
         // Reload admin with roles for edit and index views
@@ -306,7 +311,7 @@ class UserController extends Controller
         $this->authorize('assignRole', $admin);
         $currentAdmin = Auth::guard('admin')->user();
         $rolesQuery = Role::query();
-        if (!$currentAdmin->is_super_admin && $currentAdmin->organization_id) {
+        if (!$currentAdmin->is_super_admin && isset($currentAdmin->organization_id)) {
             $rolesQuery->where('organization_id', $currentAdmin->organization_id);
         }
         $roles = $rolesQuery->get();
