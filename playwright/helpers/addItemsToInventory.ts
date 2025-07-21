@@ -38,6 +38,7 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Inv
     items = [itemsOrCount];
   }
 
+  const testRunId = process.env.TEST_RUN_ID || 'default';
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     console.log('Navigating to create page for item:', item.name);
@@ -118,7 +119,7 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Inv
     } catch (error) {
       console.error(`Error processing item ${item.name}:`, error);
       // Take screenshot on error
-      await page.screenshot({ path: `error-${item.name.replace(/[^a-z0-9]/gi, '_')}.png` });
+      await page.screenshot({ path: `test-results/screen-shots/${testRunId}/error-${item.name.replace(/[^a-z0-9]/gi, '_')}.png` });
       throw error;
     }
   }
