@@ -14,12 +14,14 @@ class AdminsTableSeeder extends Seeder
      */
     public function run()
     {
-
+        
 
         \DB::table('admins')->delete();
-
-        \DB::table('admins')->insert([
-            [
+        
+        \DB::table('admins')->insert(array (
+            0 => 
+            array (
+                'id' => 1,
                 'name' => 'Super Administrator',
                 'email' => 'superadmin@rms.com',
                 'password' => '$2y$12$oZeFWflZnmyAnbme/tcp1.JxQ5J09m1qu8Qk55ILR0rusngg0TZmq',
@@ -49,9 +51,42 @@ class AdminsTableSeeder extends Seeder
                 'job_title' => 'System Administrator',
                 'status' => 'active',
                 'hired_at' => NULL,
-            ],
-        ]);
-
-
+            ),
+            1 => 
+            array (
+                'id' => 3,
+                'name' => 'Indika',
+                'email' => 'indika@delrms.com',
+                'password' => '$2y$12$jBF9NWF5ahW05u/BJ.EQ..rxSDuCBt6hMZWjDuACUK67JAzWI3gKa',
+                'branch_id' => NULL,
+                'organization_id' => 1,
+                'remember_token' => NULL,
+                'created_at' => '2025-07-21 05:21:26',
+                'updated_at' => '2025-07-21 05:21:26',
+                'is_super_admin' => false,
+                'is_active' => true,
+                'deleted_at' => NULL,
+                'email_verified_at' => NULL,
+                'phone' => NULL,
+                'profile_image' => NULL,
+                'last_login_at' => NULL,
+                'preferences' => '{"timezone":"Asia\\/Colombo","date_format":"Y-m-d","time_format":"24h","currency":"LKR"}',
+                'ui_settings' => '{"theme":"light","sidebar_collapsed":false,"dashboard_layout":"grid","notifications_enabled":true,"preferred_language":"en","cards_per_row":4,"show_help_tips":true}',
+                'failed_login_attempts' => 0,
+                'locked_until' => NULL,
+                'password_changed_at' => NULL,
+                'two_factor_secret' => NULL,
+                'two_factor_recovery_codes' => NULL,
+                'two_factor_confirmed_at' => NULL,
+                'role' => NULL,
+                'current_role_id' => NULL,
+                'department' => NULL,
+                'job_title' => NULL,
+                'status' => 'active',
+                'hired_at' => NULL,
+            ),
+        ));
+        
+        
     }
 }
