@@ -14,7 +14,10 @@ class SystemPermissionsSeeder extends Seeder
      */
     public function run()
     {
-        
+        // Truncate permissions and role_has_permissions tables
+        \DB::table('role_has_permissions')->truncate();
+        \DB::table('permissions')->truncate();
+
         $service = app(\App\Services\PermissionSystemService::class);
         $defs = $service->getPermissionDefinitions();
         $allPermissions = [];
@@ -49,10 +52,11 @@ class SystemPermissionsSeeder extends Seeder
         }
 
         foreach (array_keys($allPermissions) as $permission) {
-            Permission::firstOrCreate([
+            $perm = Permission::firstOrCreate([
                 'name' => $permission,
                 'guard_name' => 'admin',
             ]);
+            echo "Seeded permission: {$perm->name} (guard: {$perm->guard_name})\n";
         }
     }
 }
