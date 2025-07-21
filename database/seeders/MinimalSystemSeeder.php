@@ -76,21 +76,21 @@ class MinimalSystemSeeder extends Seeder
             ]);
 
             // Step 5: Create organization using correct plan ID
-            $organization = Organization::create([
-                'name' => 'Delicious Bites Restaurant',
-                'email' => 'admin@deliciousbites.com',
-                'phone' => '+94 11 123 4567',
-                'address' => '123 Main Street, Colombo 03, Sri Lanka',
-                'contact_person' => 'John Manager',
-                'contact_person_designation' => 'General Manager',
-                'contact_person_phone' => '+94 77 123 4567',
-                'business_type' => 'restaurant',
-                'subscription_plan_id' => $subscriptionPlan->id,
-                'discount_percentage' => 5.00,
-                'is_active' => true,
-                'activated_at' => now(),
-                'password' => Hash::make('DeliciousBites123!')
-            ]);
+            // $organization = Organization::create([
+            //     'name' => 'Delicious Bites Restaurant',
+            //     'email' => 'admin@deliciousbites.com',
+            //     'phone' => '+94 11 123 4567',
+            //     'address' => '123 Main Street, Colombo 03, Sri Lanka',
+            //     'contact_person' => 'John Manager',
+            //     'contact_person_designation' => 'General Manager',
+            //     'contact_person_phone' => '+94 77 123 4567',
+            //     'business_type' => 'restaurant',
+            //     'subscription_plan_id' => $subscriptionPlan->id,
+            //     'discount_percentage' => 5.00,
+            //     'is_active' => true,
+            //     'activated_at' => now(),
+            //     'password' => Hash::make('DeliciousBites123!')
+            // ]);
         });
 
         $this->command->info('✅ Minimal system foundation created successfully');
@@ -356,32 +356,6 @@ class MinimalSystemSeeder extends Seeder
         return $subscriptionPlan;
     }
 
-    /**
-     * Create sample organization
-     */
-    private function createOrganization(SubscriptionPlan $subscriptionPlan): Organization
-    {
-        $this->command->info('  🏢 Creating sample organization...');
-
-        $organization = Organization::create([
-            'name' => 'Delicious Bites Restaurant',
-            'email' => 'admin@deliciousbites.com',
-            'phone' => '+94 11 123 4567',
-            'address' => '123 Main Street, Colombo 03, Sri Lanka',
-            'contact_person' => 'John Manager',
-            'contact_person_designation' => 'General Manager',
-            'contact_person_phone' => '+94 77 123 4567',
-            'business_type' => 'restaurant',
-            'subscription_plan_id' => $subscriptionPlan->id,
-            'discount_percentage' => 5.00,
-            'is_active' => true,
-            'activated_at' => now(),
-            'password' => Hash::make('DeliciousBites123!')
-        ]);
-
-        $this->command->info("    ✓ Organization created: {$organization->name}");
-        return $organization;
-    }
 
     /**
      * Create organization, org admin, branch, and branch admin automatically
