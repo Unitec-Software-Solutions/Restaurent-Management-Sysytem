@@ -15,8 +15,6 @@ use Spatie\Permission\Models\Permission;
 
 class RoleController extends Controller
 {
-
-
     /**
      * Display the specified role and its permissions.
      */
@@ -380,22 +378,16 @@ class RoleController extends Controller
         $usersWithSpatieRole = 0;
 
         try {
-            // Check admin guard if role has admin guard
             if ($role->guard_name === 'admin') {
                 $adminsWithSpatieRole = Admin::role($role->name, 'admin')->count();
             }
-        } catch (\Exception $e) {
-            // Role doesn't exist for admin guard, which is fine
-        }
+        } catch (\Exception $e) {}
 
         try {
-            // Check web guard if role has web guard
             if ($role->guard_name === 'web') {
                 $usersWithSpatieRole = User::role($role->name, 'web')->count();
             }
-        } catch (\Exception $e) {
-            // Role doesn't exist for web guard, which is fine
-        }
+        } catch (\Exception $e) {}
 
         $totalUsage = $adminsUsingRole + $adminsWithSpatieRole + $usersWithSpatieRole;
 
