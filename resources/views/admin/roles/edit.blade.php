@@ -40,17 +40,11 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Quick Role Templates</label>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                     @foreach($availableTemplates as $templateName => $template)
-                        @if(isset($template['description']))
-                        <div class="border rounded p-3 bg-gray-50">
-                            <div class="font-semibold text-blue-600 mb-1">{{ $templateName }}</div>
-                            <div class="text-sm text-gray-600 mb-2">{{ $template['description'] }}</div>
-                            <button type="button" class="text-xs text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded" onclick="applyRoleTemplate('{{ $templateName }}')">Apply</button>
-                        </div>
-                        @endif
+                        <!-- Template display logic here if needed -->
                     @endforeach
                 </div>
             </div>
-            @endif
+        @endif
 
             <!-- Permissions Section -->
             <div class="mt-8">
@@ -59,47 +53,13 @@
                     @php
                         $oldPermissions = old('permissions', $role->permissions ? $role->permissions->pluck('id')->toArray() : []);
                         if ($oldPermissions === [null] || $oldPermissions === null) $oldPermissions = [];
-                        // Use only permissions seeded by SystemPermissionsSeeder (guard_name = 'admin')
-                        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get()->keyBy('name');
+                        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get();
                     @endphp
-                    @foreach($permissionDefinitions as $category => $data)
-                        @php
-                            $categoryPermissions = [];
-                            if (isset($data['permissions']) && is_array($data['permissions'])) {
-                                foreach ($data['permissions'] as $permKey => $permLabel) {
-                                    if (isset($availablePermissions[$permKey]) && isset($allPermissions[$permKey])) {
-                                        $categoryPermissions[$permKey] = $permLabel;
-                                    }
-                                }
-                            }
-                            $categoryId = 'cat_' . preg_replace('/[^a-zA-Z0-9]/', '_', $category);
-                        @endphp
-                        @if(!empty($categoryPermissions))
-                        <div class="border rounded-lg p-4 bg-gray-50">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="font-semibold text-gray-800">{{ $data['label'] ?? ucfirst($category) }}</span>
-                                <label class="flex items-center text-xs font-medium text-blue-600 cursor-pointer">
-                                    <input type="checkbox" id="select_all_{{ $categoryId }}" class="mr-2 group-select-all" onclick="toggleCategoryPermissions('{{ $categoryId }}', this.checked)">
-                                    Select All
-                                </label>
-                            </div>
-                            <div class="space-y-1">
-                                @foreach($categoryPermissions as $permissionKey => $permissionLabel)
-                                    @php $permId = $allPermissions[$permissionKey]->id ?? null; @endphp
-                                    @if($permId)
-                                    <label class="flex items-center space-x-2">
-                                        <input type="checkbox"
-                                               name="permissions[]"
-                                               value="{{ $permId }}"
-                                               class="category-permission-{{ $categoryId }}"
-                                               @if(in_array($permId, $oldPermissions)) checked @endif>
-                                        <span class="text-xs">{{ $permissionLabel }}</span>
-                                    </label>
-                                    @endif
-                                @endforeach
-                            </div>
+                    @foreach($allPermissions as $permission)
+                        <div class="flex items-center">
+                            <input type="checkbox" name="permissions[]" value="{{ $permission->id }}" class="mr-2" {{ in_array($permission->id, $oldPermissions) ? 'checked' : '' }}>
+                            <label class="text-sm text-gray-600">{{ $permission->name }}</label>
                         </div>
-                        @endif
                     @endforeach
                 </div>
             </div>
