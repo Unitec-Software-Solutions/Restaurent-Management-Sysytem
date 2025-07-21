@@ -13,17 +13,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('🌱 Starting minimal database seeding...');
-        
+
         // Only essential seeders for basic system functionality
         $this->call([
             MinimalSystemSeeder::class,
         ]);
-        
+
         $this->command->info('✅ Minimal seeding completed successfully');
         $this->command->info('🔐 Login at /admin/login with: superadmin@rms.com / SuperAdmin123!');
-        $this->call(OrganizationsTableSeeder::class);
-        $this->call(BranchesTableSeeder::class);
+        // $this->call(OrganizationsTableSeeder::class);
+        // $this->call(BranchesTableSeeder::class);
         $this->call(AdminsTableSeeder::class);
-        $this->call(RolesTableSeeder::class);
+        // $this->call(RolesTableSeeder::class);
     }
 }
