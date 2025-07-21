@@ -64,6 +64,11 @@ use App\Http\Controllers\Admin\
     // ItemStockController (what the heck is this?)
 };
 
+// Report controllers
+use App\Http\Controllers\Admin\{
+    ReportController
+};
+
 
 use App\Http\Controllers\PaymentController as MainPaymentController;
 use App\Http\Middleware\SuperAdmin;
@@ -483,6 +488,22 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         });
 
+        Route::prefix('reports')->name('reports.')->group(function () {
+            // Route::get('/', [ReportController::class, 'index'])->name('index');
+            Route::prefix('sales')->name('sales.')->group(function () {
+                Route::get('/', [ReportController::class, 'salesReport'])->name('index');
+            });
+            Route::prefix('inventory')->name('inventory.')->group(function () {
+                Route::get('/', [ReportController::class, 'inventoryReport'])->name('index');
+                Route::get('/stock', [ReportController::class, 'inventoryStock'])->name('stock');
+                Route::get('/grn', [ReportController::class, 'inventoryGrn'])->name('grn');
+                Route::get('/gtn', [ReportController::class, 'inventoryGtn'])->name('gtn');
+                Route::get('/srn', [ReportController::class, 'inventorySrn'])->name('srn');
+                // Route::get('/items', [ReportController::class, 'inventory_items'])->name('items');
+                // Route::get('/summary', [ReportController::class, 'inventory_summary'])->name('summary');
+            });
+
+        });
 
         // Additional Admin Routes
         Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
@@ -756,7 +777,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
 Route::get('customers/index', [App\Http\Controllers\Admin\CustomerController::class, 'index'])->middleware(['auth:admin'])->name('admin.customers.index');
 // Route::get('digital-menu/index', [App\Http\Controllers\Admin\DigitalMenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.digital-menu.index');
 Route::get('settings/index', [App\Http\Controllers\Admin\SettingController::class, 'index'])->middleware(['auth:admin'])->name('admin.settings.index');
-Route::get('reports/index', [App\Http\Controllers\Admin\ReportController::class, 'index'])->middleware(['auth:admin'])->name('admin.reports.index');
+Route::get('admin/reports/index', [App\Http\Controllers\Admin\ReportController::class, 'index'])->middleware(['auth:admin'])->name('admin.reports.index');
 Route::get('debug/routes', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes');
 Route::get('debug/routes/test', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.test');
 Route::get('debug/routes/generate', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.generate');
