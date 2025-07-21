@@ -15,12 +15,13 @@
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700">Permissions</label>
             @php
-                $oldPermissions = old('permissions', isset($user) && $user->permissions ? $user->permissions->pluck('name')->toArray() : []);
+                $oldPermissions = old('permissions', isset($user) && $user->permissions ? $user->permissions->pluck('id')->toArray() : []);
+                $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get();
             @endphp
             @foreach($allPermissions as $permission)
                 <div class="flex items-center">
-                    <input type="checkbox" name="permissions[]" value="{{ $permission->name }}"
-                        {{ in_array($permission->name, $oldPermissions) ? 'checked' : '' }} class="mr-2">
+                    <input type="checkbox" name="permissions[]" value="{{ $permission->id }}"
+                        {{ in_array($permission->id, $oldPermissions) ? 'checked' : '' }} class="mr-2">
                     <label class="text-sm text-gray-600">{{ $permission->name }}</label>
                 </div>
             @endforeach
