@@ -495,6 +495,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
             Route::prefix('inventory')->name('inventory.')->group(function () {
                 Route::get('/', [ReportController::class, 'inventoryReport'])->name('index');
+                // Route::get('/', [ReportController::class, 'inventoryReport'])->name('index');
                 Route::get('/stock', [ReportController::class, 'inventoryStock'])->name('stock');
                 Route::get('/grn', [ReportController::class, 'inventoryGrn'])->name('grn');
                 Route::get('/gtn', [ReportController::class, 'inventoryGtn'])->name('gtn');
@@ -507,7 +508,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Additional Admin Routes
         Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
-        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.view');
+        // Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.view');
         Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
         Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.view');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
