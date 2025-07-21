@@ -2,7 +2,7 @@
     <div class="relative" x-data="{ open: false }">
         <button @click="open = !open" class="flex items-center gap-2 focus:outline-none">
             <div class="relative h-10 w-10 overflow-hidden rounded-full">
-                <img src="{{ asset('images/avatar.jpg') }}" alt="User avatar" class="object-cover h-full w-full"
+                {{-- <img src="{{ asset('images/avatar.jpg') }}" alt="User avatar" class="object-cover h-full w-full" --}}
                     onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(auth('admin')->user()->name ?? 'Admin') }}&background=D9DCFF&color=515DEF&size=64'">
             </div>
             <div class="flex flex-col">
