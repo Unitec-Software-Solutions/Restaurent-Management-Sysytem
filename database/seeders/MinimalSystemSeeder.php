@@ -85,7 +85,7 @@ class MinimalSystemSeeder extends Seeder
                 'contact_person_designation' => 'General Manager',
                 'contact_person_phone' => '+94 77 123 4567',
                 'business_type' => 'restaurant',
-                'subscription_plan_id' => $subscriptionPlan->id,
+                'subscription_plan_id' => $subscriptionPlan->getKey(),
                 'discount_percentage' => 5.00,
                 'is_active' => true,
                 'activated_at' => now(),
@@ -248,7 +248,7 @@ class MinimalSystemSeeder extends Seeder
 
         foreach ($modules as $moduleData) {
             $module = Module::create($moduleData);
-            $this->command->info("    ✓ Module: {$module->name}");
+            $this->command->info("    ✓ Module: {$module->getAttribute('name')}");
         }
     }
 
@@ -372,14 +372,14 @@ class MinimalSystemSeeder extends Seeder
             'contact_person_designation' => 'General Manager',
             'contact_person_phone' => '+94 77 123 4567',
             'business_type' => 'restaurant',
-            'subscription_plan_id' => $subscriptionPlan->id,
+            'subscription_plan_id' => $subscriptionPlan->getKey(),
             'discount_percentage' => 5.00,
             'is_active' => true,
             'activated_at' => now(),
             'password' => Hash::make('DeliciousBites123!')
         ]);
 
-        $this->command->info("    ✓ Organization created: {$organization->name}");
+        $this->command->info("    ✓ Organization created: {$organization->getAttribute('name')}");
         return $organization;
     }
 
@@ -404,7 +404,7 @@ class MinimalSystemSeeder extends Seeder
             'activated_at' => now(),
             'password' => Hash::make('DeliciousBites123!')
         ]);
-        $this->command->info("    ✓ Organization created: {$organization->name}");
+        $this->command->info("    ✓ Organization created: {$organization->getAttribute('name')}");
 
         // Create organization admin
         $orgAdmin = Admin::create([ // Create organization admin
@@ -458,7 +458,7 @@ class MinimalSystemSeeder extends Seeder
             'manager_phone' => '+94 77 234 5678',
             'code' => 'DB-COL-001'
         ]);
-        $this->command->info("    ✓ Branch created: {$branch->name}");
+        $this->command->info("    ✓ Branch created: {$branch->getAttribute('name')}");
 
         // Create branch admin
         $branchAdmin = Admin::create([ // Create branch admin
@@ -492,23 +492,23 @@ class MinimalSystemSeeder extends Seeder
     {
         $defaultCategories = [
             [
-            'organization_id' => $organization->id,
+            'organization_id' => $organization->getKey(),
             'name' => 'Production Items',
-            'code' => 'PI' . $organization->id,
+            'code' => 'PI' . $organization->getKey(),
             'description' => 'Items that are produced in-house like buns, bread, etc.',
             'is_active' => true
             ],
             [
-            'organization_id' => $organization->id,
+            'organization_id' => $organization->getKey(),
             'name' => 'Buy & Sell',
-            'code' => 'BS' . $organization->id,
+            'code' => 'BS' . $organization->getKey(),
             'description' => 'Items that are bought and sold directly',
             'is_active' => true
             ],
             [
-            'organization_id' => $organization->id,
+            'organization_id' => $organization->getKey(),
             'name' => 'Ingredients',
-            'code' => 'IG' . $organization->id,
+            'code' => 'IG' . $organization->getKey(),
             'description' => 'Raw cooking ingredients and supplies',
             'is_active' => true
             ]
@@ -534,8 +534,8 @@ class MinimalSystemSeeder extends Seeder
         $validMenuType = $menuTypeMapping[$type] ?? 'all_day';
 
         return Menu::create([
-            'organization_id' => $organization->id,
-            'branch_id' => $branch->id,
+            'organization_id' => $organization->getKey(),
+            'branch_id' => $branch->getKey(),
             'name' => $name,
             'description' => "Delicious {$type} options",
             'date_from' => now()->subDays(7),
@@ -573,8 +573,8 @@ class MinimalSystemSeeder extends Seeder
         $createdCategories = [];
         foreach ($categories as $index => $categoryData) {
             $category = MenuCategory::create([
-                'organization_id' => $organization->id,
-                'branch_id' => $branch->id,
+                'organization_id' => $organization->getKey(),
+                'branch_id' => $branch->getKey(),
                 'name' => $categoryData['name'],
                 'description' => $categoryData['description'],
                 'sort_order' => $index + 1,
@@ -671,8 +671,8 @@ class MinimalSystemSeeder extends Seeder
 
         foreach ($items as $index => $itemData) {
             MenuItem::create([
-                'organization_id' => $organization->id,
-                'branch_id' => $branch->id,
+                'organization_id' => $organization->getKey(),
+                'branch_id' => $branch->getKey(),
                 'menu_category_id' => $itemData['category_id'],
                 'item_master_id' => null, // KOT items don't need item_master link (they are recipe-based)
                 'name' => $itemData['name'],
@@ -752,8 +752,8 @@ class MinimalSystemSeeder extends Seeder
 
         foreach ($tables as $tableData) {
             Table::create([
-                'organization_id' => $branch->organization_id,
-                'branch_id' => $branch->id,
+                'organization_id' => $branch->organization_id ?? $branch->organization_id ?? null,
+                'branch_id' => $branch->getKey(),
                 'number' => $tableData['number'],
                 'capacity' => $tableData['capacity'],
                 'is_active' => true,
@@ -772,8 +772,8 @@ class MinimalSystemSeeder extends Seeder
         $this->command->info('  📝 Creating reservations and orders...');
 
         $customers = Customer::take(2)->get();
-        $menuItems = MenuItem::where('branch_id', $branch->id)->take(3)->get();
-        $tables = Table::where('branch_id', $branch->id)->take(2)->get();
+        $menuItems = MenuItem::where('branch_id', $branch->getKey())->take(3)->get();
+        $tables = Table::where('branch_id', $branch->getKey())->take(2)->get();
 
         // Create 2 reservations
         foreach ($customers as $index => $customer) {
@@ -793,7 +793,7 @@ class MinimalSystemSeeder extends Seeder
                 'comments' => $index === 0 ? 'Anniversary dinner' : 'Business meeting',
                 'reservation_fee' => $branch->reservation_fee,
                 'status' => 'confirmed',
-                'branch_id' => $branch->id,
+                'branch_id' => $branch->getKey(),
                 'assigned_table_ids' => [$tables[$index]->id]
             ]);
 
@@ -810,10 +810,10 @@ class MinimalSystemSeeder extends Seeder
     private function createOrderForReservation(Reservation $reservation, Branch $branch, $menuItems, Customer $customer): void
     {
         $order = Order::create([
-            'organization_id' => $branch->organization_id,
-            'branch_id' => $branch->id,
-            'reservation_id' => $reservation->id,
-            'customer_id' => $customer->id,
+            'organization_id' => $branch->getAttribute('organization_id'),
+            'branch_id' => $branch->getKey(),
+            'reservation_id' => $reservation->getKey(),
+            'customer_id' => $customer->getKey(),
             'order_type' => 'dine_in',
             'status' => 'completed',
             'total_amount' => 0,
@@ -829,10 +829,13 @@ class MinimalSystemSeeder extends Seeder
 
         foreach ($selectedItems as $itemIndex) {
             $menuItem = MenuItem::find($menuItemIds[$itemIndex]);
+            if (!$menuItem) {
+                continue;
+            }
 
             OrderItem::create([
-                'order_id' => $order->id,
-                'menu_item_id' => $menuItem->id,
+                'order_id' => $order->getKey(),
+                'menu_item_id' => $menuItem->getKey(),
                 'quantity' => rand(1, 3),
                 'unit_price' => $menuItem->price,
                 'total_price' => $menuItem->price * rand(1, 3),
@@ -844,7 +847,7 @@ class MinimalSystemSeeder extends Seeder
         $order->total_amount = $order->orderItems()->sum('total_price');
         $order->save();
 
-        $this->command->info("    ✓ Order #{$order->id} created for reservation #{$reservation->id}");
+        $this->command->info("    ✓ Order #{$order->getKey()} created for reservation #{$reservation->getKey()}");
     }
 
     /**
