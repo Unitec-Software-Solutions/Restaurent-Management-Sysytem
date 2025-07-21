@@ -3,24 +3,30 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Database\Seeders\MinimalSystemSeeder;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database - Minimal Setup
+     * Seed the application's database
      */
     public function run(): void
     {
-        $this->command->info('🌱 Starting minimal database seeding...');
-
-        // Only essential seeders for basic system functionality
-        $this->call([
-            MinimalSystemSeeder::class,
+        // Create Super Admin if not exists
+        $superAdminEmail = 'superadmin@system.local';
+        $superAdmin = Admin::firstOrCreate([
+            'email' => $superAdminEmail
+        ], [
+            'name' => 'Super Admin',
+            'password' => bcrypt('superadmin123'),
+            'is_super_admin' => true,
+            'is_active' => true,
         ]);
 
-        $this->command->info('✅ Minimal seeding completed successfully');
-        $this->command->info('🔐 Login at /admin/login with: superadmin@rms.com / SuperAdmin123!');
+        // Seed all system permissions for admin guard
         $this->call(SystemPermissionsSeeder::class);
+
+        if (method_exists($superAdmin, 'assignRole')) {
+            $superAdmin->assignRole('super_admin');
+        }
     }
 }
