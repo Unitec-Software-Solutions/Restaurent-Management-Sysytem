@@ -59,6 +59,7 @@
                     @php
                         $oldPermissions = old('permissions', $role->permissions ? $role->permissions->pluck('id')->toArray() : []);
                         if ($oldPermissions === [null] || $oldPermissions === null) $oldPermissions = [];
+                        // Use only permissions seeded by SystemPermissionsSeeder (guard_name = 'admin')
                         $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get()->keyBy('name');
                     @endphp
                     @foreach($permissionDefinitions as $category => $data)
