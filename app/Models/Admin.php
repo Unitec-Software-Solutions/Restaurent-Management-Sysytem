@@ -12,16 +12,18 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Admin extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasFactory, Notifiable, HasRoles {
+        HasRoles::assignRole as spatieAssignRole;
+        HasRoles::syncRoles as spatieSyncRoles;
+        HasRoles::removeRole as spatieRemoveRole;
+    }
 
     /**
-     * The roles that belong to the admin.
+     * Legacy role property for backward compatibility.
+     *
+     * @var string|null
      */
-    public function roles()
-    {
-        return $this->belongsToMany(\Spatie\Permission\Models\Role::class, 'admin_role', 'admin_id', 'role_id');
-    }
-    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+    public $role;
 
     protected $fillable = [
         'name',
@@ -48,17 +50,15 @@ class Admin extends Authenticatable
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Ensure status property always returns a value to avoid undefined property error.
      */
-    protected $hidden = [
-        'password',
-        'remember_token',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
-    ];
+    public function getStatusAttribute($value)
+    {
+        return $value ?? 'inactive';
+    }
 
     /**
-     * Get the attributes that should be cast following UI/UX data types.
+     * The attributes that should be cast.
      */
     protected function casts(): array
     {
@@ -78,9 +78,32 @@ class Admin extends Authenticatable
     }
 
     /**
-     * Guard name for Spatie permissions
+     * Guard name for Spatie permissions - CRITICAL: Must match config
      */
     protected $guard_name = 'admin';
+
+    /**
+     * Override Spatie's roles relationship to use correct guard
+     */
+    public function roles()
+    {
+        return $this->morphToMany(
+            \Spatie\Permission\Models\Role::class,
+            'model',
+            'model_has_roles',
+            'model_id',
+            'role_id'
+        )->where('model_type', static::class)
+         ->where('roles.guard_name', $this->getDefaultGuardName());
+    }
+
+    /**
+     * Get the default guard name for the model
+     */
+    public function getDefaultGuardName(): string
+    {
+        return $this->guard_name;
+    }
 
     /**
      * Boot method to set default UI settings and handle role migration
@@ -177,6 +200,8 @@ class Admin extends Authenticatable
     {
         return $this->belongsTo(\Spatie\Permission\Models\Role::class, 'current_role_id');
     }
+
+
 
     /**
      * Scopes for UI filtering following UI/UX patterns
@@ -507,7 +532,6 @@ class Admin extends Authenticatable
      */
     public function isOrganizationAdmin()
     {
-
         return !$this->is_super_admin
             && !is_null($this->organization_id)
             && is_null($this->branch_id);
