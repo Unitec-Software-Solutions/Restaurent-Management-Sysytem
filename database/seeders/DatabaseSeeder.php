@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✅ Minimal seeding completed successfully');
         $this->command->info('🔐 Login at /admin/login with: superadmin@rms.com / SuperAdmin123!');
         // $this->call(OrganizationsTableSeeder::class);
-        // $this->call(BranchesTableSeeder::class);
+        $this->call(BranchesTableSeeder::class);
         $this->call(AdminsTableSeeder::class);
         $this->call(RolesTableSeeder::class);
     }
