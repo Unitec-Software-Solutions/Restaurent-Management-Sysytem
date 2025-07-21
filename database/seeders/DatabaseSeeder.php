@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Admin;
+use Spatie\Permission\Exceptions\RoleDoesNotExist;
 
 class DatabaseSeeder extends Seeder
 {
@@ -24,14 +25,17 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Seed all system permissions for admin guard
-        $this->call(\Database\Seeders\SystemPermissionsSeeder::class);
+        $this->call(SystemPermissionsSeeder::class);
+
+        // Seed all modules
+        $this->call(ModuleSeeder::class);
 
         // Assign the super_admin role if it exists
         if (method_exists($superAdmin, 'assignRole')) {
             try {
                 $superAdmin->assignRole('super_admin');
-            } catch (\Spatie\Permission\Exceptions\RoleDoesNotExist $e) {
-                // Role does not exist yet, skip assignment
+            } catch (RoleDoesNotExist $e) {
+
             }
         }
     }
