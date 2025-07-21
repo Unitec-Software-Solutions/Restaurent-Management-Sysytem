@@ -1,5 +1,3 @@
-
-
 import { Page } from '@playwright/test';
 
 export type InventoryItem = {
@@ -10,6 +8,7 @@ export type InventoryItem = {
   unit?: string;
   buyingPrice?: string;
   sellingPrice?: string;
+  itemType?: string;
   stockLevel?: string;
 };
 
@@ -67,7 +66,16 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Inv
       await fillFieldWithRetry(page, 'input[name="items[0][item_code]"]', item.code || '');
 
       // Wait for categories to load
-      await page.waitForSelector('select[name="items[0][item_category_id]"] option:not([value=""])', { timeout: 10000 });
+      await page.waitForSelector('select[name="items[0][item_category_id]"]:not([disabled])', { timeout: 10000 });
+      // Optionally, ensure there are options to select
+      await page.waitForFunction(
+        (sel) => {
+          const select = document.querySelector(sel) as HTMLSelectElement;
+          return select && Array.from(select.options).some(o => o.value);
+        },
+        'select[name="items[0][item_category_id]"]',
+        { timeout: 10000 }
+      );
       if (item.category) {
         await page.selectOption('select[name="items[0][item_category_id]"]', { value: item.category });
       } else {
