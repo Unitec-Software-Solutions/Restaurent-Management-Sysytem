@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Spatie\Permission\Models\Role as SpatieRole;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Role extends SpatieRole
 {
-    use HasFactory;
+    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -96,7 +98,8 @@ class Role extends SpatieRole
             'personal' => 4,
         ];
 
-        return $levels[$this->scope] ?? 5;
+        $scope = $this->getAttribute('scope');
+        return $levels[$scope] ?? 5;
     }
 
     /**
