@@ -15,7 +15,7 @@
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700">Permissions</label>
             @php
-                $oldPermissions = old('permissions', isset($user) && $user->permissions ? $user->permissions->pluck('id')->toArray() : []);
+                $oldPermissions = old('permissions', isset($user) ? $user->getAllPermissions()->pluck('id')->toArray() : []);
                 $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get();
             @endphp
             @foreach($allPermissions as $permission)
