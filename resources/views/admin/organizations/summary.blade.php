@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organization Summary</h1>
-        
+
         <!-- Actions -->
         <div class="flex gap-3">
             @can('activate', $organization)
@@ -24,7 +24,7 @@
             @endcan
         </div>
     </div>
-    
+
     <a href="{{ route('admin.organizations.index') }}"
        class="inline-block mb-6 bg-gray-200 text-gray-800 px-5 py-2 rounded hover:bg-gray-300 transition font-semibold">
         ← Back to Organizations
@@ -90,7 +90,7 @@
                 <li><span class="font-semibold">Designation:</span> {{ $organization->contact_person_designation ?? '-' }}</li>
                 <li><span class="font-semibold">Phone:</span> {{ $organization->contact_person_phone ?? '-' }}</li>
             </ul>
-            
+
             @if(auth('admin')->user()->isSuperAdmin())
             <div class="mt-6">
                 <label class="block font-medium mb-1">Activation Key</label>
@@ -127,7 +127,7 @@
     function toggleSummaryKeyVisibility() {
         const input = document.getElementById('activation-key');
         const icon = document.getElementById('summaryKeyIcon');
-        
+
         if (input.type === 'password') {
             input.type = 'text';
             icon.classList.remove('fa-eye');
@@ -308,15 +308,6 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $user->phone_number ?? '-' }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                @if($user->userRole)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {{ $user->userRole->name }}
-                                    </span>
-                                @else
-                                    <span class="text-gray-400 text-sm">No role</span>
-                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($user->roles && $user->roles->count() > 0)

@@ -15,6 +15,8 @@ use Spatie\Permission\Models\Permission;
 
 class RoleController extends Controller
 {
+
+
     /**
      * Display the specified role and its permissions.
      */

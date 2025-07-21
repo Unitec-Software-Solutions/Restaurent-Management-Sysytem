@@ -11,7 +11,7 @@
             <select id="role_id" name="role_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                 <option value="">Select a role</option>
                 @foreach($roles as $role)
-                    <option value="{{ $role->id }}" {{ $user->current_role_id == $role->id ? 'selected' : '' }}>
+                    <option value="{{ $role->id }}" {{ $user->roles->contains($role) ? 'selected' : '' }}>
                         {{ $role->name }}
                     </option>
                 @endforeach

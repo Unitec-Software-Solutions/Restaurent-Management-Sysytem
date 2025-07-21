@@ -1,14 +1,14 @@
 {{-- filepath: resources/views/admin/users/create.blade.php --}}
 @extends('layouts.admin')
 
-@section('title', 'Create User')
+@section('title', 'Create Admin')
 
 @section('content')
     <div class="container mx-auto px-4 py-8">
 <div class="bg-white rounded shadow p-6">
     @if($organizations->isEmpty())
         <div class="mb-4 bg-yellow-100 text-yellow-800 p-3 rounded flex items-center justify-between">
-            <span>No organizations found. Please create an organization before adding users.</span>
+            <span>No organizations found. Please create an organization before adding admins.</span>
             <a href="{{ route('admin.organizations.create') }}"
                class="ml-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                 + Create Organization
@@ -16,11 +16,11 @@
         </div>
     @elseif($branches->isEmpty())
         <div class="mb-4 bg-yellow-100 text-yellow-800 p-3 rounded">
-            No branches found for your organization. Please create a branch before adding users.
+            No branches found for your organization. Please create a branch before adding admins.
         </div>
     @elseif($roles->isEmpty())
         <div class="mb-4 bg-yellow-100 text-yellow-800 p-3 rounded flex items-center justify-between">
-            <span>No roles found. Please create a role before adding users.</span>
+            <span>No roles found. Please create a role before adding admins.</span>
             <a href="{{ route('admin.roles.create') }}"
                class="ml-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                 + Create Role
@@ -72,13 +72,13 @@
             @endif
 
             <div class="mb-4">
-                <label for="role_id" class="block text-sm font-medium text-gray-700">Role</label>
-                <select id="role_id" name="role_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    <option value="">Select Role</option>
-                    @foreach($roles as $role)
-                        @if($role->name === 'Super Admin' && !auth('admin')->user()->isSuperAdmin())
-                            @continue
-                        @endif
+            <label for="role_id" class="block text-sm font-medium text-gray-700">Role</label>
+            <select id="role_id" name="role_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                <option value="">Select Role</option>
+                @foreach($roles as $role)
+                    @if($role->name === 'Super Admin' && !auth('admin')->user()->isSuperAdmin())
+                        @continue
+                    @endif
                         <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
                             {{ $role->name }}
                         </option>
@@ -129,7 +129,7 @@
 
             <div class="mt-6 flex justify-end">
                 <a href="{{ route('admin.users.index') }}" class="mr-3 bg-gray-200 text-gray-800 py-2 px-4 rounded hover:bg-gray-300">Cancel</a>
-                <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Create User</button>
+                <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Create Admin</button>
             </div>
         </form>
     @endif
