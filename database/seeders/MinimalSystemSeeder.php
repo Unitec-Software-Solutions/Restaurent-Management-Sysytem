@@ -56,8 +56,8 @@ class MinimalSystemSeeder extends Seeder
             // Step 4: Create subscription plan FIRST
             $subscriptionPlan = SubscriptionPlan::create([
                 'name' => 'Premium Plan',
-                'price' => 99.99,
-                'currency' => 'USD',
+                'price' => 50000.00,
+                'currency' => 'LKR',
                 'description' => 'Full-featured restaurant management plan',
                 'is_trial' => false,
                 'trial_period_days' => 30,
@@ -333,8 +333,8 @@ class MinimalSystemSeeder extends Seeder
 
         $subscriptionPlan = SubscriptionPlan::create([
             'name' => 'Premium Plan',
-            'price' => 99.99,
-            'currency' => 'USD',
+            'price' => 50000.00,
+            'currency' => 'LKR',
             'description' => 'Full-featured restaurant management plan',
             'is_trial' => false,
             'trial_period_days' => 30,
