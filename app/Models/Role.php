@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Role extends SpatieRole
 {
-    use SoftDeletes;
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -40,12 +39,19 @@ class Role extends SpatieRole
         return $this->belongsTo(\App\Models\Branch::class);
     }
 
+    // Use Spatie's default permissions() relationship
+
     /**
-     * The permissions that belong to the role (custom pivot table)
+     * Get admins assigned to this role
      */
-    public function permissions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function admins()
     {
-        return $this->belongsToMany(\App\Models\Permission::class, 'role_permissions', 'role_id', 'permission_id')->withTimestamps();
+        return $this->belongsToMany(
+            \App\Models\Admin::class,
+            'model_has_roles',
+            'role_id',
+            'model_id'
+        )->where('model_type', \App\Models\Admin::class);
     }
 
     /**
@@ -146,12 +152,43 @@ class Role extends SpatieRole
                     'manage_orders'
                 ]
             ]
-
         ];
     }
 
-    public function roles()
+    /**
+     * Sync permissions to this role using Spatie's method
+     */
+    public function syncPermissions(...$permissions)
     {
-        return $this->belongsToMany(Role::class, 'role_permissions');
+        // Flatten the permissions array if needed
+        $permissions = is_array($permissions[0] ?? null) ? $permissions[0] : $permissions;
+
+        // Convert permission names to permission models if needed
+        if (is_array($permissions) && !empty($permissions) && is_string($permissions[0] ?? null)) {
+            $permissionModels = \Spatie\Permission\Models\Permission::whereIn('name', $permissions)
+                ->where('guard_name', $this->guard_name)
+                ->get();
+
+            return parent::syncPermissions($permissionModels);
+        }
+
+        return parent::syncPermissions(...$permissions);
+    }
+
+    /**
+     * Give permission to this role using Spatie's method
+     */
+    public function givePermissionTo(...$permissions)
+    {
+        return parent::givePermissionTo(...$permissions);
+    }
+
+    /**
+     * Check if role has specific permission
+     */
+    public function hasPermissionTo($permission, ?string $guardName = null): bool
+    {
+        $guardName = $guardName ?? $this->guard_name;
+        return parent::hasPermissionTo($permission, $guardName);
     }
 }
