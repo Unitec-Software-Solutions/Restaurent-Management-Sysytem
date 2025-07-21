@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Reports Dashboard')
-@section('header-title', 'Reports Dashboard')
+@section('title', 'Sales Dashboard')
+@section('header-title', 'Sales Dashboard')
 
 @section('content')
     <div class="mx-auto px-4 py-8">
@@ -11,7 +11,7 @@
                 ['name' => 'Dashboard', 'link' => route('admin.reports.index')],
                 ['name' => 'Sales Report', 'link' => route('admin.reports.sales.index')],
                 ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
-            ]" active="Dashboard" />
+            ]" active="Sales Report" />
         </div>
 
 
