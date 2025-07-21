@@ -256,88 +256,81 @@ class UserController extends Controller
     // Update a user
     public function update(Request $request, \App\Models\Admin $admin)
     {
-        $this->authorize('update', $admin);
-        $currentAdmin = Auth::guard('admin')->user();
-
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('admins')->ignore($admin->id),
-            ],
-            'branch_id' => [
-                'nullable',
-                Rule::exists('branches', 'id')->where(function ($query) use ($currentAdmin) {
-                    if (!$currentAdmin->is_super_admin && $currentAdmin->organization_id) {
-                        $query->where('organization_id', $currentAdmin->organization_id);
-                    }
-                }),
-            ],
-            'password' => 'nullable|string|min:8|confirmed',
-        ]);
-
         $data = [
-            'name' => $request->name,
-            'email' => $request->email,
-            'branch_id' => $request->branch_id,
+            'name' => $request->input('name'),
+            'email' => $request->input('email'),
+            'branch_id' => $request->input('branch_id'),
         ];
 
         if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
+            $data['password'] = Hash::make($request->input('password'));
         }
 
         $admin->update($data);
 
-        // Assign role using Spatie's pivot table for Admin model
-        if ($request->filled('role_id')) {
-            $role = Role::where('guard_name', 'admin')->find($request->role_id);
+        // Always sync role and permissions
+        $role = null;
+        $roleId = $request->input('role_id');
+        if (!empty($roleId)) {
+            $role = Role::where('guard_name', 'admin')->find($roleId);
             if ($role) {
-                $admin->roles()->sync([$role->id]);
-                // Sync all permissions from the role to the admin
-                $admin->syncPermissions($role->permissions()->pluck('name')->toArray());
+                $admin->syncRoles([$role]);
             }
         }
-        // Reload admin with roles for edit and index views
-        $admin->load(['roles']);
 
-        return redirect()->route('admin.users.index')->with('success', 'Admin updated successfully');
+        // Get role permissions (by name)
+        $rolePermissions = $role ? $role->permissions()->pluck('name')->toArray() : [];
+
+        // Get custom permissions from request (by id, convert to name)
+        $customPermissions = [];
+        $permissionIds = $request->input('permissions', []);
+        if (is_array($permissionIds) && count($permissionIds) > 0) {
+            $customPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $permissionIds)->pluck('name')->toArray();
+        }
+
+        // Merge and sync all permissions (by name)
+        $allPermissions = array_unique(array_merge($rolePermissions, $customPermissions));
+        $admin->syncPermissions($allPermissions);
+
+        return redirect()->route('admin.users.index')->with('success', 'Admin updated successfully with assigned role and permissions.');
     }
 
     // Show form to assign/change a role for an admin
     public function assignRoleForm(\App\Models\Admin $admin)
     {
-        $this->authorize('assignRole', $admin);
-        $currentAdmin = Auth::guard('admin')->user();
-        $rolesQuery = Role::query();
-        if (!$currentAdmin->is_super_admin && isset($currentAdmin->organization_id)) {
-            $rolesQuery->where('organization_id', $currentAdmin->organization_id);
-        }
-        $roles = $rolesQuery->get();
-        return view('admin.users.assign-role', compact('admin', 'roles'));
+        $roles = \App\Models\Role::where('guard_name', 'admin')->get();
+        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get();
+        return view('admin.users.assign-role', compact('admin', 'roles', 'allPermissions'));
     }
 
-    // Assign/change a role for an admin
-    public function assignRole(Request $request, \App\Models\Admin $admin)
+    // Store assigned role and permissions for an admin
+    public function assignRoleStore(Request $request, \App\Models\Admin $admin)
     {
-        $this->authorize('assignRole', $admin);
-        $currentAdmin = Auth::guard('admin')->user();
         $request->validate([
-            'role_id' => [
-                'required',
-                Rule::exists('roles', 'id')->where(function ($query) use ($currentAdmin) {
-                    if (!$currentAdmin->is_super_admin && $currentAdmin->organization_id) {
-                        $query->where('organization_id', $currentAdmin->organization_id);
-                    }
-                })
-            ],
+            'role_id' => 'required|exists:roles,id',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'exists:permissions,id',
         ]);
-        $role = Role::find($request->role_id);
-        if ($role) {
-            $admin->roles()->sync([$role->id]);
+
+        $roleId = $request->input('role_id');
+        $role = \App\Models\Role::where('guard_name', 'admin')->findOrFail($roleId);
+        $admin->syncRoles([$role]);
+
+        // Get role permissions (by name)
+        $rolePermissions = $role->permissions()->pluck('name')->toArray();
+
+        // Get custom permissions from request (by id, convert to name)
+        $customPermissions = [];
+        $permissionIds = $request->input('permissions', []);
+        if (is_array($permissionIds) && count($permissionIds) > 0) {
+            $customPermissions = \Spatie\Permission\Models\Permission::whereIn('id', $permissionIds)->pluck('name')->toArray();
         }
-        return redirect()->route('admin.users.index')->with('success', 'Role assigned successfully');
+
+        // Merge and sync all permissions (by name)
+        $allPermissions = array_unique(array_merge($rolePermissions, $customPermissions));
+        $admin->syncPermissions($allPermissions);
+
+    return redirect()->route('admin.users.index')->with('success', 'Role and permissions assigned successfully.');
     }
 
     // Delete an admin
