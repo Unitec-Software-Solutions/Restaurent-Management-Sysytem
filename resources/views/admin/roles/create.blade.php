@@ -126,7 +126,8 @@
                 <p class="text-gray-600 mb-4">Select the permissions that this role should have access to:</p>
 
                 @php
-                    $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get()->keyBy('name');
+                    // Use only permissions seeded by SystemPermissionsSeeder (guard_name = 'admin')
+                    $allPermissions = Permission::where('guard_name', 'admin')->get()->keyBy('name');
                 @endphp
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
