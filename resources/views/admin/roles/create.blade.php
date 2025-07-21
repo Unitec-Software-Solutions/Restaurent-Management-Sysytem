@@ -31,6 +31,7 @@
                         {{ count($template['permissions']) }} permissions included
                     </div>
                 </div>
+                
             @endforeach
         </div>
     </div>
@@ -127,7 +128,7 @@
 
                 @php
                     // Use only permissions seeded by SystemPermissionsSeeder (guard_name = 'admin')
-                    $allPermissions = Permission::where('guard_name', 'admin')->get()->keyBy('name');
+                    $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get()->keyBy('name');
                 @endphp
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
