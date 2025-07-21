@@ -9,11 +9,11 @@ import { activateBranch } from './helpers/activateBranch';
 import { createSupplier } from './helpers/createSupplier';
 import { addItemsToInventory } from './helpers/addItemsToInventory';
 
-test.skip('Admin Workflow 🚀', async ({ page }) => {
-    // await loginAsSuperAdmin(page);
-    // await createSubscriptionPlan(page);
-    // await createOrganization(page);
-});
+// test.skip('Admin Workflow 🚀', async ({ page }) => {
+//     // await loginAsSuperAdmin(page);
+//     // await createSubscriptionPlan(page);
+//     // await createOrganization(page);
+// });
 
 test('Create Organization 🏢', async ({ page }) => {
     await loginAsSuperAdmin(page);
