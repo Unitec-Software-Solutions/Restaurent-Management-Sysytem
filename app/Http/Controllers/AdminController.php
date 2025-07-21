@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Reservation;
 use App\Models\Admin;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
+use App\Models\Organization;
+use App\Models\Branch;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -21,16 +23,13 @@ class AdminController extends Controller
             return redirect()->route('admin.login')->with('error', 'Please log in to access the dashboard.');
         }
 
-        // Super admin check - bypass organization requirements
         $isSuperAdmin = $admin->isSuperAdmin();
 
-        // Basic validation - super admins don't need organization
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
         }
 
         try {
-            // Super admins can see all reservations, others see their organization's
             $reservationsQuery = Reservation::with(['user', 'table'])
                 ->orderBy('created_at', 'desc')
                 ->take(10);
@@ -48,9 +47,6 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * Display reservations for admin
-     */
     public function reservations()
     {
         $admin = Auth::user();
@@ -59,17 +55,14 @@ class AdminController extends Controller
             return redirect()->route('admin.login')->with('error', 'You must be logged in to access reservations.');
         }
 
-        // Build query based on admin permissions
         $query = Reservation::with(['user', 'table']);
 
         if ($admin->is_super_admin) {
             // Super admin can see all reservations
         } elseif ($admin->branch_id) {
-            // Branch admin sees only their branch
             $query->where('branch_id', $admin->branch_id)
                   ->where('organization_id', $admin->organization_id);
         } elseif ($admin->organization_id) {
-            // Organization admin sees all branches in their organization
             $query->where('organization_id', $admin->organization_id);
         } else {
             return redirect()->route('admin.dashboard')->with('error', 'Incomplete admin details. Contact support.');
@@ -80,19 +73,15 @@ class AdminController extends Controller
         return view('admin.reservations.index', compact('reservations'));
     }
 
-    /**
-     * Display a listing of admins
-     */
     public function index()
     {
         $currentAdmin = Auth::guard('admin')->user();
 
-        // Only super admins can view admin list
         if (!$currentAdmin->isSuperAdmin()) {
             abort(403, 'Unauthorized. Only super admins can view admin accounts.');
         }
 
-        $admins = Admin::with(['organization', 'branch'])
+        $admins = Admin::with(['organization', 'branch', 'roles'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
@@ -100,8 +89,88 @@ class AdminController extends Controller
     }
 
     /**
-     * Get admin details for modal (AJAX)
+     * Show the form for creating a new admin
      */
+    public function create()
+    {
+        $currentAdmin = Auth::guard('admin')->user();
+
+        if (!$currentAdmin->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only super admins can create admin accounts.');
+        }
+
+        // Get organizations and roles for the form
+        $organizations = Organization::with('branches')->get();
+        $roles = Role::where('guard_name', 'admin')->get();
+
+        return view('admin.admins.create', compact('organizations', 'roles'));
+    }
+
+    /**
+     * Store a newly created admin
+     */
+    public function store(Request $request)
+    {
+        $currentAdmin = Auth::guard('admin')->user();
+
+        if (!$currentAdmin->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only super admins can create admin accounts.');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:admins,email',
+            'password' => 'required|string|min:8|confirmed',
+            'organization_id' => 'nullable|exists:organizations,id',
+            'branch_id' => 'nullable|exists:branches,id',
+            'role_ids' => 'array',
+            'role_ids.*' => 'exists:roles,id',
+            'is_super_admin' => 'boolean',
+            'is_active' => 'boolean',
+            'department' => 'nullable|string|max:255',
+            'job_title' => 'nullable|string|max:255',
+            'status' => 'required|in:active,inactive,suspended,pending',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $admin = Admin::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'organization_id' => $request->organization_id,
+            'branch_id' => $request->branch_id,
+            'is_super_admin' => $request->boolean('is_super_admin'),
+            'is_active' => $request->boolean('is_active', true),
+            'department' => $request->department,
+            'job_title' => $request->job_title,
+            'status' => $request->status,
+            'phone' => $request->phone,
+        ]);
+
+        // Assign roles using Spatie
+        if ($request->filled('role_ids')) {
+            $roles = Role::whereIn('id', $request->role_ids)
+                ->where('guard_name', 'admin')
+                ->get();
+
+            $admin->syncRoles($roles);
+
+            // Set the first role as current_role_id for backward compatibility
+            if ($roles->isNotEmpty()) {
+                $admin->update(['current_role_id' => $roles->first()->id]);
+            }
+        }
+
+        Log::info('New admin created', [
+            'admin_id' => $admin->id,
+            'email' => $admin->email,
+            'roles_assigned' => $request->role_ids ?? []
+        ]);
+
+        return redirect()->route('admins.index')
+            ->with('success', 'Admin created successfully.');
+    }
+
     public function getAdminDetails($adminId)
     {
         try {
@@ -127,32 +196,24 @@ class AdminController extends Controller
         }
     }
 
-    /**
-     * Show the form for editing an admin
-     */
     public function edit(Admin $admin)
     {
         $currentAdmin = Auth::guard('admin')->user();
 
-        // Only super admins can edit other admins
         if (!$currentAdmin->isSuperAdmin()) {
             abort(403, 'Unauthorized. Only super admins can edit admin accounts.');
         }
 
-        // Get roles for the form
-        $roles = Role::all();
+        $organizations = Organization::with('branches')->get();
+        $roles = Role::where('guard_name', 'admin')->get();
 
-        return view('admin.admins.edit', compact('admin', 'roles'));
+        return view('admin.admins.edit', compact('admin', 'organizations', 'roles'));
     }
 
-    /**
-     * Update an admin
-     */
     public function update(Request $request, Admin $admin)
     {
         $currentAdmin = Auth::guard('admin')->user();
 
-        // Only super admins can update other admins
         if (!$currentAdmin->isSuperAdmin()) {
             abort(403, 'Unauthorized. Only super admins can update admin accounts.');
         }
@@ -166,13 +227,15 @@ class AdminController extends Controller
             ],
             'organization_id' => 'nullable|exists:organizations,id',
             'branch_id' => 'nullable|exists:branches,id',
-            'role_id' => 'nullable|exists:roles,id',
+            'role_ids' => 'array',
+            'role_ids.*' => 'exists:roles,id',
             'password' => 'nullable|string|min:8|confirmed',
             'is_super_admin' => 'boolean',
             'is_active' => 'boolean',
             'department' => 'nullable|string|max:255',
             'job_title' => 'nullable|string|max:255',
             'status' => 'required|in:active,inactive,suspended,pending',
+            'phone' => 'nullable|string|max:20',
         ]);
 
         $data = [
@@ -185,16 +248,8 @@ class AdminController extends Controller
             'department' => $request->department,
             'job_title' => $request->job_title,
             'status' => $request->status,
+            'phone' => $request->phone,
         ];
-
-        // Handle role assignment
-        if ($request->filled('role_id')) {
-            $data['current_role_id'] = $request->role_id;
-
-            // Also assign the role via Spatie
-            $role = Role::findOrFail($request->role_id);
-            $admin->syncRoles([$role]);
-        }
 
         // Handle password update
         if ($request->filled('password')) {
@@ -203,7 +258,72 @@ class AdminController extends Controller
 
         $admin->update($data);
 
+        // Handle role assignment using Spatie
+        if ($request->has('role_ids')) {
+            if (!empty($request->role_ids)) {
+                $roles = Role::whereIn('id', $request->role_ids)
+                    ->where('guard_name', 'admin')
+                    ->get();
+
+                $admin->syncRoles($roles);
+
+                // Update current_role_id for backward compatibility
+                if ($roles->isNotEmpty()) {
+                    $admin->update(['current_role_id' => $roles->first()->id]);
+                } else {
+                    $admin->update(['current_role_id' => null]);
+                }
+            } else {
+                // Remove all roles
+                $admin->syncRoles([]);
+                $admin->update(['current_role_id' => null]);
+            }
+        }
+
+        Log::info('Admin updated', [
+            'admin_id' => $admin->id,
+            'updated_by' => $currentAdmin->id,
+            'roles_assigned' => $request->role_ids ?? []
+        ]);
+
         return redirect()->route('admins.index')
             ->with('success', 'Admin updated successfully.');
+    }
+
+    /**
+     * Remove the specified admin from storage
+     */
+    public function destroy(Admin $admin)
+    {
+        $currentAdmin = Auth::guard('admin')->user();
+
+        if (!$currentAdmin->isSuperAdmin()) {
+            abort(403, 'Unauthorized. Only super admins can delete admin accounts.');
+        }
+
+        // Prevent self-deletion
+        if ($currentAdmin->id === $admin->id) {
+            return back()->with('error', 'You cannot delete your own account.');
+        }
+
+        // Remove all roles before deletion
+        $admin->syncRoles([]);
+        $admin->delete();
+
+        return redirect()->route('admins.index')
+            ->with('success', 'Admin deleted successfully.');
+    }
+
+    /**
+     * Get branches for an organization (AJAX)
+     */
+    public function getBranches($organizationId)
+    {
+        $branches = Branch::where('organization_id', $organizationId)->get();
+
+        return response()->json([
+            'success' => true,
+            'branches' => $branches
+        ]);
     }
 }
