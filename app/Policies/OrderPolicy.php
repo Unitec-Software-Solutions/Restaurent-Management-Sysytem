@@ -5,15 +5,26 @@ namespace App\Policies;
 use App\Models\Admin;
 use App\Models\Order;
 use Illuminate\Auth\Access\Response;
+use App\Services\PermissionSystemService;
 
 class OrderPolicy
 {
+    protected PermissionSystemService $permissionService;
+
+    public function __construct(PermissionSystemService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(Admin $admin): bool
     {
-        return $admin->hasPermissionTo('view orders') || $admin->is_super_admin;
+        if ($admin->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['orders.view']) && $admin->hasPermissionTo('view orders');
     }
 
     /**
@@ -26,7 +37,7 @@ class OrderPolicy
         }
 
         // Admin can view orders from their branch/organization
-        return $admin->branch_id === $order->branch_id || 
+        return $admin->branch_id === $order->branch_id ||
                $admin->organization_id === $order->organization_id;
     }
 
@@ -35,7 +46,11 @@ class OrderPolicy
      */
     public function create(Admin $admin): bool
     {
-        return $admin->hasPermissionTo('create orders') || $admin->is_super_admin;
+        if ($admin->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['orders.create']) && $admin->hasPermissionTo('orders.create');
     }
 
     /**
@@ -43,23 +58,17 @@ class OrderPolicy
      */
     public function update(Admin $admin, Order $order): bool
     {
-        // Cannot update completed or cancelled orders
         if (in_array($order->status, [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])) {
             return false;
         }
-
-        if ($admin->is_super_admin) {
-            return true;
-        }
-
-        // Check if admin has update permission
-        if (!$admin->hasPermissionTo('update orders')) {
+        if ($admin->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+        if (!isset($availablePermissions['orders.edit']) || !$admin->hasPermissionTo('update orders')) {
             return false;
         }
-
-        // Admin can only update orders from their branch/organization
-        return $admin->branch_id === $order->branch_id || 
-               $admin->organization_id === $order->organization_id;
+        return $admin->branch_id === $order->branch_id || $admin->organization_id === $order->organization_id;
     }
 
     /**
@@ -67,23 +76,17 @@ class OrderPolicy
      */
     public function cancel(Admin $admin, Order $order): bool
     {
-        // Cannot cancel already completed or cancelled orders
         if (in_array($order->status, [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])) {
             return false;
         }
-
-        if ($admin->is_super_admin) {
-            return true;
-        }
-
-        // Check if admin has cancel permission
-        if (!$admin->hasPermissionTo('cancel orders')) {
+        if ($admin->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+        if (!isset($availablePermissions['orders.cancel']) || !$admin->hasPermissionTo('cancel orders')) {
             return false;
         }
-
-        // Admin can only cancel orders from their branch/organization
-        return $admin->branch_id === $order->branch_id || 
-               $admin->organization_id === $order->organization_id;
+        return $admin->branch_id === $order->branch_id || $admin->organization_id === $order->organization_id;
     }
 
     /**
@@ -91,18 +94,8 @@ class OrderPolicy
      */
     public function delete(Admin $admin, Order $order): bool
     {
-        // Only pending orders can be deleted
-        if ($order->status !== Order::STATUS_PENDING) {
-            return false;
-        }
-
-        if ($admin->is_super_admin) {
-            return true;
-        }
-
-        return ($admin->hasPermissionTo('delete orders') && 
-                ($admin->branch_id === $order->branch_id || 
-                 $admin->organization_id === $order->organization_id));
+        // Deletion of orders is forbidden for all users to maintain data integrity
+        return false;
     }
 
     /**
@@ -110,6 +103,7 @@ class OrderPolicy
      */
     public function restore(Admin $admin, Order $order): bool
     {
+        // Restoration of orders is forbidden for all users
         return false;
     }
 
@@ -118,6 +112,7 @@ class OrderPolicy
      */
     public function forceDelete(Admin $admin, Order $order): bool
     {
+        // Permanent deletion of orders is forbidden for all users
         return false;
     }
 }

@@ -3,7 +3,7 @@
 @section('title', 'Create Item Category')
 @section('header-title', 'Create Item Category')
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <!-- Main Content Card -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Card Header -->
@@ -45,7 +45,7 @@
                                             @endforeach
                                         </select>
                                         @error('organization_id')
-                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('organization_id') }}</p>
                                         @enderror
                                     </div>
                                 </div>

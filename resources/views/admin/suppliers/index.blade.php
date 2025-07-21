@@ -2,14 +2,31 @@
 @section('header-title', 'Suppliers Management')
 @section('content')
 
-    <div class="p-4 rounded-lg">
-        <!-- Header with buttons -->
+    <div class="container mx-auto px-4 py-8">
+
+
+            <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Supplier Management</h1>
+                <p class="text-gray-600 mt-1">Manage suppliers and their details</p>
+            </div>
+                <a href="{{ route('admin.suppliers.create') }}"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i> Add New Supplier
+                    {{-- <x-lucide-user-plus class="w-5 h-5 text-white mr-2" /> Add New Supplier --}}
+                </a>
+        </div>
+    </div>
+
+        {{-- <!-- Header with buttons -->
         <x-nav-buttons :items="[
             ['name' => 'Suppliers Management', 'link' => route('admin.suppliers.index')],
             ['name' => 'Purchase Orders', 'link' => route('admin.purchase-orders.index')],
             ['name' => 'Supplier GRNs', 'link' => route('admin.grn.index')],
-            ['name' => 'Supplier Payments', 'link' => route('admin.payments.index')],
-        ]" active="Suppliers Management" />
+            ['name' => 'Supplier Payments', 'link' => '#', 'disabled' => true],
+        ]" active="Suppliers Management" /> --}}
 
         {{-- Debug Info Card --}}
         {{-- @if(config('app.debug'))
@@ -38,9 +55,26 @@
             </div>
         @endif --}}
 
+                    <!-- Filters with Export -->
+            <x-module-filters
+                :action="route('admin.suppliers.index')"
+                :export-permission="'export_suppliers'"
+                :export-filename="'suppliers_export.xlsx'">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All Status</option>
+                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                    </select>
+                </div>
+            </x-module-filters>
+
+
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Header -->
-            <div class="p-6 border-b flex items-center justify-between">
+            {{-- <div class="p-6 border-b flex items-center justify-between">
                 <div>
                     <h2 class="text-xl font-semibold text-gray-800">Suppliers</h2>
                     <p class="text-sm text-gray-500">
@@ -60,23 +94,9 @@
                     class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-plus mr-2"></i> Add New Supplier
                 </a>
-            </div>
+            </div> --}}
 
-            <!-- Filters with Export -->
-            <x-module-filters
-                :action="route('admin.suppliers.index')"
-                :export-permission="'export_suppliers'"
-                :export-filename="'suppliers_export.xlsx'">
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                        <option value="">All Status</option>
-                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
-                    </select>
-                </div>
-            </x-module-filters>
 
             <!-- Suppliers Table -->
             <div class="overflow-x-auto">

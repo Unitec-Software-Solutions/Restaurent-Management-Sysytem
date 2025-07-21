@@ -5,15 +5,16 @@
 
 @section('content')
     <!-- Page Content -->
-    <div class="p-4 rounded-lg">
+    <div class="container mx-auto px-4 py-8">
         <!-- Header with buttons                         inventory path                              -->
         <div class="sticky top-0 z-10 mb-6">
             <x-nav-buttons :items="[
                 ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                 ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
                 ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+                ['name' => 'Stock Release Notes', 'link' => route('admin.inventory.srn.index')],
                 ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
-                ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                ['name' => 'Goods Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                 ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
             ]" active="Goods Received Notes" />
         </div>

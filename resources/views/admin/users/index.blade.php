@@ -3,14 +3,31 @@
 @section('title', 'Users')
 @section('header-title', 'Users Management')
 @section('content')
-    <div class="p-4 rounded-lg">
+<div class="container mx-auto px-4 py-8">
+
+    <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <div class="flex items-center gap-2">
+                    {{-- <i class="fas fa-user-shield text-2xl text-indigo-500"></i> --}}
+                    <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
+                </div>
+                <p class="text-gray-600 mt-1">Manage users and their roles</p>
+            </div>
+            <a href="{{ route('admin.users.create') }}"
+               class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-plus mr-2"></i>
+                Create User
+            </a>
+        </div>
+    </div>
+
 
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         <div class="p-6 border-b flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 class="text-2xl font-semibold">Users</h2>
-        <a href="{{ route('admin.users.create') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-            + Create User
-        </a>
+
+
     </div>
     <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
@@ -30,7 +47,9 @@
         <tbody class="bg-white divide-y divide-gray-200">
             @forelse($users as $index => $user)
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $users->firstItem() + $index }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ $index + 1 }}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-10 w-10">
@@ -141,8 +160,6 @@
             @endforelse
         </tbody>
     </table>
-    <div class="mt-4">
-        {{ $users->links() }}
-    </div>
+    <!-- Pagination removed: $users is not paginated -->
 </div>
 @endsection

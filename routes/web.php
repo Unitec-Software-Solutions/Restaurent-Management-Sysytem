@@ -16,7 +16,8 @@ use App\Http\Controllers\{
     RealtimeDashboardController,
     MenuController,
     KitchenController,
-    KotController
+    KotController,
+    ModuleController
 };
  // Admin namespace controllers
 use App\Http\Controllers\Admin\{
@@ -28,7 +29,8 @@ use App\Http\Controllers\Admin\{
     SubscriptionPlanController,
     PaymentController,
     KitchenStationController,
-    MenuItemController
+    MenuItemController,
+
 };
 
 // supplier controllers
@@ -41,12 +43,13 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Admin\{
     PurchaseOrderController
 };
-// GRN/GTN controllers
+// GRN/GTN/SRN controllers
 use App\Http\Controllers\Admin\
 {
     //GrnController,
     GrnDashboardController,
     GoodsTransferNoteController,
+    StockReleaseNoteController,
     // GoodsTransferItemController,
     // GrnItemController,
 };
@@ -58,7 +61,7 @@ use App\Http\Controllers\Admin\
     ItemCategoryController,
     ItemMasterController,
     ItemTransactionController,
-    ItemStockController,
+    // ItemStockController (what the heck is this?)
 };
 
 
@@ -108,9 +111,9 @@ Route::prefix('guest')->name('guest.')->group(function () {
     Route::get('/reservations/{confirmationNumber}/confirmation', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmation'])->name('reservations.confirmation');
     Route::get('/reservations/{reservationId}/confirmation/{token}', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmationById'])->name('reservation.confirmation');
 
-    // Guest session management
-    Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
-});
+        // Guest session management
+        Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
+    });
 
 /*-------------------------------------------------------------------------
 | Customer Routes
@@ -261,7 +264,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
 
+            Route::prefix('srn')->name('srn.')->group(function () {
+                Route::get('/', [StockReleaseNoteController::class, 'index'])->name('index');
+                Route::get('/create', [StockReleaseNoteController::class, 'create'])->name('create');
+                Route::post('/', [StockReleaseNoteController::class, 'store'])->name('store');
+                Route::get('/{release}', [StockReleaseNoteController::class, 'show'])->whereNumber('release')->name('show');
+                Route::get('/{release}/edit', [StockReleaseNoteController::class, 'edit'])->whereNumber('release')->name('edit');
+                Route::put('/{release}', [StockReleaseNoteController::class, 'update'])->whereNumber('release')->name('update');
+                Route::delete('/{release}', [StockReleaseNoteController::class, 'destroy'])->whereNumber('release')->name('destroy');
 
+                // AJAX endpoints fetch items of that branch with stock
+                Route::get('/items-with-stock', [StockReleaseNoteController::class, 'itemsWithStock'])->name('items-with-stock');
+
+                // Verification endpoint
+                Route::post('/{release}/verify', [StockReleaseNoteController::class, 'verify'])->whereNumber('release')->name('verify');
+            });
 
         });
 
@@ -659,10 +676,10 @@ Route::middleware(['auth:admin', SuperAdmin::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::resource('roles', \App\Http\Controllers\RoleController::class)->except(['show']);
-        Route::resource('modules', \App\Http\Controllers\ModuleController::class)->except(['show']);
-        Route::get('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'permissions'])->name('roles.permissions');
-        Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
+        Route::resource('roles', RoleController::class);
+        Route::resource('modules', ModuleController::class)->except(['show']);
+        Route::get('roles/{role}/permissions', [RoleController::class, 'permissions'])->name('roles.permissions');
+        Route::post('roles/{role}/permissions', [RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
     });
 
 // User Management Routes - Accessible by Superadmin, Org Admin, and Branch Admin with permissions
@@ -749,6 +766,7 @@ Route::post('inventory/items/restore', [ItemMasterController::class, 'restore'])
 // Menu routes - properly ordered to avoid conflicts
 Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
 Route::get('menus/list', [App\Http\Controllers\Admin\MenuController::class, 'list'])->middleware(['auth:admin'])->name('admin.menus.list');
+Route::get('menus/manager', [App\Http\Controllers\Admin\MenuController::class, 'manager'])->middleware(['auth:admin'])->name('admin.menus.manager');
 Route::get('menus/create', [App\Http\Controllers\Admin\MenuController::class, 'create'])->middleware(['auth:admin'])->name('admin.menus.create');
 Route::post('menus/store', [App\Http\Controllers\Admin\MenuController::class, 'store'])->middleware(['auth:admin'])->name('admin.menus.store');
 Route::get('menus/bulk-create', [App\Http\Controllers\Admin\MenuController::class, 'bulkCreate'])->middleware(['auth:admin'])->name('admin.menus.bulk-create');
@@ -830,7 +848,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
 // Remove the duplicate test route - keep only one for debugging
 Route::get('/test-branches/{organization}', function($organizationId) {
     try {
-        $controller = app(\App\Http\Controllers\ReservationController::class);
+        $controller = app(ReservationController::class);
         return $controller->getBranches($organizationId);
     } catch (\Exception $e) {
         return response()->json([
@@ -1058,12 +1076,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/management', [App\Http\Controllers\DashboardController::class, 'management'])->name('dashboard.management');
 });
 
-
-
-
-
-
-
 // Include reservation workflow routes
 require __DIR__.'/reservation_workflow.php';
 
@@ -1076,3 +1088,9 @@ Route::get('/api/menu-items/branch/{branch}/active', [OrderController::class, 'g
 Route::get('admin/kots/{kot}/print', [\App\Http\Controllers\KotController::class, 'print'])
     ->name('admin.kots.print')
     ->middleware(['auth:admin']);
+
+// Roles CRUD - Accessible by Super Admin
+Route::middleware(['auth:admin', SuperAdmin::class])->group(function () {
+    Route::resource('roles', RoleController::class);
+
+});

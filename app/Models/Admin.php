@@ -328,7 +328,7 @@ class Admin extends Authenticatable
      */
     public function isLocked(): bool
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        return $this->locked_until && \Illuminate\Support\Carbon::parse($this->locked_until)->gt(now());
     }
 
     public function incrementFailedLogins(): void
@@ -498,7 +498,10 @@ class Admin extends Authenticatable
      */
     public function isOrganizationAdmin()
     {
-        return !$this->is_super_admin && $this->organization_id && !$this->branch_id;
+        
+        return !$this->is_super_admin
+            && !is_null($this->organization_id)
+            && is_null($this->branch_id);
     }
 
     /**
@@ -506,7 +509,8 @@ class Admin extends Authenticatable
      */
     public function isBranchAdmin()
     {
-        return !$this->is_super_admin && $this->organization_id && $this->branch_id;
+        return !$this->is_super_admin
+            && !empty($this->organization_id)
+            && !empty($this->branch_id);
     }
-    
 }

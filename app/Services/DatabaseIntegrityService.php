@@ -24,9 +24,9 @@ class DatabaseIntegrityService
     {
         $this->errors = [];
         $this->warnings = [];
-        
+
         Log::info('🔍 Starting comprehensive database integrity check...');
-        
+
         $checks = [
             'checkTableConstraints',
             'validateRequiredColumns',
@@ -37,7 +37,7 @@ class DatabaseIntegrityService
             'checkIndexIntegrity',
             'validateSeederData'
         ];
-        
+
         foreach ($checks as $check) {
             try {
                 $this->$check();
@@ -49,7 +49,7 @@ class DatabaseIntegrityService
                 ]);
             }
         }
-        
+
         return [
             'status' => empty($this->errors) ? 'passed' : 'failed',
             'errors' => $this->errors,
@@ -64,7 +64,7 @@ class DatabaseIntegrityService
     protected function checkTableConstraints(): void
     {
         Log::info('🔎 Checking table constraints...');
-        
+
         $criticalTables = [
             'organizations' => ['name', 'email'],
             'branches' => ['organization_id', 'name'],
@@ -74,21 +74,21 @@ class DatabaseIntegrityService
             'orders' => ['branch_id', 'status'],
             'users' => ['name', 'email']
         ];
-        
+
         foreach ($criticalTables as $table => $requiredColumns) {
             if (!Schema::hasTable($table)) {
                 $this->warnings[] = "Table '{$table}' does not exist";
                 continue;
             }
-            
+
             $existingColumns = Schema::getColumnListing($table);
-            
+
             foreach ($requiredColumns as $column) {
                 if (!in_array($column, $existingColumns)) {
                     $this->errors[] = "Required column '{$column}' missing in table '{$table}'";
                     continue;
                 }
-                
+
                 // Check for NULL values in required columns
                 try {
                     $nullCount = DB::table($table)->whereNull($column)->count();
@@ -108,7 +108,7 @@ class DatabaseIntegrityService
     protected function validateRequiredColumns(): void
     {
         Log::info('🔎 Validating required columns...');
-        
+
         $columnValidations = [
             'kitchen_stations' => [
                 'code' => ['type' => 'string', 'nullable' => false, 'unique' => true],
@@ -117,14 +117,13 @@ class DatabaseIntegrityService
                 'max_capacity' => ['type' => 'decimal', 'nullable' => true]
             ],
             'organizations' => [
-                'plan_snapshot' => ['type' => 'json', 'nullable' => true],
                 'subscription_plan_id' => ['type' => 'integer', 'nullable' => true]
             ]
         ];
-        
+
         foreach ($columnValidations as $table => $columns) {
             if (!Schema::hasTable($table)) continue;
-            
+
             foreach ($columns as $column => $rules) {
                 if (!Schema::hasColumn($table, $column)) {
                     $this->errors[] = "Required column '{$column}' missing in table '{$table}'";
@@ -139,7 +138,7 @@ class DatabaseIntegrityService
     protected function checkForeignKeyIntegrity(): void
     {
         Log::info('🔎 Checking foreign key integrity...');
-        
+
         $foreignKeys = [
             'branches.organization_id' => 'organizations.id',
             'kitchen_stations.branch_id' => 'branches.id',
@@ -147,22 +146,22 @@ class DatabaseIntegrityService
             'menu_items.branch_id' => 'branches.id',
             'orders.branch_id' => 'branches.id'
         ];
-        
+
         foreach ($foreignKeys as $childColumn => $parentColumn) {
             [$childTable, $childCol] = explode('.', $childColumn);
             [$parentTable, $parentCol] = explode('.', $parentColumn);
-            
+
             if (!Schema::hasTable($childTable) || !Schema::hasTable($parentTable)) {
                 continue;
             }
-            
+
             try {
                 $orphanedRecords = DB::table($childTable)
                     ->leftJoin($parentTable, "{$childTable}.{$childCol}", '=', "{$parentTable}.{$parentCol}")
                     ->whereNull("{$parentTable}.{$parentCol}")
                     ->whereNotNull("{$childTable}.{$childCol}")
                     ->count();
-                
+
                 if ($orphanedRecords > 0) {
                     $this->errors[] = "Found {$orphanedRecords} orphaned records in {$childTable}.{$childCol}";
                 }
@@ -178,24 +177,23 @@ class DatabaseIntegrityService
     protected function validateJsonColumns(): void
     {
         Log::info('🔎 Validating JSON columns...');
-        
+
         $jsonColumns = [
             'kitchen_stations' => ['printer_config', 'settings'],
-            'organizations' => ['plan_snapshot']
         ];
-        
+
         foreach ($jsonColumns as $table => $columns) {
             if (!Schema::hasTable($table)) continue;
-            
+
             foreach ($columns as $column) {
                 if (!Schema::hasColumn($table, $column)) continue;
-                
+
                 try {
                     $invalidJson = DB::table($table)
                         ->whereRaw("JSON_VALID({$column}) = 0")
                         ->whereNotNull($column)
                         ->count();
-                    
+
                     if ($invalidJson > 0) {
                         $this->errors[] = "Found {$invalidJson} invalid JSON values in {$table}.{$column}";
                     }
@@ -213,19 +211,19 @@ class DatabaseIntegrityService
     protected function checkUniqueConstraints(): void
     {
         Log::info('🔎 Checking unique constraints...');
-        
+
         $uniqueConstraints = [
             'kitchen_stations' => ['code'],
             'organizations' => ['email'],
             'users' => ['email']
         ];
-        
+
         foreach ($uniqueConstraints as $table => $columns) {
             if (!Schema::hasTable($table)) continue;
-            
+
             foreach ($columns as $column) {
                 if (!Schema::hasColumn($table, $column)) continue;
-                
+
                 try {
                     $duplicates = DB::table($table)
                         ->select($column, DB::raw('COUNT(*) as count'))
@@ -233,7 +231,7 @@ class DatabaseIntegrityService
                         ->groupBy($column)
                         ->having('count', '>', 1)
                         ->count();
-                    
+
                     if ($duplicates > 0) {
                         $this->errors[] = "Found {$duplicates} duplicate values in unique column {$table}.{$column}";
                     }
@@ -250,23 +248,23 @@ class DatabaseIntegrityService
     protected function validateEnumValues(): void
     {
         Log::info('🔎 Validating ENUM values...');
-        
+
         $enumValidations = [
             'kitchen_stations.type' => ['cooking', 'prep', 'beverage', 'dessert', 'grill', 'fry', 'bar'],
             'orders.status' => ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
         ];
-        
+
         foreach ($enumValidations as $column => $validValues) {
             [$table, $col] = explode('.', $column);
-            
+
             if (!Schema::hasTable($table) || !Schema::hasColumn($table, $col)) continue;
-            
+
             try {
                 $invalidValues = DB::table($table)
                     ->whereNotIn($col, $validValues)
                     ->whereNotNull($col)
                     ->count();
-                
+
                 if ($invalidValues > 0) {
                     $this->errors[] = "Found {$invalidValues} invalid ENUM values in {$table}.{$col}";
                 }
@@ -282,22 +280,22 @@ class DatabaseIntegrityService
     protected function checkIndexIntegrity(): void
     {
         Log::info('🔎 Checking index integrity...');
-        
+
         $requiredIndexes = [
             'kitchen_stations' => ['kitchen_stations_code_unique', 'kitchen_stations_branch_id_index'],
             'organizations' => ['organizations_email_unique'],
             'branches' => ['branches_organization_id_index']
         ];
-        
+
         foreach ($requiredIndexes as $table => $indexes) {
             if (!Schema::hasTable($table)) continue;
-            
+
             try {
                 $existingIndexes = collect(DB::select("SHOW INDEX FROM {$table}"))
                     ->pluck('Key_name')
                     ->unique()
                     ->toArray();
-                
+
                 foreach ($indexes as $index) {
                     if (!in_array($index, $existingIndexes)) {
                         $this->warnings[] = "Missing index '{$index}' on table '{$table}'";
@@ -315,25 +313,25 @@ class DatabaseIntegrityService
     protected function validateSeederData(): void
     {
         Log::info('🔎 Validating seeder data...');
-        
+
         // Check if organizations exist
         $orgCount = Organization::count();
         if ($orgCount === 0) {
             $this->warnings[] = "No organizations found in database";
         }
-        
+
         // Check if branches exist for organizations
         $orgsWithoutBranches = Organization::doesntHave('branches')->count();
         if ($orgsWithoutBranches > 0) {
             $this->warnings[] = "{$orgsWithoutBranches} organizations have no branches";
         }
-        
+
         // Check kitchen stations
         $branchesWithoutStations = Branch::doesntHave('kitchenStations')->count();
         if ($branchesWithoutStations > 0) {
             $this->warnings[] = "{$branchesWithoutStations} branches have no kitchen stations";
         }
-        
+
         // Check for kitchen stations without codes
         $stationsWithoutCodes = KitchenStation::whereNull('code')->orWhere('code', '')->count();
         if ($stationsWithoutCodes > 0) {
@@ -360,20 +358,20 @@ class DatabaseIntegrityService
     protected function generateRecommendations(): array
     {
         $recommendations = [];
-        
+
         if (!empty($this->errors)) {
             $recommendations[] = "🚨 Critical errors found - database seeding may fail";
             $recommendations[] = "Run 'php artisan db:fix-integrity' to auto-fix common issues";
         }
-        
+
         if (!empty($this->warnings)) {
             $recommendations[] = "⚠️ Warnings found - review for optimal performance";
         }
-        
+
         if (empty($this->errors) && empty($this->warnings)) {
             $recommendations[] = "✅ Database integrity is excellent!";
         }
-        
+
         return $recommendations;
     }
 
@@ -383,33 +381,33 @@ class DatabaseIntegrityService
     public function fixIntegrityIssues(): array
     {
         $fixes = [];
-        
+
         try {
             DB::beginTransaction();
-            
+
             // Fix kitchen stations without codes
             $this->fixKitchenStationCodes($fixes);
-            
+
             // Fix invalid JSON columns
             $this->fixInvalidJsonColumns($fixes);
-            
+
             // Fix orphaned foreign keys
             $this->fixOrphanedRecords($fixes);
-            
+
             DB::commit();
-            
+
             Log::info('✅ Database integrity fixes completed successfully', $fixes);
-            
+
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('❌ Database integrity fix failed', [
                 'error' => $e->getMessage(),
                 'fixes_attempted' => $fixes
             ]);
-            
+
             throw $e;
         }
-        
+
         return $fixes;
     }
 
@@ -419,11 +417,11 @@ class DatabaseIntegrityService
     protected function fixKitchenStationCodes(array &$fixes): void
     {
         $stationsWithoutCodes = KitchenStation::whereNull('code')->orWhere('code', '')->get();
-        
+
         foreach ($stationsWithoutCodes as $station) {
             $newCode = $this->generateUniqueStationCode($station);
             $station->update(['code' => $newCode]);
-            
+
             $fixes[] = "Generated code '{$newCode}' for kitchen station ID {$station->id}";
         }
     }
@@ -443,9 +441,9 @@ class DatabaseIntegrityService
             'bar' => 'BAR',
             default => 'MAIN'
         };
-        
+
         $branchCode = str_pad($station->branch_id, 2, '0', STR_PAD_LEFT);
-        
+
         // Find next available sequence number
         $sequence = 1;
         do {
@@ -453,7 +451,7 @@ class DatabaseIntegrityService
             $exists = KitchenStation::where('code', $code)->where('id', '!=', $station->id)->exists();
             $sequence++;
         } while ($exists && $sequence < 1000);
-        
+
         return $code;
     }
 
@@ -464,7 +462,7 @@ class DatabaseIntegrityService
     {
         // Fix kitchen stations with invalid printer_config
         $stations = KitchenStation::whereNotNull('printer_config')->get();
-        
+
         foreach ($stations as $station) {
             if (!is_array($station->printer_config)) {
                 $defaultConfig = [
@@ -475,7 +473,7 @@ class DatabaseIntegrityService
                     'print_logo' => true,
                     'print_quality' => 'standard'
                 ];
-                
+
                 $station->update(['printer_config' => $defaultConfig]);
                 $fixes[] = "Fixed printer_config for kitchen station ID {$station->id}";
             }
@@ -492,7 +490,7 @@ class DatabaseIntegrityService
         if ($orphanedBranches > 0) {
             $fixes[] = "Found {$orphanedBranches} orphaned branches - manual review required";
         }
-        
+
         $orphanedStations = KitchenStation::whereDoesntHave('branch')->count();
         if ($orphanedStations > 0) {
             $fixes[] = "Found {$orphanedStations} orphaned kitchen stations - manual review required";

@@ -1,11 +1,35 @@
 @extends('layouts.admin')
 
 @section('title', 'Orders Management')
+@section('header-title', 'Orders Management')
 
 @section('content')
-<div class="p-6">
+<div class="container mx-auto px-4 py-8">
+{{-- Debug: Uncomment to inspect orders and branches variables --}}
+{{-- @php dd($orders, $branches ?? null); @endphp --}}
+
+
     <!-- Header Section -->
-    <div class="mb-6">
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <div class="flex items-center gap-2">
+                    {{-- <i class="fas fa-user-shield text-2xl text-indigo-500"></i> --}}
+                    <h1 class="text-2xl font-bold text-gray-900">Orders Management</h1>
+                </div>
+                <p class="text-gray-600 mt-1">Manage and track all orders across your organization</p>
+            </div>
+            <a href="{{ route('admin.orders.create') }}"
+               class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="fas fa-plus mr-2"></i>
+                Create Order
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Header Section -->
+    {{-- <div class="mb-6">
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Orders Management</h1>
@@ -20,7 +44,7 @@
                 </button>
             </div>
         </div>
-    </div>
+    </div> --}}
 
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">

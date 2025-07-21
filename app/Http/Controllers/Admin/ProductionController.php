@@ -85,7 +85,7 @@ class ProductionController extends Controller
     {
         $user = Auth::user();
 
-        $query = ProductionOrder::with(['items.item', 'requestMaster.branch']);
+        $query = ProductionOrder::with(['items.item', 'ProductionRequestMaster.branch']);
 
         // Super admins can see all orders, others filter by organization
         if (!$user->is_super_admin) {

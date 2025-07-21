@@ -123,8 +123,8 @@ class OrganizationAutomationService
 
         $admin = Admin::create($adminData);
 
-        // Assign organization admin role (use firstOrCreate to avoid duplicates)
-        $orgAdminRole = Role::firstOrCreate(
+        // Assign organization admin role (Spatie)
+        $orgAdminRole = \Spatie\Permission\Models\Role::firstOrCreate(
             [
                 'name' => 'Organization Administrator',
                 'organization_id' => $organization->id,
@@ -135,19 +135,25 @@ class OrganizationAutomationService
                 'description' => 'Full administrative access to organization-wide operations'
             ]
         );
+        $admin->syncRoles([$orgAdminRole]);
 
-        $admin->assignRole($orgAdminRole);
+        // Assign permissions to the role based on subscription plan
+        if (class_exists('App\\Services\\PermissionSystemService')) {
+            $permissionService = app(\App\Services\PermissionSystemService::class);
+            $permissionDefinitions = $permissionService->getPermissionDefinitions();
+            $modulesConfig = config('modules');
+            $availablePermissions = $permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+            $orgAdminRole->syncPermissions(array_keys($availablePermissions));
+        }
 
         // Store the plain text password for welcome email
         $admin->temporary_password = $defaultPassword;
-
         Log::info('Organization admin created with default password', [
             'admin_id' => $admin->id,
             'organization_id' => $organization->id,
             'email' => $admin->email,
             'password_used' => 'default_admin_password'
         ]);
-
         return $admin;
     }
 
@@ -172,11 +178,12 @@ class OrganizationAutomationService
 
         $admin = Admin::create($adminData);
 
-        // Assign branch admin role (use firstOrCreate to avoid duplicates)
-        $branchAdminRole = Role::firstOrCreate(
+        // Assign branch admin role (Spatie)
+        $branchAdminRole = \Spatie\Permission\Models\Role::firstOrCreate(
             [
                 'name' => 'Branch Administrator',
                 'organization_id' => $organization->id,
+                'branch_id' => $headOffice->id,
                 'guard_name' => 'admin'
             ],
             [
@@ -184,12 +191,19 @@ class OrganizationAutomationService
                 'description' => 'Full administrative access to branch operations'
             ]
         );
+        $admin->syncRoles([$branchAdminRole]);
 
-        $admin->assignRole($branchAdminRole);
+        // Assign permissions to the role based on subscription plan
+        if (class_exists('App\\Services\\PermissionSystemService')) {
+            $permissionService = app(\App\Services\PermissionSystemService::class);
+            $permissionDefinitions = $permissionService->getPermissionDefinitions();
+            $modulesConfig = config('modules');
+            $availablePermissions = $permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
+            $branchAdminRole->syncPermissions(array_keys($availablePermissions));
+        }
 
         // Store password for welcome email
         $admin->temporary_password = $defaultPassword;
-
         Log::info('Branch admin created for head office with default password', [
             'admin_id' => $admin->id,
             'organization_id' => $organization->id,
@@ -197,7 +211,6 @@ class OrganizationAutomationService
             'email' => $admin->email,
             'password_used' => 'default_branch_password'
         ]);
-
         return $admin;
     }
 
@@ -439,6 +452,7 @@ class OrganizationAutomationService
         ];
 
         // Create and assign permissions
+        $assigned = 0;
         foreach ($orgAdminPermissions as $permissionName) {
             $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
                 'name' => $permissionName,
@@ -447,8 +461,9 @@ class OrganizationAutomationService
 
             try {
                 $admin->givePermissionTo($permission);
+                $assigned++;
             } catch (\Exception $e) {
-                Log::warning('Failed to assign permission to organization admin', [
+                \Log::warning('[OrganizationAutomationService@assignSubscriptionPermissions] Failed to assign permission', [
                     'permission' => $permissionName,
                     'admin_id' => $admin->id,
                     'error' => $e->getMessage()
@@ -456,10 +471,10 @@ class OrganizationAutomationService
             }
         }
 
-        Log::info('Comprehensive organization admin permissions assigned', [
+        \Log::info('[OrganizationAutomationService@assignSubscriptionPermissions] Organization admin permissions assigned', [
             'organization_id' => $organization->id,
             'admin_id' => $admin->id,
-            'permissions_assigned' => count($orgAdminPermissions)
+            'permissions_assigned' => $assigned
         ]);
     }
 
@@ -620,6 +635,7 @@ class OrganizationAutomationService
         ];
 
         // Create and assign permissions
+        $assigned = 0;
         foreach ($branchAdminPermissions as $permissionName) {
             $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
                 'name' => $permissionName,
@@ -628,8 +644,9 @@ class OrganizationAutomationService
 
             try {
                 $branchAdmin->givePermissionTo($permission);
+                $assigned++;
             } catch (\Exception $e) {
-                Log::warning('Failed to assign permission to branch admin', [
+                \Log::warning('[OrganizationAutomationService@assignBranchPermissions] Failed to assign permission', [
                     'permission' => $permissionName,
                     'admin_id' => $branchAdmin->id,
                     'error' => $e->getMessage()
@@ -637,11 +654,11 @@ class OrganizationAutomationService
             }
         }
 
-        Log::info('Comprehensive branch admin permissions assigned', [
+        \Log::info('[OrganizationAutomationService@assignBranchPermissions] Branch admin permissions assigned', [
             'organization_id' => $organization->id,
             'branch_id' => $branch->id,
             'admin_id' => $branchAdmin->id,
-            'permissions_assigned' => count($branchAdminPermissions)
+            'permissions_assigned' => $assigned
         ]);
     }
 

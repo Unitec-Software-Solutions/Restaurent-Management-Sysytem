@@ -11,6 +11,22 @@ use Illuminate\Support\Facades\Log;
 
 class KotController extends Controller
 {
+
+    /**
+     * Display a listing of the KOTs.
+     */
+    public function index(Request $request)
+    {
+        $admin = auth('admin')->user();
+
+        $kots = Kot::with(['order.customer', 'kotItems.menuItem'])
+            ->where('organization_id', $admin->organization_id)
+            ->get();
+
+    return view('admin.kitchen.kots.index', compact('kots'));
+
+    }
+
     /**
      * Generate and print KOT for an order
      */
@@ -18,7 +34,7 @@ class KotController extends Controller
     {
         try {
             $admin = auth('admin')->user();
-            
+
             // Check if admin can access this order
             if (!$admin->is_super_admin && $order->organization_id !== $admin->organization_id) {
                 return response()->json([
@@ -74,7 +90,7 @@ class KotController extends Controller
             // Create KOT items from order items that require preparation
             foreach ($kotRequiredItems as $orderItem) {
                 $menuItem = $orderItem->menuItem;
-                
+
                 $kot->kotItems()->create([
                     'order_item_id' => $orderItem->id,
                     'menu_item_id' => $orderItem->menu_item_id,
@@ -117,7 +133,7 @@ class KotController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
-            
+
             Log::error('Failed to generate KOT', [
                 'error' => $e->getMessage(),
                 'order_id' => $order->id,
@@ -137,7 +153,7 @@ class KotController extends Controller
     public function print(Kot $kot)
     {
         $admin = auth('admin')->user();
-        
+
         // Check if admin can access this KOT
         if (!$admin->isSuperAdmin() && $kot->organization_id !== $admin->organization_id) {
             abort(403, 'Unauthorized access');
@@ -168,7 +184,7 @@ class KotController extends Controller
         try {
             $kot = Kot::findOrFail($kotId);
             $admin = auth('admin')->user();
-            
+
             // Check if admin can access this KOT
             if (!$admin->isSuperAdmin() && $kot->organization_id !== $admin->organization_id) {
                 return response()->json([
@@ -210,22 +226,22 @@ class KotController extends Controller
     private function generateKotNumber($branchId = null): string
     {
         $prefix = 'KOT';
-        
+
         if ($branchId) {
             $branch = \App\Models\Branch::find($branchId);
             if ($branch) {
                 $prefix = strtoupper(substr($branch->code ?? $branch->name, 0, 3)) . '-KOT';
             }
         }
-        
+
         $todayCount = Kot::whereDate('created_at', today())
                          ->when($branchId, function($q) use ($branchId) {
                              $q->where('branch_id', $branchId);
                          })
                          ->count();
-        
+
         $number = str_pad($todayCount + 1, 4, '0', STR_PAD_LEFT);
-        
+
         return $prefix . '-' . now()->format('Ymd') . '-' . $number;
     }
 
@@ -258,12 +274,12 @@ class KotController extends Controller
         if ($menuItem->preparation_time > 30) {
             return 'high';
         }
-        
+
         // Large quantities
         if ($orderItem->quantity > 5) {
             return 'high';
         }
-        
+
         return 'normal';
     }
 }

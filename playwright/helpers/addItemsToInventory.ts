@@ -32,7 +32,7 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Ite
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    await page.goto('https://rms.test/admin/inventory/items/create', { timeout: 60000 });
+    await page.goto('https://restaurant-management-system.test/admin/inventory/items/create', { timeout: 60000 });
     // Wait for the heading to ensure the page is loaded
     await page.getByRole('heading', { name: 'Add New Items', level: 2 }).waitFor({ timeout: 15000 });
 
@@ -55,6 +55,6 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Ite
     await page.locator('input[name="items[0][current_stock]"]').fill(item.stockLevel);
     await page.getByRole('button', { name: ' Save All Items' }).click();
     // Wait for navigation or success message if needed
-    await page.waitForTimeout(300); // Short wait for UI stability
+    // await page.waitForTimeout(300); // Short wait for UI stability
   }
 }

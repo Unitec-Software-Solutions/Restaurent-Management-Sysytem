@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
         <!-- Card Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
@@ -195,8 +195,8 @@
                         </div>
 
                         <div id="menu-items-container" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                            @if(isset($items) && $items->count() > 0)
-                                @foreach($items as $item)
+                            @if(isset($menuItems) && $menuItems->count() > 0)
+                                @foreach($menuItems as $item)
                                 <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-blue-300 transition-colors duration-150 cursor-pointer {{ ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) ? 'opacity-50 cursor-not-allowed' : '' }}" onclick="toggleItemSelection('{{ $item->id }}')">
                                     <div class="flex items-center">
                                         <input class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 item-check"
@@ -204,7 +204,7 @@
                                             value="{{ $item->id }}"
                                             id="item_{{ $item->id }}"
                                             data-item-id="{{ $item->id }}"
-                                            {{ ($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) ? 'disabled' : '' }}
+                                            @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled @endif
                                             onclick="event.stopPropagation();">
 
                                         <label for="item_{{ $item->id }}" class="ml-3 flex-1 cursor-pointer">
@@ -220,11 +220,9 @@
                                             @if($item->item_type === 'KOT')
                                                 <div class="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded mt-1 inline-block">✓ Always Available</div>
                                             @elseif($item->item_type === 'Buy & Sell')
-                                                @if($item->current_stock > 0)
-                                                    <div class="text-xs text-green-600 font-medium mt-1">In Stock ({{ $item->current_stock }})</div>
-                                                @else
-                                                    <div class="text-xs text-red-600 font-medium mt-1 bg-red-50 px-2 py-1 rounded">❌ Out of Stock</div>
-                                                @endif
+                                                <div class="text-xs font-medium mt-1 {{ $item->current_stock > 0 ? 'text-green-600' : 'text-red-600 bg-red-50 px-2 py-1 rounded' }}">
+                                                    {{ $item->current_stock > 0 ? 'In Stock (' . $item->current_stock . ')' : '❌ Out of Stock' }}
+                                                </div>
                                             @endif
                                         </label>
 
@@ -233,21 +231,20 @@
                                                 class="qty-decrease w-12 h-12 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-r border-gray-300"
                                                 data-item-id="{{ $item->id }}"
                                                 onclick="event.stopPropagation();"
-                                                disabled>−</button>
+                                                @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled @endif>−</button>
                                             <input type="number"
                                                 min="1"
-                                                max="{{ ($item->item_type === 'Buy & Sell') ? $item->current_stock : 99 }}"
+                                                max="99"
                                                 value="1"
                                                 class="item-qty w-16 h-12 text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 touch-manipulation"
                                                 data-item-id="{{ $item->id }}"
                                                 onclick="event.stopPropagation();"
-                                                disabled
-                                                readonly>
+                                                @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled readonly @else disabled readonly @endif>
                                             <button type="button"
                                                 class="qty-increase w-12 h-12 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-600 text-2xl font-bold flex items-center justify-center touch-manipulation transition-all duration-150 border-l border-gray-300"
                                                 data-item-id="{{ $item->id }}"
                                                 onclick="event.stopPropagation();"
-                                                disabled>+</button>
+                                                @if($item->item_type === 'Buy & Sell' && $item->current_stock <= 0) disabled @endif>+</button>
                                         </div>
                                     </div>
                                 </div>

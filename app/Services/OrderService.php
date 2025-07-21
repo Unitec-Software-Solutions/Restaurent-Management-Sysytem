@@ -52,12 +52,12 @@ class OrderService
             $reservation = null;
             if (!empty($orderData['reservation_id'])) {
                 $reservation = $this->validateReservation($orderData['reservation_id']);
-                
+
                 // Ensure reservation is confirmed and valid
                 if (!in_array($reservation->status, ['confirmed', 'checked_in'])) {
                     throw new Exception("Reservation must be confirmed before placing orders");
                 }
-                
+
                 // Check time constraints
                 if ($reservation->date < now()->toDateString()) {
                     throw new Exception("Cannot create orders for past reservations");
@@ -231,15 +231,15 @@ class OrderService
     public function getStockAlerts(int $branchId, ?int $organizationId = null): array
     {
         $items = $this->getItemsWithStock($branchId, $organizationId);
-        
+
         $alerts = [
             'low_stock' => $items->where('is_low_stock', true)->where('is_out_of_stock', false),
             'out_of_stock' => $items->where('is_out_of_stock', true),
             'total_alerts' => 0
         ];
-        
+
         $alerts['total_alerts'] = $alerts['low_stock']->count() + $alerts['out_of_stock']->count();
-        
+
         return $alerts;
     }
 
@@ -287,11 +287,11 @@ class OrderService
     {
         $startDate = now()->subDays($days)->startOfDay();
         $endDate = now()->endOfDay();
-        
+
         $orders = Order::where('branch_id', $branchId)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
-            
+
         return [
             'total_orders' => $orders->count(),
             'completed_orders' => $orders->where('status', self::STATUS_COMPLETED)->count(),
@@ -301,20 +301,20 @@ class OrderService
             'average_order_value' => $orders->where('status', self::STATUS_COMPLETED)->avg('total_amount'),
         ];
     }
-    
+
     /**
      * Get order alerts for dashboard
      */
     public function getOrderAlerts(int $branchId): array
     {
         $alerts = [];
-        
+
         // Check for stuck orders (pending for too long)
         $stuckOrders = Order::where('branch_id', $branchId)
             ->where('status', self::STATUS_PENDING)
             ->where('created_at', '<', now()->subMinutes(30))
             ->count();
-            
+
         if ($stuckOrders > 0) {
             $alerts[] = [
                 'type' => 'warning',
@@ -323,12 +323,12 @@ class OrderService
                 'count' => $stuckOrders
             ];
         }
-        
+
         // Check for orders ready for pickup/serving
         $readyOrders = Order::where('branch_id', $branchId)
             ->where('status', self::STATUS_READY)
             ->count();
-            
+
         if ($readyOrders > 0) {
             $alerts[] = [
                 'type' => 'info',
@@ -337,7 +337,7 @@ class OrderService
                 'count' => $readyOrders
             ];
         }
-        
+
         return $alerts;
     }
 
@@ -347,7 +347,7 @@ class OrderService
     private function validateOrderData(array $orderData): void
     {
         $required = ['order_type', 'items'];
-        
+
         foreach ($required as $field) {
             if (empty($orderData[$field])) {
                 throw new Exception("Required field missing: {$field}");
@@ -367,10 +367,10 @@ class OrderService
             Order::TYPE_TAKEAWAY_ONLINE,
             Order::TYPE_TAKEAWAY_WALKIN_SCHEDULED,
             Order::TYPE_TAKEAWAY_WALKIN_DEMAND,
-            Order::TYPE_DINEIN_ONLINE,
-            Order::TYPE_DINEIN_INCALL,
-            Order::TYPE_DINEIN_WALKIN_SCHEDULED,
-            Order::TYPE_DINEIN_WALKIN_DEMAND,
+            // Order::TYPE_DINEIN_ONLINE,
+            // Order::TYPE_DINEIN_INCALL,
+            // Order::TYPE_DINEIN_WALKIN_SCHEDULED,
+            // Order::TYPE_DINEIN_WALKIN_DEMAND,
         ];
 
         if (!in_array($orderData['order_type'], $validTypes)) {
@@ -384,7 +384,7 @@ class OrderService
     private function validateReservation(int $reservationId): Reservation
     {
         $reservation = Reservation::with(['branch.organization'])->find($reservationId);
-        
+
         if (!$reservation) {
             throw new Exception('Reservation not found');
         }
@@ -406,7 +406,7 @@ class OrderService
     private function validateBranch(int $branchId): Branch
     {
         $branch = Branch::with('organization')->find($branchId);
-        
+
         if (!$branch) {
             throw new Exception('Branch not found');
         }
@@ -458,7 +458,7 @@ class OrderService
     {
         foreach ($items as $item) {
             $menuItem = ItemMaster::find($item['item_id']);
-            
+
             $orderItem = OrderItem::create([
                 'order_id' => $order->id,
                 'menu_item_id' => $item['item_id'],
@@ -565,9 +565,9 @@ class OrderService
         $latest = Order::whereDate('created_at', today())
                       ->latest('id')
                       ->first();
-        
+
         $sequence = $latest ? ((int) substr($latest->order_number, -4)) + 1 : 1;
-        
+
         return sprintf('%s-%s-%04d', $prefix, $date, $sequence);
     }
 
@@ -582,7 +582,7 @@ class OrderService
         $this->setupKotGeneration();
         $this->setupOrderStateMachine();
         $this->setupStockReservation();
-        
+
         Log::info('OrderService: Real-time system installed');
     }
 

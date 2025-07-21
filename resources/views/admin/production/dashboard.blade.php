@@ -13,7 +13,7 @@
                 ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
                 ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
                 ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
-                ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
+                // ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
             ]" active="Production" />
         </div>
 
@@ -21,7 +21,7 @@
         <!-- Quick Actions -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {{-- Production Requests --}}
-            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Production Requests</h2>
                     <p class="text-gray-500 text-sm">Manage branch production requests and approvals</p>
@@ -43,7 +43,7 @@
             </div>
 
             {{-- Production Orders --}}
-            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Production Orders</h2>
                     <p class="text-gray-500 text-sm">Manage kitchen production orders and operations</p>
@@ -62,7 +62,7 @@
             </div>
 
             {{-- Production Sessions --}}
-            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Production Sessions</h2>
                     <p class="text-gray-500 text-sm">Monitor and manage active production sessions</p>
@@ -80,7 +80,7 @@
             </div>
 
             {{-- Production Recipes --}}
-            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col gap-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Recipe Management</h2>
                     <p class="text-gray-500 text-sm">Manage production recipes and bill of materials</p>
@@ -98,7 +98,7 @@
             </div>
 
             {{-- Ingredient Management --}}
-            <div class="bg-white rounded-xl shadow p-6 flex flex-col gap-4 opacity-60 pointer-events-none select-none">
+            <div class="bg-white rounded-xl shadow-sm p-6 flex flex-col gap-4 opacity-60 pointer-events-none select-none">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-800">Ingredient Management</h2>
                     <p class="text-gray-500 text-sm">Track ingredient usage and requirements</p>

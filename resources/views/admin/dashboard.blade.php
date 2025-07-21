@@ -2,7 +2,7 @@
 @section('header-title', 'RMS Dashboard')
 @section('content')
 <div class="p-6">
-    <div class="mb-6">
+    <div class="mb-3 pt-3 ">
         
         <p class="text-gray-600">Welcome back to your restaurant management system</p>
     </div>
@@ -223,15 +223,6 @@
             </div>
         </div>
             
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-gray-500 text-sm font-medium">Inventory Items</h3>
-                <p class="text-2xl font-bold mt-2">189</p>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-gray-500 text-sm font-medium">Registered Customers</h3>
-                <p class="text-2xl font-bold mt-2">432</p>
-            </div>
         </div>
 
 

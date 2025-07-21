@@ -57,13 +57,26 @@
                 transform: translateY(0);
             }
         }
+
+        body {
+            zoom: 90%; /* Adjust zoom level for better visibility */
+        }
+
+        @media not all and (min-resolution:.001dpcm) {
+        @supports (-moz-appearance: none) {
+            body {
+                transform: scale(0.8);
+                transform-origin: top left;
+                width: 125%;
+            }
+        }
+    }
     </style>
 
 
 </head>
 
 <body class="bg-[#F3F4FF] dark:bg-gray-900 h-full">
-
 
     <!-- Enhanced Sidebar -->
     @auth

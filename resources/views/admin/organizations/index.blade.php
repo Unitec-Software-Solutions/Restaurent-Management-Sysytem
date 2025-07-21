@@ -1,15 +1,25 @@
 @extends('layouts.admin')
 
 @section('title', 'Organizations')
+@section('header-title', 'Organizations')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organizations</h1>
-        <a href="{{ route('admin.organizations.create') }}"
-           class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 transition font-semibold">
-            + Add Organization
-        </a>
+    <!-- Header Section -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Organizations</h1>
+                <p class="text-gray-600 mt-1">Manage organizations and their details</p>
+            </div>
+            @if(auth('admin')->user()->isSuperAdmin())
+                <a href="{{ route('admin.organizations.create') }}"
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Organization
+                </a>
+            @endif
+        </div>
     </div>
 
     @if(session('success'))
@@ -62,7 +72,7 @@
                                        class="inline-block {{ $org->is_active ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-purple-100 text-purple-800 hover:bg-purple-200' }} px-3 py-1 rounded transition text-xs font-semibold">
                                         {{ $org->is_active ? 'Manage' : 'Activate' }}
                                     </a>
-                                    
+
                                     {{-- Only super admins can delete inactive organizations --}}
                                     @can('delete', $org)
                                         <form action="{{ route('admin.organizations.destroy', $org) }}" method="POST" class="inline"

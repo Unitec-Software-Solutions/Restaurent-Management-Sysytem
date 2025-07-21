@@ -39,6 +39,14 @@ class Role extends SpatieRole
     }
 
     /**
+     * The permissions that belong to the role (custom pivot table)
+     */
+    public function permissions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Permission::class, 'role_permissions', 'role_id', 'permission_id')->withTimestamps();
+    }
+
+    /**
      * Scope roles by organization
      */
     public function scopeForOrganization($query, $organizationId)
@@ -135,9 +143,12 @@ class Role extends SpatieRole
                     'manage_orders'
                 ]
             ]
-            
-            // Note: Operational roles like Manager, Staff Member, Guest User should be created
-            // manually by organization/branch admins as needed, not automatically seeded
+
         ];
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'role_permissions');
     }
 }
