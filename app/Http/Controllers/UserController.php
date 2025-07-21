@@ -57,7 +57,8 @@ class UserController extends Controller
 
         // Only show roles that are available for the current admin's org/branch/plan
         $rolesQuery = Role::with('permissions')
-            ->where('guard_name', 'admin'); // Use 'admin' guard for system users
+            ->where('guard_name', 'admin')
+            ->whereNull('deleted_at'); // Exclude soft deleted roles
 
         if ($admin->isSuperAdmin()) {
             // all roles for admin guard
