@@ -57,15 +57,16 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-3">Permissions</label>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     @php
-                        $oldPermissions = old('permissions', $role->permissions ? $role->permissions->pluck('name')->toArray() : []);
+                        $oldPermissions = old('permissions', $role->permissions ? $role->permissions->pluck('id')->toArray() : []);
                         if ($oldPermissions === [null] || $oldPermissions === null) $oldPermissions = [];
+                        $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get()->keyBy('name');
                     @endphp
                     @foreach($permissionDefinitions as $category => $data)
                         @php
                             $categoryPermissions = [];
                             if (isset($data['permissions']) && is_array($data['permissions'])) {
                                 foreach ($data['permissions'] as $permKey => $permLabel) {
-                                    if (isset($availablePermissions[$permKey])) {
+                                    if (isset($availablePermissions[$permKey]) && isset($allPermissions[$permKey])) {
                                         $categoryPermissions[$permKey] = $permLabel;
                                     }
                                 }
@@ -83,14 +84,17 @@
                             </div>
                             <div class="space-y-1">
                                 @foreach($categoryPermissions as $permissionKey => $permissionLabel)
+                                    @php $permId = $allPermissions[$permissionKey]->id ?? null; @endphp
+                                    @if($permId)
                                     <label class="flex items-center space-x-2">
                                         <input type="checkbox"
                                                name="permissions[]"
-                                               value="{{ $permissionKey }}"
+                                               value="{{ $permId }}"
                                                class="category-permission-{{ $categoryId }}"
-                                               @if(in_array($permissionKey, $oldPermissions)) checked @endif>
+                                               @if(in_array($permId, $oldPermissions)) checked @endif>
                                         <span class="text-xs">{{ $permissionLabel }}</span>
                                     </label>
+                                    @endif
                                 @endforeach
                             </div>
                         </div>
