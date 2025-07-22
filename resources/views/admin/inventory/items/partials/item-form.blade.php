@@ -164,7 +164,7 @@
                 class="item-type-select w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 data-index="{{ $index }}">
                 <option value="">Select Item Type</option>
-                <option value="buy_sell">Buy & Sell Item (Inventory Item)</option>
+                <option value="buy_sell" selected>Buy & Sell Item (Inventory Item)</option>
             </select>
             <div class="text-xs text-gray-500 mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
                 <div class="flex items-start">
@@ -202,11 +202,11 @@
         <div class="flex items-center">
             <input type="hidden" name="{{ $prefix }}[is_menu_item]" value="0">
             <input type="checkbox" id="menuitem-{{ $index }}" name="{{ $prefix }}[is_menu_item]"
-                value="1"
-                class="menu-item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900"
+                                value="1"
+                class="menu-item-checkbox h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900"
                 data-index="{{ $index }}">
             <label for="menuitem-{{ $index }}"
-                class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Include in Menu</label>
+                class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Is Menu Item</label>
         </div>
         <div class="flex items-center">
             <input type="hidden" name="{{ $prefix }}[requires_production]" value="0">
@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Auto-check appropriate flags
                 inventoryCheckbox.checked = true;
                 productionCheckbox.checked = false;
-                menuItemCheckbox.checked = true; // Most buy & sell items go to menu
+                menuItemCheckbox.checked = false; // Most buy & sell items go to menu
 
                 // Update helper text
                 if (stockRequiredText) {
