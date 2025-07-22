@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\{User, Role};
+use App\Models\{Admin, Role};
 use App\Services\PermissionSystemService;
 
 class RolePolicy
@@ -13,57 +13,102 @@ class RolePolicy
     {
         $this->permissionService = $permissionService;
     }
-    public function manage(User $user, Role $role)
+    public function manage(Admin $user, Role $role)
     {
         if ($user->is_super_admin) return true;
         if (method_exists($role, 'trashed') && $role->trashed()) return false;
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['roles.manage']) && $user->organization_id === $role->organization_id;
+        // Check organization scope
+        if (!$user->is_super_admin && $user->getAttribute('organization_id') !== $role->getAttribute('organization_id')) {
+            return false;
+        }
+
+        // Check branch scope
+        if ($user->isBranchAdmin() && $user->getAttribute('branch_id') !== $role->getAttribute('branch_id')) {
+            return false;
+        }
+
+        return isset($availablePermissions['roles.manage']);
     }
-    public function viewAny($user)
+
+    public function viewAny(Admin $user)
     {
         if ($user->is_super_admin) return true;
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        // Only allow if there are non-deleted roles
+        $availablePermissions = $this->permissionService->getAvailablePermissions($user, $permissionDefinitions);
         return isset($availablePermissions['roles.view']);
     }
-    public function create($user)
+
+    public function create(Admin $user)
     {
         if ($user->is_super_admin) return true;
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        $availablePermissions = $this->permissionService->getAvailablePermissions($user, $permissionDefinitions);
         return isset($availablePermissions['roles.create']);
     }
-    public function update($user, $role)
+
+    public function update(Admin $user, Role $role)
     {
         if ($user->is_super_admin) return true;
         if (method_exists($role, 'trashed') && $role->trashed()) return false;
+
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['roles.edit']) && $user->organization_id === $role->organization_id;
+        $availablePermissions = $this->permissionService->getAvailablePermissions($user, $permissionDefinitions);
+
+        // Check organization scope
+        if (!$user->is_super_admin && $user->getAttribute('organization_id') !== $role->getAttribute('organization_id')) {
+            return false;
+        }
+
+        // Check branch scope
+        if ($user->isBranchAdmin() && $user->getAttribute('branch_id') !== $role->getAttribute('branch_id')) {
+            return false;
+        }
+
+        return isset($availablePermissions['roles.edit']);
     }
-    public function view($user, $role)
+
+    public function view(Admin $user, Role $role)
     {
         if ($user->is_super_admin) return true;
-        if ($role->deleted_at) return false;
+        if (method_exists($role, 'trashed') && $role->trashed()) return false;
+
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['roles.view']) && $user->organization_id === $role->organization_id;
+        $availablePermissions = $this->permissionService->getAvailablePermissions($user, $permissionDefinitions);
+
+        // Check organization scope
+        if (!$user->is_super_admin && $user->getAttribute('organization_id') !== $role->getAttribute('organization_id')) {
+            return false;
+        }
+
+        // Check branch scope
+        if ($user->isBranchAdmin() && $user->getAttribute('branch_id') !== $role->getAttribute('branch_id')) {
+            return false;
+        }
+
+        return isset($availablePermissions['roles.view']);
     }
-    public function delete($user, $role)
+
+    public function delete(Admin $user, Role $role)
     {
         if ($user->is_super_admin) return true;
-        if ($role->deleted_at) return false;
+        if (method_exists($role, 'trashed') && $role->trashed()) return false;
+
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['roles.delete']) && $user->organization_id === $role->organization_id;
+        $availablePermissions = $this->permissionService->getAvailablePermissions($user, $permissionDefinitions);
+
+        // Check organization scope
+        if (!$user->is_super_admin && $user->getAttribute('organization_id') !== $role->getAttribute('organization_id')) {
+            return false;
+        }
+
+        // Check branch scope
+        if ($user->isBranchAdmin() && $user->getAttribute('branch_id') !== $role->getAttribute('branch_id')) {
+            return false;
+        }
+
+        return isset($availablePermissions['roles.delete']);
     }
 }
