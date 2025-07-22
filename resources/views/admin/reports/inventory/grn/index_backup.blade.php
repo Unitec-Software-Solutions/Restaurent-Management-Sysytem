@@ -1,3 +1,4 @@
+
 @extends('layouts.admin')
 @section('header-title', 'GRN Reports')
 
@@ -39,12 +40,12 @@
                 <!-- Date Range -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-                    <input type="date" name="date_from" value="{{ $dateFrom ?? date('Y-m-01') }}"
+                    <input type="date" name="date_from" value="{{ $dateFrom }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
-                    <input type="date" name="date_to" value="{{ $dateTo ?? date('Y-m-d') }}"
+                    <input type="date" name="date_to" value="{{ $dateTo }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                 </div>
 
@@ -53,9 +54,11 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="">All Statuses</option>
-                        <option value="pending" {{ ($status ?? '') == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="verified" {{ ($status ?? '') == 'verified' ? 'selected' : '' }}>Verified</option>
-                        <option value="rejected" {{ ($status ?? '') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                        <option value="pending" {{ $status == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="draft" {{ $status == 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="confirmed" {{ $status == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
+                        <option value="accepted" {{ $status == 'accepted' ? 'selected' : '' }}>Accepted</option>
+                        <option value="rejected" {{ $status == 'rejected' ? 'selected' : '' }}>Rejected</option>
                     </select>
                 </div>
 
@@ -64,41 +67,38 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
                     <select name="payment_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="">All Payment Statuses</option>
-                        <option value="unpaid" {{ ($paymentStatus ?? '') == 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                        <option value="partial" {{ ($paymentStatus ?? '') == 'partial' ? 'selected' : '' }}>Partial</option>
-                        <option value="paid" {{ ($paymentStatus ?? '') == 'paid' ? 'selected' : '' }}>Paid</option>
+                        <option value="unpaid" {{ $paymentStatus == 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                        <option value="partial" {{ $paymentStatus == 'partial' ? 'selected' : '' }}>Partial</option>
+                        <option value="paid" {{ $paymentStatus == 'paid' ? 'selected' : '' }}>Paid</option>
+                        <option value="overdue" {{ $paymentStatus == 'overdue' ? 'selected' : '' }}>Overdue</option>
                     </select>
                 </div>
 
                 <!-- Supplier Filter -->
-                @if(isset($suppliers) && $suppliers->count() > 0)
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
                     <select name="supplier_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="">All Suppliers</option>
                         @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" {{ ($supplierId ?? '') == $supplier->id ? 'selected' : '' }}>
+                            <option value="{{ $supplier->id }}" {{ $supplierId == $supplier->id ? 'selected' : '' }}>
                                 {{ $supplier->name }}
                             </option>
                         @endforeach
                     </select>
                 </div>
-                @endif
 
                 <!-- Branch Filter -->
-                @if(isset($branches) && $branches->count() > 0)
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
                     <select name="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <option value="">All Branches</option>
                         @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ ($branchId ?? '') == $branch->id ? 'selected' : '' }}>
+                            <option value="{{ $branch->id }}" {{ $branchId == $branch->id ? 'selected' : '' }}>
                                 {{ $branch->name }}
                             </option>
                         @endforeach
                     </select>
                 </div>
-                @endif
             </div>
 
             <div class="flex gap-2">
@@ -115,7 +115,7 @@
     <!-- Report Results -->
     @if(isset($reportData) && $reportData['grns']->count() > 0)
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
@@ -125,7 +125,7 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">Total GRNs</p>
-                        <p class="text-2xl font-semibold text-gray-900">{{ $reportData['summary']['total_grns'] ?? 0 }}</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ $reportData['summary']['total_grns'] }}</p>
                     </div>
                 </div>
             </div>
@@ -139,7 +139,7 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">Total Purchase Value</p>
-                        <p class="text-2xl font-semibold text-gray-900">Rs. {{ number_format($reportData['summary']['total_purchase_value'] ?? 0, 2) }}</p>
+                        <p class="text-2xl font-semibold text-gray-900">Rs. {{ number_format($reportData['summary']['total_purchase_value'], 2) }}</p>
                     </div>
                 </div>
             </div>
@@ -147,13 +147,13 @@
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-check-circle text-green-600"></i>
+                        <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-credit-card text-yellow-600"></i>
                         </div>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Paid Amount</p>
-                        <p class="text-2xl font-semibold text-gray-900">Rs. {{ number_format($reportData['summary']['total_paid'] ?? 0, 2) }}</p>
+                        <p class="text-sm font-medium text-gray-500">Total Paid</p>
+                        <p class="text-2xl font-semibold text-gray-900">Rs. {{ number_format($reportData['summary']['total_paid'], 2) }}</p>
                     </div>
                 </div>
             </div>
@@ -167,7 +167,21 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">Outstanding</p>
-                        <p class="text-2xl font-semibold text-gray-900">Rs. {{ number_format($reportData['summary']['total_outstanding'] ?? 0, 2) }}</p>
+                        <p class="text-2xl font-semibold text-gray-900">Rs. {{ number_format($reportData['summary']['total_outstanding'], 2) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-percentage text-purple-600"></i>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Payment Rate</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ number_format($reportData['summary']['payment_percentage'], 1) }}%</p>
                     </div>
                 </div>
             </div>
@@ -186,6 +200,7 @@
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Purchase Value</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Paid Amount</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Outstanding</th>
                         </tr>
                     </thead>
@@ -194,32 +209,38 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div>
-                                        <div class="text-sm font-medium text-gray-900">{{ $grn['grn_number'] ?? 'N/A' }}</div>
-                                        <div class="text-sm text-gray-500">
-                                            {{ isset($grn['received_date']) ? \Carbon\Carbon::parse($grn['received_date'])->format('M d, Y') : 'N/A' }}
-                                        </div>
+                                        <div class="text-sm font-medium text-gray-900">{{ $grn['grn_number'] }}</div>
+                                        <div class="text-sm text-gray-500">{{ \Carbon\Carbon::parse($grn['receipt_date'])->format('M d, Y') }}</div>
+                                        @if($grn['due_date'])
+                                            <div class="text-xs text-gray-400">Due: {{ \Carbon\Carbon::parse($grn['due_date'])->format('M d, Y') }}</div>
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ $grn['supplier_name'] ?? 'N/A' }}</div>
+                                    <div class="text-sm font-medium text-gray-900">{{ $grn['supplier_name'] }}</div>
+                                    @if($grn['supplier_contact'])
+                                        <div class="text-sm text-gray-500">{{ $grn['supplier_contact'] }}</div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ $grn['branch_name'] ?? 'N/A' }}</div>
+                                    <div class="text-sm text-gray-900">{{ $grn['branch_name'] }}</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    <div class="text-sm text-gray-900">{{ $grn['items_count'] ?? 0 }}</div>
+                                    <div class="text-sm text-gray-900">{{ $grn['items_count'] }}</div>
+                                    <div class="text-xs text-gray-500">{{ number_format($grn['total_quantity'], 0) }} units</div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
                                     @php
                                         $statusColors = [
                                             'pending' => 'bg-yellow-100 text-yellow-800',
-                                            'verified' => 'bg-green-100 text-green-800',
+                                            'draft' => 'bg-gray-100 text-gray-800',
+                                            'confirmed' => 'bg-blue-100 text-blue-800',
+                                            'accepted' => 'bg-green-100 text-green-800',
                                             'rejected' => 'bg-red-100 text-red-800'
                                         ];
-                                        $status = $grn['status'] ?? 'pending';
                                     @endphp
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $statusColors[$status] ?? 'bg-gray-100 text-gray-800' }}">
-                                        {{ ucfirst($status) }}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $statusColors[$grn['status']] ?? 'bg-gray-100 text-gray-800' }}">
+                                        {{ ucfirst($grn['status']) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -227,19 +248,22 @@
                                         $paymentColors = [
                                             'unpaid' => 'bg-red-100 text-red-800',
                                             'partial' => 'bg-yellow-100 text-yellow-800',
-                                            'paid' => 'bg-green-100 text-green-800'
+                                            'paid' => 'bg-green-100 text-green-800',
+                                            'overdue' => 'bg-red-200 text-red-900'
                                         ];
-                                        $paymentStatus = $grn['payment_status'] ?? 'unpaid';
                                     @endphp
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $paymentColors[$paymentStatus] ?? 'bg-gray-100 text-gray-800' }}">
-                                        {{ ucfirst($paymentStatus) }}
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $paymentColors[$grn['payment_status']] ?? 'bg-gray-100 text-gray-800' }}">
+                                        {{ ucfirst($grn['payment_status']) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                                    Rs. {{ number_format($grn['total_purchase_value'] ?? 0, 2) }}
+                                    Rs. {{ number_format($grn['total_purchase_value'], 2) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">
+                                    Rs. {{ number_format($grn['paid_amount'], 2) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">
-                                    Rs. {{ number_format($grn['outstanding_amount'] ?? 0, 2) }}
+                                    Rs. {{ number_format($grn['outstanding_amount'], 2) }}
                                 </td>
                             </tr>
                         @endforeach
@@ -280,7 +304,7 @@
 
             <!-- Payment Analysis -->
             <div class="bg-white rounded-xl shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Payment Status Overview</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Payment Analysis</h3>
                 <div class="space-y-4">
                     <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                         <div>
@@ -304,11 +328,11 @@
 
                     <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg">
                         <div>
-                            <div class="text-sm font-medium text-gray-900">Unpaid</div>
-                            <div class="text-xs text-gray-500">{{ $reportData['grns']->where('payment_status', 'unpaid')->count() }} GRNs</div>
+                            <div class="text-sm font-medium text-gray-900">Overdue</div>
+                            <div class="text-xs text-gray-500">{{ $reportData['grns']->where('payment_status', 'overdue')->count() }} GRNs</div>
                         </div>
                         <div class="text-lg font-semibold text-red-600">
-                            Rs. {{ number_format($reportData['grns']->where('payment_status', 'unpaid')->sum('outstanding_amount'), 0) }}
+                            Rs. {{ number_format($reportData['grns']->where('payment_status', 'overdue')->sum('outstanding_amount'), 0) }}
                         </div>
                     </div>
                 </div>
