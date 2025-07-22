@@ -6,7 +6,6 @@
     <!-- Navigation Buttons -->
     <div class="rounded-lg">
         <x-nav-buttons :items="[
-            ['name' => '<< Back', 'link' => route('admin.reports.index')],
             ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
             ['name' => 'Stock Report', 'link' => route('admin.reports.inventory.stock')],
             ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
