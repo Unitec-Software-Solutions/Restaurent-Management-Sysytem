@@ -403,7 +403,7 @@ class ReportController extends Controller
             $totalAmount = $grn->items->sum('line_total') ?? $grn->total_amount ?? 0;
             $paidAmount = $grn->paid_amount ?? 0;
             $outstandingAmount = max(0, $totalAmount - $paidAmount);
-            
+
             $reportData[] = [
                 'grn_id' => $grn->grn_id,
                 'grn_number' => $grn->grn_number,
@@ -432,7 +432,7 @@ class ReportController extends Controller
                 'total_purchase_value' => collect($reportData)->sum('total_purchase_value'),
                 'total_paid' => collect($reportData)->sum('paid_amount'),
                 'total_outstanding' => collect($reportData)->sum('outstanding_amount'),
-                'payment_percentage' => count($reportData) > 0 ? 
+                'payment_percentage' => count($reportData) > 0 ?
                     (collect($reportData)->sum('paid_amount') / collect($reportData)->sum('total_purchase_value')) * 100 : 0,
             ]
         ];
