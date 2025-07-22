@@ -564,6 +564,7 @@ class ReportController extends Controller
         $dateFrom = $request->get('date_from', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $dateTo = $request->get('date_to', Carbon::now()->format('Y-m-d'));
         $releaseType = $request->get('release_type');
+        $status = $request->get('status');
         $branchId = $request->get('branch_id');
         $itemId = $request->get('item_id');
         $exportFormat = $request->get('export');
@@ -579,7 +580,7 @@ class ReportController extends Controller
         $items = $itemsQuery->where('is_active', true)->orderBy('name')->get();
 
         // Generate SRN report
-        $reportData = $this->generateSrnReport($dateFrom, $dateTo, $releaseType, $branchId, $itemId, $orgId);
+        $reportData = $this->generateSrnReport($dateFrom, $dateTo, $releaseType, $branchId, $itemId, $orgId, $status);
 
         if ($exportFormat) {
             return $this->exportSrnReport($reportData, $exportFormat, $dateFrom, $dateTo);
@@ -587,11 +588,11 @@ class ReportController extends Controller
 
         return view('admin.reports.inventory.srn.index', compact(
             'reportData', 'branches', 'items', 'dateFrom', 'dateTo',
-            'releaseType', 'branchId', 'itemId'
+            'releaseType', 'branchId', 'itemId', 'status'
         ));
     }
 
-    protected function generateSrnReport($dateFrom, $dateTo, $releaseType = null, $branchId = null, $itemId = null, $orgId = null)
+    protected function generateSrnReport($dateFrom, $dateTo, $releaseType = null, $branchId = null, $itemId = null, $orgId = null, $status = null)
     {
         // Build SRN query
         $srnQuery = StockReleaseNoteMaster::with(['items', 'branch'])
@@ -605,6 +606,10 @@ class ReportController extends Controller
 
         if ($branchId) {
             $srnQuery->where('branch_id', $branchId);
+        }
+
+        if (!empty($status)) {
+            $srnQuery->where('status', $status);
         }
 
         $srns = $srnQuery->get();
@@ -640,15 +645,21 @@ class ReportController extends Controller
             ];
         }
 
+        // Calculate avg_daily_loss
+        $days = max(1, Carbon::parse($dateFrom)->diffInDays(Carbon::parse($dateTo)) + 1);
+        $totalCostImpact = collect($reportData)->sum('cost_impact');
+        $avgDailyLoss = $days > 0 ? $totalCostImpact / $days : 0;
+
         return [
             'srns' => collect($reportData)->sortByDesc('release_date'),
             'summary' => [
                 'total_srns' => collect($reportData)->count(),
                 'total_quantity_released' => collect($reportData)->sum('total_quantity'),
                 'total_released_quantity' => collect($reportData)->sum('released_quantity'),
-                'total_cost_impact' => collect($reportData)->sum('cost_impact'),
+                'total_cost_impact' => $totalCostImpact,
                 'total_value_released' => collect($reportData)->sum('total_value'),
                 'avg_release_value' => collect($reportData)->count() > 0 ? collect($reportData)->avg('total_value') : 0,
+                'avg_daily_loss' => $avgDailyLoss,
                 'release_types' => collect($reportData)->groupBy('release_type')->map->count(),
             ]
         ];
