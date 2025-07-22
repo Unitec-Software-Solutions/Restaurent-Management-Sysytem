@@ -51,12 +51,18 @@ class SystemPermissionsSeeder extends Seeder
             }
         }
 
+        $created = [];
         foreach (array_keys($allPermissions) as $permission) {
             $perm = Permission::firstOrCreate([
                 'name' => $permission,
                 'guard_name' => 'admin',
             ]);
-            echo "Seeded permission: {$perm->name} (guard: {$perm->guard_name})\n";
+            $created[] = $perm->name . ' (id: ' . $perm->id . ')';
         }
+        \Log::info('SystemPermissionsSeeder created permissions:', $created);
+
+        // Debug dump of the permissions table after seeding
+        $all = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->orderBy('id')->get(['id', 'name', 'guard_name']);
+        \Log::debug('Permissions table after seeding:', $all->toArray());
     }
 }
