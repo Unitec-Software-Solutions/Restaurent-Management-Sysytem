@@ -62,7 +62,9 @@ class SystemPermissionsSeeder extends Seeder
         \Log::info('SystemPermissionsSeeder created permissions:', $created);
 
         // Debug dump of the permissions table after seeding
-        $all = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->orderBy('id')->get(['id', 'name', 'guard_name']);
+        $all = Permission::where('guard_name', 'admin')->orderBy('id')->get(['id', 'name', 'guard_name']);
         \Log::debug('Permissions table after seeding:', $all->toArray());
+
+        $this->command->info('Created ' . count($allPermissions) . ' permissions.');
     }
 }
