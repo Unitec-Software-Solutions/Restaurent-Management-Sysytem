@@ -6,14 +6,13 @@ use App\Models\Role;
 use Illuminate\Http\Request;
 use App\Models\Organization;
 use App\Models\User;
-use App\Models\Module;
-
 use App\Models\Admin;
-use Illuminate\Support\Facades\Log;
 use App\Services\PermissionSystemService;
 use Spatie\Permission\Models\Permission;
 use App\Models\Branch;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Gate;
 
 class RoleController extends Controller
 {
@@ -24,6 +23,9 @@ class RoleController extends Controller
         $this->permissionService = $permissionService;
     }
 
+    /**
+     * Display a listing of roles
+     */
     public function index(Request $request)
     {
         $admin = auth('admin')->user();
@@ -37,400 +39,347 @@ class RoleController extends Controller
         if ($admin->is_super_admin) {
             $organizations = Organization::with('branches')->get();
         } elseif ($admin->isOrganizationAdmin()) {
-            $rolesQuery->where('organization_id', $admin->getAttribute('organization_id'));
-            $organizations = Organization::where('id', $admin->getAttribute('organization_id'))->with('branches')->get();
+            $rolesQuery->where('organization_id', $admin->organization_id);
+            $organizations = Organization::where('id', $admin->organization_id)
+                ->with('branches')
+                ->get();
         } else {
-            $rolesQuery->where('branch_id', $admin->getAttribute('branch_id'));
-            $organizations = Organization::where('id', $admin->getAttribute('organization_id'))->with('branches')->get();
+            $rolesQuery->where('branch_id', $admin->branch_id);
+            $organizations = Organization::where('id', $admin->organization_id)
+                ->with('branches')
+                ->get();
         }
 
+        // Apply filters for super admins
         $selectedOrgId = $request->query('organization_id');
         $selectedBranchId = $request->query('branch_id');
 
-        if ($selectedBranchId && $admin->is_super_admin) {
-            $rolesQuery->where('branch_id', $selectedBranchId);
-        } elseif ($selectedOrgId && $admin->is_super_admin) {
-            $rolesQuery->where('organization_id', $selectedOrgId)->whereNull('branch_id');
+        if ($admin->is_super_admin) {
+            if ($selectedBranchId) {
+                $rolesQuery->where('branch_id', $selectedBranchId);
+            } elseif ($selectedOrgId) {
+                $rolesQuery->where('organization_id', $selectedOrgId)
+                    ->whereNull('branch_id');
+            }
         }
 
         $roles = $rolesQuery->with(['organization', 'branch', 'permissions'])->get();
 
-        return view('admin.roles.index', compact('organizations', 'roles', 'selectedOrgId', 'selectedBranchId'));
+        return view('admin.roles.index', compact(
+            'organizations',
+            'roles',
+            'selectedOrgId',
+            'selectedBranchId'
+        ));
     }
 
+    /**
+     * Show role details
+     */
+    public function show(Role $role)
+    {
+        $this->authorizeAccess($role);
+        $role->load(['permissions', 'organization', 'branch']);
+        return view('admin.roles.show', compact('role'));
+    }
+
+    /**
+     * Edit role form
+     */
+    public function edit(Role $role)
+    {
+        $this->authorizeAccess($role);
+        $role->load(['permissions', 'organization', 'branch']);
+
+        $admin = auth('admin')->user();
+        $organizations = Organization::with('branches')->get();
+        $permissions = Permission::where('guard_name', 'admin')->get();
+
+        // Get branches based on admin level
+        $branches = $this->getAuthorizedBranches($admin);
+
+        // Get permissions definitions
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $availablePermissions = $this->permissionService->getAvailablePermissions(
+            $admin,
+            $permissionDefinitions
+        );
+
+        return view('admin.roles.edit', compact(
+            'role',
+            'organizations',
+            'permissions',
+            'branches',
+            'permissionDefinitions',
+            'availablePermissions'
+        ));
+    }
+
+    /**
+     * Create role form
+     */
     public function create(Request $request)
     {
         $admin = auth('admin')->user();
 
-        if (!($admin instanceof \App\Models\Admin)) {
+        if (!($admin instanceof Admin)) {
             abort(403, 'Unauthorized: Only admins can access this section.');
         }
 
-        if ($admin->is_super_admin) {
-            $organizations = Organization::with('branches')->get();
-            $branches = Branch::all();
-        } elseif ($admin->isOrganizationAdmin()) {
-            $organizations = Organization::where('id', $admin->getAttribute('organization_id'))->with('branches')->get();
-            $branches = Branch::where('organization_id', $admin->getAttribute('organization_id'))->get();
-        } elseif ($admin->isBranchAdmin()) {
-            $organizations = Organization::where('id', $admin->getAttribute('organization_id'))->with('branches')->get();
-            $branches = Branch::where('id', $admin->getAttribute('branch_id') ?? 0)->get();
-        } else {
-            abort(403, 'Unauthorized: Only admins can access this section.');
-        }
+        $organizations = $this->getAuthorizedOrganizations($admin);
+        $branches = $this->getAuthorizedBranches($admin);
 
-        // Get permission definitions and available permissions for the admin guard
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
-
-        // Provide availableTemplates for quick role templates (optional, can be empty)
-        $availableTemplates = method_exists($this->permissionService, 'getRoleTemplates')
-            ? $this->permissionService->getRoleTemplates()
-            : [];
+        $availablePermissions = $this->permissionService->getAvailablePermissions(
+            $admin,
+            $permissionDefinitions
+        );
 
         return view('admin.roles.create', [
             'organizations' => $organizations,
             'branches' => $branches,
             'permissionDefinitions' => $permissionDefinitions,
-            'availablePermissions' => $availablePermissions,
-            'availableTemplates' => $availableTemplates
+            'availablePermissions' => $availablePermissions
         ]);
     }
 
+    /**
+     * Store new role
+     */
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
 
+        // Validation rules
         $rules = [
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
+            'name' => 'required|string|max:255',
             'permissions' => 'array',
-            'permissions.*' => [
-                'required',
-                'string',
-                function ($attribute, $value, $fail) use ($admin) {
-                    $permission = Permission::where('name', $value)
-                        ->where('guard_name', 'admin')
-                        ->first();
-                    if (!$permission) {
-                        $fail("The permission '{$value}' does not exist.");
-                        return;
-                    }
-                    if (!$admin->is_super_admin) {
-                        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-                        $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
-                        if (!isset($availablePermissions[$value])) {
-                            $fail("You don't have access to assign the permission '{$value}'.");
-                        }
-                        \Log::debug('Permission validation', [
-                            'permission_name' => $value,
-                            'available_permissions' => array_keys($availablePermissions)
-                        ]);
-                    }
-                },
-            ],
+            'permissions.*' => 'required|string'
         ];
 
+        // Add organization/branch rules for super admins
         if ($admin->is_super_admin) {
             $rules['organization_id'] = 'required|exists:organizations,id';
-            $rules['branch_id'] = 'nullable|exists:branches,id';
-        } elseif ($admin->isOrganizationAdmin()) {
             $rules['branch_id'] = 'nullable|exists:branches,id';
         }
 
         $validated = $request->validate($rules);
 
-        $organizationId = $admin->is_super_admin ? $request->input('organization_id') : $admin->getAttribute('organization_id');
-        $branchId = null;
-        if ($admin->is_super_admin) {
-            $branchId = $request->input('branch_id');
-        } elseif ($admin->isOrganizationAdmin()) {
-            $branchId = $request->input('branch_id');
-        } elseif ($admin->isBranchAdmin()) {
-            $branchId = $admin->getAttribute('branch_id');
-        }
+        // Verify permission access
+        $this->validatePermissionAccess($admin, $validated['permissions'] ?? []);
 
-        $existingRole = Role::where('name', $request->input('name'))
-            ->where('organization_id', $organizationId)
-            ->where('branch_id', $branchId)
-            ->first();
-        if ($existingRole) {
-            return back()->withErrors(['name' => 'A role with this name already exists in this scope.']);
-        }
+        // Determine scope
+        [$organizationId, $branchId] = $this->determineScope($admin, $request);
 
-        \DB::beginTransaction();
+        // Check for duplicate role
+        $this->checkDuplicateRole($request->name, $organizationId, $branchId);
+
+        DB::beginTransaction();
         try {
             $role = Role::create([
-                'name' => $request->input('name'),
+                'name' => $request->name,
                 'branch_id' => $branchId,
                 'organization_id' => $organizationId,
                 'guard_name' => 'admin',
             ]);
 
-            $permissionNames = $validated['permissions'] ?? [];
-            \Log::debug('Role permission sync', [
-                'role_id' => $role->id,
-                'role_name' => $role->name,
-                'permissions_to_sync' => $permissionNames,
+            $role->syncPermissions($validated['permissions'] ?? []);
+
+            DB::commit();
+
+            Log::info('Role created', [
+                'id' => $role->id,
+                'by_admin' => $admin->id
             ]);
 
-            $role->syncPermissions($permissionNames);
+            return redirect()->route('admin.roles.index')
+                ->with('success', 'Role created successfully');
 
-            \DB::commit();
-            $role->refresh();
-            \Log::info('Role created successfully', [
-                'role_id' => $role->id,
-                'role_name' => $role->name,
-                'permissions' => $role->permissions()->pluck('name')->toArray()
-            ]);
-            return redirect()
-                ->route('admin.roles.index')
-                ->with('success', 'Role "' . $role->name . '" created successfully.');
         } catch (\Exception $e) {
-            \DB::rollBack();
-            \Log::error('Failed to create role', [
-                'role_name' => $request->input('name'),
+            DB::rollBack();
+            Log::error('Role creation failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return back()
-                ->withInput()
-                ->withErrors(['error' => 'Failed to create role: ' . $e->getMessage()]);
+
+            return back()->withInput()
+                ->withErrors(['error' => 'Role creation failed: ' . $e->getMessage()]);
         }
     }
 
-    public function show(Role $role)
+    /**
+     * Update existing role
+     */
+    public function update(Request $request, Role $role)
     {
         $admin = auth('admin')->user();
+        $this->authorizeAccess($role);
 
-        if (!$admin->is_super_admin) {
-            if ($admin->isOrganizationAdmin() && $role->getAttribute('organization_id') !== $admin->getAttribute('organization_id')) {
-                abort(403, 'You can only view roles within your organization.');
-            } elseif ($admin->isBranchAdmin() && $role->getAttribute('branch_id') !== $admin->getAttribute('branch_id')) {
-                abort(403, 'You can only view roles within your branch.');
-            }
-        }
-
-        $role->load(['permissions', 'organization', 'branch']);
-
-        return view('admin.roles.show', compact('role'));
-    }
-public function edit(Role $role)
-    {
-        $admin = auth('admin')->user();
-        $role->load(['permissions', 'organization', 'branch']);
-
-        if (!$admin->is_super_admin) {
-            if ($admin->isOrganizationAdmin() && $role->getAttribute('organization_id') !== $admin->getAttribute('organization_id')) {
-                abort(403, 'You can only edit roles within your organization.');
-            } elseif ($admin->isBranchAdmin() && $role->getAttribute('branch_id') !== $admin->getAttribute('branch_id')) {
-                abort(403, 'You can only edit roles within your branch.');
-            }
-        }
-
-        $branches = Branch::where('organization_id', $role->getAttribute('organization_id'))->get();
-
-        if ($admin->is_super_admin) {
-            $organizations = Organization::with('branches')->get();
-        } elseif ($admin->isOrganizationAdmin() || $admin->isBranchAdmin()) {
-            $organizations = Organization::where('id', $admin->getAttribute('organization_id'))->with('branches')->get();
-        } else {
-            $organizations = collect();
-        }
-
-        // Get permission definitions and available permissions for the admin guard
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
-
-        // Provide availableTemplates for quick role templates (optional, can be empty)
-        $availableTemplates = method_exists($this->permissionService, 'getRoleTemplates')
-            ? $this->permissionService->getRoleTemplates()
-            : [];
-
-        return view('admin.roles.edit', [
-            'role' => $role,
-            'organizations' => $organizations,
-            'branches' => $branches,
-            'permissionDefinitions' => $permissionDefinitions,
-            'availablePermissions' => $availablePermissions,
-            'availableTemplates' => $availableTemplates
-        ]);
-    }
-
-
-public function update(Request $request, Role $role)
-{
-    $admin = auth('admin')->user();
-
-    // Verify user has permission to update roles
-    if (!$admin->is_super_admin) {
-        if ($admin->isOrganizationAdmin() && $role->getAttribute('organization_id') !== $admin->getAttribute('organization_id')) {
-            abort(403, 'You can only update roles within your organization.');
-        } elseif ($admin->isBranchAdmin() && $role->getAttribute('branch_id') !== $admin->getAttribute('branch_id')) {
-            abort(403, 'You can only update roles within your branch.');
-        }
-    }
-
-    // Define validation rules
-    $rules = [
-        'name' => ['required', 'string', 'max:255'],
-        'permissions' => 'array',
-        'permissions.*' => [
-            'required',
-            'string',
-            function ($attribute, $value, $fail) use ($admin) {
-                // First verify the permission exists with correct guard
-                $permission = Permission::where('name', $value)
-                    ->where('guard_name', 'admin')
-                    ->first();
-
-                if (!$permission) {
-                    $fail("The permission '{$value}' does not exist.");
-                    return;
-                }                    // Then verify the admin has access to assign this permission
-                if (!$admin->is_super_admin) {
-                    $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-                    $availablePermissions = $this->permissionService->getAvailablePermissions($admin, $permissionDefinitions);
-
-                    if (!isset($availablePermissions[$permission->name])) {
-                        $fail("You don't have access to assign the permission '{$permission->name}'.");
-                    }
-
-                    // Debug log
-                    \Log::debug('Permission validation', [
-                        'permission_id' => $value,
-                        'permission_name' => $permission->name,
-                        'available_permissions' => array_keys($availablePermissions)
-                    ]);
-                }
-            },
-        ],
-    ];
-    if ($admin->is_super_admin) {
-        $rules['organization_id'] = 'required|exists:organizations,id';
-        $rules['branch_id'] = 'nullable|exists:branches,id';
-    } elseif ($admin->isOrganizationAdmin()) {
-        $rules['branch_id'] = 'nullable|exists:branches,id';
-    }
-
-    $validated = $request->validate($rules);
-
-    $orgId = $admin->is_super_admin ? $request->input('organization_id') : $role->getAttribute('organization_id');
-    $branchId = $admin->is_super_admin ? $request->input('branch_id') :
-        ($admin->isOrganizationAdmin() ? $request->input('branch_id') : $role->getAttribute('branch_id'));
-
-    $existingRole = Role::where('name', $request->input('name'))
-        ->where('organization_id', $orgId)
-        ->where('branch_id', $branchId)
-        ->where('id', '!=', $role->id)
-        ->first();
-    if ($existingRole) {
-        return back()->withErrors(['name' => 'A role with this name already exists in this scope.']);
-    }
-
-    try {
-        // Begin transaction
-        \DB::beginTransaction();
-
-        // Update role basic info
-        $updateData = [
-            'name' => $request->input('name'),
+        // Validation rules
+        $rules = [
+            'name' => 'required|string|max:255',
+            'permissions' => 'array',
+            'permissions.*' => 'required|string'
         ];
 
+        // Add organization/branch rules for super admins
         if ($admin->is_super_admin) {
-            $updateData['organization_id'] = $request->input('organization_id');
-            $updateData['branch_id'] = $request->input('branch_id');
-        } elseif ($admin->isOrganizationAdmin()) {
-            $updateData['branch_id'] = $request->input('branch_id');
+            $rules['organization_id'] = 'required|exists:organizations,id';
+            $rules['branch_id'] = 'nullable|exists:branches,id';
         }
 
-        // Update role data
-        $role->update($updateData);
+        $validated = $request->validate($rules);
 
-        // Get permission names from request
-        $permissionNames = $validated['permissions'] ?? [];
+        // Verify permission access
+        $this->validatePermissionAccess($admin, $validated['permissions'] ?? []);
 
-        // Debug log before sync
-        \Log::debug('Attempting to sync permissions to role', [
-            'role_id' => $role->id,
-            'role_name' => $role->name,
-            'permissions_to_sync' => $permissionNames,
-        ]);
+        DB::beginTransaction();
+        try {
+            // Update basic info
+            $updateData = ['name' => $request->name];
 
-        // Sync permissions using permission names directly
-        $role->syncPermissions($permissionNames);
+            if ($admin->is_super_admin) {
+                $updateData['organization_id'] = $request->organization_id;
+                $updateData['branch_id'] = $request->branch_id;
+            }
 
-        // Commit transaction
-        \DB::commit();
+            $role->update($updateData);
 
-        // Refresh role with updated permissions
-        $role->refresh();
+            // Sync permissions
+            $role->syncPermissions($validated['permissions'] ?? []);
 
-        // Log successful update
-        \Log::info('Role updated successfully', [
-            'role_id' => $role->id,
-            'role_name' => $role->name,
-            'permissions' => $role->permissions()->pluck('name')->toArray()
-        ]);
+            DB::commit();
 
-        return redirect()
-            ->route('admin.roles.index')
-            ->with('success', 'Role "' . $role->name . '" updated successfully.');
+            Log::info('Role updated', [
+                'id' => $role->id,
+                'by_admin' => $admin->id
+            ]);
 
-    } catch (\Exception $e) {
-        // Rollback transaction on error
-        \DB::rollBack();
+            return redirect()->route('admin.roles.index')
+                ->with('success', 'Role updated successfully');
 
-        \Log::error('Failed to update role', [
-            'role_id' => $role->id,
-            'role_name' => $role->name,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Role update failed', [
+                'role_id' => $role->id,
+                'error' => $e->getMessage()
+            ]);
 
-        return back()
-            ->withInput()
-            ->withErrors(['error' => 'Failed to update role: ' . $e->getMessage()]);
+            return back()->withInput()
+                ->withErrors(['error' => 'Role update failed: ' . $e->getMessage()]);
+        }
     }
-}
+
+    /**
+     * Delete role
+     */
     public function destroy(Role $role)
     {
         $admin = auth('admin')->user();
+        $this->authorizeAccess($role);
 
-        if (!$admin->is_super_admin) {
-            if ($admin->isOrganizationAdmin() && $role->getAttribute('organization_id') !== $admin->getAttribute('organization_id')) {
-                abort(403, 'You can only delete roles within your organization.');
-            } elseif ($admin->isBranchAdmin() && $role->getAttribute('branch_id') !== $admin->getAttribute('branch_id')) {
-                abort(403, 'You can only delete roles within your branch.');
-            }
+        if ($role->users()->exists()) {
+            return back()->withErrors([
+                'error' => 'Cannot delete role assigned to users'
+            ]);
         }
 
-        // Check if role is in use
-        $adminsUsingRole = Admin::where('current_role_id', $role->id)->count();
-        $adminsWithSpatieRole = 0;
-
-        try {
-            $adminsWithSpatieRole = Admin::role($role->name, 'admin')->count();
-        } catch (\Exception $e) {}
-
-        $totalUsage = $adminsUsingRole + $adminsWithSpatieRole;
-
-        if ($totalUsage > 0) {
-            $details = [];
-            if ($adminsUsingRole > 0) $details[] = "{$adminsUsingRole} admin(s) via current_role_id";
-            if ($adminsWithSpatieRole > 0) $details[] = "{$adminsWithSpatieRole} admin(s) via Spatie roles";
-
-            return back()->withErrors(['role' => "Cannot delete role '{$role->name}' as it is assigned to: " . implode(', ', $details)])
-                ->with('error', 'Role deletion failed.');
-        }
-
-        $roleName = $role->name;
         $role->delete();
 
+        Log::info('Role deleted', [
+            'id' => $role->id,
+            'by_admin' => $admin->id
+        ]);
+
         return redirect()->route('admin.roles.index')
-            ->with('success', "Role '{$roleName}' deleted successfully.");
+            ->with('success', 'Role deleted successfully');
+    }
+
+    /**
+     * --------------------------
+     * Helper Methods
+     * --------------------------
+     */
+
+    private function authorizeAccess(Role $role)
+    {
+        $admin = auth('admin')->user();
+
+        if ($admin->is_super_admin) return;
+
+        if ($admin->isOrganizationAdmin() &&
+            $role->organization_id !== $admin->organization_id) {
+            abort(403, 'Unauthorized for this organization');
+        }
+
+        if ($admin->isBranchAdmin() &&
+            $role->branch_id !== $admin->branch_id) {
+            abort(403, 'Unauthorized for this branch');
+        }
+    }
+
+    private function validatePermissionAccess(Admin $admin, array $permissions)
+    {
+        if ($admin->is_super_admin) return;
+
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $availablePermissions = $this->permissionService->getAvailablePermissions(
+            $admin,
+            $permissionDefinitions
+        );
+
+        foreach ($permissions as $permission) {
+            if (!isset($availablePermissions[$permission])) {
+                abort(403, "Unauthorized to assign permission: {$permission}");
+            }
+        }
+    }
+
+    private function determineScope(Admin $admin, Request $request): array
+    {
+        return [
+            $admin->is_super_admin
+                ? $request->organization_id
+                : $admin->organization_id,
+
+            $admin->is_super_admin
+                ? $request->branch_id
+                : ($admin->isOrganizationAdmin()
+                    ? $request->branch_id
+                    : $admin->branch_id)
+        ];
+    }
+
+    private function checkDuplicateRole(string $name, $organizationId, $branchId)
+    {
+        $exists = Role::where('name', $name)
+            ->where('organization_id', $organizationId)
+            ->where('branch_id', $branchId)
+            ->exists();
+
+        if ($exists) {
+            abort(422, 'Role name already exists in this scope');
+        }
+    }
+
+    private function getAuthorizedOrganizations(Admin $admin)
+    {
+        if ($admin->is_super_admin) {
+            return Organization::with('branches')->get();
+        }
+        return Organization::where('id', $admin->organization_id)
+            ->with('branches')
+            ->get();
+    }
+
+    private function getAuthorizedBranches(Admin $admin)
+    {
+        if ($admin->is_super_admin) {
+            return Branch::all();
+        }
+        if ($admin->isOrganizationAdmin()) {
+            return Branch::where('organization_id', $admin->organization_id)->get();
+        }
+        return Branch::where('id', $admin->branch_id)->get();
     }
 }
