@@ -12,6 +12,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class AdminController extends Controller
 {
@@ -45,32 +47,6 @@ class AdminController extends Controller
             Log::error('Dashboard error: ' . $e->getMessage());
             return view('admin.dashboard', ['reservations' => collect(), 'admin' => $admin]);
         }
-    }
-
-    public function reservations()
-    {
-        $admin = Auth::user();
-
-        if (!$admin) {
-            return redirect()->route('admin.login')->with('error', 'You must be logged in to access reservations.');
-        }
-
-        $query = Reservation::with(['user', 'table']);
-
-        if ($admin->is_super_admin) {
-            // Super admin can see all reservations
-        } elseif ($admin->branch_id) {
-            $query->where('branch_id', $admin->branch_id)
-                  ->where('organization_id', $admin->organization_id);
-        } elseif ($admin->organization_id) {
-            $query->where('organization_id', $admin->organization_id);
-        } else {
-            return redirect()->route('admin.dashboard')->with('error', 'Incomplete admin details. Contact support.');
-        }
-
-        $reservations = $query->orderBy('created_at', 'desc')->get();
-
-        return view('admin.reservations.index', compact('reservations'));
     }
 
     public function index()
@@ -137,22 +113,22 @@ class AdminController extends Controller
             DB::beginTransaction();
 
             $admin = Admin::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'organization_id' => $request->organization_id,
-                'branch_id' => $request->branch_id,
+                'name' => $request->input('name'),
+                'email' => $request->input('email'),
+                'password' => Hash::make($request->input('password')),
+                'organization_id' => $request->input('organization_id'),
+                'branch_id' => $request->input('branch_id'),
                 'is_super_admin' => $request->boolean('is_super_admin'),
                 'is_active' => $request->boolean('is_active', true),
-                'department' => $request->department,
-                'job_title' => $request->job_title,
-                'status' => $request->status,
-                'phone' => $request->phone,
+                'department' => $request->input('department'),
+                'job_title' => $request->input('job_title'),
+                'status' => $request->input('status'),
+                'phone' => $request->input('phone'),
             ]);
 
             // Assign roles using Spatie's role assignment
             if ($request->filled('roles')) {
-                $roles = Role::whereIn('id', $request->roles)
+                $roles = Role::whereIn('id', $request->input('roles'))
                     ->where('guard_name', 'admin')
                     ->get();
 
@@ -185,40 +161,6 @@ class AdminController extends Controller
 
             return back()->withInput()
                 ->withErrors(['error' => 'Failed to create admin: ' . $e->getMessage()]);
-        }
-
-        Log::info('New admin created', [
-            'admin_id' => $admin->id,
-            'email' => $admin->email,
-            'roles_assigned' => $request->role_ids ?? []
-        ]);
-
-        return redirect()->route('admins.index')
-            ->with('success', 'Admin created successfully.');
-    }
-
-    public function getAdminDetails($adminId)
-    {
-        try {
-            $admin = Admin::with(['organization', 'roles'])->findOrFail($adminId);
-
-            $stats = [
-                'last_login' => $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->diffForHumans() : 'Never',
-                'is_super_admin' => $admin->isSuperAdmin(),
-                'role_count' => $admin->roles()->count(),
-                'created_ago' => $admin->created_at->diffForHumans(),
-            ];
-
-            return response()->json([
-                'success' => true,
-                'admin' => $admin,
-                'stats' => $stats
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Admin not found'
-            ]);
         }
     }
 
@@ -355,13 +297,32 @@ class AdminController extends Controller
     /**
      * Get branches for an organization (AJAX)
      */
-    public function getBranches($organizationId)
+    public function getAdminDetails($adminId)
     {
-        $branches = Branch::where('organization_id', $organizationId)->get();
+        try {
+            $admin = Admin::with(['organization', 'roles'])->findOrFail($adminId);
 
-        return response()->json([
-            'success' => true,
-            'branches' => $branches
-        ]);
+            $stats = [
+                'last_login' => $admin->last_login_at ? Carbon::parse($admin->last_login_at)->diffForHumans() : 'Never',
+                'is_super_admin' => $admin->isSuperAdmin(),
+                'role_count' => $admin->roles()->count(),
+                'created_ago' => $admin->created_at->diffForHumans(),
+            ];
+
+            // Add permission details
+            $permissions = method_exists($admin, 'getFormattedPermissions') ? $admin->getFormattedPermissions() : [];
+
+            return response()->json([
+                'success' => true,
+                'admin' => $admin,
+                'stats' => $stats,
+                'permissions' => $permissions // Include permission details
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Admin not found'
+            ]);
+        }
     }
 }
