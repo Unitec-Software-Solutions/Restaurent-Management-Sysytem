@@ -21,6 +21,10 @@
     <!-- Scripts -->
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
 
+    <!-- Role Management Scripts -->
+    <script src="{{ asset('js/role-management.js') }}"></script>
+    <script src="{{ asset('js/permissions.js') }}"></script>
+
     <!-- Enhanced Sidebar Assets -->
     @vite(['resources/css/sidebar.css', 'resources/js/sidebar.js'])
     <script>
