@@ -163,6 +163,10 @@ Route::post('/login', [AdminAuthController::class, 'login']);
 | Admin Routes
 |------------------------------------------------------------------------*/
 Route::prefix('admin')->name('admin.')->group(function () {
+    // Example: Protect admin dashboard with role middleware
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])
+        ->middleware(['role:super_admin,organization_admin,branch_admin'])
+        ->name('dashboard');
     // Authentication routes (no middleware)
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login'])->name('login.submit');
