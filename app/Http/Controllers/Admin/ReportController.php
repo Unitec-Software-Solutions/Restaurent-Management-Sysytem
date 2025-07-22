@@ -12,9 +12,10 @@ use App\Models\ItemTransaction;
 use App\Models\ItemCategory;
 use App\Models\GoodsTransferNote;
 use App\Models\GrnMaster;
-use App\Models\StockReleaseNote;
+use App\Models\StockReleaseNoteMaster;
 use App\Models\Branch;
 use App\Models\Organization;
+use App\Models\Supplier;
 use Illuminate\Support\Facades\Response;
 
 class ReportController extends Controller
@@ -357,7 +358,7 @@ class ReportController extends Controller
         $branches = $branchesQuery->where('is_active', true)->orderBy('name')->get();
 
         // Get available suppliers
-        $suppliersQuery = \App\Models\Supplier::query();
+        $suppliersQuery = Supplier::query();
         $this->applyOrganizationFilter($suppliersQuery, $orgId);
         $suppliers = $suppliersQuery->orderBy('name')->get();
 
@@ -398,48 +399,41 @@ class ReportController extends Controller
         $grns = $grnQuery->get();
 
         $reportData = [];
-        $totalAmount = 0;
-        $totalPaid = 0;
-        $totalOutstanding = 0;
-
         foreach ($grns as $grn) {
-            $paidAmount = $grn->paid_amount;
-            $outstandingAmount = $grn->outstanding_amount;
-            $totalPurchaseValue = (isset($grn->total_purchase_value) && $grn->total_purchase_value !== null)
-                ? $grn->total_purchase_value
-                : (isset($grn->total_amount) ? $grn->total_amount : 0);
-
+            $totalAmount = $grn->items->sum('line_total') ?? $grn->total_amount ?? 0;
+            $paidAmount = $grn->paid_amount ?? 0;
+            $outstandingAmount = max(0, $totalAmount - $paidAmount);
+            
             $reportData[] = [
                 'grn_id' => $grn->grn_id,
                 'grn_number' => $grn->grn_number,
                 'supplier_name' => $grn->supplier->name ?? 'N/A',
+                'supplier_contact' => $grn->supplier->phone ?? '',
                 'branch_name' => $grn->branch->name ?? 'N/A',
                 'received_date' => $grn->received_date,
-                'status' => $grn->status,
-                'total_amount' => isset($grn->total_amount) ? $grn->total_amount : 0,
-                'total_purchase_value' => $totalPurchaseValue,
-                'paid_amount' => $paidAmount,
-                'outstanding_amount' => $outstandingAmount,
+                'receipt_date' => $grn->received_date,
+                'due_date' => $grn->due_date ?? null,
+                'status' => strtolower($grn->status),
                 'items_count' => $grn->items->count(),
                 'total_quantity' => $grn->items->sum('received_quantity'),
-                'accepted_quantity' => $grn->items->sum('accepted_quantity'),
-                'rejected_quantity' => $grn->items->sum('rejected_quantity'),
-                'payment_status' => $grn->payment_status,
+                'total_purchase_value' => $totalAmount,
+                'total_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
+                'outstanding_amount' => $outstandingAmount,
+                'payment_status' => $this->getPaymentStatus($totalAmount, $paidAmount),
+                'notes' => $grn->notes,
             ];
-
-            $totalAmount += $grn->total_amount;
-            $totalPaid += $paidAmount;
-            $totalOutstanding += $outstandingAmount;
         }
 
         return [
             'grns' => collect($reportData)->sortByDesc('received_date'),
             'summary' => [
-                'total_grns' => $grns->count(),
-                'total_amount' => $totalAmount,
-                'total_paid' => $totalPaid,
-                'total_outstanding' => $totalOutstanding,
-                'payment_completion_rate' => $totalAmount > 0 ? ($totalPaid / $totalAmount) * 100 : 0,
+                'total_grns' => count($reportData),
+                'total_purchase_value' => collect($reportData)->sum('total_purchase_value'),
+                'total_paid' => collect($reportData)->sum('paid_amount'),
+                'total_outstanding' => collect($reportData)->sum('outstanding_amount'),
+                'payment_percentage' => count($reportData) > 0 ? 
+                    (collect($reportData)->sum('paid_amount') / collect($reportData)->sum('total_purchase_value')) * 100 : 0,
             ]
         ];
     }
@@ -600,7 +594,7 @@ class ReportController extends Controller
     protected function generateSrnReport($dateFrom, $dateTo, $releaseType = null, $branchId = null, $itemId = null, $orgId = null)
     {
         // Build SRN query
-        $srnQuery = StockReleaseNote::with(['items', 'branch'])
+        $srnQuery = StockReleaseNoteMaster::with(['items', 'branch'])
             ->whereBetween('release_date', [$dateFrom, $dateTo]);
 
         $this->applyOrganizationFilter($srnQuery, $orgId);
@@ -625,17 +619,20 @@ class ReportController extends Controller
 
             if ($itemsData->isEmpty()) continue;
 
-            $totalValue = $itemsData->sum('line_total');
-            $totalQuantity = $itemsData->sum('release_quantity');
+            $totalValue = $itemsData->sum('line_total') ?? 0;
+            $totalQuantity = $itemsData->sum('release_quantity') ?? 0;
 
             $reportData[] = [
                 'srn_id' => $srn->id,
                 'srn_number' => $srn->srn_number,
                 'branch_name' => $srn->branch->name ?? 'N/A',
                 'release_date' => $srn->release_date,
+                'approved_date' => $srn->verified_at,
                 'release_type' => $srn->release_type,
-                'reason' => $srn->reason,
+                'reason' => $srn->notes ?? 'N/A',
                 'items_count' => $itemsData->count(),
+                'released_quantity' => $totalQuantity,
+                'cost_impact' => $totalValue,
                 'total_quantity' => $totalQuantity,
                 'total_value' => $totalValue,
                 'avg_unit_cost' => $totalQuantity > 0 ? $totalValue / $totalQuantity : 0,
@@ -648,8 +645,10 @@ class ReportController extends Controller
             'summary' => [
                 'total_srns' => collect($reportData)->count(),
                 'total_quantity_released' => collect($reportData)->sum('total_quantity'),
+                'total_released_quantity' => collect($reportData)->sum('released_quantity'),
+                'total_cost_impact' => collect($reportData)->sum('cost_impact'),
                 'total_value_released' => collect($reportData)->sum('total_value'),
-                'avg_release_value' => collect($reportData)->avg('total_value'),
+                'avg_release_value' => collect($reportData)->count() > 0 ? collect($reportData)->avg('total_value') : 0,
                 'release_types' => collect($reportData)->groupBy('release_type')->map->count(),
             ]
         ];
