@@ -46,26 +46,29 @@ test('Create New Branch 🏪', async ({ page }) => {
             { table_id: 1, capacity: 4 }
         ]
     });
-    // Activate the branch after creation
-     await activateBranch(page, { branchId: '2' });
 
-   await createBranch(page, {
-       organizationId: '1', // Default organization ID
-       name: 'Negambo Branch',
-       address: '123 Main St, Negambo, Sri Lanka',
-       phone: '0712345678',
-       opening_time: '08:00',
-       closing_time: '22:00',
-       total_capacity: 50,
-       reservation_fee: 100.00,
-       cancellation_fee: 50.00,
-       contact_person: 'John Doe',
-       contact_person_designation: 'Manager',
-       contact_person_phone: '0712345678',
-       tables: [
-           { table_id: 1, capacity: 4 }
-       ]
-   });
+    // Activate the branch after creation
+    await activateBranch(page, { branchId: '2' });
+
+    // create branch 3
+    await createBranch(page, {
+        organizationId: '1', // Default organization ID
+        name: 'Negambo Branch',
+        address: '123 Main St, Negambo, Sri Lanka',
+        phone: '0712345678',
+        opening_time: '08:00',
+        closing_time: '22:00',
+        total_capacity: 50,
+        reservation_fee: 100.00,
+        cancellation_fee: 50.00,
+        contact_person: 'John Doe',
+        contact_person_designation: 'Manager',
+        contact_person_phone: '0712345678',
+        tables: [
+            { table_id: 1, capacity: 4 }
+        ]
+    });
+
     // Activate the branch after creation
     await activateBranch(page, { branchId: '3' });
 });
