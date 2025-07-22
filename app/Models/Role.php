@@ -39,7 +39,21 @@ class Role extends SpatieRole
         return $this->belongsTo(\App\Models\Branch::class);
     }
 
-    // Use Spatie's default permissions() relationship
+    /**
+     * Users that belong to this role
+     */
+    public function users(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'role_user');
+    }
+
+    /**
+     * Permissions that belong to this role
+     */
+    public function permissions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'permission_role');
+    }
 
     /**
      * Get admins assigned to this role
