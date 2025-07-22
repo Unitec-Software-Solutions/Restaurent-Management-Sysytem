@@ -190,6 +190,8 @@ Route::middleware(['web', 'auth:admin'])->prefix('admin')->name('admin.')->group
     // Route::get('digital-menu/index', [DigitalMenuController::class, 'index'])->name('digital-menu.index');
     Route::get('settings/index', [SettingController::class, 'index'])->name('settings.index');
     Route::get('reports/index', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/srn/generate', [ReportController::class, 'generateSrnReport'])->name('reports.srn.generate');
+    Route::get('api/average-daily-loss', [ReportController::class, 'getAverageDailyLoss'])->name('api.average-daily-loss');
     Route::get('debug/routes', [DebugController::class, 'routes'])->name('debug.routes');
     Route::get('debug/routes/test', [DebugController::class, 'routes'])->name('debug.routes.test');
     Route::get('debug/routes/generate', [DebugController::class, 'routes'])->name('debug.routes.generate');
