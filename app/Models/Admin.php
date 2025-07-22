@@ -75,7 +75,6 @@ class Admin extends Authenticatable
         'password',
         'remember_token',
     ];
-
     /**
      * The attributes that should be cast.
      *
@@ -96,6 +95,7 @@ class Admin extends Authenticatable
         'branch_id' => 'integer',
         'current_role_id' => 'integer',
     ];
+    // ...existing code...
 
     /**
      * The model's default values for attributes.
@@ -573,3 +573,4 @@ class Admin extends Authenticatable
         return $value ?? 'inactive';
     }
 }
+
