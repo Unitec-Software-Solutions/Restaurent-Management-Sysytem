@@ -45,6 +45,9 @@ export async function createBranch(page: Page,
     await page.fill(`input[name="tables[${i}][capacity]"]`, branchData.tables[i].capacity.toString());
   }
 
-  // Submit the form
-  await page.click('button[type="submit"]');
+    // Submit the form
+    await page.click('button[type="submit"]');
+
+    await page.getByText('Branch created successfully.').waitFor({ state: 'visible' });
+    console.log('Branch created successfully');
 }
