@@ -7,7 +7,6 @@
     <!-- Navigation Buttons -->
     <div class="rounded-lg">
         <x-nav-buttons :items="[
-            ['name' => '<< Back', 'link' => route('admin.reports.index')],
             ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
             ['name' => 'Stock Report', 'link' => route('admin.reports.inventory.stock')],
             ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
@@ -250,7 +249,7 @@
         <!-- Transaction Summary -->
         <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white rounded-xl shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Selling Items</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Usage Items</h3>
                 @php
                     $topSelling = $reportData->sortByDesc('sales_quantity')->take(5);
                 @endphp
@@ -265,7 +264,7 @@
             </div>
 
             <div class="bg-white rounded-xl shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">High Wastage Items</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">High Usage Items</h3>
                 @php
                     $highWastage = $reportData->sortByDesc('wastage')->take(5);
                 @endphp
