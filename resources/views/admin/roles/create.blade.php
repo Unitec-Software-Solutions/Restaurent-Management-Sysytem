@@ -5,12 +5,26 @@
 
 @section('content')
 <div class="container mx-auto px-4 py-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold mb-2">Create New Role</h1>
-        <p class="text-gray-600">Define a new role with specific permissions for your organization or branch</p>
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold mb-2">Create New Role</h1>
+            <p class="text-gray-600">Define a new role with specific permissions for your organization or branch</p>
+        </div>
+        <div>
+            <a href="{{ route('admin.roles.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Roles
+            </a>
+        </div>
+    </div>
+
+    <!-- Current Template Indicator -->
+    <div id="selectedTemplateIndicator" class="mb-4">
+        <span class="text-sm text-gray-600">Selected Template: </span>
+        <span id="selectedTemplate" class="font-medium text-blue-600">None</span>
     </div>
 
     <!-- Predefined Role Templates -->
+    @can('roles.templates')
     @if(!empty($availableTemplates))
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <h3 class="text-lg font-semibold text-blue-800 mb-3">
@@ -31,11 +45,12 @@
                         {{ count($template['permissions']) }} permissions included
                     </div>
                 </div>
-                
+
             @endforeach
         </div>
     </div>
     @endif
+    @endcan
 
     <div class="bg-white rounded shadow p-6">
         <form action="{{ route('admin.roles.store') }}" method="POST" id="roleForm">
@@ -164,18 +179,23 @@
 
                             <div class="space-y-2">
                                 @foreach($categoryPermissions as $permissionKey => $description)
-                                    @php $permId = $allPermissions[$permissionKey]->id ?? null; @endphp
-                                    @if($permId)
-                                    <label class="flex items-center">
-                                        <input type="checkbox"
-                                               name="permissions[]"
-                                               value="{{ $permId }}"
-                                               class="permission-checkbox {{ $categoryKey }}-permission rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                               {{ in_array($permId, old('permissions', [])) ? 'checked' : '' }}>
-                                        <span class="ml-2 text-sm text-gray-700">
-                                            {{ $description }}
-                                        </span>
-                                    </label>
+                                    @php $permission = $allPermissions[$permissionKey] ?? null; @endphp
+                                    @if($permission)
+                                    <div class="mb-2">
+                                        <label class="flex items-center">
+                                            <input type="checkbox"
+                                                   name="permissions[]"
+                                                   value="{{ $permission->name }}"
+                                                   class="permission-checkbox {{ $categoryKey }}-permission rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                   {{ in_array($permission->name, old('permissions', [])) ? 'checked' : '' }}>
+                                            <span class="ml-2 text-sm text-gray-700">
+                                                {{ $description }}
+                                            </span>
+                                        </label>
+                                        @error('permissions.' . $loop->index)
+                                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
                                     @endif
                                 @endforeach
                             </div>
@@ -202,16 +222,39 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Organization change handler
+    const orgSelect = document.getElementById('organization_id');
+    const branchSelect = document.getElementById('branch_id');
+
+    if (orgSelect && branchSelect) {
+        orgSelect.addEventListener('change', function() {
+            const selectedOrgId = this.value;
+            Array.from(branchSelect.options).forEach(option => {
+                if (option.value === '') {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = option.dataset.org === selectedOrgId ? 'block' : 'none';
+                }
+            });
+            branchSelect.value = ''; // Reset branch selection
+        });
+    }
+
     // Handle group select all functionality
     document.querySelectorAll('.group-select-all').forEach(function(selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
             const group = this.dataset.group;
             const groupPermissions = document.querySelectorAll('.' + group + '-permission');
-
             groupPermissions.forEach(function(checkbox) {
                 checkbox.checked = selectAllCheckbox.checked;
             });
         });
+
+        // Check initial state
+        const group = selectAllCheckbox.dataset.group;
+        const groupPermissions = document.querySelectorAll('.' + group + '-permission');
+        const allChecked = Array.from(groupPermissions).every(cb => cb.checked);
+        selectAllCheckbox.checked = allChecked;
     });
 
     // Handle individual permission changes
@@ -249,9 +292,12 @@ function loadRoleTemplate(templateName, permissions) {
 
     // Check permissions from template
     permissions.forEach(function(permission) {
-        const checkbox = document.querySelector('input[value="' + permission + '"]');
+        const checkbox = document.querySelector(`input[name="permissions[]"][value="${permission}"]`);
         if (checkbox) {
             checkbox.checked = true;
+            // Trigger change event to update group checkboxes
+            const event = new Event('change', { bubbles: true });
+            checkbox.dispatchEvent(event);
         }
     });
 
