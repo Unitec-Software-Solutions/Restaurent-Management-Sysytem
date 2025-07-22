@@ -530,6 +530,55 @@ class Admin extends Authenticatable
     }
 
     /**
+     * Get all permissions including those inherited through roles
+     */
+    public function getEffectivePermissions(): Collection
+    {
+        if ($this->is_super_admin) {
+            return Permission::where('guard_name', 'admin')->get();
+        }
+        return $this->getAllPermissions();
+    }
+
+    /**
+     * Get formatted permissions with source information
+     */
+    public function getFormattedPermissions(): array
+    {
+        $permissions = $this->getEffectivePermissions();
+        
+        $formatted = [];
+        foreach ($permissions as $permission) {
+            $formatted[] = [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'source' => $this->getPermissionSource($permission)
+            ];
+        }
+        
+        return $formatted;
+    }
+
+    /**
+     * Get the source of a permission (direct or via role)
+     */
+    protected function getPermissionSource($permission): string
+    {
+        if ($this->hasDirectPermission($permission)) {
+            return 'Direct';
+        }
+        
+        $roles = $this->roles()->with('permissions')->get();
+        foreach ($roles as $role) {
+            if ($role->hasPermissionTo($permission)) {
+                return "Via Role: {$role->name}";
+            }
+        }
+        
+        return 'Unknown';
+    }
+
+    /**
      * Migrate legacy role to Spatie role system
      */
     protected function migrateLegacyRole(): void
