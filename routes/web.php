@@ -495,8 +495,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
             Route::prefix('inventory')->name('inventory.')->group(function () {
                 Route::get('/', [ReportController::class, 'inventoryReport'])->name('index');
-                // Route::get('/', [ReportController::class, 'inventoryReport'])->name('index');
                 Route::get('/stock', [ReportController::class, 'inventoryStock'])->name('stock');
+                Route::get('/category', [ReportController::class, 'categoryReport'])->name('category');
                 Route::get('/grn', [ReportController::class, 'inventoryGrn'])->name('grn');
                 Route::get('/gtn', [ReportController::class, 'inventoryGtn'])->name('gtn');
                 Route::get('/srn', [ReportController::class, 'inventorySrn'])->name('srn');
