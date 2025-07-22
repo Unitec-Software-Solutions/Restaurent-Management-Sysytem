@@ -461,13 +461,17 @@ class Admin extends Authenticatable
     }
 
     /**
-     * Override roles method to enforce admin guard
+     * Override roles method to enforce admin guard and model type
      */
     public function roles()
     {
-        return $this->belongsToMany(Role::class, 'model_has_roles', 'model_id', 'role_id')
-            ->where('model_type', self::class)
-            ->where('guard_name', 'admin');
+        return $this->morphToMany(
+            \Spatie\Permission\Models\Role::class,
+            'model',
+            'model_has_roles',
+            'model_id',
+            'role_id'
+        )->where('guard_name', $this->guard_name);
     }
 
     /**
@@ -529,16 +533,7 @@ class Admin extends Authenticatable
         ];
     }
 
-    /**
-     * Get all permissions including those inherited through roles
-     */
-    public function getEffectivePermissions(): Collection
-    {
-        if ($this->is_super_admin) {
-            return Permission::where('guard_name', 'admin')->get();
-        }
-        return $this->getAllPermissions();
-    }
+    // Duplicate getEffectivePermissions method removed to fix redeclaration error.
 
     /**
      * Get formatted permissions with source information
