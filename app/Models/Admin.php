@@ -33,6 +33,11 @@ class Admin extends Authenticatable
     protected $guard_name = 'admin';
 
     /**
+     * The model type used for role assignments
+     */
+    protected string $model_type = 'App\Models\Admin';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<string>
