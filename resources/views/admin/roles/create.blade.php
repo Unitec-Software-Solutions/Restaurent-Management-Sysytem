@@ -132,78 +132,41 @@
                         </div>
                     </div>
                 @endif
-            </div>
 
-            <!-- Permission Categories -->
-            <div class="mt-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    <i class="fas fa-key mr-2"></i>Role Permissions
-                </h3>
-                <p class="text-gray-600 mb-4">Select the permissions that this role should have access to:</p>
-
-                @php
-                    // Use only permissions seeded by SystemPermissionsSeeder (guard_name = 'admin')
-                    $allPermissions = \Spatie\Permission\Models\Permission::where('guard_name', 'admin')->get()->keyBy('name');
-                @endphp
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @foreach($permissionDefinitions as $categoryKey => $category)
-                        @php
-                            // Filter permissions to only show those available to this admin and exist in allPermissions
-                            $categoryPermissions = [];
-                            if (isset($category['permissions']) && is_array($category['permissions'])) {
-                                foreach ($category['permissions'] as $permKey => $permLabel) {
-                                    if (isset($availablePermissions[$permKey]) && isset($allPermissions[$permKey])) {
-                                        $categoryPermissions[$permKey] = $permLabel;
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        @foreach($permissionDefinitions as $group => $definition)
+                            @php
+                                $groupPermissions = [];
+                                if (isset($definition['permissions']) && is_array($definition['permissions'])) {
+                                    foreach ($definition['permissions'] as $permKey => $permLabel) {
+                                        if (isset($availablePermissions[$permKey])) {
+                                            $groupPermissions[$permKey] = $permLabel;
+                                        }
                                     }
                                 }
-                            }
-                        @endphp
-
-                        @if(!empty($categoryPermissions))
-                        <div class="border border-gray-200 rounded-lg p-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <h4 class="font-semibold text-gray-800 flex items-center">
-                                    <i class="fas fa-{{ $category['icon'] }} mr-2 text-blue-500"></i>
-                                    {{ $category['name'] }}
-                                </h4>
-                                <label class="flex items-center">
-                                    <input type="checkbox"
-                                           class="group-select-all rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                           data-group="{{ $categoryKey }}">
-                                    <span class="ml-2 text-xs text-indigo-600 font-medium">All</span>
-                                </label>
-                            </div>
-
-                            <p class="text-xs text-gray-500 mb-3">{{ $category['description'] }}</p>
-
-                            <div class="space-y-2">
-                                @foreach($categoryPermissions as $permissionKey => $description)
-                                    @php $permission = $allPermissions[$permissionKey] ?? null; @endphp
-                                    @if($permission)
-                                    <div class="mb-2">
-                                        <label class="flex items-center">
-                                            <input type="checkbox"
-                                                   name="permissions[]"
-                                                   value="{{ $permission->name }}"
-                                                   class="permission-checkbox {{ $categoryKey }}-permission rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                   {{ in_array($permission->name, old('permissions', [])) ? 'checked' : '' }}>
-                                            <span class="ml-2 text-sm text-gray-700">
-                                                {{ $description }}
-                                            </span>
+                            @endphp
+                            @if(!empty($groupPermissions))
+                            <div class="border rounded p-4">
+                                <h4 class="font-semibold mb-2">{{ ucfirst($group) }}</h4>
+                                @foreach($groupPermissions as $permKey => $permLabel)
+                                    <div class="flex items-center mb-2">
+                                        <input type="checkbox" name="permissions[]"
+                                            value="{{ $permKey }}"
+                                            class="mr-2 rounded"
+                                            id="perm_{{ $permKey }}"
+                                            {{ in_array($permKey, old('permissions', [])) ? 'checked' : '' }}>
+                                        <label for="perm_{{ $permKey }}">
+                                            {{ $permLabel }}
                                         </label>
-                                        @error('permissions.' . $loop->index)
-                                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                                        @enderror
                                     </div>
-                                    @endif
                                 @endforeach
                             </div>
-                        </div>
-                        @endif
-                    @endforeach
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
-            </div>
 
             <!-- Submit Buttons -->
             <div class="mt-8 flex justify-end space-x-3">
