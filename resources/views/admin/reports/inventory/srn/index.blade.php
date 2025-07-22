@@ -5,7 +5,8 @@
 <div class="container mx-auto px-4 py-8">
             <div class="rounded-lg">
             <x-nav-buttons :items="[
-                ['name' => 'Dashboard', 'link' => route('admin.reports.inventory.index')],
+                ['name' => '<< Back', 'link' => route('admin.reports.index')],
+                ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
                 ['name' => 'Goods Transfer Note Report', 'link' => route('admin.reports.inventory.gtn')],
                 ['name' => 'Goods Receipt Note Report', 'link' => route('admin.reports.inventory.grn')],
                 ['name' => 'Stock Release Note Report', 'link' => route('admin.reports.inventory.srn')],

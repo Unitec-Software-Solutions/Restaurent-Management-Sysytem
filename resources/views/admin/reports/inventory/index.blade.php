@@ -8,13 +8,14 @@
         <!-- Navigation Buttons -->
         <div class="rounded-lg">
             <x-nav-buttons :items="[
-                ['name' => 'Dashboard', 'link' => route('admin.reports.inventory.index')],
+                ['name' => '<< Back', 'link' => route('admin.reports.index')],
+                ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
                 ['name' => 'Goods Transfer Note Report', 'link' => route('admin.reports.inventory.gtn')],
                 ['name' => 'Goods Receipt Note Report', 'link' => route('admin.reports.inventory.grn')],
-                ['name' => 'Stock Transfer Note Report', 'link' => route('admin.reports.inventory.srn')],
+                ['name' => 'Stock Release Note Report', 'link' => route('admin.reports.inventory.srn')],
                 ['name' => 'Stock Report', 'link' => route('admin.reports.inventory.stock')],
                 // ['name' => 'Inventory items Report', 'link' => route('admin.reports.inventory.items.index')],
-            ]" active="Dashboard" />
+            ]" active="Inventory Report" />
         </div>
 
 
