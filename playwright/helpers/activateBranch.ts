@@ -7,11 +7,16 @@ export async function activateBranch(page: Page, branchData: { branchId?: string
   const testRunId = process.env.TEST_RUN_ID || 'default';
   await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-1-summary.png` });
 
-  console.log('Filling login credentials');
-  await page.getByRole('textbox', { name: 'Email' }).fill('superadmin@rms.com');
-  await page.getByRole('textbox', { name: 'Password' }).fill('SuperAdmin123!');
-  await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-2-login-filled.png` });
-  await page.getByRole('button', { name: 'Login' }).click();
+    // Only fill login credentials if on /admin/login
+    if (page.url().endsWith('/admin/login')) {
+        console.log('Filling login credentials');
+        await page.getByRole('textbox', { name: 'Email' }).fill('superadmin@rms.com');
+        await page.getByRole('textbox', { name: 'Password' }).fill('SuperAdmin123!');
+        await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-2-login-filled.png` });
+        await page.getByRole('button', { name: 'Login' }).click();
+    } else {
+        console.log('Already authenticated or not on login page, continuing...');
+    }
 
   // Handle dialog and click "Copy"
   page.once('dialog', async dialog => {
