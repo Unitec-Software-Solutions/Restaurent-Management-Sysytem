@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\UserInvitation;
 use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\User;
@@ -11,12 +10,8 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use App\Services\PermissionSystemService;
 
 class UserController extends Controller
@@ -34,13 +29,13 @@ class UserController extends Controller
         $admin = auth('admin')->user();
         // Always use Spatie roles relationship for admins
         if ($admin->isSuperAdmin()) {
-            $admins = \App\Models\Admin::with(['roles', 'organization', 'branch'])->get();
+            $admins = Admin::with(['roles', 'organization', 'branch'])->get();
         } elseif ($admin->isOrganizationAdmin()) {
-            $admins = \App\Models\Admin::where('organization_id', $admin->organization_id)
+            $admins = Admin::where('organization_id', $admin->organization->id ?? null)
                 ->with(['roles', 'organization', 'branch'])
                 ->get();
         } else {
-            $admins = \App\Models\Admin::where('branch_id', $admin->branch_id)
+            $admins = Admin::where('branch_id', $admin->branch->id ?? null)
                 ->with(['roles', 'organization', 'branch'])
                 ->get();
         }
@@ -64,9 +59,9 @@ class UserController extends Controller
         if ($admin->isSuperAdmin()) {
             // all roles for admin guard
         } elseif ($admin->isOrganizationAdmin()) {
-            $rolesQuery->where('organization_id', $admin->organization_id);
+            $rolesQuery->where('organization_id', $admin->organization->id ?? null);
         } else {
-            $rolesQuery->where('branch_id', $admin->branch_id);
+            $rolesQuery->where('branch_id', $admin->branch->id ?? null);
         }
         $roles = $rolesQuery->get();
 
@@ -84,15 +79,15 @@ class UserController extends Controller
                 'branch_admin' => 'Branch Admin'
             ];
         } elseif ($admin->isOrganizationAdmin()) {
-            $organizations = Organization::where('id', $admin->organization_id)->get();
-            $branches = Branch::where('organization_id', $admin->organization_id)->get();
+            $organizations = Organization::where('id', $admin->organization->id ?? null)->get();
+            $branches = Branch::where('organization_id', $admin->organization->id ?? null)->get();
             $adminTypes = [
                 'org_admin' => 'Organization Admin',
                 'branch_admin' => 'Branch Admin'
             ];
         } else {
-            $organizations = Organization::where('id', $admin->organization_id)->get();
-            $branches = Branch::where('id', $admin->branch_id)->get();
+            $organizations = Organization::where('id', $admin->organization->id ?? null)->get();
+            $branches = Branch::where('id', $admin->branch->id ?? null)->get();
             $adminTypes = [
                 'branch_admin' => 'Branch Admin'
             ];
@@ -142,7 +137,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
-        $this->authorize('create', \App\Models\Admin::class);
+        $this->authorize('create', Admin::class);
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -154,14 +149,14 @@ class UserController extends Controller
             'permissions.*' => 'exists:permissions,id',
         ]);
 
-        $role = Role::where('guard_name', 'admin')->findOrFail($request->role_id);
+        $role = Role::where('guard_name', 'admin')->findOrFail($request->input('role_id'));
         $admin = auth('admin')->user();
 
         // Validate role assignment permissions
         $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
         $modulesConfig = config('modules');
         $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-        $rolePermissions = $role->permissions->pluck('name')->toArray();
+        $rolePermissions = $role->permissions()->pluck('name')->toArray();
         foreach ($rolePermissions as $perm) {
             if (!isset($availablePermissions[$perm])) {
                 return back()->withErrors(['role_id' => 'You cannot assign a role with permissions outside your plan/modules.']);
@@ -170,8 +165,8 @@ class UserController extends Controller
 
         // Validate permission assignments
         $requestedPermissions = collect();
-        if ($request->permissions) {
-            $requestedPermissions = Permission::whereIn('id', $request->permissions)
+        if ($request->has('permissions')) {
+            $requestedPermissions = Permission::whereIn('id', $request->input('permissions'))
                 ->where('guard_name', 'admin')
                 ->get();
             foreach ($requestedPermissions as $permission) {
@@ -184,22 +179,22 @@ class UserController extends Controller
         }
 
         // Create the admin user
-        $adminUser = \App\Models\Admin::create([
-            'organization_id' => $request->organization_id ?? $admin->organization_id,
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone_number' => $request->phone_number,
-            'password' => Hash::make($request->password),
-            'branch_id' => $request->branch_id,
-            'created_by' => $admin->id,
+        $adminUser = Admin::create([
+            'organization_id' => $request->input('organization_id') ?? Auth::guard('admin')->user()->organization_id,
+            'name' => $request->input('name'),
+            'email' => $request->input('email'),
+            'phone_number' => $request->input('phone_number'),
+            'password' => Hash::make($request->input('password')),
+            'branch_id' => $request->input('branch_id'),
+            'created_by' => Auth::guard('admin')->user()->id,
             'is_active' => true,
         ]);
 
         // Assign role to the admin (using Spatie)
-        $adminUser->assignRole($role);
+        $adminUser->syncRoles([$role->name]);
 
         // Sync all permissions from the role to the admin
-        $adminUser->syncPermissions($role->permissions->pluck('name')->toArray());
+        $adminUser->syncPermissions($role->permissions()->pluck('name')->toArray());
 
         // Assign additional permissions if specified (additive)
         if ($requestedPermissions->count()) {
@@ -210,14 +205,14 @@ class UserController extends Controller
             'admin_id' => $adminUser->id,
             'role' => $role->name,
             'permissions' => $adminUser->getPermissionNames()->toArray() ?? [],
-            'created_by' => $admin->id
+            'created_by' => Auth::guard('admin')->user()->id
         ]);
 
         return redirect()->route('admin.users.index')->with('success', 'Admin created successfully with assigned role and permissions.');
     }
 
     // Show form to edit a user
-    public function edit(\App\Models\Admin $admin)
+    public function edit(Admin $admin)
     {
         $this->authorize('update', $admin);
         $adminUser = auth('admin')->user();
@@ -234,15 +229,15 @@ class UserController extends Controller
             $branches = $allBranches;
             $roles = Role::where('guard_name', 'admin')->get();
         } elseif ($adminUser->isOrganizationAdmin()) {
-            $organizations = Organization::where('id', $adminUser->organization_id)->get();
-            $branches = Branch::where('organization_id', $adminUser->organization_id)->get();
+            $organizations = Organization::where('id', $adminUser->organization->id ?? null)->get();
+            $branches = Branch::where('organization_id', $adminUser->organization->id ?? null)->get();
             $allBranches = $branches;
-            $roles = Role::where('organization_id', $adminUser->organization_id)->where('guard_name', 'admin')->get();
+            $roles = Role::where('organization_id', $adminUser->organization->id ?? null)->where('guard_name', 'admin')->get();
         } else {
-            $organizations = Organization::where('id', $adminUser->organization_id)->get();
-            $branches = Branch::where('id', $adminUser->branch_id)->get();
+            $organizations = Organization::where('id', $adminUser->organization->id ?? null)->get();
+            $branches = Branch::where('id', $adminUser->branch->id ?? null)->get();
             $allBranches = $branches;
-            $roles = Role::where('branch_id', $adminUser->branch_id)->where('guard_name', 'admin')->get();
+            $roles = Role::where('branch_id', $adminUser->branch->id ?? null)->where('guard_name', 'admin')->get();
         }
 
         return view('admin.users.edit', compact(
@@ -255,7 +250,7 @@ class UserController extends Controller
     }
 
     // Update a user
-    public function update(Request $request, \App\Models\Admin $admin)
+    public function update(Request $request, Admin $admin)
     {
         $data = [
             'name' => $request->input('name'),
@@ -299,7 +294,7 @@ class UserController extends Controller
     }
 
     // Show form to assign/change a role for an admin
-    public function assignRoleForm(\App\Models\Admin $admin)
+    public function assignRoleForm(Admin $admin)
     {
         $roles = Role::where('guard_name', 'admin')->get();
         $allPermissions = Permission::where('guard_name', 'admin')->get();
@@ -337,10 +332,11 @@ class UserController extends Controller
     }
 
     // Delete an admin
-    public function destroy(\App\Models\Admin $admin)
+    public function destroy(Admin $admin)
     {
         $this->authorize('delete', $admin);
-        if (optional(Auth::guard('admin')->user())->id === $admin->id) {
+        $currentAdmin = Auth::guard('admin')->user();
+        if ($currentAdmin && $currentAdmin->id === $admin->id) {
             return redirect()->back()->with('error', 'You cannot delete your own account');
         }
 
@@ -351,13 +347,14 @@ class UserController extends Controller
 
 
     // All User model methods removed. Only Admin management remains.
+    
+public function show(Admin $admin)
+{
+    $admin->load(['roles', 'organization', 'branch']);
+    $permissions = $admin->getFormattedPermissions(); // Get formatted permissions
 
-    public function show(\App\Models\Admin $admin)
-    {
-        $admin->load(['roles', 'organization', 'branch']);
-        return view('admin.users.summary', compact('admin'));
-    }
-
+    return view('admin.users.summary', compact('admin', 'permissions'));
+}
 }
 
 
