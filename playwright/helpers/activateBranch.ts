@@ -1,8 +1,9 @@
 import { Page } from '@playwright/test';
 
-export async function activateBranch(page: Page) {
+export async function activateBranch(page: Page, branchData: { branchId?: string }) {
+  const branchId = branchData.branchId || '1';
   console.log('Navigating to branch summary page');
-  await page.goto('https://rms.test/admin/branches/1/summary');
+  await page.goto(`https://rms.test/admin/branches/${branchId}/summary`);
   const testRunId = process.env.TEST_RUN_ID || 'default';
   await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-1-summary.png` });
 
@@ -36,13 +37,13 @@ export async function activateBranch(page: Page) {
   console.log('Clicking Activate');
   await page.getByRole('button', { name: 'Activate' }).click();
 
-  // Wait for success or error
-  try {
-    await page.waitForSelector('.alert-success, .alert-error', { timeout: 10000 });
-    await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-6-result.png` });
-    console.log('Activation result displayed');
-  } catch (e) {
-    console.warn('No result message appeared after activation');
-    await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-6-no-result.png` });
-  }
+//   // Wait for success or error
+//   try {
+//     await page.waitForSelector('.alert-success, .alert-error', { timeout: 10000 });
+//     await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-6-result.png` });
+//     console.log('Activation result displayed');
+//   } catch (e) {
+//     console.warn('No result message appeared after activation');
+//     await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-6-no-result.png` });
+//   }
 }
