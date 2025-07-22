@@ -123,8 +123,8 @@ class AdminController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'organization_id' => 'nullable|exists:organizations,id',
             'branch_id' => 'nullable|exists:branches,id',
-            'role_ids' => 'array',
-            'role_ids.*' => 'exists:roles,id',
+            'roles' => 'required|array',
+            'roles.*' => 'exists:roles,id',
             'is_super_admin' => 'boolean',
             'is_active' => 'boolean',
             'department' => 'nullable|string|max:255',
@@ -133,32 +133,58 @@ class AdminController extends Controller
             'phone' => 'nullable|string|max:20',
         ]);
 
-        $admin = Admin::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'organization_id' => $request->organization_id,
-            'branch_id' => $request->branch_id,
-            'is_super_admin' => $request->boolean('is_super_admin'),
-            'is_active' => $request->boolean('is_active', true),
-            'department' => $request->department,
-            'job_title' => $request->job_title,
-            'status' => $request->status,
-            'phone' => $request->phone,
-        ]);
+        try {
+            DB::beginTransaction();
 
-        // Assign roles using Spatie
-        if ($request->filled('role_ids')) {
-            $roles = Role::whereIn('id', $request->role_ids)
-                ->where('guard_name', 'admin')
-                ->get();
+            $admin = Admin::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'organization_id' => $request->organization_id,
+                'branch_id' => $request->branch_id,
+                'is_super_admin' => $request->boolean('is_super_admin'),
+                'is_active' => $request->boolean('is_active', true),
+                'department' => $request->department,
+                'job_title' => $request->job_title,
+                'status' => $request->status,
+                'phone' => $request->phone,
+            ]);
 
-            $admin->syncRoles($roles);
+            // Assign roles using Spatie's role assignment
+            if ($request->filled('roles')) {
+                $roles = Role::whereIn('id', $request->roles)
+                    ->where('guard_name', 'admin')
+                    ->get();
 
-            // Set the first role as current_role_id for backward compatibility
-            if ($roles->isNotEmpty()) {
-                $admin->update(['current_role_id' => $roles->first()->id]);
+                $admin->syncRoles($roles);
+
+                // Set the first role as current_role_id
+                if ($roles->isNotEmpty()) {
+                    $admin->update(['current_role_id' => $roles->first()->id]);
+                }
+
+                // Log role assignment
+                Log::info('Admin roles assigned', [
+                    'admin_id' => $admin->id,
+                    'roles' => $roles->pluck('name')->toArray(),
+                    'effective_permissions' => $admin->getAllPermissions()->pluck('name')->toArray()
+                ]);
             }
+
+            DB::commit();
+
+            return redirect()->route('admins.index')
+                ->with('success', 'Admin created successfully with assigned roles.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to create admin', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withInput()
+                ->withErrors(['error' => 'Failed to create admin: ' . $e->getMessage()]);
         }
 
         Log::info('New admin created', [
@@ -212,82 +238,94 @@ class AdminController extends Controller
 
     public function update(Request $request, Admin $admin)
     {
-        $currentAdmin = Auth::guard('admin')->user();
+        try {
+            DB::beginTransaction();
 
-        if (!$currentAdmin->isSuperAdmin()) {
-            abort(403, 'Unauthorized. Only super admins can update admin accounts.');
-        }
+            $currentAdmin = Auth::guard('admin')->user();
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('admins')->ignore($admin->id),
-            ],
-            'organization_id' => 'nullable|exists:organizations,id',
-            'branch_id' => 'nullable|exists:branches,id',
-            'role_ids' => 'array',
-            'role_ids.*' => 'exists:roles,id',
-            'password' => 'nullable|string|min:8|confirmed',
-            'is_super_admin' => 'boolean',
-            'is_active' => 'boolean',
-            'department' => 'nullable|string|max:255',
-            'job_title' => 'nullable|string|max:255',
-            'status' => 'required|in:active,inactive,suspended,pending',
-            'phone' => 'nullable|string|max:20',
-        ]);
+            if (!$currentAdmin->isSuperAdmin()) {
+                abort(403, 'Unauthorized. Only super admins can update admin accounts.');
+            }
 
-        $data = [
-            'name' => $request->name,
-            'email' => $request->email,
-            'organization_id' => $request->organization_id,
-            'branch_id' => $request->branch_id,
-            'is_super_admin' => $request->boolean('is_super_admin'),
-            'is_active' => $request->boolean('is_active'),
-            'department' => $request->department,
-            'job_title' => $request->job_title,
-            'status' => $request->status,
-            'phone' => $request->phone,
-        ];
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => [
+                    'required',
+                    'email',
+                    Rule::unique('admins')->ignore($admin->id),
+                ],
+                'organization_id' => 'nullable|exists:organizations,id',
+                'branch_id' => 'nullable|exists:branches,id',
+                'roles' => 'required|array',
+                'roles.*' => 'exists:roles,id',
+                'password' => 'nullable|string|min:8|confirmed',
+                'is_super_admin' => 'boolean',
+                'is_active' => 'boolean',
+                'department' => 'nullable|string|max:255',
+                'job_title' => 'nullable|string|max:255',
+                'status' => 'required|in:active,inactive,suspended,pending',
+                'phone' => 'nullable|string|max:20',
+            ]);
 
-        // Handle password update
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
-        }
+            $data = [
+                'name' => $request->input('name'),
+                'email' => $request->input('email'),
+                'organization_id' => $request->input('organization_id'),
+                'branch_id' => $request->input('branch_id'),
+                'is_super_admin' => $request->boolean('is_super_admin'),
+                'is_active' => $request->boolean('is_active'),
+                'department' => $request->input('department'),
+                'job_title' => $request->input('job_title'),
+                'status' => $request->input('status'),
+                'phone' => $request->input('phone'),
+            ];
 
-        $admin->update($data);
+            // Handle password update
+            if ($request->filled('password')) {
+                $data['password'] = Hash::make($request->input('password'));
+            }
 
-        // Handle role assignment using Spatie
-        if ($request->has('role_ids')) {
-            if (!empty($request->role_ids)) {
-                $roles = Role::whereIn('id', $request->role_ids)
+            $admin->update($data);
+
+            // Handle role assignment using Spatie
+            if ($request->has('roles')) {
+                $roles = Role::whereIn('id', $request->input('roles'))
                     ->where('guard_name', 'admin')
                     ->get();
 
                 $admin->syncRoles($roles);
 
-                // Update current_role_id for backward compatibility
+                // Update current_role_id
                 if ($roles->isNotEmpty()) {
                     $admin->update(['current_role_id' => $roles->first()->id]);
                 } else {
                     $admin->update(['current_role_id' => null]);
                 }
-            } else {
-                // Remove all roles
-                $admin->syncRoles([]);
-                $admin->update(['current_role_id' => null]);
+
+                // Log role assignment
+                Log::info('Admin roles updated', [
+                    'admin_id' => $admin->id,
+                    'roles' => $roles->pluck('name')->toArray(),
+                    'effective_permissions' => $admin->getAllPermissions()->pluck('name')->toArray()
+                ]);
             }
+
+            DB::commit();
+
+            return redirect()->route('admins.index')
+                ->with('success', 'Admin updated successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update admin', [
+                'admin_id' => $admin->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withInput()
+                ->withErrors(['error' => 'Failed to update admin: ' . $e->getMessage()]);
         }
-
-        Log::info('Admin updated', [
-            'admin_id' => $admin->id,
-            'updated_by' => $currentAdmin->id,
-            'roles_assigned' => $request->role_ids ?? []
-        ]);
-
-        return redirect()->route('admins.index')
-            ->with('success', 'Admin updated successfully.');
     }
 
     /**
