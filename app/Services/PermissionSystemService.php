@@ -146,7 +146,7 @@ class PermissionSystemService {
         Organization::each(function ($org) use ($key, $roleData) {
             $role = Role::firstOrCreate([
                 'name' => $key,
-                'organization_id' => $org->id,
+                'organization_id' => $org->getKey(),
                 'guard_name' => 'web'
             ], [
                 'display_name' => $roleData['name'],
@@ -162,8 +162,8 @@ class PermissionSystemService {
         Branch::each(function ($branch) use ($key, $roleData) {
             $role = Role::firstOrCreate([
                 'name' => $key,
-                'organization_id' => $branch->organization_id,
-                'branch_id' => $branch->id,
+                'organization_id' => isset($branch->organization_id) ? $branch->organization_id : ($branch->organization->id ?? null),
+                'branch_id' => isset($branch->id) ? $branch->id : ($branch->getKey() ?? null),
                 'guard_name' => 'web'
             ], [
                 'display_name' => $roleData['name'],
@@ -290,6 +290,7 @@ class PermissionSystemService {
                     'roles.delete' => 'Delete roles',
                     'roles.manage' => 'Full role management',
                     'roles.assign' => 'Assign roles to users',
+                    'roles.templates' => 'Access role templates',
                     'permissions.view' => 'View permissions',
                     'permissions.assign' => 'Assign permissions',
                 ]
@@ -530,7 +531,7 @@ class PermissionSystemService {
                     'organizations.view', 'organizations.edit', 'organizations.settings',
                     'branches.view', 'branches.create', 'branches.edit', 'branches.delete', 'branches.activate', 'branches.manage',
                     'users.view', 'users.create', 'users.edit', 'users.delete', 'users.activate', 'users.manage',
-                    'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.manage', 'roles.assign',
+                    'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.manage', 'roles.assign', 'roles.templates',
                     'menus.view', 'menus.create', 'menus.edit', 'menus.delete', 'menus.activate', 'menus.manage',
                     'orders.view', 'orders.create', 'orders.edit', 'orders.process', 'orders.cancel', 'orders.manage',
                     'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.adjust', 'inventory.manage',
