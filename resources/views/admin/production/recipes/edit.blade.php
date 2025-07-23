@@ -3,7 +3,7 @@
 @section('title', 'Edit Recipe')
 @section('header-title', 'Edit Recipe - ' . $recipe->recipe_name)
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
             <div class="flex items-center justify-between mb-8">

@@ -3,7 +3,7 @@
 @section('title', 'Branch Summary')
 @section('header-title', 'Branch Summary - ' . $branch->name)
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Branch Summary</h1>
         <a href="{{ route('admin.branches.index', ['organization' => $branch->organization_id]) }}"
@@ -58,7 +58,7 @@
     <!-- Activation Key Section -->
     <div class="bg-white rounded-2xl shadow p-8 mb-8">
         <label class="block font-medium mb-1">Activation Key</label>
-        
+
         {{-- Debug Info --}}
         @if(config('app.debug'))
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
@@ -68,7 +68,7 @@
             </p>
         </div>
         @endif
-        
+
         <div class="flex items-center gap-2">
             <input type="text" id="activation-key" value="{{ $branch->activation_key }}" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700" />
             <button type="button" onclick="copyActivationKey()" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Copy</button>
@@ -76,7 +76,7 @@
                 <form action="{{ route('admin.branches.regenerate-key', $branch->id) }}" method="POST" class="inline">
                     @csrf
                     @method('PUT')
-                    <button type="submit" 
+                    <button type="submit"
                             onclick="return confirm('Are you sure you want to regenerate the activation key? This will invalidate the current key.')"
                             class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">
                         Regenerate

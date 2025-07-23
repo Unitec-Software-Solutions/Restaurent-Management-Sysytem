@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
             <!-- Left: Order Form -->
             <div class="lg:flex-[7_7_0%]">
@@ -77,7 +77,7 @@
                             <input type="hidden" name="reservation_id" value="{{ $reservation->id ?? '' }}">
                             <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id }}">
                             <input type="hidden" name="order_type" value="{{ $orderType ?? 'dine_in' }}">
-                            
+
                             <!-- Customer Info (for takeaway/delivery) -->
                             @if(!isset($reservation))
                             <div class="mb-6 bg-gray-50 rounded-lg p-4">
@@ -122,18 +122,18 @@
                                         </select>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Menu Items Grid with Real-time Stock Indicators -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="menu-items-container">
                                     @foreach($menuItems as $item)
-                                    <div class="menu-item-card border rounded-lg p-4 transition-all duration-300 hover:shadow-md" 
-                                         data-item-id="{{ $item->id }}" 
+                                    <div class="menu-item-card border rounded-lg p-4 transition-all duration-300 hover:shadow-md"
+                                         data-item-id="{{ $item->id }}"
                                          data-category="{{ $item->menuCategory->name ?? 'Uncategorized' }}"
                                          data-name="{{ $item->name }}"
                                          data-type="{{ $item->type_name ?? 'KOT' }}"
                                          data-availability="{{ $item->availability_info['status'] ?? 'available' }}"
                                          data-stock="{{ $item->current_stock ?? 0 }}">
-                                        
+
                                         <!-- Item Header -->
                                         <div class="flex items-start justify-between mb-3">
                                             <div class="flex-1">
@@ -185,9 +185,9 @@
                                                 <span class="stock-percentage" data-item-id="{{ $item->id }}">{{ $item->stock_percentage }}%</span>
                                             </div>
                                             <div class="w-full bg-gray-200 rounded-full h-2">
-                                                <div class="stock-bar h-2 rounded-full transition-all duration-300" 
+                                                <div class="stock-bar h-2 rounded-full transition-all duration-300"
                                                      data-item-id="{{ $item->id }}"
-                                                     style="width: {{ $item->stock_percentage }}%; 
+                                                     style="width: {{ $item->stock_percentage }}%;
                                                             background-color: {{ $item->stock_percentage > 50 ? '#10B981' : ($item->stock_percentage > 20 ? '#F59E0B' : '#EF4444') }};">
                                                 </div>
                                             </div>
@@ -196,24 +196,24 @@
                                         <!-- Add to Cart Controls -->
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center">
-                                                <input type="checkbox" 
-                                                       class="item-check mr-3" 
+                                                <input type="checkbox"
+                                                       class="item-check mr-3"
                                                        data-item-id="{{ $item->id }}"
                                                        data-max-quantity="{{ $item->stock_percentage > 0 ? 999 : 0 }}"
                                                        id="item_{{ $item->id }}"
-                                                       name="items[{{ $item->id }}][menu_item_id]" 
+                                                       name="items[{{ $item->id }}][menu_item_id]"
                                                        value="{{ $item->id }}"
                                                        {{ $item->availability_status === 'out_of_stock' ? 'disabled' : '' }}>
-                                                
+
                                                 @if($item->availability_status !== 'out_of_stock')
                                                     <div class="flex items-center quantity-controls" style="display: none;">
                                                         <button type="button" class="qty-decrease w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center" data-item-id="{{ $item->id }}">
                                                             <i class="fas fa-minus text-xs"></i>
                                                         </button>
-                                                        <input type="number" 
-                                                               min="1" 
-                                                               value="1" 
-                                                               class="item-qty w-16 text-center border-x border-gray-300 text-sm py-1" 
+                                                        <input type="number"
+                                                               min="1"
+                                                               value="1"
+                                                               class="item-qty w-16 text-center border-x border-gray-300 text-sm py-1"
                                                                data-item-id="{{ $item->id }}"
                                                                name="items[{{ $item->id }}][quantity]">
                                                         <button type="button" class="qty-increase w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center justify-center" data-item-id="{{ $item->id }}">
@@ -250,7 +250,7 @@
                                                 </span>
                                             @endif
                                             @if($item->allergens)
-                                                <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800" 
+                                                <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800"
                                                       title="Allergens: {{ implode(', ', $item->allergens) }}">
                                                     <i class="fas fa-exclamation-triangle mr-1"></i>Allergens
                                                 </span>
@@ -274,7 +274,7 @@
                                     <i class="fas fa-arrow-left mr-2"></i>
                                     Back
                                 </a>
-                                
+
                                 <div class="flex gap-3">
                                     <button type="button" id="validate-cart-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg flex items-center">
                                         <i class="fas fa-check-circle mr-2"></i>

@@ -3,7 +3,7 @@
 @section('header-title', 'Supplier Payment Details')
 
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="mx-auto px-4 py-8">
         <!-- Back and Action Buttons -->
         <div class="flex justify-between items-center mb-6">
             <a href="{{ route('admin.payments.index') }}" class="flex items-center text-indigo-600 hover:text-indigo-800">

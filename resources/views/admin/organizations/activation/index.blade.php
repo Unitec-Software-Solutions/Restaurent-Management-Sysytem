@@ -3,10 +3,10 @@
 @section('title', 'Organization Activation')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-8">
         <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Organization Activation</h1>
-        
+
         @if(auth('admin')->user()->isSuperAdmin())
             <div class="flex gap-3">
                 <a href="{{ route('admin.organizations.index') }}"
@@ -28,7 +28,7 @@
                 </button>
             </div>
         @endif
-        
+
         @if(session('success'))
             <div class="flash-message mb-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded flex items-center">
                 <i class="fas fa-check-circle mr-3"></i>
@@ -49,7 +49,7 @@
             </div>
         @endif
     </div>
-    
+
     <!-- Organizations List -->
     <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div class="p-6 border-b border-gray-200">
@@ -160,7 +160,7 @@
                                             </button>
                                         @endif
                                     @endif
-                                    
+
                                     <!-- View Details Link -->
                                     <a href="{{ route('admin.organizations.show', $organization) }}"
                                        class="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -201,36 +201,36 @@
                 </div>
             </div>
             <h3 class="text-lg font-medium text-gray-900 text-center mb-4">Activate Organization</h3>
-            
+
             <form id="activationForm" method="POST">
                 @csrf
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Organization</label>
                     <div id="modalOrgName" class="text-sm text-gray-900 font-medium"></div>
                 </div>
-                
+
                 <div class="mb-4">
                     <label for="modal_activation_key" class="block text-sm font-medium text-gray-700 mb-2">
                         Activation Key <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" 
-                           id="modal_activation_key" 
+                    <input type="text"
+                           id="modal_activation_key"
                            name="activation_key"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                            placeholder="Enter activation key"
                            required>
                     <p class="text-xs text-gray-500 mt-1">
                         Enter the correct activation key to activate this organization.
                     </p>
                 </div>
-                
+
                 <div class="flex gap-3 justify-end">
-                    <button type="button" 
+                    <button type="button"
                             onclick="hideActivationModal()"
                             class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit"
                             class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
                         <i class="fas fa-check mr-2"></i>Activate
                     </button>
@@ -251,11 +251,11 @@
                 </div>
             </div>
             <h3 class="text-lg font-medium text-gray-900 text-center mb-4">Deactivate Organization</h3>
-            
+
             <form id="deactivationForm" method="POST">
                 @csrf
                 <input type="hidden" name="action" value="deactivate">
-                
+
                 <div class="mb-4">
                     <p class="text-sm text-gray-700">
                         Are you sure you want to deactivate <span id="deactivateOrgName" class="font-medium"></span>?
@@ -265,14 +265,14 @@
                         This will also deactivate all branches belonging to this organization.
                     </p>
                 </div>
-                
+
                 <div class="flex gap-3 justify-end">
-                    <button type="button" 
+                    <button type="button"
                             onclick="hideDeactivationModal()"
                             class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit"
                             class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition">
                         <i class="fas fa-pause mr-2"></i>Deactivate
                     </button>

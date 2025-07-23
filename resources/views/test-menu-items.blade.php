@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h1 class="text-2xl font-bold mb-4">Menu Items System Test</h1>
-            
+
             <!-- System Explanation -->
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <h2 class="font-semibold text-blue-900 mb-2">System Overview</h2>
@@ -49,7 +49,7 @@
         async function loadMenuItems() {
             const loading = document.getElementById('loading');
             const results = document.getElementById('results');
-            
+
             loading.classList.remove('hidden');
             results.innerHTML = '';
 
@@ -60,7 +60,7 @@
                 if (data.success) {
                     allMenuItems = data.items;
                     displayMenuItems(allMenuItems);
-                    
+
                     // Show summary
                     const summary = document.createElement('div');
                     summary.className = 'bg-green-50 border border-green-200 rounded-lg p-4 mb-4';

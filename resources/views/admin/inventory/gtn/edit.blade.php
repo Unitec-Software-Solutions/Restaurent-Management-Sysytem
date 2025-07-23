@@ -2,7 +2,7 @@
 
 @section('header-title', 'Edit Goods Transfer Note' . $gtn->gtn_number)
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="mx-auto px-4 py-8">
         <!-- Main Content Card -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
             <!-- Card Header -->

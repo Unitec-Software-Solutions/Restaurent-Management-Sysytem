@@ -5,9 +5,16 @@ namespace App\Policies;
 use App\Models\Admin;
 use App\Models\Branch;
 use App\Models\Organization;
+use App\Services\PermissionSystemService;
 
 class BranchPolicy
 {
+    protected PermissionSystemService $permissionService;
+
+    public function __construct(PermissionSystemService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
     /**
      * Grant all permissions to super admin before checking other methods.
      */
@@ -20,73 +27,43 @@ class BranchPolicy
 
     public function view($user, Branch $branch)
     {
-        return $user->organization_id === $branch->organization_id;
+        if (!$user->hasPermissionTo('branches.view')) return false;
+        return data_get($user, 'organization_id') === data_get($branch, 'organization_id');
     }
 
     public function update(Admin $admin, Branch $branch)
     {
-        return $admin->organization_id === $branch->organization_id;
+        if (!$admin->hasPermissionTo('branches.edit')) return false;
+        return data_get($admin, 'organization_id') === data_get($branch, 'organization_id');
     }
 
     public function regenerateKey(Admin $admin, Branch $branch)
     {
-        // Only super admins can regenerate activation keys
-        return $admin->is_super_admin;
+        if (!$admin->hasPermissionTo('branches.regenerate-key')) return false;
+        return data_get($admin, 'organization_id') === data_get($branch, 'organization_id');
     }
 
     public function delete($user, $branch)
     {
-        // Only super admins can delete branches
-        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
-            // Only allow deletion of inactive branches
-            return !$branch->is_active;
-        }
-        
-        // Organization admins and branch admins cannot delete branches
-        return false;
+        if (!$user->hasPermissionTo('branches.delete')) return false;
+        return $user->organization_id === $branch->organization_id;
     }
 
     public function create($user, Organization $organization)
     {
-        // Allow super admin
-        if (isset($user->is_super_admin) && $user->is_super_admin) {
-            return true;
-        }
-        // Allow org admin for their own org
-        return $user->organization_id === $organization->id;
+        if (!$user->hasPermissionTo('branches.create')) return false;
+        return $user->organization_id === $organization->getKey();
     }
 
     public function activate(Admin $admin, Branch $branch)
     {
-        // Super admins can activate any branch
-        if ($admin->is_super_admin) {
-            return true;
-        }
-        
-        // Organization admins can activate branches in their organization
-        if ($admin->isOrganizationAdmin() && $admin->organization_id === $branch->organization_id) {
-            return true;
-        }
-        
-        // Branch admins can activate their own branch
-        if ($admin->isBranchAdmin() && $admin->branch_id === $branch->id) {
-            return true;
-        }
-        
-        return false;
+        if (!$admin->hasPermissionTo('branches.activate')) return false;
+        return data_get($admin, 'organization_id') === data_get($branch, 'organization_id');
     }
 
     public function deactivate(Admin $admin, Branch $branch)
     {
-        // Only super admins and org admins can deactivate branches
-        if ($admin->is_super_admin) {
-            return true;
-        }
-        
-        if ($admin->isOrganizationAdmin() && $admin->organization_id === $branch->organization_id) {
-            return true;
-        }
-        
-        return false;
+        if (!$admin->hasPermissionTo('branches.deactivate')) return false;
+        return data_get($admin, 'organization_id') === data_get($branch, 'organization_id');
     }
 }

@@ -5,7 +5,8 @@
 @section('header-title', 'Subscription Plans')
 
 @section('content')
-    <div class="pt-6 p-6 rounded-lg">
+<div class="mx-auto px-4 py-8">
+    <!-- Header Section -->
     <!-- Flash Messages -->
     @if(session('success'))
         <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg">
@@ -33,7 +34,7 @@
                 <p class="text-gray-600 mt-1">Manage subscription tiers and module access</p>
             </div>
             @if(auth('admin')->user()->isSuperAdmin())
-                <a href="{{ route('admin.subscription-plans.create') }}" 
+                <a href="{{ route('admin.subscription-plans.create') }}"
                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-plus mr-2"></i>
                     Create Plan
@@ -50,17 +51,17 @@
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex justify-between items-start mb-3">
                         <h3 class="text-lg font-semibold text-gray-900">{{ $plan->name }}</h3>
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full
                             {{ $plan->is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
                             {{ $plan->is_active ? 'Active' : 'Inactive' }}
                         </span>
                     </div>
-                    
+
                     <div class="text-3xl font-bold text-gray-900 mb-1">
                         {{ $plan->currency ?? 'USD' }} {{ number_format($plan->price, 2) }}
                         <span class="text-sm font-normal text-gray-500">/month</span>
                     </div>
-                    
+
                     @if($plan->description)
                         <p class="text-sm text-gray-600">{{ $plan->description }}</p>
                     @endif
@@ -103,27 +104,27 @@
                 <!-- Actions -->
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
                     <div class="flex gap-2">
-                        <a href="{{ route('admin.subscription-plans.show', $plan) }}" 
+                        <a href="{{ route('admin.subscription-plans.show', $plan) }}"
                            class="flex-1 text-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-sm">
                             View
                         </a>
                         @if(auth('admin')->user()->isSuperAdmin())
-                            <a href="{{ route('admin.subscription-plans.edit', $plan) }}" 
+                            <a href="{{ route('admin.subscription-plans.edit', $plan) }}"
                                class="flex-1 text-center bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-sm">
                                 Edit
                             </a>
                             @if(($plan->organizations_count ?? 0) == 0)
-                                <form action="{{ route('admin.subscription-plans.destroy', $plan) }}" method="POST" 
+                                <form action="{{ route('admin.subscription-plans.destroy', $plan) }}" method="POST"
                                       class="flex-1" onsubmit="return confirm('Are you sure you want to delete this plan?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" 
+                                    <button type="submit"
                                             class="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm">
                                         Delete
                                     </button>
                                 </form>
                             @else
-                                <button type="button" 
+                                <button type="button"
                                         disabled
                                         title="Cannot delete plan with {{ $plan->organizations_count }} organizations"
                                         class="flex-1 bg-gray-400 text-gray-600 px-3 py-2 rounded text-sm cursor-not-allowed">
@@ -146,7 +147,7 @@
                     </p>
                     <div class="mt-6">
                         @if(auth('admin')->user()->isSuperAdmin())
-                            <a href="{{ route('admin.subscription-plans.create') }}" 
+                            <a href="{{ route('admin.subscription-plans.create') }}"
                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
                                 <i class="fas fa-plus mr-2"></i> Create Plan
                             </a>

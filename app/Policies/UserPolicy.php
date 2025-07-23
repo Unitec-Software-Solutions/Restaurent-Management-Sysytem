@@ -4,21 +4,22 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Admin;
+use App\Services\PermissionSystemService;
 
 class UserPolicy
 {
+    protected PermissionSystemService $permissionService;
+
+    public function __construct(PermissionSystemService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User|Admin $user): bool
     {
-        // Super admin can view all users
-        if ($user->is_super_admin) {
-            return true;
-        }
-
-        // Organization and branch admins can view users in their scope
-        return $user->isOrganizationAdmin() || $user->isBranchAdmin();
+        return $user->hasPermissionTo('users.view');
     }
 
     /**
@@ -26,7 +27,7 @@ class UserPolicy
      */
     public function view(User|Admin $user, User $model): bool
     {
-        return $user->is_super_admin || $user->organization_id === $model->organization_id;
+        return $user->hasPermissionTo('users.view') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 
     /**
@@ -34,13 +35,7 @@ class UserPolicy
      */
     public function create(User|Admin $user): bool
     {
-        // Super admin can create users anywhere
-        if ($user->is_super_admin) {
-            return true;
-        }
-
-        // Organization and branch admins can create users
-        return $user->isOrganizationAdmin() || $user->isBranchAdmin();
+        return $user->hasPermissionTo('users.create');
     }
 
     /**
@@ -48,7 +43,7 @@ class UserPolicy
      */
     public function update(User|Admin $user, User $model): bool
     {
-        return $user->is_super_admin || $user->organization_id === $model->organization_id;
+        return $user->hasPermissionTo('users.edit') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 
     /**
@@ -56,7 +51,7 @@ class UserPolicy
      */
     public function delete(User|Admin $user, User $model): bool
     {
-        return $user->is_super_admin || $user->organization_id === $model->organization_id;
+        return $user->hasPermissionTo('users.delete') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 
     /**
@@ -74,27 +69,12 @@ class UserPolicy
     {
         return false;
     }
-    
+
     /**
      * Determine whether the user can assign roles to the model.
      */
     public function assignRole(User|Admin $user, User $model): bool
     {
-        // Super admin can assign any role
-        if ($user->is_super_admin) {
-            return true;
-        }
-
-        // Organization admin can assign roles within their organization
-        if ($user->isOrganizationAdmin() && $user->organization_id === $model->organization_id) {
-            return true;
-        }
-
-        // Branch admin can assign roles within their branch
-        if ($user->isBranchAdmin() && $user->branch_id === $model->branch_id) {
-            return true;
-        }
-
-        return false;
+        return $user->hasPermissionTo('users.roles') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 }

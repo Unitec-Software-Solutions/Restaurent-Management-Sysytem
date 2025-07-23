@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="max-w-2xl mx-auto">
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
             <div class="px-6 py-4 bg-gray-50 border-b">
@@ -71,7 +71,7 @@
                             <td>{{ ucfirst($order->status) }}</td>
                             <td>
                                 <a href="{{ route('admin.orders.reservations.edit', [
-                                    'reservation' => $reservation, 
+                                    'reservation' => $reservation,
                                     'order' => $order
                                 ]) }}" class="text-blue-500">Edit</a>
                             </td>
@@ -84,7 +84,7 @@
             @endif
 
             <div class="mt-4">
-                <a href="{{ route('admin.orders.reservations.create', $reservation) }}" 
+                <a href="{{ route('admin.orders.reservations.create', $reservation) }}"
                    class="bg-blue-500 text-white px-4 py-2 rounded">
                     + Create Order
                 </a>

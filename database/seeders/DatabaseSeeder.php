@@ -3,23 +3,40 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Database\Seeders\MinimalSystemSeeder;
+use App\Models\Admin;
+use Spatie\Permission\Exceptions\RoleDoesNotExist;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database - Minimal Setup
+     * Seed the application's database
      */
     public function run(): void
     {
-        $this->command->info('🌱 Starting minimal database seeding...');
-        
-        // Only essential seeders for basic system functionality
-        $this->call([
-            MinimalSystemSeeder::class,
+        // Create Super Admin if not exists
+        $superAdminEmail = 'superadmin@rms.com';
+        $superAdmin = Admin::firstOrCreate([
+            'email' => $superAdminEmail
+        ], [
+            'name' => 'Super Admin',
+            'password' => bcrypt('SuperAdmin123!'),
+            'is_super_admin' => true,
+            'is_active' => true,
         ]);
-        
-        $this->command->info('✅ Minimal seeding completed successfully');
-        $this->command->info('🔐 Login at /admin/login with: superadmin@rms.com / SuperAdmin123!');
+
+        // Seed all system permissions for admin guard
+        $this->call(SystemPermissionsSeeder::class);
+
+        // Seed all modules
+        $this->call(ModuleSeeder::class);
+
+        // Assign the super_admin role if it exists
+        if (method_exists($superAdmin, 'assignRole')) {
+            try {
+                $superAdmin->assignRole('super_admin');
+            } catch (RoleDoesNotExist $e) {
+
+            }
+        }
     }
 }

@@ -4,13 +4,19 @@ namespace App\Policies;
 
 use App\Models\Module;
 use App\Models\User;
+use App\Services\PermissionSystemService;
 
 class ModulePolicy
 {
+    protected PermissionSystemService $permissionService;
+
+    public function __construct(PermissionSystemService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
     public function before($user, $ability)
     {
-        // Allow super admin everything
-        return $user->is_super_admin ?? false;
+        if ($user->is_super_admin) return true;
     }
 
     /**
@@ -18,7 +24,10 @@ class ModulePolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['modules.view']);
     }
 
     /**
@@ -26,7 +35,10 @@ class ModulePolicy
      */
     public function view(User $user, Module $module): bool
     {
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['modules.view']);
     }
 
     /**
@@ -34,7 +46,10 @@ class ModulePolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['modules.create']);
     }
 
     /**
@@ -42,7 +57,10 @@ class ModulePolicy
      */
     public function update(User $user, Module $module): bool
     {
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['modules.edit']);
     }
 
     /**
@@ -50,7 +68,10 @@ class ModulePolicy
      */
     public function delete(User $user, Module $module): bool
     {
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['modules.delete']);
     }
 
     /**
@@ -58,7 +79,10 @@ class ModulePolicy
      */
     public function restore(User $user, Module $module): bool
     {
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['modules.restore']);
     }
 
     /**
@@ -66,6 +90,9 @@ class ModulePolicy
      */
     public function forceDelete(User $user, Module $module): bool
     {
-        return false;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['modules.force_delete']);
     }
 }

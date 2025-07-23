@@ -3,7 +3,7 @@
 @section('title', 'Branch Details - ' . $branch->name)
 @section('header-title', 'Branch Details - ' . $branch->name)
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="mx-auto px-4 py-8">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <div>

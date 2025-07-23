@@ -18,8 +18,15 @@
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!--charts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
+
     <!-- Scripts -->
     @vite(['resources/sass/app.scss', 'resources/css/app.css', 'resources/js/app.js'])
+
+    <!-- Role Management Scripts -->
+    <script src="{{ asset('js/role-management.js') }}"></script>
+    <script src="{{ asset('js/permissions.js') }}"></script>
 
     <!-- Enhanced Sidebar Assets -->
     @vite(['resources/css/sidebar.css', 'resources/js/sidebar.js'])
@@ -57,13 +64,26 @@
                 transform: translateY(0);
             }
         }
+
+        body {
+            zoom: 90%; /* Adjust zoom level for better visibility */
+        }
+
+        @media not all and (min-resolution:.001dpcm) {
+        @supports (-moz-appearance: none) {
+            body {
+                transform: scale(0.8);
+                transform-origin: top left;
+                width: 125%;
+            }
+        }
+    }
     </style>
 
 
 </head>
 
 <body class="bg-[#F3F4FF] dark:bg-gray-900 h-full">
-
 
     <!-- Enhanced Sidebar -->
     @auth

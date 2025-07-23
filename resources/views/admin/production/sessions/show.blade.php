@@ -3,7 +3,7 @@
 @section('title', 'Production Session Details')
 @section('header-title', 'Production Session Details - ' . $session->session_name)
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
             <div class="flex items-center justify-between mb-8">

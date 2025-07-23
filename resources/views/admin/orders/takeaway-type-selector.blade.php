@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="max-w-2xl mx-auto">
         <!-- Header Card -->
         <div class="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -126,14 +126,14 @@
 
                 <!-- Action Buttons -->
                 <div class="flex justify-between items-center mt-8">
-                    <a href="{{ route('admin.orders.dashboard') }}" 
+                    <a href="{{ route('admin.orders.dashboard') }}"
                        class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg flex items-center transition-colors">
                         <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
                     </a>
-                    
+
                     <div id="selected-type-info" class="text-center hidden">
                         <p class="text-gray-600 text-sm">Selected: <span id="selected-type-name" class="font-semibold"></span></p>
-                        <button onclick="proceedWithSelection()" 
+                        <button onclick="proceedWithSelection()"
                                 class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center transition-colors">
                             <i class="fas fa-arrow-right mr-2"></i> Proceed
                         </button>
@@ -156,26 +156,26 @@ const orderTypes = {
         description: 'Customer orders in advance with pickup time'
     },
     'demand': {
-        name: 'On-Demand Takeaway', 
+        name: 'On-Demand Takeaway',
         route: '{{ route("admin.orders.takeaway.create") }}?type=demand',
         description: 'Immediate order, prepare and pickup now'
     },
     'preorder': {
         name: 'Pre-Order Takeaway',
-        route: '{{ route("admin.orders.takeaway.create") }}?type=preorder', 
+        route: '{{ route("admin.orders.takeaway.create") }}?type=preorder',
         description: 'Order for future date with advance payment'
     }
 };
 
 function selectOrderType(type) {
     selectedOrderType = type;
-    
+
     // Remove previous selections
     document.querySelectorAll('.border-gray-200').forEach(el => {
         el.classList.remove('border-blue-400', 'bg-blue-50', 'border-orange-400', 'bg-orange-50', 'border-purple-400', 'bg-purple-50');
         el.classList.add('border-gray-200');
     });
-    
+
     // Highlight selected option
     const selectedElement = event.currentTarget;
     if (type === 'scheduled') {
@@ -188,7 +188,7 @@ function selectOrderType(type) {
         selectedElement.classList.remove('border-gray-200');
         selectedElement.classList.add('border-purple-400', 'bg-purple-50');
     }
-    
+
     // Show selection info
     document.getElementById('selected-type-info').classList.remove('hidden');
     document.getElementById('selected-type-name').textContent = orderTypes[type].name;

@@ -2,9 +2,29 @@
 
 @section('title', 'Branches')
 @section('header-title', 'Branches')
+
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
+<div class="mx-auto px-4 py-8">
+
+    <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Branches</h1>
+                <p class="text-gray-600 mt-1">Manage branches and their details</p>
+            </div>
+           @if(isset($organization))
+                <a href="{{ route('admin.branches.create', ['organization' => $organization->id]) }}"
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Branch
+                </a>
+            @endif
+        </div>
+    </div>
+
+
+    {{-- <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Branches</h1>
         @can('create', App\Models\Branch::class)
             @if(isset($organization))
@@ -14,7 +34,7 @@
                 </a>
             @endif
         @endcan
-    </div>
+    </div> --}}
 
     @if(session('success'))
         <div class="mb-4 bg-green-100 text-green-700 p-3 rounded">

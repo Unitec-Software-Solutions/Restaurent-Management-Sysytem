@@ -16,8 +16,11 @@ use App\Http\Controllers\{
     RealtimeDashboardController,
     MenuController,
     KitchenController,
-    KotController
+    KotController,
+    ModuleController,
+    ReportsGenController,
 };
+
  // Admin namespace controllers
 use App\Http\Controllers\Admin\{
     ProductionOrderController,
@@ -28,7 +31,8 @@ use App\Http\Controllers\Admin\{
     SubscriptionPlanController,
     PaymentController,
     KitchenStationController,
-    MenuItemController
+    MenuItemController,
+    MenuCategoryController
 };
 
 // supplier controllers
@@ -41,12 +45,13 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Admin\{
     PurchaseOrderController
 };
-// GRN/GTN controllers
+// GRN/GTN/SRN controllers
 use App\Http\Controllers\Admin\
 {
     //GrnController,
     GrnDashboardController,
     GoodsTransferNoteController,
+    StockReleaseNoteController,
     // GoodsTransferItemController,
     // GrnItemController,
 };
@@ -58,30 +63,26 @@ use App\Http\Controllers\Admin\
     ItemCategoryController,
     ItemMasterController,
     ItemTransactionController,
-    ItemStockController,
+    // ItemStockController (what the heck is this?)
+};
+
+// Report controllers
+use App\Http\Controllers\Admin\{
+    ReportController
 };
 
 
 use App\Http\Controllers\PaymentController as MainPaymentController;
 use App\Http\Middleware\SuperAdmin;
 use App\Http\Controllers\ReservationWorkflowController;
+use App\Http\Controllers\DashboardController;
 
-/*-------------------------------------------------------------------------
-| Debug Routes - Removed in production refactoring
-|------------------------------------------------------------------------*/
-// Debug routes have been removed for production readiness
 
-/*-------------------------------------------------------------------------
-| Public Routes
-|------------------------------------------------------------------------*/
 
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-/*-------------------------------------------------------------------------
-| Guest Routes (Unauthenticated)
-|------------------------------------------------------------------------*/
 Route::prefix('guest')->name('guest.')->group(function () {
     // Menu browsing
     Route::get('/menu/branches', [\App\Http\Controllers\Guest\GuestController::class, 'viewMenu'])->name('menu.branch-selection');
@@ -108,9 +109,9 @@ Route::prefix('guest')->name('guest.')->group(function () {
     Route::get('/reservations/{confirmationNumber}/confirmation', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmation'])->name('reservations.confirmation');
     Route::get('/reservations/{reservationId}/confirmation/{token}', [\App\Http\Controllers\Guest\GuestController::class, 'reservationConfirmationById'])->name('reservation.confirmation');
 
-    // Guest session management
-    Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
-});
+        // Guest session management
+        Route::get('/session/info', [\App\Http\Controllers\Guest\GuestController::class, 'sessionInfo'])->name('session.info');
+    });
 
 /*-------------------------------------------------------------------------
 | Customer Routes
@@ -174,6 +175,10 @@ Route::post('/login', [AdminAuthController::class, 'login']);
 | Admin Routes
 |------------------------------------------------------------------------*/
 Route::prefix('admin')->name('admin.')->group(function () {
+    // Example: Protect admin dashboard with role middleware
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])
+        ->middleware(['role:super_admin,organization_admin,branch_admin'])
+        ->name('dashboard');
     // Authentication routes (no middleware)
     Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login'])->name('login.submit');
@@ -261,7 +266,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('/item-stock-ajax', [GoodsTransferNoteController::class, 'getItemStock'])->name('item-stock-ajax');
             });
 
+            Route::prefix('srn')->name('srn.')->group(function () {
+                Route::get('/', [StockReleaseNoteController::class, 'index'])->name('index');
+                Route::get('/create', [StockReleaseNoteController::class, 'create'])->name('create');
+                Route::post('/', [StockReleaseNoteController::class, 'store'])->name('store');
+                Route::get('/{release}', [StockReleaseNoteController::class, 'show'])->whereNumber('release')->name('show');
+                Route::get('/{release}/edit', [StockReleaseNoteController::class, 'edit'])->whereNumber('release')->name('edit');
+                Route::put('/{release}', [StockReleaseNoteController::class, 'update'])->whereNumber('release')->name('update');
+                Route::delete('/{release}', [StockReleaseNoteController::class, 'destroy'])->whereNumber('release')->name('destroy');
 
+                // AJAX endpoints fetch items of that branch with stock
+                Route::get('/items-with-stock', [StockReleaseNoteController::class, 'itemsWithStock'])->name('items-with-stock');
+
+                // Verification endpoint
+                Route::post('/{release}/verify', [StockReleaseNoteController::class, 'verify'])->whereNumber('release')->name('verify');
+            });
 
         });
 
@@ -466,16 +485,44 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         });
 
+        Route::prefix('reports')->name('reports.')->group(function () {
+            // Route::get('/', [ReportController::class, 'index'])->name('index');
+            Route::prefix('sales')->name('sales.')->group(function () {
+                Route::get('/', [ReportController::class, 'salesReport'])->name('index');
+            });
+            Route::prefix('inventory')->name('inventory.')->group(function () {
+                Route::get('/', [ReportController::class, 'inventoryReport'])->name('index');
+                Route::get('/stock', [ReportController::class, 'inventoryStock'])->name('stock');
+                Route::get('/category', [ReportController::class, 'categoryReport'])->name('category');
+                Route::get('/grn', [ReportController::class, 'inventoryGrn'])->name('grn');
+                Route::get('/gtn', [ReportController::class, 'inventoryGtn'])->name('gtn');
+                Route::get('/srn', [ReportController::class, 'inventorySrn'])->name('srn');
+                // Route::get('/items', [ReportController::class, 'inventory_items'])->name('items');
+                // Route::get('/summary', [ReportController::class, 'inventory_summary'])->name('summary');
+            });
+
+        });
 
         // Additional Admin Routes
         Route::get('/debug-user', function () {return view('admin.debug-user');})->name('debug-user');
-        Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.view');
+        // Route::get('/reports', function () {return view('admin.reports.index');})->name('reports.view');
         Route::get('/digital-menu', function () {return view('admin.digital-menu.index');})->name('digital-menu.index');
         Route::get('/settings', function () {return view('admin.settings.index');})->name('settings.view');
         Route::get('/profile', [AdminController::class, 'profile'])->name('profile.index');
 
     });
 
+});
+
+// Admin user management routes
+Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('users', [App\Http\Controllers\UserController::class, 'index'])->name('users.index');
+    Route::get('users/create', [App\Http\Controllers\UserController::class, 'create'])->name('users.create');
+    Route::post('users', [App\Http\Controllers\UserController::class, 'store'])->name('users.store');
+    Route::get('users/{admin}', [App\Http\Controllers\UserController::class, 'show'])->name('users.show');
+    Route::get('users/{admin}/edit', [App\Http\Controllers\UserController::class, 'edit'])->name('users.edit');
+    Route::put('users/{admin}', [App\Http\Controllers\UserController::class, 'update'])->name('users.update');
+    Route::delete('users/{admin}', [App\Http\Controllers\UserController::class, 'destroy'])->name('users.destroy');
 });
 
 /*-------------------------------------------------------------------------
@@ -485,13 +532,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::middleware(['auth:admin'])->group(function () {
     // API routes for super admin organization selection
     Route::get('/admin/api/organizations/{organization}/categories', [
-        \App\Http\Controllers\Admin\ItemCategoryController::class,
+        ItemCategoryController::class,
         'getByOrganization'
     ])->name('admin.api.organizations.categories');
 
     // Universal admin API route for getting branches by organization
     Route::get('/admin/api/organizations/{organization}/branches', [
-        \App\Http\Controllers\BranchController::class,
+       BranchController::class,
         'getBranchesByOrganization'
     ])->name('admin.api.organizations.branches');
 
@@ -570,9 +617,6 @@ Route::middleware(['auth:admin', SuperAdmin::class])->prefix('admin')->name('adm
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
 
 
-    // Roles & Permissions
-    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-
     // Subscription Plans
     Route::resource('subscription-plans', SubscriptionPlanController::class);
 });
@@ -617,10 +661,6 @@ Route::middleware(['web', 'auth:admin', App\Http\Middleware\SuperAdmin::class])
         // Users Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
 
-
-        // Roles & Permissions
-        Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-
         // Subscription Plans
         Route::resource('subscription-plans', SubscriptionPlanController::class);
 
@@ -645,25 +685,12 @@ Route::middleware(['auth:admin'])->group(function () {
 
     // Users Management
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
-
-
-    // Roles & Permissions
-    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-
     // Subscription Plans
     Route::resource('subscription-plans', SubscriptionPlanController::class);
 
 });
 
-Route::middleware(['auth:admin', SuperAdmin::class])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::resource('roles', \App\Http\Controllers\RoleController::class)->except(['show']);
-        Route::resource('modules', \App\Http\Controllers\ModuleController::class)->except(['show']);
-        Route::get('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'permissions'])->name('roles.permissions');
-        Route::post('roles/{role}/permissions', [\App\Http\Controllers\RoleController::class, 'updatePermissions'])->name('roles.permissions.update');
-    });
+
 
 // User Management Routes - Accessible by Superadmin, Org Admin, and Branch Admin with permissions
 Route::middleware(['auth:admin'])
@@ -680,6 +707,8 @@ Route::middleware(['auth:admin'])
         Route::post('/users/{user}/assign-role', [UserController::class, 'assignRole'])->name('users.assign-role.store');
         Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
 });
+
+
 
 Route::prefix('admin/api')->middleware(['auth:admin'])->group(function () {
     // Stock and availability APIs
@@ -728,7 +757,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:admin'])->group(functi
 Route::get('customers/index', [App\Http\Controllers\Admin\CustomerController::class, 'index'])->middleware(['auth:admin'])->name('admin.customers.index');
 // Route::get('digital-menu/index', [App\Http\Controllers\Admin\DigitalMenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.digital-menu.index');
 Route::get('settings/index', [App\Http\Controllers\Admin\SettingController::class, 'index'])->middleware(['auth:admin'])->name('admin.settings.index');
-Route::get('reports/index', [App\Http\Controllers\Admin\ReportController::class, 'index'])->middleware(['auth:admin'])->name('admin.reports.index');
+Route::get('admin/reports/index', [App\Http\Controllers\Admin\ReportController::class, 'index'])->middleware(['auth:admin'])->name('admin.reports.index');
 Route::get('debug/routes', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes');
 Route::get('debug/routes/test', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.test');
 Route::get('debug/routes/generate', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.generate');
@@ -749,8 +778,10 @@ Route::post('inventory/items/restore', [ItemMasterController::class, 'restore'])
 // Menu routes - properly ordered to avoid conflicts
 Route::get('menus/index', [App\Http\Controllers\Admin\MenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.menus.index');
 Route::get('menus/list', [App\Http\Controllers\Admin\MenuController::class, 'list'])->middleware(['auth:admin'])->name('admin.menus.list');
+Route::get('menus/manager', [App\Http\Controllers\Admin\MenuController::class, 'manager'])->middleware(['auth:admin'])->name('admin.menus.manager');
 Route::get('menus/create', [App\Http\Controllers\Admin\MenuController::class, 'create'])->middleware(['auth:admin'])->name('admin.menus.create');
 Route::post('menus/store', [App\Http\Controllers\Admin\MenuController::class, 'store'])->middleware(['auth:admin'])->name('admin.menus.store');
+Route::get('menus/manager', [App\Http\Controllers\Admin\MenuController::class, 'manager'])->middleware(['auth:admin'])->name('admin.menus.manager');
 Route::get('menus/bulk-create', [App\Http\Controllers\Admin\MenuController::class, 'bulkCreate'])->middleware(['auth:admin'])->name('admin.menus.bulk-create');
 Route::post('menus/bulk-store', [App\Http\Controllers\Admin\MenuController::class, 'bulkStore'])->middleware(['auth:admin'])->name('admin.menus.bulk-store');
 Route::get('menus/calendar', [App\Http\Controllers\Admin\MenuController::class, 'calendar'])->middleware(['auth:admin'])->name('admin.menus.calendar');
@@ -781,7 +812,7 @@ Route::get('reservations/assign-steward', [App\Http\Controllers\Admin\Reservatio
 Route::get('reservations/check-in', [App\Http\Controllers\Admin\ReservationController::class, 'checkIn'])->middleware(['auth:admin'])->name('admin.reservations.check-in');
 Route::get('reservations/check-out', [App\Http\Controllers\Admin\ReservationController::class, 'checkOut'])->middleware(['auth:admin'])->name('admin.reservations.check-out');
 Route::get('orders/orders/reservations/create', [App\Http\Controllers\Admin\OrderController::class, 'orders'])->middleware(['auth:admin'])->name('admin.orders.orders.reservations.create');
-Route::get('roles/assign', [App\Http\Controllers\RoleController::class, 'assign'])->name('roles.assign');
+
 
 Route::get('purchase-orders/show', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'show'])->middleware(['auth:admin'])->name('admin.purchase-orders.show');
 Route::get('purchase-orders/index', [App\Http\Controllers\Admin\PurchaseOrderController::class, 'index'])->middleware(['auth:admin'])->name('admin.purchase-orders.index');
@@ -805,7 +836,6 @@ Route::get('bills/show', [App\Http\Controllers\Admin\BillController::class, 'sho
 Route::get('payments/create', [App\Http\Controllers\PaymentController::class, 'create'])->name('payments.create');
 Route::get('branch', [App\Http\Controllers\BranchController::class, 'index'])->name('branch');
 
-Route::get('role', [App\Http\Controllers\RoleController::class, 'index'])->name('role');
 Route::get('subscription/expired', [App\Http\Controllers\SubscriptionController::class, 'expired'])->name('subscription.expired');
 Route::get('subscription/upgrade', [App\Http\Controllers\SubscriptionController::class, 'upgrade'])->name('subscription.upgrade');
 Route::get('subscription/required', [App\Http\Controllers\SubscriptionController::class, 'required'])->name('subscription.required');
@@ -830,7 +860,7 @@ Route::prefix('api')->middleware(['web'])->group(function () {
 // Remove the duplicate test route - keep only one for debugging
 Route::get('/test-branches/{organization}', function($organizationId) {
     try {
-        $controller = app(\App\Http\Controllers\ReservationController::class);
+        $controller = app(ReservationController::class);
         return $controller->getBranches($organizationId);
     } catch (\Exception $e) {
         return response()->json([
@@ -1031,37 +1061,31 @@ Route::prefix('admin/menu-items')->name('admin.menu-items.')->middleware(['auth:
 |------------------------------------------------------------------------*/
 Route::prefix('admin/menu-categories')->name('admin.menu-categories.')->middleware(['auth:admin'])->group(function () {
     // Standard CRUD routes
-    Route::get('/', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'index'])->name('index');
-    Route::get('/create', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'create'])->name('create');
-    Route::post('/', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'store'])->name('store');
-    Route::get('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'show'])->name('show');
-    Route::get('/{menuCategory}/edit', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'edit'])->name('edit');
-    Route::put('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'update'])->name('update');
-    Route::delete('/{menuCategory}', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'destroy'])->name('destroy');
+    Route::get('/', [MenuCategoryController::class, 'index'])->name('index');
+    Route::get('/create', [MenuCategoryController::class, 'create'])->name('create');
+    Route::post('/', [MenuCategoryController::class, 'store'])->name('store');
+    Route::get('/{menuCategory}', [MenuCategoryController::class, 'show'])->name('show');
+    Route::get('/{menuCategory}/edit', [MenuCategoryController::class, 'edit'])->name('edit');
+    Route::put('/{menuCategory}', [MenuCategoryController::class, 'update'])->name('update');
+    Route::delete('/{menuCategory}', [MenuCategoryController::class, 'destroy'])->name('destroy');
 
     // AJAX routes
-    Route::get('/api/branches/{branch}/categories', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'getCategoriesForBranch'])->name('api.branch-categories');
-    Route::post('/api/sort-order', [\App\Http\Controllers\Admin\MenuCategoryController::class, 'updateSortOrder'])->name('api.sort-order');
+    Route::get('/api/branches/{branch}/categories', [MenuCategoryController::class, 'getCategoriesForBranch'])->name('api.branch-categories');
+    Route::post('/api/sort-order', [MenuCategoryController::class, 'updateSortOrder'])->name('api.sort-order');
 });
 
 // User Authentication Routes (for regular users)
 Route::middleware('guest')->group(function () {
-    Route::get('/user/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('user.login');
-    Route::post('/user/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('user.login.submit');
+    Route::get('/user/login', [LoginController::class, 'showLoginForm'])->name('user.login');
+    Route::post('/user/login', [LoginController::class, 'login'])->name('user.login.submit');
 });
 
 // User Dashboard Routes (for authenticated regular users)
 Route::middleware('auth')->group(function () {
-    Route::post('/user/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('user.logout');
-    Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard/staff', [App\Http\Controllers\DashboardController::class, 'staff'])->name('dashboard.staff');
-    Route::get('/dashboard/management', [App\Http\Controllers\DashboardController::class, 'management'])->name('dashboard.management');
+    Route::post('/user/logout', [LoginController::class, 'logout'])->name('user.logout');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/staff', [DashboardController::class, 'staff'])->name('dashboard.staff');
 });
-
-
-
-
-
 
 
 // Include reservation workflow routes
@@ -1073,6 +1097,22 @@ require __DIR__.'/groups/public.php';
 // API route for getting menu items from active menus
 Route::get('/api/menu-items/branch/{branch}/active', [OrderController::class, 'getMenuItemsFromActiveMenus'])->name('api.menu-items.active');
 
-Route::get('admin/kots/{kot}/print', [\App\Http\Controllers\KotController::class, 'print'])
+Route::get('admin/kots/{kot}/print', [KotController::class, 'print'])
     ->name('admin.kots.print')
     ->middleware(['auth:admin']);
+
+// Export Routes - Multi-sheet Excel exports
+Route::middleware(['auth:admin'])->prefix('admin/exports')->name('admin.exports.')->group(function () {
+    Route::get('/test', [\App\Http\Controllers\ReportsGenController::class, 'testExport'])->name('test');
+    Route::get('.', [\App\Http\Controllers\ReportsGenController::class, 'handleMultiSheetExport'])->name('multisheet');
+});
+
+// Roles CRUD - Accessible by Super Admin
+Route::middleware(['auth:admin', SuperAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::resource('roles', RoleController::class);
+        Route::get('roles/assign', [RoleController::class, 'assign'])->name('roles.assign');
+    });
+

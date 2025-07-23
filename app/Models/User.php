@@ -20,18 +20,14 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'organization_id',
         'name',
         'email',
         'phone_number',
         'password',
-        'is_registered',
-        'is_guest',
-        'organization_id',
         'branch_id',
-        'role_id',
-        'is_admin',
-        'is_super_admin',
-        'created_by'
+        'created_by',
+        'is_active',
     ];
 
     /**
@@ -58,6 +54,8 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    protected $guard_name = 'admin';
+
     /**
      * Get the attributes that should be cast.
      *
@@ -70,7 +68,6 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_registered' => 'boolean',
             'is_guest' => 'boolean',
-            'is_admin' => 'boolean',
             'is_super_admin' => 'boolean',
         ];
     }
@@ -79,67 +76,30 @@ class User extends Authenticatable
         return $this->belongsTo(Organization::class, 'organization_id');
     }
 
-    public function branch()
+    public function roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsTo(\App\Models\Branch::class, 'branch_id');
+        return $this->belongsToMany(Role::class, 'role_user');
     }
 
-    public function hasBranchPermission($branchId, $permission)
+    public function permissions()
     {
-        return $this->roles()->where(function ($query) use ($branchId) {
-            $query->where('branch_id', $branchId)
-                  ->orWhereNull('branch_id');
-        })->whereHas('permissions', function ($q) use ($permission) {
-            $q->where('name', $permission);
-        })->exists();
+        return $this->roles->flatMap(function ($role) {
+            return $role->permissions;
+        });
     }
 
-    public function isSuperAdmin()
+    public function hasRole($role): bool
     {
-        return $this->hasRole('superadmin');
+        return $this->roles->contains('name', $role);
     }
 
-    public function is_org_admin()
+    public function hasPermission($permission): bool
     {
-        return $this->hasRole('organization_admin');
-    }
-
-    public function is_branch_admin()
-    {
-        return $this->hasRole('branch_admin');
-    }
-
-    public function hasCustomRole($roleName)
-    {
-        return $this->role && $this->role->name === $roleName;
-    }
-
-    public function canAssignRoles()
-    {
-        return $this->is_admin || $this->hasPermission('users.assign_roles');
-    }
-
-    public function hasPermission($permission)
-    {
-        if ($this->is_superadmin) return true;
-        if ($this->role && $this->role->permissions) {
-            return $this->role->permissions->pluck('name')->contains($permission);
-        }
-        return false;
-    }
-
-    public function userRole()
-    {
-        return $this->belongsTo(Role::class, 'role_id');
+        return $this->permissions()->contains('name', $permission);
     }
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function isAdmin()
-    {
-        return (bool) $this->is_admin;
     }
 }

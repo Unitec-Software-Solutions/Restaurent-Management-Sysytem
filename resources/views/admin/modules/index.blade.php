@@ -2,18 +2,36 @@
 
 @section('title', 'Modules Management')
 @section('header-title', 'Modules Management')
+
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+    {{-- <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Modules Management</h1>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight"></h1>
             <p class="text-gray-600 mt-1">Manage system modules and their permissions</p>
         </div>
         <a href="{{ route('admin.modules.create') }}"
            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center transition shadow-sm">
             <i class="fas fa-plus mr-2"></i> Add Module
         </a>
+    </div> --}}
+
+    <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Modules Management</h1>
+                <p class="text-gray-600 mt-1">Manage system modules and their permissions</p>
+            </div>
+            @if(auth('admin')->user()->isSuperAdmin())
+                <a href="{{ route('admin.modules.create') }}"
+                   class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Module
+                </a>
+            @endif
+        </div>
     </div>
 
     @if(session('success'))

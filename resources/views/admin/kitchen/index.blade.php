@@ -139,8 +139,8 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
-                                {{ $kot->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                                {{ $kot->status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                    ($kot->status === 'preparing' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800') }}">
                                 {{ ucfirst($kot->status) }}
                             </span>
@@ -173,6 +173,7 @@
                 </div>
             </a>
 
+            {{--
             <a href="{{ route('admin.kitchen.queue.index') }}" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <div class="p-2 bg-blue-100 rounded-lg">
                     <i class="fas fa-list text-blue-600"></i>
@@ -182,6 +183,7 @@
                     <p class="text-sm text-gray-500">View kitchen queue</p>
                 </div>
             </a>
+            --}}
 
             <button onclick="printAllKOTs()" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <div class="p-2 bg-green-100 rounded-lg">

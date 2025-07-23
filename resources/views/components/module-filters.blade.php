@@ -139,7 +139,7 @@
                     type="submit"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                 >
-                    <i class="fas fa-search mr-2"></i>
+                    <i class="fa-solid fa-filter mr-2"></i>
                     Filter
                 </button>
 

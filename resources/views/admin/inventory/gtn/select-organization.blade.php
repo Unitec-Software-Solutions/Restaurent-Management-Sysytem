@@ -3,7 +3,7 @@
 @section('header-title', 'Select Organization - Create GTN')
 
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="mx-auto px-4 py-8">
         <!-- Main Content Card -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden max-w-2xl mx-auto">
             <!-- Card Header -->

@@ -20,16 +20,16 @@ class SeederValidationService
     {
         $this->validationErrors = [];
         $this->dataChecks = [];
-        
+
         Log::info("🔍 Pre-seeding validation for {$seederClass}");
-        
+
         // Get validation rules for the specific seeder
         $rules = $this->getValidationRules($seederClass);
-        
+
         foreach ($data as $index => $record) {
             $this->validateRecord($seederClass, $record, $rules, $index);
         }
-        
+
         return [
             'valid' => empty($this->validationErrors),
             'errors' => $this->validationErrors,
@@ -64,7 +64,6 @@ class SeederValidationService
                 'required_fields' => ['name', 'email'],
                 'unique_fields' => ['email'],
                 'foreign_keys' => [],
-                'json_fields' => ['plan_snapshot'],
                 'enum_fields' => [],
                 'data_types' => [
                     'name' => 'string',
@@ -99,7 +98,7 @@ class SeederValidationService
                 ]
             ]
         ];
-        
+
         return $rules[$seederClass] ?? [];
     }
 
@@ -109,22 +108,22 @@ class SeederValidationService
     protected function validateRecord(string $seederClass, array $record, array $rules, int $index): void
     {
         $recordId = "Record #{$index}";
-        
+
         // Check required fields
         $this->validateRequiredFields($record, $rules['required_fields'] ?? [], $seederClass, $recordId);
-        
+
         // Check data types
         $this->validateDataTypes($record, $rules['data_types'] ?? [], $seederClass, $recordId);
-        
+
         // Check ENUM values
         $this->validateEnumValues($record, $rules['enum_fields'] ?? [], $seederClass, $recordId);
-        
+
         // Check JSON structure
         $this->validateJsonFields($record, $rules['json_fields'] ?? [], $seederClass, $recordId);
-        
+
         // Check foreign key references
         $this->validateForeignKeys($record, $rules['foreign_keys'] ?? [], $seederClass, $recordId);
-        
+
         // Check unique constraints (when data is provided)
         $this->validateUniqueFields($record, $rules['unique_fields'] ?? [], $seederClass, $recordId);
     }
@@ -141,7 +140,7 @@ class SeederValidationService
                 $this->validationErrors[] = "{$seeder} - {$recordId}: Required field '{$field}' is null or empty";
             }
         }
-        
+
         $this->dataChecks[] = "Required fields validation for {$recordId}";
     }
 
@@ -154,7 +153,7 @@ class SeederValidationService
             if (!array_key_exists($field, $record) || is_null($record[$field])) {
                 continue; // Skip if field doesn't exist or is null
             }
-            
+
             $value = $record[$field];
             $isValid = match($expectedType) {
                 'integer' => is_int($value) || (is_string($value) && ctype_digit($value)),
@@ -164,13 +163,13 @@ class SeederValidationService
                 'array' => is_array($value),
                 default => true
             };
-            
+
             if (!$isValid) {
                 $actualType = gettype($value);
                 $this->validationErrors[] = "{$seeder} - {$recordId}: Field '{$field}' expected {$expectedType}, got {$actualType}";
             }
         }
-        
+
         $this->dataChecks[] = "Data type validation for {$recordId}";
     }
 
@@ -183,13 +182,13 @@ class SeederValidationService
             if (!array_key_exists($field, $record) || is_null($record[$field])) {
                 continue;
             }
-            
+
             if (!in_array($record[$field], $validValues)) {
                 $validValuesStr = implode(', ', $validValues);
                 $this->validationErrors[] = "{$seeder} - {$recordId}: Field '{$field}' has invalid value '{$record[$field]}'. Valid values: {$validValuesStr}";
             }
         }
-        
+
         $this->dataChecks[] = "ENUM validation for {$recordId}";
     }
 
@@ -202,14 +201,14 @@ class SeederValidationService
             if (!array_key_exists($field, $record) || is_null($record[$field])) {
                 continue;
             }
-            
+
             $value = $record[$field];
-            
+
             // If it's already an array, it's valid
             if (is_array($value)) {
                 continue;
             }
-            
+
             // If it's a string, try to decode it
             if (is_string($value)) {
                 $decoded = json_decode($value, true);
@@ -220,7 +219,7 @@ class SeederValidationService
                 $this->validationErrors[] = "{$seeder} - {$recordId}: Field '{$field}' should be JSON (array or valid JSON string)";
             }
         }
-        
+
         $this->dataChecks[] = "JSON validation for {$recordId}";
     }
 
@@ -233,9 +232,9 @@ class SeederValidationService
             if (!array_key_exists($field, $record) || is_null($record[$field])) {
                 continue;
             }
-            
+
             [$table, $column] = explode('.', $reference);
-            
+
             try {
                 $exists = DB::table($table)->where($column, $record[$field])->exists();
                 if (!$exists) {
@@ -245,7 +244,7 @@ class SeederValidationService
                 $this->validationErrors[] = "{$seeder} - {$recordId}: Could not validate foreign key '{$field}': " . $e->getMessage();
             }
         }
-        
+
         $this->dataChecks[] = "Foreign key validation for {$recordId}";
     }
 
@@ -258,14 +257,14 @@ class SeederValidationService
             if (!array_key_exists($field, $record) || is_null($record[$field])) {
                 continue;
             }
-            
+
             // Basic validation - check if value looks reasonable for unique field
             $value = $record[$field];
             if (is_string($value) && strlen(trim($value)) === 0) {
                 $this->validationErrors[] = "{$seeder} - {$recordId}: Unique field '{$field}' cannot be empty string";
             }
         }
-        
+
         $this->dataChecks[] = "Unique fields validation for {$recordId}";
     }
 
@@ -289,62 +288,62 @@ class SeederValidationService
     {
         $startTime = microtime(true);
         $result = ['success' => false, 'message' => '', 'data' => []];
-        
+
         try {
             DB::beginTransaction();
-            
+
             Log::info("🌱 Starting safe seeding for {$seederName}");
-            
+
             // Execute the seeder function
             $seederResult = $seederFunction();
-            
+
             // Verify the seeding was successful
             $this->verifySeedingResult($seederName);
-            
+
             DB::commit();
-            
+
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            
+
             $result = [
                 'success' => true,
                 'message' => "✅ {$seederName} completed successfully in {$duration}ms",
                 'data' => $seederResult ?? [],
                 'duration_ms' => $duration
             ];
-            
+
             Log::info($result['message']);
-            
+
         } catch (QueryException $e) {
             DB::rollBack();
-            
+
             $result = [
                 'success' => false,
                 'message' => "❌ {$seederName} failed with database error: " . $e->getMessage(),
                 'error_code' => $e->getCode(),
                 'error_sql' => $e->getSql() ?? 'N/A'
             ];
-            
+
             Log::error("Database error in {$seederName}", [
                 'error' => $e->getMessage(),
                 'code' => $e->getCode(),
                 'sql' => $e->getSql()
             ]);
-            
+
         } catch (Exception $e) {
             DB::rollBack();
-            
+
             $result = [
                 'success' => false,
                 'message' => "❌ {$seederName} failed with error: " . $e->getMessage(),
                 'error_trace' => $e->getTraceAsString()
             ];
-            
+
             Log::error("General error in {$seederName}", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
         }
-        
+
         return $result;
     }
 
@@ -360,7 +359,7 @@ class SeederValidationService
                     ->whereNull('code')
                     ->orWhere('code', '')
                     ->count();
-                
+
                 if ($stationsWithoutCodes > 0) {
                     throw new Exception("Kitchen stations were created without required codes");
                 }
@@ -370,13 +369,13 @@ class SeederValidationService
                     ->whereNull('email')
                     ->orWhere('email', '')
                     ->count();
-                
+
                 if ($orgsWithoutEmail > 0) {
                     throw new Exception("Organizations were created without required email");
                 }
             }
         ];
-        
+
         if (isset($verifications[$seederName])) {
             $verifications[$seederName]();
         }
@@ -403,95 +402,95 @@ class SeederValidationService
     public function validateSeederRequirements(string $seederClass): array
     {
         $issues = [];
-        
+
         try {
             // Check seeder-specific requirements
             switch ($seederClass) {
                 case 'KitchenStationSeeder':
                     $issues = array_merge($issues, $this->validateKitchenStationRequirements());
                     break;
-                    
+
                 case 'OrganizationSeeder':
                     $issues = array_merge($issues, $this->validateOrganizationRequirements());
                     break;
-                    
+
                 case 'BranchSeeder':
                     $issues = array_merge($issues, $this->validateBranchRequirements());
                     break;
-                    
+
                 case 'UserSeeder':
                     $issues = array_merge($issues, $this->validateUserRequirements());
                     break;
-                    
+
                 case 'DatabaseSeeder':
                     // Validate all seeder requirements for main seeder
                     $issues = array_merge($issues, $this->validateAllSeederRequirements());
                     break;
-                    
+
                 default:
                     // Generic validation for unknown seeders
                     $issues = array_merge($issues, $this->validateGenericSeederRequirements($seederClass));
                     break;
             }
-            
+
         } catch (\Exception $e) {
             $issues[] = "Failed to validate seeder requirements: " . $e->getMessage();
         }
-        
+
         return [
             'issues' => $issues,
             'status' => empty($issues) ? 'passed' : 'failed',
             'seeder_class' => $seederClass
         ];
     }
-    
+
     protected function validateKitchenStationRequirements(): array
     {
         $issues = [];
-        
+
         // Check if branches exist (required for kitchen stations)
         if (!DB::table('branches')->exists()) {
             $issues[] = "KitchenStationSeeder requires branches to exist - run BranchSeeder first";
         }
-        
+
         // Check for existing kitchen station codes that might conflict
         $existingCodes = DB::table('kitchen_stations')->pluck('code')->toArray();
         if (!empty($existingCodes)) {
             $issues[] = "Existing kitchen station codes found - may cause unique constraint violations: " . implode(', ', $existingCodes);
         }
-        
+
         return $issues;
     }
-    
+
     protected function validateBranchRequirements(): array
     {
         $issues = [];
-        
+
         // Check if organizations exist (required for branches)
         if (!DB::table('organizations')->exists()) {
             $issues[] = "BranchSeeder requires organizations to exist - run OrganizationSeeder first";
         }
-        
+
         return $issues;
     }
-    
+
     protected function validateUserRequirements(): array
     {
         $issues = [];
-        
+
         // Check if roles exist
         if (!DB::table('roles')->exists()) {
             $issues[] = "UserSeeder requires roles to exist - ensure role seeding is completed first";
         }
-        
+
         // Check if branches exist for user assignment
         if (!DB::table('branches')->exists()) {
             $issues[] = "UserSeeder requires branches for user assignment - run BranchSeeder first";
         }
-        
+
         return $issues;
     }
-    
+
     protected function validateOrganizationRequirements(): array
     {
         $issues = [];
@@ -500,7 +499,7 @@ class SeederValidationService
         try {
             $columns = Schema::getColumnListing('organizations');
             $requiredColumns = ['name', 'email', 'phone'];
-            
+
             foreach ($requiredColumns as $column) {
                 if (!in_array($column, $columns)) {
                     $issues[] = "Organizations table missing required column: {$column}";
@@ -509,14 +508,14 @@ class SeederValidationService
         } catch (\Exception $e) {
             $issues[] = "Could not validate organization table structure: " . $e->getMessage();
         }
-        
+
         return $issues;
     }
-    
+
     protected function validateAllSeederRequirements(): array
     {
         $issues = [];
-        
+
         // Check dependency chain for main database seeder
         $seederChain = [
             'OrganizationSeeder' => [],
@@ -524,7 +523,7 @@ class SeederValidationService
             'KitchenStationSeeder' => ['organizations', 'branches'],
             'UserSeeder' => ['organizations', 'branches', 'roles']
         ];
-        
+
         foreach ($seederChain as $seeder => $dependencies) {
             foreach ($dependencies as $table) {
                 if (!DB::table($table)->exists()) {
@@ -532,19 +531,19 @@ class SeederValidationService
                 }
             }
         }
-        
+
         return $issues;
     }
-    
+
     protected function validateGenericSeederRequirements(string $seederClass): array
     {
         $issues = [];
-        
+
         // Generic checks for unknown seeders
         if (!class_exists($seederClass)) {
             $issues[] = "Seeder class '{$seederClass}' does not exist";
         }
-        
+
         return $issues;
     }
 }
