@@ -33,6 +33,11 @@ class StockReleaseNoteItem extends Model
         return $this->belongsTo(StockReleaseNoteMaster::class, 'srn_id');
     }
 
+    public function stockReleaseNote()
+    {
+        return $this->stockReleaseNoteMaster();
+    }
+
     public function item()
     {
         return $this->belongsTo(ItemMaster::class, 'item_id');
