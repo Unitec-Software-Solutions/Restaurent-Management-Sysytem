@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { log } from 'console';
 
 export async function createOrganization(page: Page) {
     await page.getByRole('link', { name: ' Organizations ' }).click();
@@ -15,4 +16,6 @@ export async function createOrganization(page: Page) {
     await page.getByText('Status *').click();
     await page.locator('select[name="is_active"]').selectOption('1'); // Active
     await page.getByRole('button', { name: 'Create Organization' }).click();
+    await page.waitForURL('**/admin/organizations');
+    log('Organization created successfully');
 }
