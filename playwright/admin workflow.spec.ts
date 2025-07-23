@@ -13,10 +13,14 @@ import { createBranch } from './helpers/createBranch';
 test.skip('Admin Workflow 🚀', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await createSubscriptionPlan(page);
-    await createOrganization(page);
+    //await createOrganization(page);
 });
-
-test.skip('Create Organization 🏢', async ({ page }) => {
+test('Create Subscription Plan 🚀', async ({ page }) => {
+    await loginAsSuperAdmin(page);
+    await createSubscriptionPlan(page);
+    //await createOrganization(page);
+});
+test('Create Organization 🏢', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await createOrganization(page);
 });
