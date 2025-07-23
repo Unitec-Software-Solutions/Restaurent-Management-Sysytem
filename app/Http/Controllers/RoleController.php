@@ -5,14 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use App\Models\Organization;
-use App\Models\User;
 use App\Models\Admin;
 use App\Services\PermissionSystemService;
 use Spatie\Permission\Models\Permission;
 use App\Models\Branch;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Gate;
 
 class RoleController extends Controller
 {
@@ -92,7 +90,7 @@ class RoleController extends Controller
         $role->load(['permissions', 'organization', 'branch']);
 
         $admin = auth('admin')->user();
-        $organizations = Organization::with('branches')->get();
+        $organizations = $this->getAuthorizedOrganizations($admin);
         $permissions = Permission::where('guard_name', 'admin')->get();
 
         // Get branches based on admin level
@@ -105,13 +103,19 @@ class RoleController extends Controller
             $permissionDefinitions
         );
 
+        // Provide availableTemplates for quick role templates (optional, can be empty)
+        $availableTemplates = method_exists($this->permissionService, 'getRoleTemplates')
+            ? $this->permissionService->getRoleTemplates()
+            : [];
+
         return view('admin.roles.edit', compact(
             'role',
             'organizations',
             'permissions',
             'branches',
             'permissionDefinitions',
-            'availablePermissions'
+            'availablePermissions',
+            'availableTemplates'
         ));
     }
 
@@ -144,7 +148,7 @@ class RoleController extends Controller
     }
 
     /**
-     * Store new role
+     * Store new role - FIXED PERMISSION SYNCING
      */
     public function store(Request $request)
     {
@@ -164,9 +168,10 @@ class RoleController extends Controller
         }
 
         $validated = $request->validate($rules);
+        $permissions = $validated['permissions'] ?? [];
 
         // Verify permission access
-        $this->validatePermissionAccess($admin, $validated['permissions'] ?? []);
+        $this->validatePermissionAccess($admin, $permissions);
 
         // Determine scope
         [$organizationId, $branchId] = $this->determineScope($admin, $request);
@@ -183,12 +188,15 @@ class RoleController extends Controller
                 'guard_name' => 'admin',
             ]);
 
-            $role->syncPermissions($validated['permissions'] ?? []);
+            // FIX: Properly sync permissions
+            $this->syncRolePermissions($role, $permissions);
 
             DB::commit();
 
-            Log::info('Role created', [
-                'id' => $role->id,
+            Log::info('Role created with permissions', [
+                'role_id' => $role->id,
+                'name' => $role->name,
+                'permissions' => $permissions,
                 'by_admin' => $admin->id
             ]);
 
@@ -208,7 +216,7 @@ class RoleController extends Controller
     }
 
     /**
-     * Update existing role
+     * Update existing role - FIXED PERMISSION SYNCING
      */
     public function update(Request $request, Role $role)
     {
@@ -229,9 +237,10 @@ class RoleController extends Controller
         }
 
         $validated = $request->validate($rules);
+        $permissions = $validated['permissions'] ?? [];
 
         // Verify permission access
-        $this->validatePermissionAccess($admin, $validated['permissions'] ?? []);
+        $this->validatePermissionAccess($admin, $permissions);
 
         DB::beginTransaction();
         try {
@@ -245,13 +254,15 @@ class RoleController extends Controller
 
             $role->update($updateData);
 
-            // Sync permissions
-            $role->syncPermissions($validated['permissions'] ?? []);
+            // FIX: Properly sync permissions
+            $this->syncRolePermissions($role, $permissions);
 
             DB::commit();
 
-            Log::info('Role updated', [
-                'id' => $role->id,
+            Log::info('Role updated with permissions', [
+                'role_id' => $role->id,
+                'name' => $role->name,
+                'permissions' => $permissions,
                 'by_admin' => $admin->id
             ]);
 
@@ -381,5 +392,33 @@ class RoleController extends Controller
             return Branch::where('organization_id', $admin->organization_id)->get();
         }
         return Branch::where('id', $admin->branch_id)->get();
+    }
+
+    /**
+     * FIX: Properly sync role permissions
+     * This ensures permissions are correctly attached to the role
+     */
+    private function syncRolePermissions(Role $role, array $permissionNames)
+    {
+        // Convert permission names to actual permission models
+        $permissions = Permission::whereIn('name', $permissionNames)
+            ->where('guard_name', 'admin')
+            ->get();
+
+        // Verify all permissions were found
+        if ($permissions->count() !== count($permissionNames)) {
+            $missing = array_diff($permissionNames, $permissions->pluck('name')->toArray());
+            throw new \Exception("Some permissions do not exist: " . implode(', ', $missing));
+        }
+
+        // Sync permissions to role
+        $role->syncPermissions($permissions);
+
+        // Log detailed permission sync
+        Log::debug('Permissions synced to role', [
+            'role_id' => $role->id,
+            'permission_ids' => $permissions->pluck('id'),
+            'permission_names' => $permissions->pluck('name')
+        ]);
     }
 }
