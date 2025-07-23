@@ -466,7 +466,7 @@ class Admin extends Authenticatable
     public function roles()
     {
         return $this->morphToMany(
-            \Spatie\Permission\Models\Role::class,
+            \App\Models\Role::class,
             'model',
             'model_has_roles',
             'model_id',
@@ -571,6 +571,117 @@ class Admin extends Authenticatable
     public function getStatusAttribute($value)
     {
         return $value ?? 'inactive';
+    }
+
+    /**
+     * Get detailed role and permission information for debugging
+     */
+    public function getRolePermissionDetails(): array
+    {
+        $this->load(['roles.permissions']);
+        
+        $roleDetails = $this->roles->map(function($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'guard_name' => $role->guard_name,
+                'permissions_count' => $role->permissions->count(),
+                'permissions' => $role->permissions->pluck('name')->toArray()
+            ];
+        })->toArray();
+
+        $effectivePermissions = $this->getAllPermissions();
+        
+        return [
+            'admin_id' => $this->id,
+            'admin_email' => $this->email,
+            'is_super_admin' => $this->isSuperAdmin(),
+            'roles_count' => $this->roles->count(),
+            'roles' => $roleDetails,
+            'effective_permissions_count' => $effectivePermissions->count(),
+            'effective_permissions' => $effectivePermissions->pluck('name')->toArray(),
+            'direct_permissions' => $this->getDirectPermissions()->pluck('name')->toArray(),
+            'permissions_via_roles' => $this->getPermissionsViaRoles()->pluck('name')->toArray()
+        ];
+    }
+
+    /**
+     * Verify admin role assignments in database
+     */
+    public function verifyRoleAssignments(): array
+    {
+        $modelHasRoles = \DB::table('model_has_roles')
+            ->where('model_type', self::class)
+            ->where('model_id', $this->id)
+            ->pluck('role_id')
+            ->toArray();
+
+        $actualRoles = $this->roles()->pluck('roles.id')->toArray();
+
+        return [
+            'admin_id' => $this->id,
+            'admin_email' => $this->email,
+            'pivot_table_role_ids' => $modelHasRoles,
+            'model_role_ids' => $actualRoles,
+            'sync_status' => array_diff($modelHasRoles, $actualRoles) === [] && 
+                           array_diff($actualRoles, $modelHasRoles) === [] ? 'synced' : 'out_of_sync',
+            'missing_in_model' => array_diff($modelHasRoles, $actualRoles),
+            'missing_in_pivot' => array_diff($actualRoles, $modelHasRoles)
+        ];
+    }
+
+    /**
+     * Force refresh admin roles and permissions from database
+     */
+    public function refreshRolesAndPermissions(): self
+    {
+        // Clear any cached relationships
+        unset($this->relations['roles']);
+        unset($this->relations['permissions']);
+        
+        // Clear Spatie permission cache
+        app()['cache']->forget(config('permission.cache.key'));
+        
+        // Reload roles and permissions
+        $this->load(['roles.permissions']);
+        
+        return $this;
+    }
+
+    /**
+     * Test permission inheritance from roles
+     */
+    public function testPermissionInheritance(): array
+    {
+        $this->load(['roles.permissions']);
+        
+        $results = [];
+        
+        foreach ($this->roles as $role) {
+            $rolePermissions = $role->permissions->pluck('name')->toArray();
+            
+            $inheritanceTest = [];
+            foreach ($rolePermissions as $permission) {
+                $inheritanceTest[$permission] = [
+                    'has_permission' => $this->hasPermissionTo($permission),
+                    'can_permission' => $this->can($permission),
+                    'role_has_permission' => $role->hasPermissionTo($permission)
+                ];
+            }
+            
+            $results[$role->name] = [
+                'role_id' => $role->id,
+                'role_permissions_count' => count($rolePermissions),
+                'inheritance_test' => $inheritanceTest
+            ];
+        }
+        
+        return [
+            'admin_id' => $this->id,
+            'admin_email' => $this->email,
+            'roles_tested' => count($this->roles),
+            'results' => $results
+        ];
     }
 }
 
