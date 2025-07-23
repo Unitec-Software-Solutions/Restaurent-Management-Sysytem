@@ -400,25 +400,106 @@ class RoleController extends Controller
      */
     private function syncRolePermissions(Role $role, array $permissionNames)
     {
-        // Convert permission names to actual permission models
-        $permissions = Permission::whereIn('name', $permissionNames)
+        if (empty($permissionNames)) {
+            Log::info('No permissions to sync for role', ['role_id' => $role->id]);
+            return;
+        }
+
+        Log::info('Starting permission sync for role', [
+            'role_id' => $role->id,
+            'role_name' => $role->name,
+            'permission_names' => $permissionNames
+        ]);
+
+        // First, ensure all permissions exist in the database
+        $existingPermissions = Permission::whereIn('name', $permissionNames)
             ->where('guard_name', 'admin')
             ->get();
 
-        // Verify all permissions were found
-        if ($permissions->count() !== count($permissionNames)) {
-            $missing = array_diff($permissionNames, $permissions->pluck('name')->toArray());
-            throw new \Exception("Some permissions do not exist: " . implode(', ', $missing));
+        $existingPermissionNames = $existingPermissions->pluck('name')->toArray();
+        $missingPermissions = array_diff($permissionNames, $existingPermissionNames);
+
+        // Create missing permissions if any
+        if (!empty($missingPermissions)) {
+            Log::warning('Creating missing permissions', [
+                'role_id' => $role->id,
+                'missing_permissions' => $missingPermissions
+            ]);
+
+            foreach ($missingPermissions as $permissionName) {
+                try {
+                    $newPermission = Permission::create([
+                        'name' => $permissionName,
+                        'guard_name' => 'admin'
+                    ]);
+                    $existingPermissions->push($newPermission);
+                    Log::info('Created missing permission', [
+                        'permission_name' => $permissionName,
+                        'permission_id' => $newPermission->id
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to create missing permission', [
+                        'permission_name' => $permissionName,
+                        'error' => $e->getMessage()
+                    ]);
+                    throw new \Exception("Failed to create permission '{$permissionName}': " . $e->getMessage());
+                }
+            }
         }
 
-        // Sync permissions to role
-        $role->syncPermissions($permissions);
+        // Verify all permissions are now available
+        $finalPermissions = Permission::whereIn('name', $permissionNames)
+            ->where('guard_name', 'admin')
+            ->get();
 
-        // Log detailed permission sync
-        Log::debug('Permissions synced to role', [
-            'role_id' => $role->id,
-            'permission_ids' => $permissions->pluck('id'),
-            'permission_names' => $permissions->pluck('name')
-        ]);
+        if ($finalPermissions->count() !== count($permissionNames)) {
+            $stillMissing = array_diff($permissionNames, $finalPermissions->pluck('name')->toArray());
+            Log::error('Some permissions still missing after creation attempt', [
+                'role_id' => $role->id,
+                'missing_permissions' => $stillMissing
+            ]);
+            throw new \Exception("Some permissions could not be created or found: " . implode(', ', $stillMissing));
+        }
+
+        try {
+            // Clear cache before syncing
+            app()['cache']->forget(config('permission.cache.key'));
+            
+            // Sync permissions to role using Spatie's method
+            $role->syncPermissions($finalPermissions);
+
+            // Verify the sync worked by reloading the role
+            $role->load('permissions');
+            $syncedPermissionNames = $role->permissions->pluck('name')->toArray();
+
+            Log::info('Permissions successfully synced to role', [
+                'role_id' => $role->id,
+                'role_name' => $role->name,
+                'requested_permissions' => $permissionNames,
+                'synced_permissions' => $syncedPermissionNames,
+                'permission_ids' => $role->permissions->pluck('id')->toArray(),
+                'sync_successful' => count($syncedPermissionNames) === count($permissionNames)
+            ]);
+
+            // Double-check that all requested permissions were synced
+            $missingSyncedPermissions = array_diff($permissionNames, $syncedPermissionNames);
+            if (!empty($missingSyncedPermissions)) {
+                Log::error('Some permissions failed to sync to role', [
+                    'role_id' => $role->id,
+                    'missing_synced_permissions' => $missingSyncedPermissions
+                ]);
+                throw new \Exception("Some permissions failed to sync to role: " . implode(', ', $missingSyncedPermissions));
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Permission sync failed', [
+                'role_id' => $role->id,
+                'role_name' => $role->name,
+                'permission_names' => $permissionNames,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw new \Exception("Failed to sync permissions to role: " . $e->getMessage());
+        }
     }
 }
