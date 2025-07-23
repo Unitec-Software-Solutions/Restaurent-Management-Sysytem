@@ -726,13 +726,12 @@ class AdminSidebar extends Component
             ];
         }
 
-        // UPDATED: Show ALL menu items but enhance with access level indicators
-        // Only filter out items with invalid routes
+        // Filter menu items based on permissions and route validity
         return array_map(function($item) use ($admin) {
             return $this->enhanceMenuItemWithAccessLevel($item, $admin);
         }, array_filter($menuItems, function ($item) use ($admin) {
-            // Only check route validity, show all items regardless of permissions
-            return ($item['is_route_valid'] ?? true);
+            // Check both route validity and permissions
+            return $this->isMenuItemAccessible($item, $admin);
         }));
     }
 
@@ -829,7 +828,7 @@ class AdminSidebar extends Component
     }
 
     /**
-     * UPDATED: Check if menu item is accessible by admin - SHOW ALL items for org/branch admins
+     * UPDATED: Check if menu item is accessible by admin - Filter based on actual permissions
      */
     private function isMenuItemAccessible(array $item, $admin): bool
     {
@@ -838,8 +837,18 @@ class AdminSidebar extends Component
             return false;
         }
 
-        // ALWAYS SHOW MENU ITEMS for organizational and branch admins - let the UI and middleware handle restrictions
-        return true;
+        // Super admins can access everything
+        if ($this->isSuperAdmin($admin)) {
+            return true;
+        }
+
+        // If no permission is required, show the item
+        if (!isset($item['permission']) || $item['permission'] === null) {
+            return true;
+        }
+
+        // Check if admin has the required permission
+        return $this->hasPermission($admin, $item['permission']);
     }
 
     /**
@@ -861,18 +870,21 @@ class AdminSidebar extends Component
     }
 
     /**
-     * UPDATED: Enhanced menu items with access level indicators
+     * UPDATED: Enhanced menu items with access level indicators and sub-item filtering
      */
     private function enhanceMenuItemWithAccessLevel(array $item, $admin): array
     {
         $item['is_permitted'] = $this->isMenuItemPermitted($item, $admin);
         $item['access_level'] = $this->getAccessLevel($admin);
 
-        // Enhance sub-items if they exist
+        // Filter and enhance sub-items if they exist
         if (isset($item['sub_items']) && is_array($item['sub_items'])) {
             $item['sub_items'] = array_map(function($subItem) use ($admin) {
                 return $this->enhanceMenuItemWithAccessLevel($subItem, $admin);
-            }, $item['sub_items']);
+            }, array_filter($item['sub_items'], function($subItem) use ($admin) {
+                // Filter sub-items based on permissions
+                return $this->isMenuItemAccessible($subItem, $admin);
+            }));
         }
 
         return $item;
