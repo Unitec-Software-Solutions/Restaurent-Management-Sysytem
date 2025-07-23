@@ -18,6 +18,9 @@
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!--charts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.46.0/dist/apexcharts.min.js"></script>
+
     <!-- Scripts -->
     @vite(['resources/sass/app.scss', 'resources/css/app.css', 'resources/js/app.js'])
 
@@ -77,7 +80,6 @@
 </head>
 
 <body class="bg-[#F3F4FF] dark:bg-gray-900 h-full">
-
 
     <!-- Enhanced Sidebar -->
     @auth

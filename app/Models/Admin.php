@@ -14,6 +14,15 @@ class Admin extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, SoftDeletes;
 
+    /**
+     * The roles that belong to the admin.
+     */
+    public function roles()
+    {
+        return $this->belongsToMany(\Spatie\Permission\Models\Role::class, 'admin_role', 'admin_id', 'role_id');
+    }
+    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+
     protected $fillable = [
         'name',
         'email',
@@ -328,7 +337,7 @@ class Admin extends Authenticatable
      */
     public function isLocked(): bool
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        return $this->locked_until && \Illuminate\Support\Carbon::parse($this->locked_until)->gt(now());
     }
 
     public function incrementFailedLogins(): void
@@ -482,7 +491,7 @@ class Admin extends Authenticatable
     {
         return [
             'total_logins' => 0, // Would be tracked in audit logs
-            'last_login' => $this->last_login_at?->diffForHumans() ?? 'Never',
+            'last_login' => optional(\Illuminate\Support\Carbon::parse($this->last_login_at))->diffForHumans() ?? 'Never',
             'account_status' => $this->status_badge['text'],
             'role_status' => $this->role_badge['text'],
             'permissions_count' => $this->getAllPermissions()->count(),
@@ -498,7 +507,10 @@ class Admin extends Authenticatable
      */
     public function isOrganizationAdmin()
     {
-        return !$this->is_super_admin && $this->organization_id && is_null($this->branch_id);
+
+        return !$this->is_super_admin
+            && !is_null($this->organization_id)
+            && is_null($this->branch_id);
     }
 
     /**
@@ -506,6 +518,8 @@ class Admin extends Authenticatable
      */
     public function isBranchAdmin()
     {
-        return !$this->is_super_admin && $this->organization_id && $this->branch_id;
+        return !$this->is_super_admin
+            && !empty($this->organization_id)
+            && !empty($this->branch_id);
     }
 }

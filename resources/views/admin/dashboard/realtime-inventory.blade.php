@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto">
             <!-- Dashboard Header -->
             <div class="mb-8">
@@ -150,7 +150,7 @@
                                 </div>
                                 <div class="text-right">
                                     <p class="font-bold text-gray-900">LKR {{ number_format($order->total_amount, 2) }}</p>
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full
                                         {{ $order->status === 'confirmed' ? 'bg-green-100 text-green-800' : '' }}
                                         {{ $order->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
                                         {{ $order->status === 'cancelled' ? 'bg-red-100 text-red-800' : '' }}">

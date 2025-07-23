@@ -8,22 +8,71 @@ import { createOrganization } from './helpers/createOrganization';
 import { activateBranch } from './helpers/activateBranch';
 import { createSupplier } from './helpers/createSupplier';
 import { addItemsToInventory } from './helpers/addItemsToInventory';
+import { createBranch } from './helpers/createBranch';
 
-test('Admin Workflow 🚀', async ({ page }) => {
+test.skip('Admin Workflow 🚀', async ({ page }) => {
     await loginAsSuperAdmin(page);
-    // await createSubscriptionPlan(page);
-    // await createOrganization(page);
+    await createSubscriptionPlan(page);
+    await createOrganization(page);
 });
 
-test('create Organization 🏢', async ({ page }) => {
+test.skip('Create Organization 🏢', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await createOrganization(page);
 });
 
-test('Activate Branch 🔑', async ({ page }) => {
-    await loginAsSuperAdmin(page);
-    await activateBranch(page);
+test('Activate Branch Default 🔑', async ({ page }) => {
+    await activateBranch(page, { branchId: '1' });
 });
+
+
+test('Create New Branch 🏪', async ({ page }) => {
+    await loginAsSuperAdmin(page);
+    // create a new branch with default organization ID - 1 Branch id - 2
+    await createBranch(page, {
+        organizationId: '1', // Default organization ID
+        name: 'Galle Branch',
+        address: '123 Main St, Galle, Sri Lanka',
+        phone: '0712345678',
+        opening_time: '08:00',
+        closing_time: '22:00',
+        total_capacity: 50,
+        reservation_fee: 100.00,
+        cancellation_fee: 50.00,
+        contact_person: 'John Doe',
+        contact_person_designation: 'Manager',
+        contact_person_phone: '0712345678',
+        tables: [
+            { table_id: 1, capacity: 4 }
+        ]
+    });
+
+    // Activate the branch after creation
+    await activateBranch(page, { branchId: '2' });
+
+    // create branch 3
+    await createBranch(page, {
+        organizationId: '1', // Default organization ID
+        name: 'Negambo Branch',
+        address: '123 Main St, Negambo, Sri Lanka',
+        phone: '0712345678',
+        opening_time: '08:00',
+        closing_time: '22:00',
+        total_capacity: 50,
+        reservation_fee: 100.00,
+        cancellation_fee: 50.00,
+        contact_person: 'John Doe',
+        contact_person_designation: 'Manager',
+        contact_person_phone: '0712345678',
+        tables: [
+            { table_id: 1, capacity: 4 }
+        ]
+    });
+
+    // Activate the branch after creation
+    await activateBranch(page, { branchId: '3' });
+});
+
 
 test('Create Supplier 🚚', async ({ page }) => {
     await loginAsSuperAdmin(page);

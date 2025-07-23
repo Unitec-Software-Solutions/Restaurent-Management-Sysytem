@@ -3,7 +3,7 @@
 @section('title', 'Menu Manager')
 
 @section('content')
-<div class="p-4 rounded-lg">
+<div class="mx-auto px-4 py-8">
     <!-- Header Section -->
     <div class="mb-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -12,11 +12,11 @@
                 <p class="text-gray-600">Manage which items appear in your restaurant menus</p>
             </div>
             <div class="flex gap-3">
-                <a href="{{ route('admin.inventory.items.create') }}" 
+                <a href="{{ route('admin.inventory.items.create') }}"
                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-plus mr-2"></i> Add New Item
                 </a>
-                <a href="{{ route('admin.menus.index') }}" 
+                <a href="{{ route('admin.menus.index') }}"
                    class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-arrow-left mr-2"></i> Back to Menus
                 </a>
@@ -81,7 +81,7 @@
             <div class="flex flex-col md:flex-row gap-3">
                 <!-- Search -->
                 <div class="relative">
-                    <input type="text" id="search-items" placeholder="Search items..." 
+                    <input type="text" id="search-items" placeholder="Search items..."
                            class="w-full md:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                 </div>
@@ -134,7 +134,7 @@
                      data-is-menu="{{ $item['is_menu_item'] ? 'true' : 'false' }}"
                      data-is-special="{{ $item['is_chefs_special'] ? 'true' : 'false' }}"
                      data-is-popular="{{ $item['is_popular'] ? 'true' : 'false' }}">
-                    
+
                     <!-- Selection Checkbox -->
                     <div class="flex items-start justify-between mb-3">
                         <input type="checkbox" class="item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
@@ -193,7 +193,7 @@
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="menu-toggle sr-only" 
+                                <input type="checkbox" class="menu-toggle sr-only"
                                        data-item-id="{{ $item['id'] }}"
                                        {{ $item['is_menu_item'] ? 'checked' : '' }}>
                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -202,7 +202,7 @@
                                 {{ $item['is_menu_item'] ? 'In Menu' : 'Not in Menu' }}
                             </span>
                         </div>
-                        <a href="{{ route('admin.inventory.items.edit', $item['id']) }}" 
+                        <a href="{{ route('admin.inventory.items.edit', $item['id']) }}"
                            class="text-indigo-600 hover:text-indigo-800 text-sm">
                             <i class="fas fa-edit"></i>
                         </a>
@@ -250,10 +250,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const isMenu = item.dataset.isMenu === 'true';
             const isSpecial = item.dataset.isSpecial === 'true';
             const isPopular = item.dataset.isPopular === 'true';
-            
+
             const matchesSearch = itemName.includes(searchTerm);
             const matchesCategory = !selectedCategory || itemCategory === selectedCategory;
-            
+
             let matchesMenuFilter = true;
             switch (selectedMenuFilter) {
                 case 'menu':
@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     matchesMenuFilter = isPopular;
                     break;
             }
-            
+
             if (matchesSearch && matchesCategory && matchesMenuFilter) {
                 item.style.display = 'block';
                 visibleCount++;
@@ -293,11 +293,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.classList.contains('menu-toggle')) {
             const itemId = e.target.dataset.itemId;
             const isMenu = e.target.checked;
-            
+
             // Update UI immediately
             const itemCard = e.target.closest('.item-card');
             const statusText = itemCard.querySelector('.text-sm.font-medium.text-gray-700');
-            
+
             if (isMenu) {
                 itemCard.classList.remove('bg-gray-50');
                 itemCard.classList.add('bg-green-50', 'border-green-200');
@@ -307,10 +307,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 itemCard.classList.add('bg-gray-50');
                 statusText.textContent = 'Not in Menu';
             }
-            
+
             // Update data attribute
             itemCard.dataset.isMenu = isMenu.toString();
-            
+
             // Send AJAX request
             fetch('{{ route("admin.menus.toggle-status") }}', {
                 method: 'POST',
@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateBulkButtons() {
         const selectedItems = document.querySelectorAll('.item-checkbox:checked');
         const hasSelection = selectedItems.length > 0;
-        
+
         bulkAddBtn.disabled = !hasSelection;
         bulkRemoveBtn.disabled = !hasSelection;
     }
@@ -384,9 +384,9 @@ document.addEventListener('DOMContentLoaded', function() {
     bulkAddBtn.addEventListener('click', function() {
         const selectedItems = Array.from(document.querySelectorAll('.item-checkbox:checked'))
             .map(checkbox => checkbox.closest('.item-card').dataset.itemId);
-        
+
         if (selectedItems.length === 0) return;
-        
+
         bulkUpdateMenuStatus(selectedItems, true);
     });
 
@@ -394,9 +394,9 @@ document.addEventListener('DOMContentLoaded', function() {
     bulkRemoveBtn.addEventListener('click', function() {
         const selectedItems = Array.from(document.querySelectorAll('.item-checkbox:checked'))
             .map(checkbox => checkbox.closest('.item-card').dataset.itemId);
-        
+
         if (selectedItems.length === 0) return;
-        
+
         bulkUpdateMenuStatus(selectedItems, false);
     });
 
@@ -421,9 +421,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const itemCard = document.querySelector(`[data-item-id="${itemId}"]`);
                     const toggle = itemCard.querySelector('.menu-toggle');
                     const statusText = itemCard.querySelector('.text-sm.font-medium.text-gray-700');
-                    
+
                     toggle.checked = isMenu;
-                    
+
                     if (isMenu) {
                         itemCard.classList.remove('bg-gray-50');
                         itemCard.classList.add('bg-green-50', 'border-green-200');
@@ -433,14 +433,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         itemCard.classList.add('bg-gray-50');
                         statusText.textContent = 'Not in Menu';
                     }
-                    
+
                     itemCard.dataset.isMenu = isMenu.toString();
                 });
-                
+
                 // Clear selections
                 document.querySelectorAll('.item-checkbox').forEach(checkbox => checkbox.checked = false);
                 updateBulkButtons();
-                
+
                 alert(data.message);
             } else {
                 alert('Failed to update menu status. Please try again.');

@@ -4,10 +4,19 @@
 @section('title', 'Create Role')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold mb-2">Create New Role</h1>
-        <p class="text-gray-600">Define a new role with specific permissions for your organization or branch</p>
+<div class="mx-auto px-4 py-8">
+    <!-- Header Section -->
+     <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+         <div class="flex justify-between items-center">
+            <div>
+                <div class="flex items-center gap-2">
+                    {{-- <i class="fas fa-user-shield text-2xl text-indigo-500"></i> --}}
+                    <h1 class="text-2xl font-bold text-gray-900">Create New Role</h1>
+                </div>
+                <p class="text-gray-600 mt-1">Define a new role with specific permissions for your organization or branch</p>
+            </div>
+
+        </div>
     </div>
 
     <!-- Predefined Role Templates -->
@@ -36,7 +45,7 @@
     </div>
     @endif
 
-    <div class="bg-white rounded shadow p-6">
+    <div class="bg-white rounded-lg shadow-sm p-6">
         <form action="{{ route('admin.roles.store') }}" method="POST" id="roleForm">
             @csrf
 
@@ -67,9 +76,9 @@
                                 </option>
                             @endforeach
                         </select>
-                        @error('organization_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
+                        @if($errors->has('organization_id'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('organization_id') }}</p>
+                        @endif
                     </div>
 
                     <div class="mb-4">

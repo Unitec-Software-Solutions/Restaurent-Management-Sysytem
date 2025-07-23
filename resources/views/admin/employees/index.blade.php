@@ -3,32 +3,32 @@
 @section('title', 'Employees')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Employee Management</h1>
             <p class="text-gray-600 mt-1">Manage your restaurant staff and their roles</p>
         </div>
-        <a href="{{ route('admin.employees.create') }}" 
+        <a href="{{ route('admin.employees.create') }}"
            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center transition shadow-sm">
             <i class="fas fa-plus mr-2"></i> Add Employee
         </a>
     </div>
 
     <!-- Filters with Export -->
-    <x-module-filters 
+    <x-module-filters
         :action="route('admin.employees.index')"
         :export-permission="'export_employees'"
         :export-filename="'employees_export.xlsx'">
-        
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <input type="text" name="search" value="{{ request('search') }}" 
+            <input type="text" name="search" value="{{ request('search') }}"
                    placeholder="Name, ID, email, phone..."
                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
         </div>
-        
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
             <select name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
@@ -40,7 +40,7 @@
                 @endforeach
             </select>
         </div>
-        
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
             <select name="branch_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
@@ -50,7 +50,7 @@
                         {{ $branch->name }}
                     </option>
                 @endforeach        </div>
-        
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
@@ -59,7 +59,7 @@
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
             </select>
         </div>
-        
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Shift Type</label>
             <select name="shift_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
@@ -70,11 +70,11 @@
                 <option value="flexible" {{ request('shift_type') === 'flexible' ? 'selected' : '' }}>Flexible</option>
             </select>
         </div>
-        
+
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Show Deleted</label>
             <div class="flex items-center h-[42px]">
-                <input type="checkbox" name="show_deleted" value="1" 
+                <input type="checkbox" name="show_deleted" value="1"
                        {{ request('show_deleted') ? 'checked' : '' }}
                        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                 <span class="ml-2 text-sm text-gray-600">Include deleted employees</span>
@@ -124,7 +124,7 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
                                 @if($employee->shift_type)
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full
                                         {{ $employee->shift_type === 'morning' ? 'bg-yellow-100 text-yellow-800' : '' }}
                                         {{ $employee->shift_type === 'evening' ? 'bg-orange-100 text-orange-800' : '' }}
                                         {{ $employee->shift_type === 'night' ? 'bg-purple-100 text-purple-800' : '' }}
@@ -137,7 +137,7 @@
                             </div>
                             <div class="text-sm text-gray-500">
                                 @if($employee->availability_status)
-                                    <span class="px-2 py-1 text-xs rounded-full 
+                                    <span class="px-2 py-1 text-xs rounded-full
                                         {{ $employee->availability_status === 'available' ? 'bg-green-100 text-green-700' : '' }}
                                         {{ $employee->availability_status === 'busy' ? 'bg-red-100 text-red-700' : '' }}
                                         {{ $employee->availability_status === 'on_break' ? 'bg-yellow-100 text-yellow-700' : '' }}
@@ -185,11 +185,11 @@
                                     </form>
                                 @else
                                     <!-- Normal Actions for Active Employees -->
-                                    <a href="{{ route('admin.employees.show', $employee) }}" 
+                                    <a href="{{ route('admin.employees.show', $employee) }}"
                                        class="text-indigo-600 hover:text-indigo-900 p-1" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ route('admin.employees.edit', $employee) }}" 
+                                    <a href="{{ route('admin.employees.edit', $employee) }}"
                                        class="text-blue-600 hover:text-blue-900 p-1" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
@@ -214,7 +214,7 @@
                             <h3 class="text-lg font-medium text-gray-900 mb-1">No employees found</h3>
                             <p class="text-gray-500">Get started by adding your first employee.</p>
                             <div class="mt-4">
-                                <a href="{{ route('admin.employees.create') }}" 
+                                <a href="{{ route('admin.employees.create') }}"
                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
                                     <i class="fas fa-plus mr-2"></i> Add Employee
                                 </a>
@@ -225,7 +225,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         @if($employees->hasPages())
         <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
             {{ $employees->links() }}

@@ -16,14 +16,14 @@ class AdminController extends Controller
     public function dashboard()
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             return redirect()->route('admin.login')->with('error', 'Please log in to access the dashboard.');
         }
 
         // Super admin check - bypass organization requirements
         $isSuperAdmin = $admin->isSuperAdmin();
-        
+
         // Basic validation - super admins don't need organization
         if (!$isSuperAdmin && !$admin->organization_id) {
             return redirect()->route('admin.login')->with('error', 'Account setup incomplete. Contact support.');
@@ -34,11 +34,11 @@ class AdminController extends Controller
             $reservationsQuery = Reservation::with(['user', 'table'])
                 ->orderBy('created_at', 'desc')
                 ->take(10);
-                
+
             if (!$isSuperAdmin && $admin->organization_id) {
                 $reservationsQuery->where('organization_id', $admin->organization_id);
             }
-            
+
             $reservations = $reservationsQuery->get();
 
             return view('admin.dashboard', compact('reservations', 'admin'));
@@ -86,7 +86,7 @@ class AdminController extends Controller
     public function index()
     {
         $currentAdmin = Auth::guard('admin')->user();
-        
+
         // Only super admins can view admin list
         if (!$currentAdmin->isSuperAdmin()) {
             abort(403, 'Unauthorized. Only super admins can view admin accounts.');
@@ -95,7 +95,7 @@ class AdminController extends Controller
         $admins = Admin::with(['organization', 'branch'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
-        
+
         return view('admin.admins.index', compact('admins'));
     }
 
@@ -105,10 +105,10 @@ class AdminController extends Controller
     public function getAdminDetails($adminId)
     {
         try {
-            $admin = \App\Models\Admin::with(['organization', 'roles'])->findOrFail($adminId);
-            
+            $admin = Admin::with(['organization', 'roles'])->findOrFail($adminId);
+
             $stats = [
-                'last_login' => $admin->last_login_at ? $admin->last_login_at->diffForHumans() : 'Never',
+                'last_login' => $admin->last_login_at ? \Carbon\Carbon::parse($admin->last_login_at)->diffForHumans() : 'Never',
                 'is_super_admin' => $admin->isSuperAdmin(),
                 'role_count' => $admin->roles()->count(),
                 'created_ago' => $admin->created_at->diffForHumans(),
@@ -133,7 +133,7 @@ class AdminController extends Controller
     public function edit(Admin $admin)
     {
         $currentAdmin = Auth::guard('admin')->user();
-        
+
         // Only super admins can edit other admins
         if (!$currentAdmin->isSuperAdmin()) {
             abort(403, 'Unauthorized. Only super admins can edit admin accounts.');
@@ -141,7 +141,7 @@ class AdminController extends Controller
 
         // Get roles for the form
         $roles = Role::all();
-        
+
         return view('admin.admins.edit', compact('admin', 'roles'));
     }
 
@@ -151,7 +151,7 @@ class AdminController extends Controller
     public function update(Request $request, Admin $admin)
     {
         $currentAdmin = Auth::guard('admin')->user();
-        
+
         // Only super admins can update other admins
         if (!$currentAdmin->isSuperAdmin()) {
             abort(403, 'Unauthorized. Only super admins can update admin accounts.');
@@ -190,7 +190,7 @@ class AdminController extends Controller
         // Handle role assignment
         if ($request->filled('role_id')) {
             $data['current_role_id'] = $request->role_id;
-            
+
             // Also assign the role via Spatie
             $role = Role::findOrFail($request->role_id);
             $admin->syncRoles([$role]);

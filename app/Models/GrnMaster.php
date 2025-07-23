@@ -243,6 +243,31 @@ class GrnMaster extends Model
         return 'Pending Verification';
     }
 
+    public function payments()
+    {
+        return $this->hasMany(GrnPayment::class, 'grn_id');
+    }
+
+    public function getPaidAmountAttribute()
+    {
+        return $this->payments->sum('amount');
+    }
+
+    public function getOutstandingAmountAttribute()
+    {
+        return $this->total_amount - $this->paid_amount;
+    }
+
+    public function getPaymentStatusAttribute()
+    {
+        if ($this->paid_amount >= $this->total_amount) {
+            return self::PAYMENT_STATUS_PAID;
+        } elseif ($this->paid_amount > 0) {
+            return self::PAYMENT_STATUS_PARTIAL;
+        }
+        return self::PAYMENT_STATUS_PENDING;
+    }
+
     public function calculatePaymentStatus()
     {
         if ($this->paid_amount >= $this->total_amount) {

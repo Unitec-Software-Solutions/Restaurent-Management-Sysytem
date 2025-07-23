@@ -628,7 +628,7 @@ class GrnDashboardController extends Controller
             }
 
             $userId = $request->input('received_by_user_id');
-            $userExists = \DB::table('users')->where('id', $userId)->exists();
+            $userExists = DB::table('users')->where('id', $userId)->exists();
             $grn = GrnMaster::create([
                 'grn_number' => GrnMaster::generateGRNNumber($targetOrgId),
                 'branch_id' => $validated['branch_id'],

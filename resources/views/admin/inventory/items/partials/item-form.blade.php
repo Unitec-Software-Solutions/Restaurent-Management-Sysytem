@@ -78,15 +78,26 @@
             <select name="{{ $prefix }}[unit_of_measurement]" required
                 class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900">
                 <option value="">Select Unit</option>
-                <option value="piece">Piece</option>
-                <option value="kg">Kg</option>
-                <option value="g">Gram</option>
-                <option value="L">Liter</option>
-                <option value="ml">Milliliter</option>
-                <option value="box">Box</option>
-                <option value="pack">Pack</option>
-                <option value="bottle">Bottle</option>
-                <option value="can">Can</option>
+                <option value="kg">Kilograms (kg)</option>
+                <option value="g">Grams (g)</option>
+                <option value="l">Liters (l)</option>
+                <option value="ml">Milliliters (ml)</option>
+                <option value="pcs">Pieces (pcs)</option>
+                <option value="plate">Plate (plate)</option>
+                <option value="bottle">Bottle (bottle)</option>
+                <option value="packet">Packet (packet)</option>
+                <option value="box">Box (box)</option>
+                <option value="pack">Pack (pack)</option>
+                <option value="dozen">Dozen (dozen)</option>
+                <option value="carton">Carton (carton)</option>
+                <option value="roll">Roll (roll)</option>
+                <option value="bundle">Bundle (bundle)</option>
+                <option value="sachet">Sachet (sachet)</option>
+                <option value="barrel">Barrel (barrel)</option>
+                <option value="jar">Jar (jar)</option>
+                <option value="tube">Tube (tube)</option>
+                <option value="tray">Tray (tray)</option>
+                <option value="case">Case (case)</option>
             </select>
         </div>
         <div>
@@ -153,7 +164,7 @@
                 class="item-type-select w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-100 dark:text-gray-900"
                 data-index="{{ $index }}">
                 <option value="">Select Item Type</option>
-                <option value="buy_sell">Buy & Sell Item (Inventory Item)</option>
+                <option value="buy_sell" selected>Buy & Sell Item (Inventory Item)</option>
             </select>
             <div class="text-xs text-gray-500 mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
                 <div class="flex items-start">
@@ -191,11 +202,11 @@
         <div class="flex items-center">
             <input type="hidden" name="{{ $prefix }}[is_menu_item]" value="0">
             <input type="checkbox" id="menuitem-{{ $index }}" name="{{ $prefix }}[is_menu_item]"
-                value="1"
-                class="menu-item-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900"
+                                value="1"
+                class="menu-item-checkbox h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded bg-gray-200 dark:bg-gray-300 dark:border-gray-600 dark:text-gray-900"
                 data-index="{{ $index }}">
             <label for="menuitem-{{ $index }}"
-                class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Include in Menu</label>
+                class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Is Menu Item</label>
         </div>
         <div class="flex items-center">
             <input type="hidden" name="{{ $prefix }}[requires_production]" value="0">
@@ -404,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Auto-check appropriate flags
                 inventoryCheckbox.checked = true;
                 productionCheckbox.checked = false;
-                menuItemCheckbox.checked = true; // Most buy & sell items go to menu
+                menuItemCheckbox.checked = false; // Most buy & sell items go to menu
 
                 // Update helper text
                 if (stockRequiredText) {

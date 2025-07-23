@@ -5,7 +5,7 @@
 @section('header-title', 'Production Recipes')
 
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="mx-auto px-4 py-8">
         <!-- Header with navigation buttons -->
         <div class="justify-between items-center mb-4">
             <div class="rounded-lg">
@@ -15,7 +15,7 @@
                     ['name' => 'Production Orders', 'link' => route('admin.production.orders.index')],
                     ['name' => 'Production Sessions', 'link' => route('admin.production.sessions.index')],
                     ['name' => 'Production Recipes', 'link' => route('admin.production.recipes.index')],
-                    ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
+                    // ['name' => 'Ingredient Management', 'link' => '#', 'disabled' => true],
                 ]" active="Production Recipes" />
             </div>
         </div>

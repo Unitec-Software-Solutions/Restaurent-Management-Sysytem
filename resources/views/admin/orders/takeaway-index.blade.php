@@ -1,13 +1,13 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="bg-white shadow-md rounded-lg p-6">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold">Takeaway Orders</h1>
             <div class="flex gap-4">
                 @foreach($branches as $branch)
-                <a href="{{ route('admin.orders.takeaway.branch', $branch) }}" 
+                <a href="{{ route('admin.orders.takeaway.branch', $branch) }}"
                    class="bg-gray-100 px-4 py-2 rounded hover:bg-gray-200">
                     {{ $branch->name }}
                 </a>
@@ -40,17 +40,17 @@
                         <td class="px-4 py-3">
                             @if($order->order_type)
                                 @switch($order->order_type->value)
-                                    @case('takeaway_online_scheduled') 
+                                    @case('takeaway_online_scheduled')
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                                             <i class="fas fa-globe mr-1"></i>Online
                                         </span>
                                         @break
-                                    @case('takeaway_walk_in_demand') 
+                                    @case('takeaway_walk_in_demand')
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                                             <i class="fas fa-bolt mr-1"></i>Walk-in
                                         </span>
                                         @break
-                                    @case('takeaway_in_call_scheduled') 
+                                    @case('takeaway_in_call_scheduled')
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                             <i class="fas fa-phone mr-1"></i>Phone
                                         </span>
@@ -73,7 +73,7 @@
                             LKR  {{ number_format($order->total, 2) }}
                         </td>
                         <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded text-xs font-medium 
+                            <span class="px-2 py-1 rounded text-xs font-medium
                                 @if($order->status === 'completed') bg-green-100 text-green-800
                                 @elseif($order->status === 'preparing') bg-yellow-100 text-yellow-800
                                 @else bg-blue-100 text-blue-800 @endif">
@@ -83,7 +83,7 @@
                         <td class="px-4 py-3">{{ $order->branch->name }}</td>
                         <td class="px-4 py-3">
                             <div class="flex gap-2">
-                                <a href="{{ route('orders.summary', $order) }}" 
+                                <a href="{{ route('orders.summary', $order) }}"
                                    class="text-blue-500 hover:text-blue-700">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 </a>

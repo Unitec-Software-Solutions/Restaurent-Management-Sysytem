@@ -4,21 +4,26 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Admin;
+use App\Services\PermissionSystemService;
 
 class UserPolicy
 {
+    protected PermissionSystemService $permissionService;
+
+    public function __construct(PermissionSystemService $permissionService)
+    {
+        $this->permissionService = $permissionService;
+    }
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User|Admin $user): bool
     {
-        // Super admin can view all users
-        if ($user->is_super_admin) {
-            return true;
-        }
-
-        // Organization and branch admins can view users in their scope
-        return $user->isOrganizationAdmin() || $user->isBranchAdmin();
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['users.view']);
     }
 
     /**
@@ -26,7 +31,11 @@ class UserPolicy
      */
     public function view(User|Admin $user, User $model): bool
     {
-        return $user->is_super_admin || $user->organization_id === $model->organization_id;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['users.view']) && $user->organization_id === $model->organization_id;
     }
 
     /**
@@ -34,13 +43,11 @@ class UserPolicy
      */
     public function create(User|Admin $user): bool
     {
-        // Super admin can create users anywhere
-        if ($user->is_super_admin) {
-            return true;
-        }
-
-        // Organization and branch admins can create users
-        return $user->isOrganizationAdmin() || $user->isBranchAdmin();
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['users.create']) && ($user->isOrganizationAdmin() || $user->isBranchAdmin());
     }
 
     /**
@@ -48,7 +55,11 @@ class UserPolicy
      */
     public function update(User|Admin $user, User $model): bool
     {
-        return $user->is_super_admin || $user->organization_id === $model->organization_id;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['users.edit']) && $user->organization_id === $model->organization_id;
     }
 
     /**
@@ -56,7 +67,11 @@ class UserPolicy
      */
     public function delete(User|Admin $user, User $model): bool
     {
-        return $user->is_super_admin || $user->organization_id === $model->organization_id;
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        return isset($availablePermissions['users.delete']) && $user->organization_id === $model->organization_id;
     }
 
     /**
@@ -80,21 +95,17 @@ class UserPolicy
      */
     public function assignRole(User|Admin $user, User $model): bool
     {
-        // Super admin can assign any role
-        if ($user->is_super_admin) {
+        if ($user->is_super_admin) return true;
+        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
+        $modulesConfig = config('modules');
+        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
+        $canAssign = isset($availablePermissions['users.roles']);
+        if ($canAssign && $user->isOrganizationAdmin() && $user->organization_id === $model->organization_id) {
             return true;
         }
-
-        // Organization admin can assign roles within their organization
-        if ($user->isOrganizationAdmin() && $user->organization_id === $model->organization_id) {
+        if ($canAssign && $user->isBranchAdmin() && $user->branch_id === $model->branch_id) {
             return true;
         }
-
-        // Branch admin can assign roles within their branch
-        if ($user->isBranchAdmin() && $user->branch_id === $model->branch_id) {
-            return true;
-        }
-
         return false;
     }
 }

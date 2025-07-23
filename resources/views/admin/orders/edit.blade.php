@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
             <!-- Left: Edit Order Form -->
             <div class="lg:flex-[7_7_0%]">
@@ -68,15 +68,15 @@
                         @endif
 
                         @php
-                            $orderTypeStr = $order->order_type instanceof \App\Enums\OrderType 
-                                ? $order->order_type->value 
+                            $orderTypeStr = $order->order_type instanceof \App\Enums\OrderType
+                                ? $order->order_type->value
                                 : (string)$order->order_type;
                             $isTakeaway = str_contains($orderTypeStr, 'takeaway');
                         @endphp
-                        <form action="{{ 
+                        <form action="{{
                             $isTakeaway
-                            ? route('admin.orders.takeaway.update', ['order' => $order->id]) 
-                            : route('admin.orders.update', ['order' => $order->id]) 
+                            ? route('admin.orders.takeaway.update', ['order' => $order->id])
+                            : route('admin.orders.update', ['order' => $order->id])
                         }}" method="POST" id="order-form">
                             @csrf
                             @method('PUT')
@@ -109,7 +109,7 @@
                                 <input type="datetime-local" name="order_time" id="order_time" value="{{ old('order_time', $order->order_time?->format('Y-m-d\TH:i')) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                                 <small class="text-gray-500 mt-1 block">* Schedule at least 15 minutes in the future</small>
                             </div>
-                            
+
                             <div class="mb-6">
                                 <label for="customer_name" class="block text-sm font-medium text-gray-700">Customer Name</label>
                                 <input type="text" name="customer_name" id="customer_name" value="{{ old('customer_name', $order->customer_name) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
@@ -143,7 +143,7 @@
                                         <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Menu Items Grid -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="menu-items-container">
                                     @foreach($menuItems as $item)
@@ -221,7 +221,7 @@
                         </h2>
                         <span class="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full" id="item-count">{{ $order->orderItems->sum('quantity') }} {{ Str::plural('item', $order->orderItems->sum('quantity')) }}</span>
                     </div>
-                    
+
                     <div id="cart-items" class="mb-4 max-h-[300px] overflow-y-auto pr-2">
                         @if($order->orderItems->count() > 0)
                             @foreach($order->orderItems as $item)
@@ -247,7 +247,7 @@
                             </div>
                         @endif
                     </div>
-                    
+
                     <div class="space-y-3 mb-4">
                         <div class="flex justify-between text-gray-600">
                             <span class="flex items-center">
@@ -271,14 +271,14 @@
                             <span id="cart-service">LKR {{ number_format($order->service_charge, 2) }}</span>
                         </div>
                     </div>
-                    
+
                     <div class="border-t border-gray-200 pt-4 mb-4">
                         <div class="flex justify-between font-bold text-lg text-gray-800">
                             <span>Total:</span>
                             <span id="cart-total">LKR {{ number_format($order->total, 2) }}</span>
                         </div>
                     </div>
-                    
+
                     <div class="bg-blue-50 rounded-xl p-3">
                         <div class="flex items-center text-blue-700">
                             <i class="fas fa-info-circle mr-2"></i>
@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const qtyInput = document.querySelector('.item-qty[data-item-id="' + itemId + '"]');
         const plusBtn = document.querySelector('.qty-increase[data-item-id="' + itemId + '"]');
         const minusBtn = document.querySelector('.qty-decrease[data-item-id="' + itemId + '"]');
-        
+
         if (checkbox.checked) {
             qtyInput.disabled = false;
             plusBtn.disabled = false;
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             qtyInput.removeAttribute('name');
         }
     });
-    
+
     // Setup event handlers for checkbox changes
     document.querySelectorAll('.item-check').forEach(function(checkbox) {
         checkbox.addEventListener('change', function() {
@@ -369,23 +369,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Handle form submission to ensure order time is valid and required fields are filled
     document.getElementById('order-form').addEventListener('submit', function(e) {
         const orderTimeInput = document.getElementById('order_time');
         const orderTime = new Date(orderTimeInput.value);
         const now = new Date();
-        
+
         // For existing orders, we'll allow past dates since they might have been placed earlier
         const isExistingOrder = {{ $order->id ? 'true' : 'false' }};
-        
+
         // Only validate time for new orders or if the time was changed
         if (!isExistingOrder && orderTime < now) {
             e.preventDefault();
             alert('Order time must be in the future.');
             return false;
         }
-        
+
         // Ensure at least one item is selected
         const checkedItems = document.querySelectorAll('.item-check:checked');
         if (checkedItems.length === 0) {
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please select at least one menu item.');
             return false;
         }
-        
+
         // Ensure customer name is provided
         const customerName = document.getElementById('customer_name').value;
         if (!customerName.trim()) {
@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('customer_name').focus();
             return false;
         }
-        
+
         return true;
     });
 

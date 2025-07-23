@@ -2,9 +2,9 @@
 
 @section('content')
 <div>
-    <div class="p-4 rounded-lg">
+    <div class="mx-auto px-4 py-8">
         <h1 class="text-2xl font-bold text-gray-800 mb-6">Settings - Sample Page</h1>
-        
+
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <div class="border-b border-gray-200">
                 <nav class="flex -mb-px" id="settings-tabs">
@@ -14,7 +14,7 @@
                     <button data-tab="integrations" class="tab-btn border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-4 py-4 text-sm font-medium focus:outline-none">Integrations</button>
                 </nav>
             </div>
-            
+
             <div class="p-6">
                 {{-- General Tab --}}
                 <div id="tab-general" class="tab-content">

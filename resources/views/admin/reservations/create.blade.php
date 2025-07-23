@@ -9,7 +9,7 @@
 @endphp
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto">
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
             <div class="px-6 py-4 bg-gray-50 border-b">
@@ -30,14 +30,81 @@
                 <form method="POST" action="{{ route('admin.reservations.store') }}">
                     @csrf
 
+                    @if(isset($isSuperAdmin) && $isSuperAdmin)
+                        <!-- Super Admin: Select Organization and Branch -->
+                        <div class="mb-6">
+                            <h2 class="text-lg font-semibold text-gray-700 mb-4">Select Organization & Branch</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">Organization</label>
+                                    <select name="organization_id" id="organization_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <option value="">Select Organization</option>
+                                        @foreach($organizations as $org)
+                                            <option value="{{ $org->id }}" {{ old('organization_id', $organization_id ?? '') == $org->id ? 'selected' : '' }}>{{ $org->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                    <select name="branch_id" id="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                        <option value="">Select Branch</option>
+                                        @foreach($branches as $branch)
+                                            <option value="{{ $branch->id }}" data-phone="{{ $branch->phone }}">{{ $branch->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                        // Optional: AJAX branch loading for super admin
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const orgSelect = document.getElementById('organization_id');
+                            const branchSelect = document.getElementById('branch_id');
+
+                            // When branch changes, set the phone input value to the branch phone
+                            function updateBranchPhone() {
+                                const selected = branchSelect.options[branchSelect.selectedIndex];
+                                const phone = selected && selected.dataset.phone ? selected.dataset.phone : '';
+                                // Set the customer phone input value
+                                const customerPhoneInput = document.getElementById('phone');
+                                if (customerPhoneInput) customerPhoneInput.value = phone;
+                            }
+                            branchSelect.addEventListener('change', updateBranchPhone);
+
+                            orgSelect.addEventListener('change', function() {
+                                fetch(`/api/organizations/${orgSelect.value}/branches`)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        branchSelect.innerHTML = '<option value="">Select Branch</option>';
+                                        if (data.branches) {
+                                            data.branches.forEach(branch => {
+                                                const option = document.createElement('option');
+                                                option.value = branch.id;
+                                                option.textContent = branch.name;
+                                                option.setAttribute('data-phone', branch.phone || '');
+                                                branchSelect.appendChild(option);
+                                            });
+                                        }
+                                        updateBranchPhone();
+                                    });
+                            });
+
+                            // Set phone on page load if branch is preselected
+                            updateBranchPhone();
+                        });
+                        </script>
+                    @else
+                        <input type="hidden" name="branch_id" value="{{ $branch_id ?? '' }}">
+                    @endif
+
                     <!-- Customer Information -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Customer Information</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                                <input type="text" 
-                                       name="name" 
+                                <input type="text"
+                                       name="name"
                                        id="name"
                                        value="{{ old('name', $defaultName ?? '') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -45,18 +112,18 @@
                             </div>
                             <div>
                                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                <input type="tel" 
-                                       name="phone" 
-                                       id="phone" 
+                                <input type="tel"
+                                       name="phone"
+                                       id="phone"
                                        value="{{ old('phone', $defaultPhone ?? '') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
                             <div>
                                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
-                                <input type="email" 
-                                       name="email" 
-                                       id="email" 
+                                <input type="email"
+                                       name="email"
+                                       id="email"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
@@ -68,18 +135,18 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                <input type="date" 
-                                       name="date" 
-                                       id="date" 
+                                <input type="date"
+                                       name="date"
+                                       id="date"
                                        value="{{ old('date', $defaultDate ?? '') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
                             <div>
                                 <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-                                <input type="time" 
-                                       name="start_time" 
-                                       id="start_time" 
+                                <input type="time"
+                                       name="start_time"
+                                       id="start_time"
                                        value="{{ old('start_time', $start_time) }}"
                                        step="900"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -87,9 +154,9 @@
                             </div>
                             <div>
                                 <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-                                <input type="time" 
-                                       name="end_time" 
-                                       id="end_time" 
+                                <input type="time"
+                                       name="end_time"
+                                       id="end_time"
                                        value="{{ old('end_time', $end_time) }}"
                                        step="900"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -97,9 +164,9 @@
                             </div>
                             <div>
                                 <label for="number_of_people" class="block text-sm font-medium text-gray-700 mb-1">Number of People</label>
-                                <input type="number" 
-                                       name="number_of_people" 
-                                       id="number_of_people" 
+                                <input type="number"
+                                       name="number_of_people"
+                                       id="number_of_people"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -120,8 +187,8 @@
                                     <div data-table-id="{{ $table->id }}"
                                          class="table-selection w-20 h-20 flex flex-col items-center justify-center border rounded-md text-xs p-2
                                             peer-checked:bg-blue-500 peer-checked:text-white
-                                            {{ in_array($table->id, $availableTableIds ?? []) 
-                                                ? 'bg-white hover:bg-blue-100 cursor-pointer border-gray-300' 
+                                            {{ in_array($table->id, $availableTableIds ?? [])
+                                                ? 'bg-white hover:bg-blue-100 cursor-pointer border-gray-300'
                                                 : 'bg-red-200 text-red-700 border-red-500 cursor-not-allowed opacity-70' }}">
                                         <span>Table {{ $table->id }}</span>
                                         <span>Cap: {{ $table->capacity }}</span>

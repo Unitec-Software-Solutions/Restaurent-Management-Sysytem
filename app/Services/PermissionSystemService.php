@@ -8,8 +8,68 @@ use App\Models\Organization;
 use App\Models\Branch;
 use Illuminate\Support\Facades\DB;
 
-class PermissionSystemService
-{
+class PermissionSystemService {
+    /**
+     * Get enabled module keys for a given organization or branch (by subscription plan)
+     */
+    public function getEnabledModuleKeys($entity): array
+    {
+        // $entity can be Organization or Branch
+        if (!$entity) {
+            return [];
+        }
+        if (is_object($entity) && method_exists($entity, 'getSubscriptionPlanModules')) {
+            return $entity->getSubscriptionPlanModules();
+        }
+        if (is_object($entity) && property_exists($entity, 'subscription_plan_id') && $entity->subscription_plan_id) {
+            $plan = $entity->subscriptionPlan ?? null;
+            if ($plan && method_exists($plan, 'getModulesArray')) {
+                return $plan->getModulesArray();
+            }
+        }
+        return [];
+    }
+
+    /**
+     * Get all permissions available for a given entity (org/branch) based on enabled modules and plan tier
+     */
+    public function getAvailablePermissionsForEntity($entity, $permissionDefinitions, $modulesConfig): array
+    {
+        $enabledModules = $this->getEnabledModuleKeys($entity);
+        $permissions = [];
+        foreach ($enabledModules as $moduleKey) {
+            if (!isset($modulesConfig[$moduleKey])) continue;
+            $module = $modulesConfig[$moduleKey];
+            $tier = $entity->subscription_plan_tier ?? 'basic';
+            $tiers = $module['tiers'] ?? [];
+            $tierConfig = $tiers[$tier] ?? ($tiers['basic'] ?? []);
+            foreach (($tierConfig['permissions'] ?? []) as $perm) {
+                // Map to canonical permission name if needed
+                $permissions[$perm] = $permissionDefinitions[$moduleKey]['permissions'][$perm] ?? ucwords(str_replace(['.', '_', '-'], ' ', $perm));
+            }
+        }
+        return $permissions;
+    }
+
+    /**
+     * Filter permissions for a user/admin by their org/branch and subscription plan
+     */
+    public function filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig): array
+    {
+        if ($admin->is_super_admin) {
+            return $this->flattenPermissions($permissionDefinitions);
+        }
+        if ($admin->isOrganizationAdmin()) {
+            $entity = $admin->organization ?? null;
+        } elseif ($admin->isBranchAdmin()) {
+            $entity = $admin->branch ?? null;
+        } else {
+            return [];
+        }
+        if (!$entity) return [];
+        return $this->getAvailablePermissionsForEntity($entity, $permissionDefinitions, $modulesConfig);
+    }
+
     public function installScopedPermissions()
     {
         DB::transaction(function () {
@@ -35,7 +95,7 @@ class PermissionSystemService
                     'reports.view_all'
                 ]
             ],
-            
+
             // Branch Level - Only essential admin roles
             'branch_admin' => [
                 'name' => 'Branch Administrator',
@@ -49,8 +109,8 @@ class PermissionSystemService
                     'reports.view_branch'
                 ]
             ]
-            
-            // Note: Other operational roles (shift manager, cashier, waiter, kitchen staff) 
+
+            // Note: Other operational roles (shift manager, cashier, waiter, kitchen staff)
             // should be created manually as needed by organization/branch admins
             // to avoid cluttering the system with unused roles
         ];
@@ -132,12 +192,12 @@ class PermissionSystemService
     {
         // Organization admins inherit all branch permissions for their org
         $orgRoles = Role::where('scope', 'organization')->get();
-        
+
         foreach ($orgRoles as $orgRole) {
             $branchPermissions = Permission::whereIn('name', [
                 'branch.view', 'staff.manage', 'inventory.manage', 'orders.manage'
             ])->get();
-            
+
             $orgRole->givePermissionTo($branchPermissions);
         }
     }
@@ -146,11 +206,11 @@ class PermissionSystemService
     {
         // Check if user has permission for specific action on resource
         $permission = "{$resource}.{$action}";
-        
+
         if ($user->can($permission)) {
             return $this->validateScope($user, $resource);
         }
-        
+
         return false;
     }
 
@@ -506,40 +566,15 @@ class PermissionSystemService
                     'dashboard.view', 'dashboard.manage'
                 ]
             ]
-            
-            // Note: Operational roles like Kitchen Manager, Operations Manager, Staff Member 
-            // should be created manually by organization/branch admins as needed,
-            // not automatically provided as templates to reduce noise
         ];
     }
 
-    /**
-     * Get available permissions based on admin scope
-     */
     public function getAvailablePermissions($admin, $permissionDefinitions): array
     {
-        if ($admin->is_super_admin) {
-            return $this->flattenPermissions($permissionDefinitions);
-        }
-
-        if ($admin->isOrganizationAdmin()) {
-            $excludedCategories = ['modules', 'settings'];
-            $excludedPermissions = ['organizations.create', 'organizations.delete'];
-            return $this->flattenPermissions($permissionDefinitions, $excludedCategories, $excludedPermissions);
-        }
-
-        if ($admin->isBranchAdmin()) {
-            $allowedCategories = ['orders', 'reservations', 'menus', 'inventory', 'kitchen', 'staff', 'reports', 'dashboard'];
-            $allowedPermissions = ['users.view', 'users.create', 'users.edit', 'roles.view', 'roles.assign'];
-            return $this->flattenPermissions($permissionDefinitions, [], [], $allowedCategories, $allowedPermissions);
-        }
-
-        return [];
+        $modulesConfig = config('modules');
+        return $this->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
     }
 
-    /**
-     * Flatten permission definitions into a simple array
-     */
     private function flattenPermissions($permissionDefinitions, $excludedCategories = [], $excludedPermissions = [], $allowedCategories = [], $allowedPermissions = []): array
     {
         $permissions = [];
@@ -570,9 +605,6 @@ class PermissionSystemService
         return $permissions;
     }
 
-    /**
-     * Filter role templates based on admin scope
-     */
     public function filterTemplatesByScope($roleTemplates, $admin): array
     {
         if ($admin->is_super_admin) {

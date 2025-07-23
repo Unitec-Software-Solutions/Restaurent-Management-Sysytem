@@ -3,7 +3,7 @@
 @section('header-title', 'Goods Transfer Notes')
 
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="mx-auto px-4 py-8">
         <!-- Header with navigation buttons -->
         <div class="justify-between items-center mb-4">
             <div class="rounded-lg">
@@ -11,10 +11,11 @@
                     ['name' => 'Dashboard', 'link' => route('admin.inventory.dashboard')],
                     ['name' => 'Item Management', 'link' => route('admin.inventory.items.index')],
                     ['name' => 'Stock Management', 'link' => route('admin.inventory.stock.index')],
+                    ['name' => 'Stock Release Notes', 'link' => route('admin.inventory.srn.index')],
                     ['name' => 'Goods Received Notes', 'link' => route('admin.grn.index')],
-                    ['name' => 'Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
+                    ['name' => 'Goods Transfer Notes', 'link' => route('admin.inventory.gtn.index')],
                     ['name' => 'Transactions', 'link' => route('admin.inventory.stock.transactions.index')],
-                ]" active="Transfer Notes" />
+                ]" active="Goods Transfer Notes" />
             </div>
 
             <!-- Move x-data to wrap both filter and GTN list/tabs -->
