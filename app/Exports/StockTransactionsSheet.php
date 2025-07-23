@@ -33,13 +33,12 @@ class StockTransactionsSheet implements FromCollection, WithHeadings, WithMappin
     public function collection()
     {
         $user = Auth::guard('admin')->user();
-        $isSuperAdmin = $user->is_super_admin ?? false;
-        $orgId = $isSuperAdmin ? null : $user->organization_id;
+        $isSuperAdmin = $user && ($user->is_super_admin ?? false);
+        $orgId = $isSuperAdmin ? null : ($user->organization_id ?? null);
 
         $query = ItemTransaction::with([
             'item.category',
-            'branch',
-            'createdBy'
+            'branch'
         ]);
 
         // Apply organization filter through item relationship
@@ -135,7 +134,7 @@ class StockTransactionsSheet implements FromCollection, WithHeadings, WithMappin
             $transaction->reference_number ?? 'N/A',
             $transaction->batch_number ?? 'N/A',
             $transaction->expiry_date ? $transaction->expiry_date->format('Y-m-d') : 'N/A',
-            $transaction->createdBy->name ?? 'N/A',
+            'N/A', // Created By - relationship not available
             $transaction->created_at ? $transaction->created_at->format('Y-m-d H:i:s') : 'N/A',
             $transaction->notes ?? 'N/A'
         ];

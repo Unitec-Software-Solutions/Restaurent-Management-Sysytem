@@ -31,8 +31,8 @@ class GtnItemsSheet implements FromCollection, WithHeadings, WithMapping, WithTi
     public function collection()
     {
         $user = Auth::guard('admin')->user();
-        $isSuperAdmin = $user->is_super_admin ?? false;
-        $orgId = $isSuperAdmin ? null : $user->organization_id;
+        $isSuperAdmin = $user && ($user->is_super_admin ?? false);
+        $orgId = $isSuperAdmin ? null : ($user->organization_id ?? null);
 
         $query = GoodsTransferItem::with([
             'goodsTransferNote.fromBranch',
