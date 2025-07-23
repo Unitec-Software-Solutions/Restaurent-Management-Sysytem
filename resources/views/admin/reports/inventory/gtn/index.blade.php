@@ -28,6 +28,12 @@
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
                 </a>
+
+                {{-- <a href="{{ route('admin.exports.multisheet', ['reportType' => 'goods_transfer_note_master']) }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}"
+                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-file-excel mr-2"></i> Export Excel 2 (Multi-Sheet)
+                </a> --}}
+
                 <a href="{{ route('admin.reports.inventory.gtn', array_merge(request()->query(), ['export' => 'csv'])) }}"
                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-csv mr-2"></i> Export CSV
