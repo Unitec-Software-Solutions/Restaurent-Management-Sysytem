@@ -128,10 +128,25 @@ class AdminController extends Controller
 
             // Assign roles using Spatie's role assignment
             if ($request->filled('roles')) {
-                $roles = Role::whereIn('id', $request->input('roles'))
+                $roleIds = $request->input('roles');
+                $roles = Role::whereIn('id', $roleIds)
                     ->where('guard_name', 'admin')
                     ->get();
 
+                if ($roles->count() !== count($roleIds)) {
+                    $foundIds = $roles->pluck('id')->toArray();
+                    $missingIds = array_diff($roleIds, $foundIds);
+                    Log::warning('Some roles not found during admin creation', [
+                        'admin_id' => $admin->id,
+                        'requested_role_ids' => $roleIds,
+                        'missing_role_ids' => $missingIds
+                    ]);
+                }
+
+                // Clear cache before role assignment
+                app()['cache']->forget(config('permission.cache.key'));
+
+                // Sync roles to admin
                 $admin->syncRoles($roles);
 
                 // Set the first role as current_role_id
@@ -139,11 +154,37 @@ class AdminController extends Controller
                     $admin->update(['current_role_id' => $roles->first()->id]);
                 }
 
-                // Log role assignment
-                Log::info('Admin roles assigned', [
+                // Reload admin with roles and permissions to verify assignment
+                $admin->load(['roles.permissions']);
+                $effectivePermissions = $admin->getAllPermissions();
+
+                // Log detailed role assignment
+                Log::info('Admin created with role and permissions', [
                     'admin_id' => $admin->id,
+                    'email' => $admin->email,
+                    'role' => $roles->first()->name ?? 'No Role',
                     'roles' => $roles->pluck('name')->toArray(),
-                    'effective_permissions' => $admin->getAllPermissions()->pluck('name')->toArray()
+                    'role_permissions' => $roles->flatMap(function($role) {
+                        return $role->permissions->pluck('name');
+                    })->unique()->values()->toArray(),
+                    'effective_permissions' => $effectivePermissions->pluck('name')->toArray(),
+                    'permissions_count' => $effectivePermissions->count(),
+                    'created_by' => Auth::guard('admin')->id()
+                ]);
+
+                // Verify permissions were properly inherited
+                if ($effectivePermissions->isEmpty() && $roles->isNotEmpty()) {
+                    Log::warning('Admin has roles but no effective permissions', [
+                        'admin_id' => $admin->id,
+                        'roles' => $roles->pluck('name')->toArray(),
+                        'role_ids' => $roles->pluck('id')->toArray()
+                    ]);
+                }
+            } else {
+                Log::info('Admin created without roles', [
+                    'admin_id' => $admin->id,
+                    'email' => $admin->email,
+                    'created_by' => Auth::guard('admin')->id()
                 ]);
             }
 
@@ -231,10 +272,25 @@ class AdminController extends Controller
 
             // Handle role assignment using Spatie
             if ($request->has('roles')) {
-                $roles = Role::whereIn('id', $request->input('roles'))
+                $roleIds = $request->input('roles');
+                $roles = Role::whereIn('id', $roleIds)
                     ->where('guard_name', 'admin')
                     ->get();
 
+                if ($roles->count() !== count($roleIds)) {
+                    $foundIds = $roles->pluck('id')->toArray();
+                    $missingIds = array_diff($roleIds, $foundIds);
+                    Log::warning('Some roles not found during admin update', [
+                        'admin_id' => $admin->id,
+                        'requested_role_ids' => $roleIds,
+                        'missing_role_ids' => $missingIds
+                    ]);
+                }
+
+                // Clear cache before role assignment
+                app()['cache']->forget(config('permission.cache.key'));
+
+                // Sync roles to admin
                 $admin->syncRoles($roles);
 
                 // Update current_role_id
@@ -244,12 +300,31 @@ class AdminController extends Controller
                     $admin->update(['current_role_id' => null]);
                 }
 
-                // Log role assignment
+                // Reload admin with roles and permissions to verify assignment
+                $admin->load(['roles.permissions']);
+                $effectivePermissions = $admin->getAllPermissions();
+
+                // Log detailed role assignment
                 Log::info('Admin roles updated', [
                     'admin_id' => $admin->id,
+                    'email' => $admin->email,
                     'roles' => $roles->pluck('name')->toArray(),
-                    'effective_permissions' => $admin->getAllPermissions()->pluck('name')->toArray()
+                    'role_permissions' => $roles->flatMap(function($role) {
+                        return $role->permissions->pluck('name');
+                    })->unique()->values()->toArray(),
+                    'effective_permissions' => $effectivePermissions->pluck('name')->toArray(),
+                    'permissions_count' => $effectivePermissions->count(),
+                    'updated_by' => Auth::guard('admin')->id()
                 ]);
+
+                // Verify permissions were properly inherited
+                if ($effectivePermissions->isEmpty() && $roles->isNotEmpty()) {
+                    Log::warning('Admin has roles but no effective permissions after update', [
+                        'admin_id' => $admin->id,
+                        'roles' => $roles->pluck('name')->toArray(),
+                        'role_ids' => $roles->pluck('id')->toArray()
+                    ]);
+                }
             }
 
             DB::commit();
