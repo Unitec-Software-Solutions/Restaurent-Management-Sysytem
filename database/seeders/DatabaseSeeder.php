@@ -14,12 +14,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create Super Admin if not exists
-        $superAdminEmail = 'superadmin@system.local';
+        $superAdminEmail = 'superadmin@rms.com';
         $superAdmin = Admin::firstOrCreate([
             'email' => $superAdminEmail
         ], [
             'name' => 'Super Admin',
-            'password' => bcrypt('superadmin123'),
+            'password' => bcrypt('SuperAdmin123!'),
             'is_super_admin' => true,
             'is_active' => true,
         ]);
