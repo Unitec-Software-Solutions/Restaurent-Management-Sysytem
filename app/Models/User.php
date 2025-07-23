@@ -76,44 +76,30 @@ class User extends Authenticatable
         return $this->belongsTo(Organization::class, 'organization_id');
     }
 
-    public function branch()
+    public function roles(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsTo(\App\Models\Branch::class, 'branch_id');
+        return $this->belongsToMany(Role::class, 'role_user');
     }
 
-    public function hasBranchPermission($branchId, $permission)
+    public function permissions()
     {
-        return $this->roles()->where(function ($query) use ($branchId) {
-            $query->where('branch_id', $branchId)
-                  ->orWhereNull('branch_id');
-        })->whereHas('permissions', function ($q) use ($permission) {
-            $q->where('name', $permission);
-        })->exists();
+        return $this->roles->flatMap(function ($role) {
+            return $role->permissions;
+        });
     }
 
-    public function isSuperAdmin()
+    public function hasRole($role): bool
     {
-        return $this->hasRole('Super Admin');
+        return $this->roles->contains('name', $role);
     }
 
-    public function isOrganizationAdmin()
+    public function hasPermission($permission): bool
     {
-        return !$this->isSuperAdmin()
-            && !is_null($this->organization_id)
-            && is_null($this->branch_id);
+        return $this->permissions()->contains('name', $permission);
     }
-
-    public function isBranchAdmin()
-    {
-        return $this->hasRole('Branch Admin');
-    }
-
-    // Removed legacy custom role and permission logic. Use Spatie methods only.
 
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
-    // Removed legacy isAdmin. Use Spatie roles/permissions only.
 }

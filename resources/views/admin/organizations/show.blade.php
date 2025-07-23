@@ -140,7 +140,7 @@
                 <button onclick="showTab('modules')" id="tab-modules" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
                     Modules
                 </button>
-                @if(auth('admin')->user()->isSuperAdmin() || (auth('admin')->user()->organization_id == $organization->id))
+                @if(auth('admin')->user()->isSuperAdmin() || (auth('admin')->user()?->admin_type === 'organization' && auth('admin')->user()?->organization?->id == $organization->id))
                 <button onclick="showTab('activation')" id="tab-activation" class="tab-button py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
                     Activation
                 </button>
@@ -793,7 +793,7 @@
             </div>
 
             <!-- Activation Tab (Super Admin and Organization Admin) -->
-            @if(auth('admin')->user()->isSuperAdmin() || (auth('admin')->user()->organization_id == $organization->id))
+            @if(auth('admin')->user()->isSuperAdmin() || (auth('admin')->user()?->admin_type === 'organization' && auth('admin')->user()?->organization?->id == $organization->id))
             <div id="content-activation" class="tab-content hidden">
                 <div class="max-w-4xl mx-auto space-y-6">
                     <!-- Organization Status Card -->

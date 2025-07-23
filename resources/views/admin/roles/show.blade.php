@@ -25,11 +25,18 @@
     </div>
     <div class="mb-4">
         <span class="font-semibold text-gray-700">Permissions:</span>
-        @forelse($role->permissions as $permission)
-            <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">{{ $permission->name }}</span>
-        @empty
-            <span class="text-gray-500">No permissions assigned</span>
-        @endforelse
+        <div class="mt-2 flex flex-wrap gap-2">
+            @forelse($role->permissions as $permission)
+                <span class="inline-block px-2 py-1 {{ $permission->name === 'roles.templates' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800' }} rounded text-xs">
+                    @if($permission->name === 'roles.templates')
+                        <i class="fas fa-template mr-1"></i>
+                    @endif
+                    {{ $permission->name }}
+                </span>
+            @empty
+                <span class="text-gray-500">No permissions assigned</span>
+            @endforelse
+        </div>
     </div>
     <div class="mt-6 flex gap-2">
         <a href="{{ route('admin.roles.edit', $role) }}" class="inline-flex items-center gap-1 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition">

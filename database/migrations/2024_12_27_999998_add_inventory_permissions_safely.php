@@ -19,7 +19,7 @@ return new class extends Migration
         try {
             // Check what columns exist in the permissions table
             $tableExists = Schema::hasTable('permissions');
-            
+
             if (!$tableExists) {
                 Log::info('Permissions table not found. This migration will be skipped.');
                 return;
@@ -27,7 +27,7 @@ return new class extends Migration
 
             // Check if this is Spatie Permission structure
             $isSpatieStructure = Schema::hasColumn('permissions', 'guard_name');
-            
+
             Log::info('Adding inventory permissions', [
                 'table_exists' => $tableExists,
                 'is_spatie_structure' => $isSpatieStructure
@@ -36,27 +36,27 @@ return new class extends Migration
             // Add basic inventory permissions using the actual table structure
             $permissionsToAdd = [
                 'inventory.view',
-                'inventory.manage', 
+                'inventory.manage',
                 'inventory.create',
                 'inventory.edit',
                 'inventory.delete',
                 'suppliers.view',
                 'suppliers.manage',
-                'suppliers.create', 
+                'suppliers.create',
                 'suppliers.edit',
                 'suppliers.delete',
                 'grn.view',
                 'grn.manage',
                 'grn.create'
             ];
-            
+
             foreach ($permissionsToAdd as $permission) {
                 $this->createPermissionSafely($permission, $isSpatieStructure);
             }
-            
+
             // Assign permissions to admin roles if possible
             $this->assignPermissionsToAdminRoles();
-            
+
             Log::info('Successfully added inventory permissions');
 
         } catch (\Exception $e) {
@@ -85,7 +85,7 @@ return new class extends Migration
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
-                    
+
                     Log::info("Created Spatie permission: {$permission}");
                 }
             } else {
@@ -100,16 +100,16 @@ return new class extends Migration
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
-                    
+
                     // Add optional columns if they exist
                     if (Schema::hasColumn('permissions', 'slug')) {
                         $data['slug'] = $permission;
                     }
-                    
+
                     if (Schema::hasColumn('permissions', 'description')) {
                         $data['description'] = 'Permission to ' . str_replace(['.', '_'], ' ', $permission);
                     }
-                    
+
                     if (Schema::hasColumn('permissions', 'category')) {
                         $data['category'] = explode('.', $permission)[0];
                     }
@@ -117,9 +117,9 @@ return new class extends Migration
                     if (Schema::hasColumn('permissions', 'module_slug')) {
                         $data['module_slug'] = explode('.', $permission)[0];
                     }
-                    
+
                     DB::table('permissions')->insert($data);
-                    
+
                     Log::info("Created custom permission: {$permission}");
                 }
             }
@@ -127,7 +127,7 @@ return new class extends Migration
             Log::warning("Failed to create permission {$permission}: " . $e->getMessage());
         }
     }
-    
+
     /**
      * Assign permissions to admin roles safely
      */
@@ -147,35 +147,43 @@ return new class extends Migration
             }
 
             $permissions = [
-                'inventory.view', 'inventory.manage', 'inventory.create', 
+                'inventory.view', 'inventory.manage', 'inventory.create',
                 'inventory.edit', 'inventory.delete',
-                'suppliers.view', 'suppliers.manage', 'suppliers.create', 
+                'suppliers.view', 'suppliers.manage', 'suppliers.create',
                 'suppliers.edit', 'suppliers.delete',
                 'grn.view', 'grn.manage', 'grn.create'
             ];
-            
+
             // Find admin roles and assign permissions
             $adminRoles = \Spatie\Permission\Models\Role::where('guard_name', 'admin')
                 ->whereIn('name', ['Super Admin', 'Admin', 'Organization Admin'])
                 ->get();
 
             foreach ($adminRoles as $role) {
+                // Ensure $role is an Eloquent model
+                $roleModel = \Spatie\Permission\Models\Role::find($role->id);
+                if (!$roleModel) {
+                    continue;
+                }
                 foreach ($permissions as $permissionName) {
                     try {
                         $permission = \Spatie\Permission\Models\Permission::where('name', $permissionName)
                             ->where('guard_name', 'admin')
                             ->first();
-                        
-                        if ($permission && !$role->hasPermissionTo($permissionName)) {
-                            $role->givePermissionTo($permissionName);
-                            Log::info("Assigned {$permissionName} to {$role->name}");
+
+                        if ($permission && !$roleModel->hasPermissionTo($permissionName)) {
+                            $roleModel->givePermissionTo($permissionName);
+                            $roleName = is_object($roleModel) && isset($roleModel->name) ? $roleModel->name : (method_exists($roleModel, 'getAttribute') ? $roleModel->getAttribute('name') : 'unknown');
+                            Log::info("Assigned {$permissionName} to {$roleName}");
                         }
                     } catch (\Exception $e) {
-                        Log::warning("Failed to assign {$permissionName} to {$role->name}: " . $e->getMessage());
+                        
+                        $roleName = is_object($roleModel) && isset($roleModel->name) ? $roleModel->name : (method_exists($roleModel, 'getAttribute') ? $roleModel->getAttribute('name') : 'unknown');
+                        Log::warning("Failed to assign {$permissionName} to {$roleName}: " . $e->getMessage());
                     }
                 }
             }
-            
+
         } catch (\Exception $e) {
             Log::warning('Could not assign permissions to admin roles: ' . $e->getMessage());
         }
@@ -192,13 +200,13 @@ return new class extends Migration
 
         try {
             $permissionsToRemove = [
-                'inventory.view', 'inventory.manage', 'inventory.create', 
+                'inventory.view', 'inventory.manage', 'inventory.create',
                 'inventory.edit', 'inventory.delete',
-                'suppliers.view', 'suppliers.manage', 'suppliers.create', 
+                'suppliers.view', 'suppliers.manage', 'suppliers.create',
                 'suppliers.edit', 'suppliers.delete',
                 'grn.view', 'grn.manage', 'grn.create'
             ];
-            
+
             // Check if Spatie structure
             if (Schema::hasColumn('permissions', 'guard_name')) {
                 DB::table('permissions')
@@ -210,14 +218,14 @@ return new class extends Migration
                 $customNames = array_map(function($perm) {
                     return ucwords(str_replace(['.', '_'], ' ', $perm));
                 }, $permissionsToRemove);
-                
+
                 DB::table('permissions')
                     ->whereIn('name', $customNames)
                     ->delete();
             }
-            
+
             Log::info('Removed inventory permissions');
-            
+
         } catch (\Exception $e) {
             Log::error('Error removing inventory permissions: ' . $e->getMessage());
         }

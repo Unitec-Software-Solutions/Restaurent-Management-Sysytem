@@ -37,5 +37,6 @@ class Kernel extends HttpKernel
         'admin.auth.debug' => \App\Http\Middleware\AdminAuthenticateDebug::class,
         'enhanced.admin.auth' => \App\Http\Middleware\EnhancedAdminAuth::class,
         'admin.order.defaults' => \App\Http\Middleware\AdminOrderDefaults::class,
+        'role' => \App\Http\Middleware\CheckRole::class, // Register CheckRole middleware
     ];
 }
