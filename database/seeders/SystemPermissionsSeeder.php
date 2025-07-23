@@ -16,18 +16,18 @@ class SystemPermissionsSeeder extends Seeder
      */
     public function run()
     {
-        $this->command->info('Starting SystemPermissionsSeeder...');
-        
+        $this->command->info('  Starting SystemPermissionsSeeder...');
+
         // Clear cache first
         app()['cache']->forget(config('permission.cache.key'));
-        
+
         // Don't truncate - just ensure permissions exist
         // This prevents breaking existing role-permission relationships
-        
+
         $service = app(\App\Services\PermissionSystemService::class);
         $defs = $service->getPermissionDefinitions();
         $allPermissions = [];
-        
+
         // Collect all permissions from definitions
         foreach ($defs as $category => $categoryData) {
             if (isset($categoryData['permissions'])) {
@@ -42,10 +42,10 @@ class SystemPermissionsSeeder extends Seeder
 
         // Add legacy and sidebar/menu permissions
         $sidebarFiles = [
-            app_path('View/Components/AdminSidebar.php'), 
+            app_path('View/Components/AdminSidebar.php'),
             app_path('View/Components/Sidebar.php')
         ];
-        
+
         foreach ($sidebarFiles as $sidebarPath) {
             if (file_exists($sidebarPath)) {
                 $code = file_get_contents($sidebarPath);
@@ -106,56 +106,56 @@ class SystemPermissionsSeeder extends Seeder
             }
 
             DB::commit();
-            
+
             // Log results
-            Log::info('SystemPermissionsSeeder completed', [
-                'created_count' => count($created),
-                'updated_count' => count($updated),
-                'error_count' => count($errors),
-                'total_permissions' => count($allPermissions)
+            Log::info('  SystemPermissionsSeeder completed', [
+                '  created_count' => count($created),
+                '  updated_count' => count($updated),
+                '  error_count' => count($errors),
+                '  total_permissions' => count($allPermissions)
             ]);
 
             if (!empty($created)) {
-                Log::info('SystemPermissionsSeeder created permissions:', $created);
+                Log::info('  SystemPermissionsSeeder created permissions:', $created);
             }
-            
+
             if (!empty($errors)) {
-                Log::error('SystemPermissionsSeeder errors:', $errors);
+                Log::error('  SystemPermissionsSeeder errors:', $errors);
             }
 
             // Verify all permissions exist
             $existingPermissions = Permission::where('guard_name', 'admin')
                 ->pluck('name')
                 ->toArray();
-            
+
             $missingPermissions = array_diff(array_keys($allPermissions), $existingPermissions);
             if (!empty($missingPermissions)) {
-                Log::warning('Missing permissions after seeding:', $missingPermissions);
+                Log::warning('  Missing permissions after seeding:', $missingPermissions);
             }
 
             // Debug dump of the permissions table after seeding
             $all = Permission::where('guard_name', 'admin')
                 ->orderBy('id')
                 ->get(['id', 'name', 'guard_name']);
-            
+
             Log::debug('Permissions table after seeding:', $all->toArray());
 
-            $this->command->info('Created ' . count($created) . ' new permissions.');
-            $this->command->info('Updated ' . count($updated) . ' existing permissions.');
-            $this->command->info('Total permissions: ' . count($allPermissions));
-            
+            $this->command->info('  Created ' . count($created) . ' new permissions.');
+            $this->command->info('  Updated ' . count($updated) . ' existing permissions.');
+            $this->command->info('  Total permissions: ' . count($allPermissions));
+
             if (!empty($errors)) {
-                $this->command->warn('Encountered ' . count($errors) . ' errors. Check logs for details.');
+                $this->command->warn('  Encountered ' . count($errors) . ' errors. Check logs for details.');
             }
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('SystemPermissionsSeeder transaction failed', [
+            Log::error('  SystemPermissionsSeeder transaction failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
-            $this->command->error('Permission seeding failed: ' . $e->getMessage());
+
+            $this->command->error('  Permission seeding failed: ' . $e->getMessage());
             throw $e;
         }
     }
