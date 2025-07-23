@@ -17,7 +17,8 @@ use App\Http\Controllers\{
     MenuController,
     KitchenController,
     KotController,
-    ModuleController
+    ModuleController,
+    ReportsGenController
 };
  // Admin namespace controllers
 use App\Http\Controllers\Admin\{
@@ -1121,6 +1122,12 @@ Route::get('/api/menu-items/branch/{branch}/active', [OrderController::class, 'g
 Route::get('admin/kots/{kot}/print', [\App\Http\Controllers\KotController::class, 'print'])
     ->name('admin.kots.print')
     ->middleware(['auth:admin']);
+
+// Export Routes - Multi-sheet Excel exports
+Route::middleware(['auth:admin'])->prefix('admin/exports')->name('admin.exports.')->group(function () {
+    Route::get('/test', [\App\Http\Controllers\ReportsGenController::class, 'testExport'])->name('test');
+    Route::get('/{reportType}', [\App\Http\Controllers\ReportsGenController::class, 'handleMultiSheetExport'])->name('multisheet');
+});
 
 // Roles CRUD - Accessible by Super Admin
 Route::middleware(['auth:admin', SuperAdmin::class])->group(function () {
