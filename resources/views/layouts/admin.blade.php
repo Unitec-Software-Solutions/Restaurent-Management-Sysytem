@@ -69,8 +69,8 @@
             zoom: 90%; /* Adjust zoom level for better visibility */
         }
 
-        @media not all and (min-resolution:.001dpcm) {
-        @supports (-moz-appearance: none) {
+    @media not all and (min-resolution:.001dpcm) {
+        @@supports (-moz-appearance: none) {
             body {
                 transform: scale(0.8);
                 transform-origin: top left;
