@@ -2,7 +2,7 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden fadeInUp">
         <!-- Card Header -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 py-6 px-6">
@@ -49,11 +49,11 @@
                             <p class="mt-1 text-orange-700">Kitchen Order Ticket has been generated for kitchen preparation items.</p>
                             @if(session('kot_print_url'))
                                 <div class="mt-2 flex gap-2">
-                                    <button onclick="printKOT('{{ session('kot_print_url') }}')" 
+                                    <button onclick="printKOT('{{ session('kot_print_url') }}')"
                                             class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
                                         <i class="fas fa-print mr-2"></i> Print KOT
                                     </button>
-                                    <a href="{{ route('admin.orders.print-kot-pdf', $order) }}" 
+                                    <a href="{{ route('admin.orders.print-kot-pdf', $order) }}"
                                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm flex items-center">
                                         <i class="fas fa-file-pdf mr-2"></i> Download PDF
                                     </a>
@@ -221,13 +221,6 @@
                     <a href="{{ route('admin.orders.takeaway.create') }}" class="flex-1 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg flex items-center justify-center transition shadow-sm">
                         <i class="fas fa-plus mr-2"></i> Add Another Order
                     </a>
-                    <form action="{{ route('orders.takeaway.destroy', $order->id) }}" method="POST" class="flex-1">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" onclick="return confirm('Are you sure you want to delete this order?')" class="w-full py-3 px-4 bg-white border border-gray-300 hover:bg-gray-50 text-red-600 font-medium rounded-lg flex items-center justify-center transition shadow-sm">
-                            <i class="fas fa-trash mr-2"></i> Delete Order
-                        </button>
-                    </form>
                 </div>
                 <div class="mt-4">
                     <a href="{{ route('admin.orders.takeaway.index') }}" class="flex items-center justify-center text-gray-600 hover:text-blue-600 font-medium transition-colors">

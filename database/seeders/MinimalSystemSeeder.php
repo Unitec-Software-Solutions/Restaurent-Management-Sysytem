@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Database\Seeders\BranchesTableSeeder;
 
 class MinimalSystemSeeder extends Seeder
 {
@@ -45,38 +46,102 @@ class MinimalSystemSeeder extends Seeder
             $this->createSystemModules();
 
             // Step 3: Create permissions
-            $this->createSystemPermissions();
+            $allPermissions = $this->collectAllSystemPermissions();
+            foreach ($allPermissions as $perm => $desc) {
+                Permission::firstOrCreate([
+                    'name' => $perm,
+                    'guard_name' => 'admin',
+                ]);
+            }
 
-            // Step 4: Create super admin role
-            $this->createSuperAdminRole();
+            // Step 4: Create subscription plan FIRST
+            $subscriptionPlan = SubscriptionPlan::create([
+                'name' => 'Premium Plan',
+                'price' => 50000.00,
+                'currency' => 'LKR',
+                'description' => 'Full-featured restaurant management plan',
+                'is_trial' => false,
+                'trial_period_days' => 30,
+                'max_branches' => 10,
+                'max_employees' => 100,
+                'modules' => [1, 2, 3, 4, 5, 6, 7, 8],
+                'features' => [
+                    'unlimited_orders',
+                    'advanced_reporting',
+                    'inventory_management',
+                    'multi_branch_support',
+                    'customer_management',
+                    'pos_integration'
+                ],
+                'is_active' => true
+            ]);
 
-            // Step 5: Create super admin user
-            $this->createSuperAdmin();
+            // Step 5: Create organization using correct plan ID
+            $organization = Organization::create([
+                'name' => 'Delicious Bites Restaurant',
+                'email' => 'admin@deliciousbites.com',
+                'phone' => '+94 11 123 4567',
+                'address' => '123 Main Street, Colombo 03, Sri Lanka',
+                'contact_person' => 'John Manager',
+                'contact_person_designation' => 'General Manager',
+                'contact_person_phone' => '+94 77 123 4567',
+                'business_type' => 'restaurant',
+                'subscription_plan_id' => $subscriptionPlan->id,
+                'discount_percentage' => 5.00,
+                'is_active' => true,
+                'activated_at' => now(),
+                'password' => Hash::make('DeliciousBites123!')
+            ]);
 
-            // Step 6: Create subscription plan
-            $subscriptionPlan = $this->createSubscriptionPlan();
+            // Step 6: Create branch
+            $this->call(BranchesTableSeeder::class);
 
-            // Step 7: Create organization
-            // $organization = $this->createOrganization($subscriptionPlan);
-
-            // Step 8: Create branch
-            // $branch = $this->createBranch($organization);
-
-            // Step 9: Create menu structure
-            // $this->createMenuStructure($organization, $branch);
-
-            // Step 10: Create customers
-            //$this->createCustomers();
-
-            // Step 11: Create tables for the branch
-            //$this->createTables($branch);
-
-            // Step 12: Create reservations and orders
-            //$this->createReservationsAndOrders($branch);
+            // Step 7: Create item categories
+            $this->createItemCategories($organization);
         });
 
         $this->command->info('✅ Minimal system foundation created successfully');
     }
+
+    /**
+     * Collect all permissions used in system (from PermissionSystemService, policies, middleware, sidebar, blade, etc.)
+     */
+    private function collectAllSystemPermissions(): array
+    {
+        $service = new \App\Services\PermissionSystemService();
+        $defs = $service->getPermissionDefinitions();
+        $allPermissions = [];
+        foreach ($defs as $cat) {
+            if (isset($cat['permissions'])) {
+                foreach ($cat['permissions'] as $perm => $desc) {
+                    $allPermissions[$perm] = $desc;
+                }
+            }
+        }
+        // Add legacy and sidebar/menu permissions
+        $sidebarFiles = [app_path('View/Components/AdminSidebar.php'), app_path('View/Components/Sidebar.php')];
+        foreach ($sidebarFiles as $sidebarPath) {
+            if (file_exists($sidebarPath)) {
+                $code = file_get_contents($sidebarPath);
+                preg_match_all('/permission[\'\"]?\s*=>\s*[\'\"]([^\'\"]+)[\'\"]/', $code, $matches);
+                foreach ($matches[1] as $perm) {
+                    $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
+                }
+            }
+        }
+        // Scan blade files for @can/@canany usage
+        $bladeFiles = glob(resource_path('views/**/*.blade.php'));
+        foreach ($bladeFiles as $file) {
+            $code = file_get_contents($file);
+            preg_match_all('/@can\([\'\"]([^\'\"]+)[\'\"]/', $code, $matches);
+            foreach ($matches[1] as $perm) {
+                $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
+            }
+        }
+        return $allPermissions;
+    }
+
+    // Removed assignRolePermissions. Role-permission assignments should be done via admin panel UI.
 
     /**
      * Clear existing data for clean start
@@ -201,135 +266,69 @@ class MinimalSystemSeeder extends Seeder
     {
         $this->command->info('  🔐 Creating system permissions...');
 
-        $permissions = [
-            // System Administration
+        // Collect all permissions from PermissionSystemService, sidebar/menu, blade, and legacy arrays
+        $allPermissions = [];
+        $service = new \App\Services\PermissionSystemService();
+        $defs = $service->getPermissionDefinitions();
+        // Flatten all permission definitions
+        foreach ($defs as $cat) {
+            if (isset($cat['permissions'])) {
+                foreach ($cat['permissions'] as $perm => $desc) {
+                    $allPermissions[$perm] = $desc;
+                }
+            }
+        }
+
+        // Scan sidebar/menu definitions
+        foreach ([app_path('View/Components/AdminSidebar.php'), app_path('View/Components/Sidebar.php')] as $sidebarPath) {
+            if (file_exists($sidebarPath)) {
+                $code = file_get_contents($sidebarPath);
+                preg_match_all('/permission[\'\"]?\s*=>\s*[\'\"]([^\'\"]+)[\'\"]/', $code, $matches);
+                foreach ($matches[1] as $perm) {
+                    $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
+                }
+            }
+        }
+
+        // Scan Blade menu-item usage
+        $bladeFiles = glob(resource_path('views/**/*.blade.php'));
+        foreach ($bladeFiles as $file) {
+            $code = file_get_contents($file);
+            preg_match_all('/can\([\'\"]([^\'\"]+)[\'\"]\)/', $code, $matches);
+            foreach ($matches[1] as $perm) {
+                $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
+            }
+        }
+
+        // Add legacy array permissions (if any)
+        $legacyPermissions = [
             'system.manage', 'system.settings', 'system.backup', 'system.logs',
-
-            // Order Management
-            'order.view', 'order.create', 'order.update', 'order.delete', 'order.manage',
-            'order.process', 'order.cancel', 'order.refund', 'order.print_kot',
-
-            // Reservation Management
-            'reservation.view', 'reservation.create', 'reservation.update', 'reservation.delete',
-            'reservation.manage', 'reservation.approve', 'reservation.cancel', 'reservation.checkin',
-
-            // Inventory Management
-            'inventory.view', 'inventory.create', 'inventory.update', 'inventory.delete',
+            'orders.view', 'orders.create', 'orders.edit', 'orders.cancel',
+            'reservations.view', 'reservations.create', 'reservations.edit', 'reservations.cancel',
+            'inventory.view', 'inventory.create', 'inventory.edit', 'inventory.delete',
             'inventory.manage', 'inventory.adjust', 'inventory.transfer', 'inventory.audit',
-
-            // Menu Management
-            'menu.view', 'menu.create', 'menu.update', 'menu.delete', 'menu.manage',
+            'menu.view', 'menu.create', 'menu.edit', 'menu.delete', 'menu.manage',
             'menu.categories', 'menu.pricing', 'menu.schedule', 'menu.publish',
-
-            // Customer Management
-            'customer.view', 'customer.create', 'customer.update', 'customer.delete',
-            'customer.manage', 'customer.loyalty', 'customer.communications',
-
-            // Kitchen Operations
+            'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+            'customers.manage', 'customers.loyalty', 'customers.communications',
             'kitchen.view', 'kitchen.manage', 'kitchen.stations', 'kitchen.orders',
             'kitchen.status', 'kitchen.recipes', 'kitchen.production',
             'kot.view', 'kot.create', 'kot.update', 'kot.manage', 'kot.print',
-
-            // Reports & Analytics
-            'report.view', 'report.generate', 'report.export', 'report.sales',
-            'report.inventory', 'report.staff', 'report.financial', 'report.dashboard',
-
-            // Organization & Branch Management
-            'organization.view', 'organization.create', 'organization.update', 'organization.manage',
-            'branch.view', 'branch.create', 'branch.update', 'branch.manage',
-
-            // User Management
-            'user.view', 'user.create', 'user.update', 'user.delete', 'user.manage',
-            'role.view', 'role.create', 'role.update', 'role.delete', 'role.manage',
-            'permission.view', 'permission.manage',
-
-            // Staff Management
-            'staff.view', 'staff.create', 'staff.update', 'staff.delete', 'staff.manage',
-            'staff.schedule', 'staff.attendance', 'staff.performance',
-
-            // Financial Management
-            'payment.view', 'payment.process', 'payment.refund', 'payment.manage',
-            'billing.view', 'billing.create', 'billing.manage',
-
-            // Dashboard & Profile
-            'dashboard.view', 'dashboard.manage', 'profile.view', 'profile.update'
         ];
+        foreach ($legacyPermissions as $perm) {
+            $allPermissions[$perm] = $allPermissions[$perm] ?? ucwords(str_replace(['.', '_'], ' ', $perm));
+        }
 
+        // Sync all permissions
         $created = 0;
-        foreach ($permissions as $permission) {
-            Permission::create([
-                'name' => $permission,
+        foreach ($allPermissions as $name => $desc) {
+            Permission::firstOrCreate([
+                'name' => $name,
                 'guard_name' => 'admin'
             ]);
             $created++;
         }
-
         $this->command->info("    ✓ Created {$created} permissions");
-    }
-
-    /**
-     * Create super admin role with all permissions
-     */
-    private function createSuperAdminRole(): void
-    {
-        $this->command->info('  👑 Creating super admin role...');
-
-        // Create Super Admin role
-        $superAdminRole = Role::create([
-            'name' => 'Super Administrator',
-            'guard_name' => 'admin'
-        ]);
-
-        // Assign ALL permissions to Super Admin
-        $allPermissions = Permission::where('guard_name', 'admin')->get();
-        $superAdminRole->syncPermissions($allPermissions);
-
-        $this->command->info("    ✓ Super Admin role created with {$allPermissions->count()} permissions");
-    }
-
-    /**
-     * Create super admin user
-     */
-    private function createSuperAdmin(): void
-    {
-        $this->command->info('  🔑 Creating super admin user...');
-
-        // Create super admin user (system level - no organization)
-        $superAdmin = Admin::create([
-            'name' => 'Super Administrator',
-            'email' => 'superadmin@rms.com',
-            'password' => Hash::make('SuperAdmin123!'),
-            'phone' => '+94 11 000 0000',
-            'job_title' => 'System Administrator',
-            'department' => 'System Administration',
-            'organization_id' => null, // System level admin
-            'branch_id' => null,
-            'is_super_admin' => true,
-            'is_active' => true,
-            'status' => 'active',
-            'email_verified_at' => now(),
-            'preferences' => json_encode([
-                'timezone' => 'UTC',
-                'language' => 'en',
-                'theme' => 'light',
-                'notifications' => true
-            ])
-        ]);
-
-        // Assign Super Admin role
-        $superAdminRole = Role::where('name', 'Super Administrator')
-            ->where('guard_name', 'admin')
-            ->first();
-
-        if ($superAdminRole) {
-            $superAdmin->assignRole($superAdminRole);
-        }
-
-        $this->command->info('    ✓ Super Admin user created');
-        $this->command->info('    📧 Email: superadmin@rms.com');
-        $this->command->info('    🔒 Password: SuperAdmin123!');
-        $this->command->info('    🏢 Organization: System Level (No Organization)');
-        $this->command->info('    ⚡ Permissions: All System Permissions');
     }
 
     /**
@@ -341,14 +340,14 @@ class MinimalSystemSeeder extends Seeder
 
         $subscriptionPlan = SubscriptionPlan::create([
             'name' => 'Premium Plan',
-            'price' => 99.99,
-            'currency' => 'USD',
+            'price' => 50000.00,
+            'currency' => 'LKR',
             'description' => 'Full-featured restaurant management plan',
             'is_trial' => false,
             'trial_period_days' => 30,
             'max_branches' => 10,
             'max_employees' => 100,
-            'modules' => [1, 2, 3, 4, 5, 6, 7, 8], // All module IDs
+            'modules' => [1, 2, 3, 4, 5, 6, 7, 8],
             'features' => [
                 'unlimited_orders',
                 'advanced_reporting',
@@ -364,14 +363,14 @@ class MinimalSystemSeeder extends Seeder
         return $subscriptionPlan;
     }
 
-    /**
-     * Create sample organization
-     */
-    private function createOrganization(SubscriptionPlan $subscriptionPlan): Organization
-    {
-        $this->command->info('  🏢 Creating sample organization...');
 
-        $organization = Organization::create([
+    /**
+     * Create organization, org admin, branch, and branch admin automatically
+     */
+    private function createOrganizationWithAdmins(SubscriptionPlan $subscriptionPlan): void
+    {
+        // Create organization
+        $organization = Organization::create([ // Create organization
             'name' => 'Delicious Bites Restaurant',
             'email' => 'admin@deliciousbites.com',
             'phone' => '+94 11 123 4567',
@@ -380,26 +379,44 @@ class MinimalSystemSeeder extends Seeder
             'contact_person_designation' => 'General Manager',
             'contact_person_phone' => '+94 77 123 4567',
             'business_type' => 'restaurant',
-            'subscription_plan_id' => $subscriptionPlan->id,
+            'subscription_plan_id' => $subscriptionPlan->getKey(), // Use getKey() for Eloquent model
             'discount_percentage' => 5.00,
             'is_active' => true,
             'activated_at' => now(),
             'password' => Hash::make('DeliciousBites123!')
         ]);
-
         $this->command->info("    ✓ Organization created: {$organization->name}");
-        return $organization;
-    }
 
-    /**
-     * Create sample branch
-     */
-    private function createBranch(Organization $organization): Branch
-    {
-        $this->command->info('  🏪 Creating sample branch...');
+        // Create organization admin
+        $orgAdmin = Admin::create([ // Create organization admin
+            'email' => 'orgadmin@deliciousbites.com',
+            'name' => 'Organization Admin',
+            'password' => Hash::make('OrgAdmin123!'),
+            'phone' => '+94 77 123 4567',
+            'job_title' => 'Org Admin',
+            'department' => 'Management',
+            'organization_id' => $organization->getKey(), // Use getKey() for Eloquent model
+            'branch_id' => null,
+            'is_super_admin' => false,
+            'is_active' => true,
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'preferences' => json_encode([
+                'timezone' => 'UTC',
+                'language' => 'en',
+                'theme' => 'light',
+                'notifications' => true
+            ])
+        ]);
+        $orgAdminRole = Role::where('name', 'Organization Administrator')->where('guard_name', 'admin')->first();
+        if ($orgAdminRole) {
+            $orgAdmin->assignRole($orgAdminRole);
+        }
+        $this->command->info('    ✓ Organization Admin created: orgadmin@deliciousbites.com');
 
-        $branch = Branch::create([
-            'organization_id' => $organization->id,
+        // Create branch
+        $branch = Branch::create([ // Create branch
+            'organization_id' => $organization->getKey(), // Use getKey() for Eloquent model
             'name' => 'Main Branch - Colombo',
             'address' => '123 Main Street, Colombo 03, Sri Lanka',
             'phone' => '+94 11 123 4567',
@@ -422,41 +439,36 @@ class MinimalSystemSeeder extends Seeder
             'manager_phone' => '+94 77 234 5678',
             'code' => 'DB-COL-001'
         ]);
-
         $this->command->info("    ✓ Branch created: {$branch->name}");
-        return $branch;
+
+        // Create branch admin
+        $branchAdmin = Admin::create([ // Create branch admin
+            'email' => 'branchadmin@deliciousbites.com',
+            'name' => 'Branch Admin',
+            'password' => Hash::make('BranchAdmin123!'),
+            'phone' => '+94 77 234 5678',
+            'job_title' => 'Branch Admin',
+            'department' => 'Branch Management',
+            'organization_id' => $organization->getKey(), // Use getKey() for Eloquent model
+            'branch_id' => $branch->getKey(), // Use getKey() for Eloquent model
+            'is_super_admin' => false,
+            'is_active' => true,
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'preferences' => json_encode([
+                'timezone' => 'UTC',
+                'language' => 'en',
+                'theme' => 'light',
+                'notifications' => true
+            ])
+        ]);
+        $branchAdminRole = Role::where('name', 'Branch Administrator')->where('guard_name', 'admin')->first();
+        if ($branchAdminRole) {
+            $branchAdmin->assignRole($branchAdminRole);
+        }
+        $this->command->info('    ✓ Branch Admin created: branchadmin@deliciousbites.com');
     }
 
-    /**
-     * Create menu structure with categories and items
-     */
-    private function createMenuStructure(Organization $organization, Branch $branch): void
-    {
-        $this->command->info('  📋 Creating menu structure...');
-
-        // Create item categories for inventory
-        $this->createItemCategories($organization);
-
-        // Create 2 menus
-        $breakfastMenu = $this->createMenu($organization, $branch, 'Breakfast Menu', 'morning');
-        $dinnerMenu = $this->createMenu($organization, $branch, 'Dinner Menu', 'evening');
-
-        // Create menu categories for each menu
-        $breakfastCategories = $this->createMenuCategories($organization, $branch, 'breakfast');
-        $dinnerCategories = $this->createMenuCategories($organization, $branch, 'dinner');
-
-        // Create menu items for breakfast menu
-        $this->createMenuItems($organization, $branch, $breakfastCategories, 'breakfast');
-
-        // Create menu items for dinner menu
-        $this->createMenuItems($organization, $branch, $dinnerCategories, 'dinner');
-
-        $this->command->info('    ✓ Menu structure created with 2 menus and 10 items total');
-    }
-
-    /**
-     * Create item categories for inventory
-     */
     private function createItemCategories(Organization $organization): void
     {
         $defaultCategories = [
@@ -513,7 +525,7 @@ class MinimalSystemSeeder extends Seeder
             'valid_until' => now()->addDays(365),
             'start_time' => $type === 'morning' ? '06:00:00' : '17:00:00',
             'end_time' => $type === 'morning' ? '12:00:00' : '23:00:00',
-            'type' => $validMenuType, // Use valid menu type from enum
+            'type' => $validMenuType,
             'menu_type' => 'regular',
             'is_active' => true,
             'auto_activate' => true,
@@ -779,56 +791,100 @@ class MinimalSystemSeeder extends Seeder
     private function createOrderForReservation(Reservation $reservation, Branch $branch, $menuItems, Customer $customer): void
     {
         $order = Order::create([
-            'reservation_id' => $reservation->id,
-            'branch_id' => $branch->id,
             'organization_id' => $branch->organization_id,
-            'customer_name' => $customer->name,
-            'customer_phone' => $customer->phone,
-            'customer_phone_fk' => $customer->phone,
-            'customer_email' => $customer->email,
-            'order_type' => OrderType::DINE_IN_ONLINE_SCHEDULED,
-            'status' => Order::STATUS_CONFIRMED,
-            'payment_status' => Order::PAYMENT_STATUS_PENDING,
-            'payment_method' => Order::PAYMENT_METHOD_CASH,
-            'notes' => 'Created by seeder',
-            'currency' => 'LKR',
-            'subtotal' => 0.00,
-            'tax_amount' => 0.00,
-            'total_amount' => 0.00,
-            'order_date' => now()
+            'branch_id' => $branch->id,
+            'reservation_id' => $reservation->id,
+            'customer_id' => $customer->id,
+            'order_type' => 'dine_in',
+            'status' => 'completed',
+            'total_amount' => 0,
+            'payment_status' => 'paid',
+            'payment_method' => 'cash',
+            'created_at' => now(),
+            'updated_at' => now()
         ]);
 
-        // Add order items
-        $subtotal = 0;
-        foreach ($menuItems->take(2) as $menuItem) {
-            $quantity = rand(1, 2);
-            $unitPrice = $menuItem->price;
-            $totalPrice = $unitPrice * $quantity;
+        // Add sample order items (2 items per order)
+        $menuItemIds = $menuItems->pluck('id')->toArray();
+        $selectedItems = array_rand($menuItemIds, 2);
+
+        foreach ($selectedItems as $itemIndex) {
+            $menuItem = MenuItem::find($menuItemIds[$itemIndex]);
 
             OrderItem::create([
                 'order_id' => $order->id,
                 'menu_item_id' => $menuItem->id,
-                'item_name' => $menuItem->name,
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
-                'subtotal' => $totalPrice,
-                'total_price' => $totalPrice,
-                'special_instructions' => $quantity > 1 ? 'Extra portion' : null
+                'quantity' => rand(1, 3),
+                'unit_price' => $menuItem->price,
+                'total_price' => $menuItem->price * rand(1, 3),
+                'status' => 'preparing'
             ]);
-
-            $subtotal += $totalPrice;
         }
 
-        // Update order totals
-        $tax = $subtotal * 0.12; // 12% tax
-        $total = $subtotal + $tax;
+        // Update order total amount
+        $order->total_amount = $order->orderItems()->sum('total_price');
+        $order->save();
 
-        $order->update([
-            'subtotal' => $subtotal,
-            'tax_amount' => $tax,
-            'total_amount' => $total,
-            'tax' => $tax,
-            'total' => $total
+        $this->command->info("    ✓ Order #{$order->id} created for reservation #{$reservation->id}");
+    }
+
+    /**
+     * Create super admin user and assign all permissions
+     */
+    private function createSuperAdmin(): void
+    {
+        $superAdmin = Admin::firstOrCreate([
+            'email' => 'superadmin@rms.com'
+        ], [
+            'name' => 'Super Administrator',
+            'password' => Hash::make('SuperAdmin123!'),
+            'phone' => '+94 11 000 0000',
+            'job_title' => 'System Administrator',
+            'department' => 'System Administration',
+            'organization_id' => null, // System level admin
+            'branch_id' => null,
+            'is_super_admin' => true,
+            'is_active' => true,
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'preferences' => json_encode([
+                'timezone' => 'UTC',
+                'language' => 'en',
+                'theme' => 'light',
+                'notifications' => true
+            ])
         ]);
+
+        // Assign Super Admin role
+        $superAdminRole = Role::where('name', 'Super Administrator')
+            ->where('guard_name', 'admin')
+            ->first();
+
+        if ($superAdminRole && !$superAdmin->hasRole($superAdminRole)) {
+            $superAdmin->assignRole($superAdminRole);
+        }
+
+        $this->command->info('    ✓ Super Admin user created');
+        $this->command->info('    📧 Email: superadmin@rms.com');
+        $this->command->info('    🔒 Password: SuperAdmin123!');
+        $this->command->info('    🏢 Organization: System Level (No Organization)');
+        $this->command->info('    ⚡ Permissions: All System Permissions');
+    }
+
+    /**
+     * Assign permissions to roles based on system rules
+     */
+
+    /**
+     *
+     * Assign role to user and sync permissions
+     */
+    private function assignUserRolePermissions($user, $roleName): void
+    {
+        $role = Role::where('name', $roleName)->where('guard_name', 'admin')->first();
+        if ($role) {
+            $user->assignRole($role);
+            $user->syncPermissions($role->permissions);
+        }
     }
 }

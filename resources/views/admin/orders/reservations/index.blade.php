@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 @section('content')
-<div class="container mx-auto px-4 py-8">
+<div class="mx-auto px-4 py-8">
     <div class="max-w-5xl mx-auto">
         <div class="bg-white shadow-md rounded-lg p-6">
             <h1 class="text-2xl font-bold text-gray-800 mb-6">
@@ -72,7 +72,7 @@
                                     <td class="px-4 py-2 border-b">
                                         @if($order->reservation)
                                             @routeexists('admin.reservations.show')
-                                                <a href="{{ route('admin.reservations.show', ['reservation' => $order->reservation->id]) }}" 
+                                                <a href="{{ route('admin.reservations.show', ['reservation' => $order->reservation->id]) }}"
                                                    class="inline-block text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1 transition">
                                                     View
                                                 </a>

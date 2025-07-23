@@ -137,6 +137,59 @@
                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
             @enderror
         </div>
+        <div class="mt-8">
+            <h2 class="text-lg font-semibold mb-2">Tables</h2>
+            <div id="tables-section">
+                <div class="grid grid-cols-2 gap-4 mb-2 font-semibold">
+                    <div>Table Number/ID</div>
+                    <div>Capacity</div>
+                </div>
+                <div id="table-rows">
+                    @php $tableIndex = 0; @endphp
+                    @if(isset($branch->tables) && $branch->tables->count())
+                        @foreach($branch->tables as $table)
+                        <div class="grid grid-cols-2 gap-4 mb-2">
+                            <input type="number" name="tables[{{ $tableIndex }}][table_id]" class="border rounded px-2 py-1" value="{{ $table->number ?? $table->id }}" placeholder="Table ID/Number" min="1" required>
+                            <input type="number" name="tables[{{ $tableIndex }}][capacity]" class="border rounded px-2 py-1" value="{{ $table->capacity }}" placeholder="Capacity" min="1" required>
+                            <button type='button' class='remove-table-row text-red-500 ml-2'>Remove</button>
+                        </div>
+                        @php $tableIndex++; @endphp
+                        @endforeach
+                    @else
+                        <div class="grid grid-cols-2 gap-4 mb-2">
+                            <input type="number" name="tables[0][table_id]" class="border rounded px-2 py-1" placeholder="Table ID/Number" min="1" required>
+                            <input type="number" name="tables[0][capacity]" class="border rounded px-2 py-1" placeholder="Capacity" min="1" required>
+                        </div>
+                        @php $tableIndex = 1; @endphp
+                    @endif
+                </div>
+                <button type="button" id="add-table-row" class="mt-2 bg-green-500 text-white px-3 py-1 rounded">Add Table</button>
+            </div>
+        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let tableIndex = {{ isset($branch->tables) ? $branch->tables->count() : 1 }};
+            document.getElementById('add-table-row').addEventListener('click', function() {
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-2 gap-4 mb-2';
+                row.innerHTML = `
+                    <input type=\"number\" name=\"tables[${tableIndex}][table_id]\" class=\"border rounded px-2 py-1\" placeholder=\"Table ID/Number\" min=\"1\" required>
+                    <input type=\"number\" name=\"tables[${tableIndex}][capacity]\" class=\"border rounded px-2 py-1\" placeholder=\"Capacity\" min=\"1\" required>
+                    <button type='button' class='remove-table-row text-red-500 ml-2'>Remove</button>
+                `;
+                document.getElementById('table-rows').appendChild(row);
+                row.querySelector('.remove-table-row').addEventListener('click', function() {
+                    row.remove();
+                });
+                tableIndex++;
+            });
+            document.querySelectorAll('.remove-table-row').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    btn.parentElement.remove();
+                });
+            });
+        });
+        </script>
         <div class="flex gap-3 pt-4">
             @if(auth('admin')->user()->isSuperAdmin() || auth('admin')->user()->isOrganizationAdmin() || (auth('admin')->user()->isBranchAdmin() && auth('admin')->user()->branch_id == $branch->id))
                 <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition">

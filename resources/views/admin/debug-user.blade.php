@@ -3,7 +3,7 @@
 @section('title', 'User Debug Info')
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto">
             <h1 class="text-3xl font-bold mb-6">Current User Debug Information</h1>
 

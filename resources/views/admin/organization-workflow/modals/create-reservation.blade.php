@@ -51,14 +51,17 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="res_branch">Branch <span class="text-danger">*</span></label>
-                                <select class="form-control" id="res_branch" name="branch_id" required onchange="loadAvailableTables()">
-                                    <option value="">Select Branch</option>
-                                    @if(isset($organization))
-                                        @foreach($organization->branches as $branch)
+                                @if(auth()->user()->is_super_admin)
+                                    <select class="form-control" id="res_branch" name="branch_id" required onchange="loadAvailableTables()">
+                                        <option value="">Select Branch</option>
+                                        @foreach($allBranches as $branch)
                                             <option value="{{ $branch->id }}">{{ $branch->name }}</option>
                                         @endforeach
-                                    @endif
-                                </select>
+                                    </select>
+                                @else
+                                    <input type="hidden" name="branch_id" value="{{ auth()->user()->branch_id }}">
+                                    <input type="text" class="form-control" value="{{ auth()->user()->branch->name ?? '' }}" readonly>
+                                @endif
                             </div>
                         </div>
                         <div class="col-md-6">

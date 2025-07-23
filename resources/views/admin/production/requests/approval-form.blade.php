@@ -3,7 +3,7 @@
 @section('title', 'Approve Production Request')
 @section('header-title', 'Approve Production Request - ' . $productionRequest->id)
 @section('content')
-    <div class="container mx-auto px-4 py-8">
+    <div class="mx-auto px-4 py-8">
         <div class="max-w-6xl mx-auto">
             <!-- Header -->
             <div class="flex items-center justify-between mb-8">

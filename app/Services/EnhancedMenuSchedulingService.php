@@ -11,20 +11,33 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-
 /**
  * Phase 2: Enhanced Menu Scheduling Service
  * Handles daily menu determination, special overrides, and time-based availability
  */
 class EnhancedMenuSchedulingService
+
 {
+
+        /**
+     * Get active menus for an array of branch IDs.
+     *
+     * @param array $branchIds
+     * @return \Illuminate\Support\Collection
+     */
+    public function getActiveMenus(array $branchIds)
+    {
+        return Menu::whereIn('branch_id', $branchIds)
+            ->where('is_active', true)
+            ->get();
+    }
     /**
      * Get the menu that should be active for a specific date and time
      */
     public function getActiveMenuForDateTime(int $branchId, Carbon $dateTime): ?Menu
     {
         $cacheKey = "active_menu_{$branchId}_{$dateTime->format('Y-m-d_H-i')}";
-        
+
         return Cache::remember($cacheKey, 300, function() use ($branchId, $dateTime) {
             // 1. Check for special menu overrides first (highest priority)
             $specialMenu = $this->getSpecialMenuOverride($branchId, $dateTime);
@@ -160,6 +173,7 @@ class EnhancedMenuSchedulingService
         return $periods;
     }
 
+
     /**
      * Get menu periods for a specific day
      */
@@ -210,7 +224,7 @@ class EnhancedMenuSchedulingService
         try {
             // If different menu should be active
             if (!$currentMenu || !$shouldBeActiveMenu || $currentMenu->id !== $shouldBeActiveMenu->id) {
-                
+
                 // Deactivate current menu
                 if ($currentMenu) {
                     $this->deactivateMenu($currentMenu);
@@ -229,7 +243,7 @@ class EnhancedMenuSchedulingService
         } catch (\Exception $e) {
             $result['success'] = false;
             $result['message'] = "Error: " . $e->getMessage();
-            
+
             Log::error("Menu activation failed", [
                 'branch_id' => $branchId,
                 'error' => $e->getMessage()
@@ -350,7 +364,7 @@ class EnhancedMenuSchedulingService
 
         while ($currentTime->lt($endTime)) {
             $menu = $this->getActiveMenuForDateTime($branchId, $currentTime);
-            
+
             if ($menu) {
                 // Check for transition at start time
                 if ($menu->start_time) {
@@ -427,7 +441,7 @@ class EnhancedMenuSchedulingService
         ];
 
         $created = [];
-        
+
         foreach ($defaultMenus as $menuData) {
             $menu = Menu::create(array_merge($menuData, [
                 'branch_id' => $branchId,

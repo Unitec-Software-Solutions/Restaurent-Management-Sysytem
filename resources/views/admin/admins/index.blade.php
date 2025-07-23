@@ -3,7 +3,7 @@
 @section('title', 'Manage Admins')
 
 @section('content')
-<div class="container mx-auto px-4 py-6">
+<div class="mx-auto px-4 py-8">
     <div class="bg-white rounded-lg shadow-md">
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
@@ -105,17 +105,17 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex space-x-2">
-                                        <a href="{{ route('admins.edit', $admin) }}" 
+                                        <a href="{{ route('admins.edit', $admin) }}"
                                            class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
                                             Edit
                                         </a>
-                                        
+
                                         @if($admin->id !== auth('admin')->id())
                                             @if($admin->is_active)
                                                 <form action="{{ route('admins.deactivate', $admin) }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <button type="submit" 
+                                                    <button type="submit"
                                                             class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
                                                             onclick="return confirm('Are you sure you want to deactivate this admin?')">
                                                         Deactivate
@@ -125,7 +125,7 @@
                                                 <form action="{{ route('admins.activate', $admin) }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <button type="submit" 
+                                                    <button type="submit"
                                                             class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">
                                                         Activate
                                                     </button>

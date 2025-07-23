@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('header-title', 'Inventory Item Details')
 @section('content')
-    <div class="p-4 rounded-lg">
+    <div class="mx-auto px-4 py-8">
         <!-- Header with KPI Cards -->
         {{-- <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <!-- Item Status Card -->

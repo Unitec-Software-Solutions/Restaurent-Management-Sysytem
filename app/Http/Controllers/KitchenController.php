@@ -7,6 +7,12 @@ use App\Http\Controllers\Controller;
 
 class KitchenController extends Controller
 {
+
+    public function index()
+    {
+        return view('admin.kitchen.index');
+    }
+
     public function orders()
     {
         // TODO: Implement orders logic

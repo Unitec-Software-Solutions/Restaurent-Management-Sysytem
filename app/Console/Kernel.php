@@ -17,6 +17,7 @@ class Kernel extends ConsoleKernel
         Commands\DatabaseIntegrityCheckCommand::class,
         Commands\SeedComprehensiveTestData::class,
         Commands\RunSeededDataTests::class,
+        \App\Console\Commands\SyncSystemPermissions::class,
     ];
 
     protected function schedule(Schedule $schedule)
@@ -32,5 +33,6 @@ class Kernel extends ConsoleKernel
         })->daily();
 
         $schedule->command('subscriptions:check')->daily();
+        $schedule->command('permissions:sync-system')->daily();
     }
 }
