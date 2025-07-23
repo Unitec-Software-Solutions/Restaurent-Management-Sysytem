@@ -52,7 +52,12 @@ class Role extends SpatieRole
      */
     public function permissions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'permission_role');
+        return $this->belongsToMany(
+            \Spatie\Permission\Models\Permission::class,
+            'role_has_permissions',
+            'role_id',
+            'permission_id'
+        );
     }
 
     /**
@@ -204,5 +209,73 @@ class Role extends SpatieRole
     {
         $guardName = $guardName ?? $this->guard_name;
         return parent::hasPermissionTo($permission, $guardName);
+    }
+
+    /**
+     * Get detailed permission information for debugging
+     */
+    public function getPermissionDetails(): array
+    {
+        $this->load('permissions');
+        
+        return [
+            'role_id' => $this->id,
+            'role_name' => $this->name,
+            'guard_name' => $this->guard_name,
+            'permissions_count' => $this->permissions->count(),
+            'permissions' => $this->permissions->map(function($permission) {
+                return [
+                    'id' => $permission->id,
+                    'name' => $permission->name,
+                    'guard_name' => $permission->guard_name
+                ];
+            })->toArray(),
+            'organization_id' => $this->organization_id,
+            'branch_id' => $this->branch_id,
+            'is_system_role' => $this->is_system_role ?? false,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at
+        ];
+    }
+
+    /**
+     * Verify role-permission relationships in database
+     */
+    public function verifyPermissionSync(): array
+    {
+        $rolePermissions = \DB::table('role_has_permissions')
+            ->where('role_id', $this->id)
+            ->pluck('permission_id')
+            ->toArray();
+
+        $actualPermissions = $this->permissions()->pluck('permissions.id')->toArray();
+
+        return [
+            'role_id' => $this->id,
+            'role_name' => $this->name,
+            'pivot_table_permission_ids' => $rolePermissions,
+            'model_permission_ids' => $actualPermissions,
+            'sync_status' => array_diff($rolePermissions, $actualPermissions) === [] && 
+                           array_diff($actualPermissions, $rolePermissions) === [] ? 'synced' : 'out_of_sync',
+            'missing_in_model' => array_diff($rolePermissions, $actualPermissions),
+            'missing_in_pivot' => array_diff($actualPermissions, $rolePermissions)
+        ];
+    }
+
+    /**
+     * Force refresh role permissions from database
+     */
+    public function refreshPermissions(): self
+    {
+        // Clear any cached relationships
+        unset($this->relations['permissions']);
+        
+        // Clear Spatie permission cache
+        app()['cache']->forget(config('permission.cache.key'));
+        
+        // Reload permissions
+        $this->load('permissions');
+        
+        return $this;
     }
 }
