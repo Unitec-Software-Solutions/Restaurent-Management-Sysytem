@@ -19,7 +19,6 @@ use App\Http\Controllers\{
     KotController,
     ModuleController,
     ReportsGenController,
-    ReportsGenController
 };
 
  // Admin namespace controllers
