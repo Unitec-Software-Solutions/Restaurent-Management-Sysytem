@@ -33,40 +33,51 @@ class ReportsGenController extends Controller
             $isSuperAdmin = $user->is_super_admin ?? false;
             $orgId = $isSuperAdmin ? null : $user->organization_id;
 
+            // Get optional parameters from request
+            $dateFrom = $request->get('date_from');
+            $dateTo = $request->get('date_to');
+            $filters = $request->get('filters', []);
+
             Log::info('Multi-sheet export request', [
                 'report_type' => $reportType,
                 'user_id' => $user->id,
                 'organization_id' => $orgId,
-                'is_super_admin' => $isSuperAdmin
+                'is_super_admin' => $isSuperAdmin,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+                'filters' => $filters
             ]);
 
             // Determine which export class to use based on report type
             switch ($reportType) {
                 case 'grn_master':
-                    $export = new GrnMultiSheetExport($orgId);
+                    // Pass null for grnIds to get all GRNs for the organization
+                    $export = new GrnMultiSheetExport(null, $dateFrom, $dateTo, $filters);
                     $filename = 'grn_report_' . now()->format('Y_m_d_His') . '.xlsx';
                     break;
 
                 case 'goods_transfer_note':
-                    $export = new GtnMultiSheetExport($orgId);
+                    // Pass null for gtnIds to get all GTNs for the organization
+                    $export = new GtnMultiSheetExport(null, $dateFrom, $dateTo, $filters);
                     $filename = 'gtn_report_' . now()->format('Y_m_d_His') . '.xlsx';
                     break;
 
                 case 'stock_levels':
-                    $export = new StockMultiSheetExport($orgId);
+                    // Pass null for itemIds and branchId to get all stock for the organization
+                    $branchId = $request->get('branch_id');
+                    $export = new StockMultiSheetExport(null, $branchId, $dateFrom, $dateTo, $filters);
                     $filename = 'stock_report_' . now()->format('Y_m_d_His') . '.xlsx';
                     break;
 
                 case 'stock_release_note_master':
-                    $export = new SrnMultiSheetExport($orgId);
+                    // Pass null for srnIds to get all SRNs for the organization
+                    $export = new SrnMultiSheetExport(null, $dateFrom, $dateTo, $filters);
                     $filename = 'srn_report_' . now()->format('Y_m_d_His') . '.xlsx';
                     break;
 
                 default:
                     return response()->json(['error' => 'Invalid report type'], 400);
-            }
-
-            Log::info('Starting export download', [
+            }            Log::info('Starting export download', [
                 'filename' => $filename,
                 'export_class' => get_class($export)
             ]);
@@ -104,7 +115,7 @@ class ReportsGenController extends Controller
             $orgId = $user->organization_id;
 
             // Test SRN export as it has the most comprehensive data
-            $export = new SrnMultiSheetExport($orgId);
+            $export = new SrnMultiSheetExport(null, null, null, []);
             $sheets = $export->sheets();
 
             $result = [
