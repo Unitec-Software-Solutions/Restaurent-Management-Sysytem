@@ -17,6 +17,11 @@ use App\Models\Branch;
 use App\Models\Organization;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Response;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\GrnMultiSheetExport;
+use App\Exports\GtnMultiSheetExport;
+use App\Exports\StockMultiSheetExport;
+use App\Exports\SrnMultiSheetExport;
 
 class ReportController extends Controller
 {
@@ -94,7 +99,7 @@ class ReportController extends Controller
 
         // Handle export requests
         if ($exportFormat) {
-            return $this->exportStockReport($reportData, $exportFormat, $dateFrom, $dateTo);
+            return $this->exportStockReportMultiSheet($itemId, $branchId, $dateFrom, $dateTo, $exportFormat);
         }
 
         return view('admin.reports.inventory.stock.index', compact(
@@ -366,7 +371,7 @@ class ReportController extends Controller
         $reportData = $this->generateGrnReport($dateFrom, $dateTo, $status, $supplierId, $branchId, $orgId);
 
         if ($exportFormat) {
-            return $this->exportGrnReport($reportData, $exportFormat, $dateFrom, $dateTo);
+            return $this->exportGrnReportMultiSheet($status, $supplierId, $branchId, $dateFrom, $dateTo, $exportFormat);
         }
 
         $paymentStatus = $request->get('payment_status');
@@ -471,7 +476,7 @@ class ReportController extends Controller
         $reportData = $this->generateGtnReport($dateFrom, $dateTo, $originStatus, $receiverStatus, $fromBranchId, $toBranchId, $orgId);
 
         if ($exportFormat) {
-            return $this->exportGtnReport($reportData, $exportFormat, $dateFrom, $dateTo);
+            return $this->exportGtnReportMultiSheet($originStatus, $receiverStatus, $fromBranchId, $toBranchId, $dateFrom, $dateTo, $exportFormat);
         }
 
         return view('admin.reports.inventory.gtn.index', compact(
@@ -583,7 +588,7 @@ class ReportController extends Controller
         $reportData = $this->generateSrnReport($dateFrom, $dateTo, $releaseType, $branchId, $itemId, $orgId, $status);
 
         if ($exportFormat) {
-            return $this->exportSrnReport($reportData, $exportFormat, $dateFrom, $dateTo);
+            return $this->exportSrnReportMultiSheet($releaseType, $branchId, $itemId, $status, $dateFrom, $dateTo, $exportFormat);
         }
 
         return view('admin.reports.inventory.srn.index', compact(
@@ -778,5 +783,228 @@ class ReportController extends Controller
                 $item['total_value'], $item['status']
             ];
         });
+    }
+
+    // =================================================================================
+    // MULTI-SHEET EXPORT METHODS
+    // =================================================================================
+
+    /**
+     * Export GRN report with multiple sheets (Master data + Items data)
+     */
+    protected function exportGrnReportMultiSheet($status = null, $supplierId = null, $branchId = null, $dateFrom = null, $dateTo = null, $format = 'excel')
+    {
+        $user = Auth::guard('admin')->user();
+        $isSuperAdmin = $user->is_super_admin ?? false;
+        $orgId = $isSuperAdmin ? null : $user->organization_id;
+
+        // Build GRN query to get specific IDs for export
+        $grnQuery = GrnMaster::query();
+
+        // Apply organization filter for non-super admins
+        if (!$isSuperAdmin && $orgId) {
+            $grnQuery->where('organization_id', $orgId);
+        }
+
+        // Apply date filter
+        if ($dateFrom && $dateTo) {
+            $grnQuery->whereBetween('received_date', [$dateFrom, $dateTo]);
+        }
+
+        // Apply status filter
+        if ($status) {
+            $grnQuery->where('status', $status);
+        }
+
+        // Apply supplier filter
+        if ($supplierId) {
+            $grnQuery->where('supplier_id', $supplierId);
+        }
+
+        // Apply branch filter
+        if ($branchId) {
+            $grnQuery->where('branch_id', $branchId);
+        }
+
+        $grnIds = $grnQuery->pluck('grn_id')->toArray();
+
+        // Clean up filters by removing null/empty values
+        $filters = array_filter([
+            'status' => $status,
+            'supplier_id' => $supplierId,
+            'branch_id' => $branchId
+        ], function($value) {
+            return $value !== null && $value !== '';
+        });
+
+        $filename = 'grn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(
+            new GrnMultiSheetExport($grnIds, $dateFrom, $dateTo, $filters),
+            $filename
+        );
+    }
+
+    /**
+     * Export GTN report with multiple sheets (Master data + Items data)
+     */
+    protected function exportGtnReportMultiSheet($originStatus = null, $receiverStatus = null, $fromBranchId = null, $toBranchId = null, $dateFrom = null, $dateTo = null, $format = 'excel')
+    {
+        $user = Auth::guard('admin')->user();
+        $isSuperAdmin = $user->is_super_admin ?? false;
+        $orgId = $isSuperAdmin ? null : $user->organization_id;
+
+        // Build GTN query to get specific IDs for export
+        $gtnQuery = GoodsTransferNote::query();
+
+        // Apply organization filter for non-super admins
+        if (!$isSuperAdmin && $orgId) {
+            $gtnQuery->where('organization_id', $orgId);
+        }
+
+        // Apply date filter
+        if ($dateFrom && $dateTo) {
+            $gtnQuery->whereBetween('transfer_date', [$dateFrom, $dateTo]);
+        }
+
+        // Apply status filters
+        if ($originStatus) {
+            $gtnQuery->where('origin_status', $originStatus);
+        }
+
+        if ($receiverStatus) {
+            $gtnQuery->where('receiver_status', $receiverStatus);
+        }
+
+        // Apply branch filters
+        if ($fromBranchId) {
+            $gtnQuery->where('from_branch_id', $fromBranchId);
+        }
+
+        if ($toBranchId) {
+            $gtnQuery->where('to_branch_id', $toBranchId);
+        }
+
+        $gtnIds = $gtnQuery->pluck('gtn_id')->toArray();
+
+        // Clean up filters by removing null/empty values
+        $filters = array_filter([
+            'origin_status' => $originStatus,
+            'receiver_status' => $receiverStatus,
+            'from_branch_id' => $fromBranchId,
+            'to_branch_id' => $toBranchId
+        ], function($value) {
+            return $value !== null && $value !== '';
+        });
+
+        $filename = 'gtn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(
+            new GtnMultiSheetExport($gtnIds, $dateFrom, $dateTo, $filters),
+            $filename
+        );
+    }
+
+    /**
+     * Export Stock report with multiple sheets (Stock levels + Transaction history)
+     */
+    protected function exportStockReportMultiSheet($itemId = null, $branchId = null, $dateFrom = null, $dateTo = null, $format = 'excel')
+    {
+        $user = Auth::guard('admin')->user();
+        $isSuperAdmin = $user->is_super_admin ?? false;
+        $orgId = $isSuperAdmin ? null : $user->organization_id;
+
+        // Build item query to get specific IDs for export
+        $itemQuery = ItemMaster::where('is_active', true);
+
+        // Apply organization filter for non-super admins
+        if (!$isSuperAdmin && $orgId) {
+            $itemQuery->where('organization_id', $orgId);
+        }
+
+        // Apply specific item filter if provided
+        if ($itemId) {
+            $itemQuery->where('id', $itemId);
+        }
+
+        $itemIds = $itemQuery->pluck('id')->toArray();
+
+        // Clean up filters by removing null/empty values
+        $filters = array_filter([
+            'item_id' => $itemId,
+            'branch_id' => $branchId
+        ], function($value) {
+            return $value !== null && $value !== '';
+        });
+
+        $filename = 'stock_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(
+            new StockMultiSheetExport($itemIds, $branchId, $dateFrom, $dateTo, $filters),
+            $filename
+        );
+    }
+
+    /**
+     * Export SRN report with multiple sheets (Master data + Items data)
+     */
+    protected function exportSrnReportMultiSheet($releaseType = null, $branchId = null, $itemId = null, $status = null, $dateFrom = null, $dateTo = null, $format = 'excel')
+    {
+        $user = Auth::guard('admin')->user();
+        $isSuperAdmin = $user->is_super_admin ?? false;
+        $orgId = $isSuperAdmin ? null : $user->organization_id;
+
+        // Build SRN query to get specific IDs for export
+        $srnQuery = StockReleaseNoteMaster::query();
+
+        // Apply organization filter for non-super admins
+        if (!$isSuperAdmin && $orgId) {
+            $srnQuery->where('organization_id', $orgId);
+        }
+
+        // Apply date filter
+        if ($dateFrom && $dateTo) {
+            $srnQuery->whereBetween('release_date', [$dateFrom, $dateTo]);
+        }
+
+        // Apply release type filter
+        if ($releaseType) {
+            $srnQuery->where('release_type', $releaseType);
+        }
+
+        // Apply branch filter
+        if ($branchId) {
+            $srnQuery->where('branch_id', $branchId);
+        }
+
+        // Apply status filter
+        if ($status) {
+            $srnQuery->where('status', $status);
+        }
+
+        // Apply item filter (through items relationship)
+        if ($itemId) {
+            $srnQuery->whereHas('items', function($q) use ($itemId) {
+                $q->where('item_id', $itemId);
+            });
+        }
+
+        $srnIds = $srnQuery->pluck('id')->toArray();
+
+        // Clean up filters by removing null/empty values
+        $filters = array_filter([
+            'release_type' => $releaseType,
+            'branch_id' => $branchId,
+            'status' => $status
+        ], function($value) {
+            return $value !== null && $value !== '';
+        });
+
+        $filename = 'srn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(
+            new SrnMultiSheetExport($srnIds, $dateFrom, $dateTo, $filters),
+            $filename
+        );
     }
 }
