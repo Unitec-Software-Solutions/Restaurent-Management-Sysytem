@@ -19,7 +19,7 @@ use App\Models\GoodsTransferNote;
 use App\Models\ItemMaster;
 use App\Models\StockReleaseNoteMaster;
 
-class ReportsGenController extends Controller
+class AdminReportsGenController extends Controller // revert this if any issues were encountered
 {
     /**
      * Generate a report based on input columns, filters, and date range.
