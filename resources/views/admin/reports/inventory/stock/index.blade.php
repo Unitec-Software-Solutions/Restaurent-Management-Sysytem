@@ -24,9 +24,13 @@
                 <p class="text-gray-600">Detailed stock analysis per item with transaction breakdowns</p>
             </div>
             <div class="flex gap-2">
-                <a href="{{ route('admin.reports.inventory.stock', array_merge(request()->query(), ['export' => 'csv'])) }}"
+                <a href="{{ route('admin.reports.inventory.stock', array_merge(request()->query(), ['export' => 'excel'])) }}"
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-download mr-2"></i> Export CSV
+                    <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
+                </a>
+                <a href="{{ route('admin.reports.inventory.stock', array_merge(request()->query(), ['export' => 'csv'])) }}"
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-file-csv mr-2"></i> Export CSV
                 </a>
             </div>
         </div>
