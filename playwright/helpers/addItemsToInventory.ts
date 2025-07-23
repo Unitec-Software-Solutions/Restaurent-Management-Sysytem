@@ -249,11 +249,11 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Inv
       ]);
 
     } catch (error) {
-      console.error(`Error processing item ${item.name}:`, error);
+      // console.error(`Error processing item ${item.name}:`, error);
       // Take screenshot on error
-      if (page && typeof page.screenshot === 'function') {
-        await page.screenshot({ path: `test-results/screen-shots/${testRunId}/error-${item.name.replace(/[^a-z0-9]/gi, '_')}.png` });
-      }
+      // if (page && typeof page.screenshot === 'function') {
+      //   await page.screenshot({ path: `test-results/screen-shots/${testRunId}/error-${item.name.replace(/[^a-z0-9]/gi, '_')}.png` });
+      // }
       // Optionally rethrow or continue
       // throw error;
     }
