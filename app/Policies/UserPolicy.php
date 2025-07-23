@@ -19,11 +19,7 @@ class UserPolicy
      */
     public function viewAny(User|Admin $user): bool
     {
-        if ($user->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['users.view']);
+        return $user->hasPermissionTo('users.view');
     }
 
     /**
@@ -31,11 +27,7 @@ class UserPolicy
      */
     public function view(User|Admin $user, User $model): bool
     {
-        if ($user->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['users.view']) && $user->organization_id === $model->organization_id;
+        return $user->hasPermissionTo('users.view') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 
     /**
@@ -43,11 +35,7 @@ class UserPolicy
      */
     public function create(User|Admin $user): bool
     {
-        if ($user->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['users.create']) && ($user->isOrganizationAdmin() || $user->isBranchAdmin());
+        return $user->hasPermissionTo('users.create');
     }
 
     /**
@@ -55,11 +43,7 @@ class UserPolicy
      */
     public function update(User|Admin $user, User $model): bool
     {
-        if ($user->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['users.edit']) && $user->organization_id === $model->organization_id;
+        return $user->hasPermissionTo('users.edit') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 
     /**
@@ -67,11 +51,7 @@ class UserPolicy
      */
     public function delete(User|Admin $user, User $model): bool
     {
-        if ($user->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['users.delete']) && $user->organization_id === $model->organization_id;
+        return $user->hasPermissionTo('users.delete') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 
     /**
@@ -89,23 +69,12 @@ class UserPolicy
     {
         return false;
     }
-    
+
     /**
      * Determine whether the user can assign roles to the model.
      */
     public function assignRole(User|Admin $user, User $model): bool
     {
-        if ($user->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($user, $permissionDefinitions, $modulesConfig);
-        $canAssign = isset($availablePermissions['users.roles']);
-        if ($canAssign && $user->isOrganizationAdmin() && $user->organization_id === $model->organization_id) {
-            return true;
-        }
-        if ($canAssign && $user->isBranchAdmin() && $user->branch_id === $model->branch_id) {
-            return true;
-        }
-        return false;
+        return $user->hasPermissionTo('users.roles') && data_get($user, 'organization_id') === data_get($model, 'organization_id');
     }
 }
