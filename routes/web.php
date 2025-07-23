@@ -1126,7 +1126,7 @@ Route::get('admin/kots/{kot}/print', [\App\Http\Controllers\KotController::class
 // Export Routes - Multi-sheet Excel exports
 Route::middleware(['auth:admin'])->prefix('admin/exports')->name('admin.exports.')->group(function () {
     Route::get('/test', [\App\Http\Controllers\ReportsGenController::class, 'testExport'])->name('test');
-    Route::get('/{reportType}', [\App\Http\Controllers\ReportsGenController::class, 'handleMultiSheetExport'])->name('multisheet');
+    Route::get('.', [\App\Http\Controllers\ReportsGenController::class, 'handleMultiSheetExport'])->name('multisheet');
 });
 
 // Roles CRUD - Accessible by Super Admin
