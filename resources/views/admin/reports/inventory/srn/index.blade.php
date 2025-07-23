@@ -24,6 +24,10 @@
                 <p class="text-gray-600">Track wastage, damages, and stock releases with cost analysis</p>
             </div>
             <div class="flex gap-2">
+                {{-- <a href="{{ route('admin.exports.multisheet', ['reportType' => 'stock_release_note_master']) }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}"
+                   class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
+                </a> --}}
                 <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'excel'])) }}"
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
