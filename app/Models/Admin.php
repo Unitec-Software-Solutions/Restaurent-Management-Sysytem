@@ -95,7 +95,6 @@ class Admin extends Authenticatable
         'branch_id' => 'integer',
         'current_role_id' => 'integer',
     ];
-    // ...existing code...
 
     /**
      * The model's default values for attributes.
