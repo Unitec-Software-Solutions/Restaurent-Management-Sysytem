@@ -44,17 +44,7 @@
                     'options' => $suppliers->pluck('name', 'id')->toArray(),
                     'placeholder' => 'All Suppliers '
                 ],
-                {{-- [
-                    'name' => 'payment_status',
-                    'label' => 'Payment Status',
-                    'type' => 'select',
-                    'options' => [
-                        'pending' => 'Pending',
-                        'partial' => 'Partial',
-                        'paid' => 'Paid'
-                    ],
-                    'placeholder' => 'All Statuses'
-                ] --}}
+               
             ]"
         />
 

@@ -36,7 +36,7 @@
                         @if($menuCategory->image_url)
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Category Image</label>
-                                <div class="w-full h-48 bg-cover bg-center rounded-lg border border-gray-200" 
+                                <div class="w-full h-48 bg-cover bg-center rounded-lg border border-gray-200"
                                      style="background-image: url('{{ $menuCategory->image_url }}')"></div>
                             </div>
                         @endif
@@ -102,13 +102,9 @@
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-gray-900">Menu Items ({{ $menuCategory->menuItems->count() }})</h2>
-                        <a href="{{ route('admin.menu-items.create') }}?category_id={{ $menuCategory->id }}" 
-                           class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm">
-                            <i class="fas fa-plus mr-1"></i> Add Item
-                        </a>
                     </div>
                 </div>
-                
+
                 @if($menuCategory->menuItems->count() > 0)
                     <div class="divide-y divide-gray-200">
                         @foreach($menuCategory->menuItems as $item)
@@ -126,11 +122,11 @@
                                                 </span>
                                             @endif
                                         </div>
-                                        
+
                                         @if($item->description)
                                             <p class="text-sm text-gray-600 mb-2">{{ $item->description }}</p>
                                         @endif
-                                        
+
                                         <div class="flex items-center gap-4 text-sm text-gray-500">
                                             <span><i class="fas fa-dollar-sign mr-1"></i> ${{ number_format($item->price, 2) }}</span>
                                             @if($item->itemMaster)
@@ -138,13 +134,13 @@
                                             @endif
                                         </div>
                                     </div>
-                                    
+
                                     <div class="flex gap-2">
-                                        <a href="{{ route('admin.menu-items.show', $item) }}" 
+                                        <a href="{{ route('admin.menu-items.show', $item) }}"
                                            class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-sm">
                                             View
                                         </a>
-                                        <a href="{{ route('admin.menu-items.edit', $item) }}" 
+                                        <a href="{{ route('admin.menu-items.edit', $item) }}"
                                            class="bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm">
                                             Edit
                                         </a>
@@ -202,21 +198,17 @@
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div class="space-y-3">
-                    <a href="{{ route('admin.menu-items.create') }}?category_id={{ $menuCategory->id }}" 
-                       class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-3 rounded-lg flex items-center text-sm">
-                        <i class="fas fa-plus mr-3"></i> Add Menu Item
-                    </a>
-                    <a href="{{ route('admin.menu-categories.edit', $menuCategory) }}" 
+                    <a href="{{ route('admin.menu-categories.edit', $menuCategory) }}"
                        class="w-full bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-3 rounded-lg flex items-center text-sm">
                         <i class="fas fa-edit mr-3"></i> Edit Category
                     </a>
                     @if($stats['total_menu_items'] == 0)
-                        <form method="POST" action="{{ route('admin.menu-categories.destroy', $menuCategory) }}" 
+                        <form method="POST" action="{{ route('admin.menu-categories.destroy', $menuCategory) }}"
                               onsubmit="return confirm('Are you sure you want to delete this category?')"
                               class="w-full">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" 
+                            <button type="submit"
                                     class="w-full bg-red-50 hover:bg-red-100 text-red-700 px-4 py-3 rounded-lg flex items-center text-sm">
                                 <i class="fas fa-trash mr-3"></i> Delete Category
                             </button>

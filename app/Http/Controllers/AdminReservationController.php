@@ -36,7 +36,7 @@ class AdminReservationController extends Controller
         }
 
         // Base query with user permissions
-        $query = \App\Models\Reservation::with(['branch', 'organization', 'steward', 'tables']);
+        $query = Reservation::with(['branch', 'organization', 'steward', 'tables']);
 
         if ($admin->is_super_admin) {
             // Super admin can see all reservations
@@ -376,7 +376,7 @@ public function update(Request $request, Reservation $reservation)
             $branch = $admin->branch;
         }
 
-        
+
         if ($admin->isSuperAdmin()) {
             $branch = \App\Models\Branch::find($validated['branch_id']);
         } else {
@@ -463,7 +463,7 @@ public function update(Request $request, Reservation $reservation)
             'cancellation_fee' => $cancellationFee,
             'steward_id' => $validated['steward_id'],
             'created_by_admin_id' => $admin->id,
-            'type' => ReservationType::IN_CALL, 
+            'type' => ReservationType::IN_CALL,
         ]);
 
         if (!empty($validated['assigned_table_ids'])) {
@@ -518,12 +518,12 @@ public function update(Request $request, Reservation $reservation)
         ));
     }
 
-  
+
 public function assignSteward(Request $request, Reservation $reservation)
 {
     try {
         $validated = $request->validate([
-            'steward_id' => 'required|exists:employees,id', 
+            'steward_id' => 'required|exists:employees,id',
         ]);
 
         $reservation->update(['steward_id' => $validated['steward_id']]);
@@ -605,7 +605,7 @@ public function checkTableAvailability(Request $request)
 
     $admin = auth('admin')->user();
 
-    
+
     if (!$admin->relationLoaded('branch')) {
         $admin->load('branch');
     }
@@ -663,7 +663,7 @@ public function createOrder(Reservation $reservation)
             $callback = function() use ($reservations) {
                 $file = fopen('php://output', 'w');
 
- 
+
                 fputcsv($file, [
                     'ID', 'Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time',
                     'Number of People', 'Status', 'Branch', 'Steward', 'Tables',
