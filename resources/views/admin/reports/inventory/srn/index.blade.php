@@ -28,6 +28,27 @@
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
                 </a> --}}
+
+                <!-- PDF Export Dropdown -->
+                <div class="relative inline-block text-left">
+                    <button type="button" id="pdf-dropdown-button" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                        <i class="fas fa-file-pdf mr-2"></i> Export PDF <i class="fas fa-chevron-down ml-2"></i>
+                    </button>
+                    <div id="pdf-dropdown-menu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 hidden">
+                        <div class="py-1">
+                            <a href="#" onclick="exportPDF('detailed')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-list-alt mr-2"></i> Detailed View
+                            </a>
+                            <a href="#" onclick="exportPDF('summary')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-chart-bar mr-2"></i> Summary View
+                            </a>
+                            <a href="#" onclick="exportPDF('master_only')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-table mr-2"></i> Master Records Only
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'excel'])) }}"
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
@@ -367,3 +388,38 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    // PDF Dropdown functionality
+    const pdfDropdownButton = document.getElementById('pdf-dropdown-button');
+    const pdfDropdownMenu = document.getElementById('pdf-dropdown-menu');
+
+    if (pdfDropdownButton && pdfDropdownMenu) {
+        pdfDropdownButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            pdfDropdownMenu.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!pdfDropdownButton.contains(e.target) && !pdfDropdownMenu.contains(e.target)) {
+                pdfDropdownMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    // PDF Export function
+    function exportPDF(viewType) {
+        const currentParams = new URLSearchParams(window.location.search);
+        currentParams.set('export', 'pdf');
+        currentParams.set('view_type', viewType);
+
+        const exportUrl = `{{ route('admin.reports.inventory.srn') }}?${currentParams.toString()}`;
+        window.open(exportUrl, '_blank');
+
+        // Hide dropdown after export
+        document.getElementById('pdf-dropdown-menu').classList.add('hidden');
+    }
+</script>
+@endpush
