@@ -26,6 +26,21 @@
 - **Branch admin:**  
     - Has an org id, has a branch id
 
+## Print Reports
+
+When printing reports, follow these guidelines:
+
+- **Paper Size:** Always use A4.
+- **Content Width:** All content must fit the width of the page.
+- **Tables:** Tables must be responsive and fit the page width.
+- **Margins:** Set margins to none.
+- **Graphics:** Disable page graphics by default.
+- **General:** Follow common printing guides for reports.
+
+These instructions ensure printed reports are clear, professional, and consistent.
+
+
+
 ## Errors
 
 Use `resources/views/errors/generic.blade.php` with customizable variables such as:
@@ -46,3 +61,4 @@ Examples of customizable variables:
 - `buttonClass`: 'bg-[#FF9800] hover:bg-[#e68a00]'
 
 Use these for showing error pages or redirects if needed.
+
