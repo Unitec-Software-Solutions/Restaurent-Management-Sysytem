@@ -538,7 +538,7 @@
                         </tbody>
                     </table>
                 </div>
-            @elseif($viewType === 'master_only')
+            @elseif($viewType === 'Branches_only')
                 <!-- Master Branches Only -->
                 <div class="table-container">
                     <h3 style="margin-bottom: 15px; color: #2c3e50;">
