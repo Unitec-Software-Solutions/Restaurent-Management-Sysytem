@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\StreamedResponse;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\GrnMultiSheetExport;
@@ -19,14 +20,14 @@ use App\Models\GoodsTransferNote;
 use App\Models\ItemMaster;
 use App\Models\StockReleaseNoteMaster;
 
-class AdminReportsGenController extends Controller // revert this if any issues were encountered
+class ReportsGenController extends Controller // revert this if any issues were encountered
 {
     /**
      * Generate a report based on input columns, filters, and date range.
      * Supports output for visualizations and export (Excel/CSV).
      *
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse|\Symfony\Component\HttpFoundation\StreamedResponse
+     * @return \Illuminate\Http\JsonResponse|\Symfony\Component\HttpFoundation\StreamedResponse|\Symfony\Component\HttpFoundation\BinaryFileResponse
      */
     public function generate(Request $request)
     {
@@ -265,6 +266,6 @@ class AdminReportsGenController extends Controller // revert this if any issues 
             fclose($file);
         };
 
-        return response()->stream($callback, 200, $headers);
+        return \Illuminate\Support\Facades\Response::stream($callback, 200, $headers);
     }
 }
