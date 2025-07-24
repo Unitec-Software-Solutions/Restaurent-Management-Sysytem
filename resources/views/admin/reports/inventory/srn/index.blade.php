@@ -1,4 +1,6 @@
 
+<!--- Unused Remove -->
+{{-- 
 @extends('layouts.admin')
 @section('header-title', 'SRN Reports')
 
@@ -27,7 +29,7 @@
                 {{-- <a href="{{ route('admin.exports.multisheet', ['reportType' => 'stock_release_note_master']) }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}"
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
-                </a> --}}
+                </a> 
 
                 <!-- PDF Export Dropdown -->
                 <div class="relative inline-block text-left">
@@ -93,71 +95,36 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <form method="GET" action="{{ route('admin.reports.inventory.srn') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Date Range -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-                    <input type="date" name="date_from" value="{{ $dateFrom }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
-                    <input type="date" name="date_to" value="{{ $dateTo }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-
-                <!-- Release Type Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Release Type</label>
-                    <select name="release_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Types</option>
-                        <option value="wastage" {{ $releaseType == 'wastage' ? 'selected' : '' }}>Wastage</option>
-                        <option value="damage" {{ $releaseType == 'damage' ? 'selected' : '' }}>Damage</option>
-                        <option value="expired" {{ $releaseType == 'expired' ? 'selected' : '' }}>Expired</option>
-                        <option value="theft" {{ $releaseType == 'theft' ? 'selected' : '' }}>Theft</option>
-                        <option value="adjustment" {{ $releaseType == 'adjustment' ? 'selected' : '' }}>Adjustment</option>
-                        <option value="other" {{ $releaseType == 'other' ? 'selected' : '' }}>Other</option>
-                    </select>
-                </div>
-
-                <!-- Status Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Statuses</option>
-                        <option value="pending" {{ $status == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="approved" {{ $status == 'approved' ? 'selected' : '' }}>Approved</option>
-                        <option value="rejected" {{ $status == 'rejected' ? 'selected' : '' }}>Rejected</option>
-                        <option value="processed" {{ $status == 'processed' ? 'selected' : '' }}>Processed</option>
-                    </select>
-                </div>
-
-                <!-- Branch Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <select name="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Branches</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ $branchId == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex gap-2">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-search mr-2"></i> Generate Report
-                </button>
-                <a href="{{ route('admin.reports.inventory.srn') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-undo mr-2"></i> Clear Filters
-                </a>
-            </div>
-        </form>
-    </div>
+    <x-module-filters 
+        :branches="$branches ?? []"
+        :selectedBranch="$branchId ?? ''"
+        :statusOptions="[
+            'pending' => 'Pending',
+            'approved' => 'Approved',
+            'rejected' => 'Rejected',
+            'processed' => 'Processed'
+        ]"
+        :selectedStatus="$status ?? ''"
+        :customFilters="[
+            [
+                'name' => 'release_type',
+                'label' => 'Release Type',
+                'type' => 'select',
+                'placeholder' => 'All Types',
+                'options' => [
+                    'wastage' => 'Wastage',
+                    'damage' => 'Damage',
+                    'expired' => 'Expired',
+                    'theft' => 'Theft',
+                    'adjustment' => 'Adjustment',
+                    'other' => 'Other'
+                ]
+            ]
+        ]"
+        showDateRange="true"
+        showBranchFilter="true"
+        showStatusFilter="true"
+    />
 
     <!-- Report Results -->
     @if(isset($reportData) && $reportData['srns']->count() > 0)
@@ -454,3 +421,4 @@
     }
 </script>
 @endpush
+--}}

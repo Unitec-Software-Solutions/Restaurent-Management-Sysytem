@@ -1,3 +1,5 @@
+<!--- Unused Remove -->
+{{-- 
 @extends('layouts.admin')
 @section('header-title', 'GRN Reports')
 
@@ -103,86 +105,39 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <form method="GET" action="{{ route('admin.reports.inventory.grn') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Date Range -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-                    <input type="date" name="date_from" value="{{ $dateFrom ?? date('Y-m-01') }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
-                    <input type="date" name="date_to" value="{{ $dateTo ?? date('Y-m-d') }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-
-                <!-- Status Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Statuses</option>
-                        <option value="pending" {{ ($status ?? '') == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="verified" {{ ($status ?? '') == 'verified' ? 'selected' : '' }}>Verified</option>
-                        <option value="rejected" {{ ($status ?? '') == 'rejected' ? 'selected' : '' }}>Rejected</option>
-                    </select>
-                </div>
-
-                <!-- Payment Status Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
-                    <select name="payment_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Payment Statuses</option>
-                        <option value="unpaid" {{ ($paymentStatus ?? '') == 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                        <option value="partial" {{ ($paymentStatus ?? '') == 'partial' ? 'selected' : '' }}>Partial</option>
-                        <option value="paid" {{ ($paymentStatus ?? '') == 'paid' ? 'selected' : '' }}>Paid</option>
-                    </select>
-                </div>
-
-                <!-- Supplier Filter -->
-                @if(isset($suppliers) && $suppliers->count() > 0)
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                    <select name="supplier_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Suppliers</option>
-                        @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" {{ ($supplierId ?? '') == $supplier->id ? 'selected' : '' }}>
-                                {{ $supplier->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
-
-                <!-- Branch Filter -->
-                @if(isset($branches) && $branches->count() > 0)
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                    <select name="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Branches</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ ($branchId ?? '') == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
-            </div>
-
-            <div class="flex gap-2">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-search mr-2"></i> Generate Report
-                </button>
-                <a href="{{ route('admin.reports.inventory.grn') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-undo mr-2"></i> Clear Filters
-                </a>
-            </div>
-        </form>
-    </div>
-
-    <!-- Report Results -->
+    <x-module-filters 
+        :branches="$branches ?? []"
+        :selectedBranch="$branchId ?? ''"
+        :statusOptions="[
+            'pending' => 'Pending',
+            'verified' => 'Verified',
+            'rejected' => 'Rejected'
+        ]"
+        :selectedStatus="$status ?? ''"
+        :customFilters="[
+            [
+                'name' => 'payment_status',
+                'label' => 'Payment Status',
+                'type' => 'select',
+                'placeholder' => 'All Payment Statuses',
+                'options' => [
+                    'unpaid' => 'Unpaid',
+                    'partial' => 'Partial',
+                    'paid' => 'Paid'
+                ]
+            ],
+            [
+                'name' => 'supplier_id',
+                'label' => 'Supplier',
+                'type' => 'select',
+                'placeholder' => 'All Suppliers',
+                'options' => isset($suppliers) ? $suppliers->pluck('name', 'id')->toArray() : []
+            ]
+        ]"
+        showDateRange="true"
+        showBranchFilter="true"
+        showStatusFilter="true"
+    />    <!-- Report Results -->
     @if(isset($reportData) && $reportData['grns']->count() > 0)
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

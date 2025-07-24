@@ -1,4 +1,6 @@
 
+<!--- Unused Remove -->
+{{-- 
 @extends('layouts.admin')
 @section('header-title', 'GRN Reports')
 @section('content')

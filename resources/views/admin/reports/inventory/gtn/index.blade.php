@@ -1,4 +1,6 @@
 
+<!--- Unused Remove -->
+{{-- 
 @extends('layouts.admin')
 @section('header-title', 'GTN Reports')
 
@@ -110,84 +112,52 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <form method="GET" action="{{ route('admin.reports.inventory.gtn') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Date Range -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-                    <input type="date" name="date_from" value="{{ $dateFrom }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
-                    <input type="date" name="date_to" value="{{ $dateTo }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                </div>
-
-                <!-- Origin Status Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Origin Status</label>
-                    <select name="origin_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Statuses</option>
-                        <option value="draft" {{ $originStatus == 'draft' ? 'selected' : '' }}>Draft</option>
-                        <option value="confirmed" {{ $originStatus == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
-                        <option value="in_delivery" {{ $originStatus == 'in_delivery' ? 'selected' : '' }}>In Delivery</option>
-                        <option value="delivered" {{ $originStatus == 'delivered' ? 'selected' : '' }}>Delivered</option>
-                    </select>
-                </div>
-
-                <!-- Receiver Status Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Receiver Status</label>
-                    <select name="receiver_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Statuses</option>
-                        <option value="pending" {{ $receiverStatus == 'pending' ? 'selected' : '' }}>Pending</option>
-                        <option value="received" {{ $receiverStatus == 'received' ? 'selected' : '' }}>Received</option>
-                        <option value="verified" {{ $receiverStatus == 'verified' ? 'selected' : '' }}>Verified</option>
-                        <option value="accepted" {{ $receiverStatus == 'accepted' ? 'selected' : '' }}>Accepted</option>
-                        <option value="rejected" {{ $receiverStatus == 'rejected' ? 'selected' : '' }}>Rejected</option>
-                        <option value="partially_accepted" {{ $receiverStatus == 'partially_accepted' ? 'selected' : '' }}>Partially Accepted</option>
-                    </select>
-                </div>
-
-                <!-- From Branch Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">From Branch</label>
-                    <select name="from_branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Branches</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ $fromBranchId == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- To Branch Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">To Branch</label>
-                    <select name="to_branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="">All Branches</option>
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}" {{ $toBranchId == $branch->id ? 'selected' : '' }}>
-                                {{ $branch->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex gap-2">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-search mr-2"></i> Generate Report
-                </button>
-                <a href="{{ route('admin.reports.inventory.gtn') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-undo mr-2"></i> Clear Filters
-                </a>
-            </div>
-        </form>
-    </div>
+    <x-module-filters 
+        :branches="$branches ?? []"
+        :customFilters="[
+            [
+                'name' => 'origin_status',
+                'label' => 'Origin Status',
+                'type' => 'select',
+                'placeholder' => 'All Statuses',
+                'options' => [
+                    'draft' => 'Draft',
+                    'confirmed' => 'Confirmed',
+                    'in_delivery' => 'In Delivery',
+                    'delivered' => 'Delivered'
+                ]
+            ],
+            [
+                'name' => 'receiver_status',
+                'label' => 'Receiver Status',
+                'type' => 'select',
+                'placeholder' => 'All Statuses',
+                'options' => [
+                    'pending' => 'Pending',
+                    'received' => 'Received',
+                    'verified' => 'Verified',
+                    'accepted' => 'Accepted',
+                    'rejected' => 'Rejected',
+                    'partially_accepted' => 'Partially Accepted'
+                ]
+            ],
+            [
+                'name' => 'from_branch_id',
+                'label' => 'From Branch',
+                'type' => 'select',
+                'placeholder' => 'All Branches',
+                'options' => isset($branches) ? $branches->pluck('name', 'id')->toArray() : []
+            ],
+            [
+                'name' => 'to_branch_id',
+                'label' => 'To Branch',
+                'type' => 'select',
+                'placeholder' => 'All Branches',
+                'options' => isset($branches) ? $branches->pluck('name', 'id')->toArray() : []
+            ]
+        ]"
+        showDateRange="true"
+    />
 
     <!-- Report Results -->
     @if(isset($reportData) && $reportData['gtns']->count() > 0)
