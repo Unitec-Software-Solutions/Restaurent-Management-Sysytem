@@ -15,6 +15,301 @@ use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
+    /**
+     * Create a new reservation order for a specific reservation
+     */
+    public function createReservationOrder(Request $request)
+    {
+        try {
+            $reservationId = $request->query('reservation_id');
+            $reservation = \App\Models\Reservation::with(['branch', 'customer'])->findOrFail($reservationId);
+
+            $branches = $this->getBranches();
+            $menuCategories = \App\Models\MenuCategory::with(['menuItems' => function($query) {
+                $query->where('is_active', true);
+            }])->where('is_active', true)->get();
+            
+            $menuItems = \App\Models\MenuItem::where('is_active', true)
+                ->with(['category', 'itemMaster'])
+                ->get();
+
+            return view('admin.orders.reservations.create', [
+                'reservation' => $reservation,
+                'branches' => $branches,
+                'menuCategories' => $menuCategories,
+                'menuItems' => $menuItems,
+                'orderType' => \App\Enums\OrderType::DINE_IN_WALK_IN_SCHEDULED->value,
+                'defaultBranch' => $reservation->branch
+            ]);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Unable to load reservation order form: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store a new reservation order
+     */
+    public function storeReservationOrder(Request $request)
+    {
+        $validated = $request->validate([
+            'reservation_id' => 'required|exists:reservations,id',
+            'branch_id' => 'required|exists:branches,id',
+            'items' => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.special_instructions' => 'nullable|string|max:500',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:cash,card,online',
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            \DB::beginTransaction();
+
+            $reservation = \App\Models\Reservation::with(['branch', 'customer'])->findOrFail($validated['reservation_id']);
+
+            // Create the order
+            $order = \App\Models\Order::create([
+                'order_number' => 'RO' . str_pad(\App\Models\Order::count() + 1, 6, '0', STR_PAD_LEFT),
+                'order_type' => \App\Enums\OrderType::DINE_IN_WALK_IN_SCHEDULED->value,
+                'branch_id' => $validated['branch_id'],
+                'organization_id' => $reservation->branch->organization_id,
+                'customer_name' => $reservation->customer_name,
+                'customer_phone' => $reservation->customer_phone,
+                'customer_email' => $reservation->customer_email,
+                'reservation_id' => $validated['reservation_id'],
+                'order_date' => now(),
+                'subtotal' => $validated['total_amount'] - ($validated['tax_amount'] ?? 0) + ($validated['discount_amount'] ?? 0),
+                'discount_amount' => $validated['discount_amount'] ?? 0,
+                'tax_amount' => $validated['tax_amount'] ?? 0,
+                'total_amount' => $validated['total_amount'],
+                'payment_method' => $validated['payment_method'],
+                'payment_status' => 'pending',
+                'status' => 'confirmed',
+                'notes' => $validated['notes'],
+                'created_by' => auth('admin')->id(),
+                'placed_by_admin' => true,
+                'created_at' => now(),
+            ]);
+
+            // Create order items
+            foreach ($validated['items'] as $item) {
+                $menuItem = \App\Models\MenuItem::findOrFail($item['menu_item_id']);
+                
+                \App\Models\OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['menu_item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem->price,
+                    'total_price' => $menuItem->price * $item['quantity'],
+                    'special_instructions' => $item['special_instructions'] ?? null,
+                ]);
+            }
+
+            \DB::commit();
+
+            return redirect()->route('admin.orders.show', $order->id)
+                ->with('success', 'Reservation order created successfully!');
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to create reservation order: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Edit a reservation order
+     */
+    public function editReservationOrder(\App\Models\Order $order)
+    {
+        if (!$order->reservation_id) {
+            return back()->with('error', 'This is not a reservation order');
+        }
+
+        $branches = $this->getBranches();
+        $menuCategories = \App\Models\MenuCategory::with(['menuItems' => function($query) {
+            $query->where('is_active', true);
+        }])->where('is_active', true)->get();
+        
+        $menuItems = \App\Models\MenuItem::where('is_active', true)
+            ->with(['category', 'itemMaster'])
+            ->get();
+
+        return view('admin.orders.reservations.edit', [
+            'order' => $order->load(['reservation', 'orderItems.menuItem']),
+            'branches' => $branches,
+            'menuCategories' => $menuCategories,
+            'menuItems' => $menuItems
+        ]);
+    }
+
+    /**
+     * Update a reservation order
+     */
+    public function updateReservationOrder(Request $request, \App\Models\Order $order)
+    {
+        if (!$order->reservation_id) {
+            return back()->with('error', 'This is not a reservation order');
+        }
+
+        $validated = $request->validate([
+            'branch_id' => 'required|exists:branches,id',
+            'items' => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.special_instructions' => 'nullable|string|max:500',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:cash,card,online',
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            \DB::beginTransaction();
+
+            // Update order
+            $order->update([
+                'branch_id' => $validated['branch_id'],
+                'subtotal' => $validated['total_amount'] - ($validated['tax_amount'] ?? 0) + ($validated['discount_amount'] ?? 0),
+                'discount_amount' => $validated['discount_amount'] ?? 0,
+                'tax_amount' => $validated['tax_amount'] ?? 0,
+                'total_amount' => $validated['total_amount'],
+                'payment_method' => $validated['payment_method'],
+                'notes' => $validated['notes'],
+                'updated_by' => auth('admin')->id()
+            ]);
+
+            // Delete existing items and create new ones
+            $order->orderItems()->delete();
+            foreach ($validated['items'] as $item) {
+                $menuItem = \App\Models\MenuItem::findOrFail($item['menu_item_id']);
+                
+                \App\Models\OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['menu_item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem->price,
+                    'total_price' => $menuItem->price * $item['quantity'],
+                    'special_instructions' => $item['special_instructions'] ?? null,
+                ]);
+            }
+
+            \DB::commit();
+
+            return redirect()->route('admin.orders.show', $order->id)
+                ->with('success', 'Reservation order updated successfully!');
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to update reservation order: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Show the form for creating a new reservation order
+     */
+    public function createReservationOrder(Request $request)
+    {
+        try {
+            $reservationId = $request->query('reservation_id');
+            $reservation = \App\Models\Reservation::with(['branch', 'customer'])->findOrFail($reservationId);
+
+            $branches = $this->getBranches();
+            $menuCategories = MenuCategory::with(['menuItems' => function($query) {
+                $query->where('is_active', true);
+            }])->where('is_active', true)->get();
+            
+            $menuItems = MenuItem::where('is_active', true)
+                ->with(['category', 'itemMaster'])
+                ->get();
+
+            return view('admin.orders.reservations.create', [
+                'reservation' => $reservation,
+                'branches' => $branches,
+                'menuCategories' => $menuCategories,
+                'menuItems' => $menuItems,
+                'orderType' => OrderType::DINE_IN_WALK_IN_SCHEDULED->value,
+                'defaultBranch' => $reservation->branch
+            ]);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Unable to load reservation order form: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Store a new reservation order
+     */
+    public function storeReservationOrder(Request $request)
+    {
+        $validated = $request->validate([
+            'reservation_id' => 'required|exists:reservations,id',
+            'branch_id' => 'required|exists:branches,id',
+            'items' => 'required|array|min:1',
+            'items.*.menu_item_id' => 'required|exists:menu_items,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.special_instructions' => 'nullable|string|max:500',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'total_amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:cash,card,online',
+            'notes' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $reservation = \App\Models\Reservation::with(['branch', 'customer'])->findOrFail($validated['reservation_id']);
+
+            // Create the order
+            $order = Order::create([
+                'order_number' => 'RO' . str_pad(Order::count() + 1, 6, '0', STR_PAD_LEFT),
+                'order_type' => OrderType::DINE_IN_WALK_IN_SCHEDULED->value,
+                'branch_id' => $validated['branch_id'],
+                'organization_id' => $reservation->branch->organization_id,
+                'customer_name' => $reservation->customer_name,
+                'customer_phone' => $reservation->customer_phone,
+                'customer_email' => $reservation->customer_email,
+                'reservation_id' => $validated['reservation_id'],
+                'order_date' => now(),
+                'subtotal' => $validated['total_amount'] - ($validated['tax_amount'] ?? 0) + ($validated['discount_amount'] ?? 0),
+                'discount_amount' => $validated['discount_amount'] ?? 0,
+                'tax_amount' => $validated['tax_amount'] ?? 0,
+                'total_amount' => $validated['total_amount'],
+                'payment_method' => $validated['payment_method'],
+                'payment_status' => 'pending',
+                'status' => 'confirmed',
+                'notes' => $validated['notes'],
+                'created_by' => Auth::id(),
+                'placed_by_admin' => true,
+                'created_at' => now(),
+            ]);
+
+            // Create order items
+            foreach ($validated['items'] as $item) {
+                $menuItem = MenuItem::findOrFail($item['menu_item_id']);
+                
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'menu_item_id' => $item['menu_item_id'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $menuItem->price,
+                    'total_price' => $menuItem->price * $item['quantity'],
+                    'special_instructions' => $item['special_instructions'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.orders.show', $order->id)
+                ->with('success', 'Reservation order created successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Failed to create reservation order: ' . $e->getMessage());
+        }
+    }
     public function summary()
     {
         // TODO: Implement summary logic
@@ -306,7 +601,9 @@ class OrderController extends Controller
     {
         $admin = auth('admin')->user();
         $query = \App\Models\Order::with(['reservation', 'orderItems', 'branch'])
-            ->whereNotNull('reservation_id');
+            ->whereNotNull('reservation_id')
+            ->select('orders.*') // Add explicit select to avoid JSON parsing issues
+            ->addSelect(\DB::raw("CAST(order_type AS VARCHAR) as order_type_raw")); // Cast order_type to string
             
         // Apply admin-specific filters
         if (!$admin->is_super_admin) {
