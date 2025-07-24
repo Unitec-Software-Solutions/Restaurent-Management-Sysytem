@@ -123,24 +123,41 @@ public function create()
         abort(403, 'You do not have permission to create orders.');
     }
 
-    $branches = $this->getAdminAccessibleBranches($admin);
-    if ($branches->isEmpty()) {
-        return redirect()->route('admin.dashboard')->with('error', 'No branches available. Please contact your administrator.');
-    }
-
+    // Initialize collections
+    $branches = collect([]);
     $menuItems = collect([]);
     $categories = collect([]);
 
-    // If admin is restricted to one branch, preload menu items
-    if ($admin->branch_id) {
+    // Handle branch assignment and menu items loading based on admin type
+    if ($admin->branch_id && $admin->organization_id) {
+        // Admin has both branch and org - locked to their branch
+        $branch = Branch::find($admin->branch_id);
+        if (!$branch || !$branch->is_active) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'Your assigned branch is not active. Please contact your administrator.');
+        }
+        
+        // Load menu items for the assigned branch
         $activeMenu = Menu::getActiveMenuForBranch($admin->branch_id);
         if ($activeMenu) {
             $menuItems = $activeMenu->availableMenuItems()->with('itemMaster')->get();
         }
 
+        // Get categories for the organization
         $categories = ItemCategory::where('organization_id', $admin->organization_id)
             ->active()
             ->get();
+
+        // Single branch in collection for display
+        $branches = collect([$branch]);
+
+    } else {
+        // Super admin or org admin without branch
+        $branches = $this->getAdminAccessibleBranches($admin);
+        if ($branches->isEmpty()) {
+            return redirect()->route('admin.dashboard')
+                ->with('error', 'No branches available. Please contact your administrator.');
+        }
     }
 
     $statusOptions = [
@@ -226,9 +243,9 @@ protected function getAdminAccessibleBranches($admin)
             abort(403, 'You do not have permission to create orders.');
         }
 
-        $data = $request->validate([
+        // Determine validation rules based on admin type
+        $validationRules = [
             'order_type' => 'required|string',
-            'branch_id' => 'required|exists:branches,id',
             'order_time' => 'required|date',
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'required|string|max:20',
@@ -240,13 +257,44 @@ protected function getAdminAccessibleBranches($admin)
             'reservation_id' => 'nullable|exists:reservations,id',
             'items.*.special_instructions' => 'nullable|string|max:500',
             'preferred_contact' => 'nullable|string|in:email,sms',
-        ]);
+        ];
+
+        // Only require branch_id selection for super admin or org admin without branch
+        if ($admin->is_super_admin || ($admin->organization_id && !$admin->branch_id)) {
+            $validationRules['branch_id'] = 'required|exists:branches,id';
+        }
+
+        // Validate the request data
+        $data = $request->validate($validationRules);
+
+        // Set branch_id based on admin type
+        if ($admin->branch_id && $admin->organization_id) {
+            // Admin has both branch and org assigned - use their branch
+            $data['branch_id'] = $admin->branch_id;
+        } else if (!isset($data['branch_id'])) {
+            throw new \Exception('Branch selection is required.');
+        }
+
+        // Validate branch access
+        $branch = Branch::findOrFail($data['branch_id']);
+        if (!$admin->is_super_admin) {
+            if ($admin->organization_id && $branch->organization_id !== $admin->organization_id) {
+                throw new \Exception('Selected branch does not belong to your organization.');
+            }
+            if ($admin->branch_id && $branch->id !== $admin->branch_id) {
+                throw new \Exception('You can only create orders for your assigned branch.');
+            }
+        }
 
         DB::beginTransaction();
         try {
+            // Get organization_id from the branch
+            $branch = Branch::findOrFail($data['branch_id']);
+            
             // Initialize required fields with default values
             $order = Order::create([
                 'branch_id' => $data['branch_id'],
+                'organization_id' => $branch->organization_id, // Add organization_id
                 'customer_name' => $data['customer_name'],
                 'customer_phone' => $data['customer_phone'],
                 'order_type' => $data['order_type'],
@@ -262,22 +310,46 @@ protected function getAdminAccessibleBranches($admin)
                 'delivery_fee' => 0,
                 'total_amount' => 0,
                 'total' => 0,
-                'currency' => 'USD' // or your default currency
+                'currency' => 'USD', // or your default currency
+                'reservation_required' => false
             ]);
 
             $subtotal = 0;
             foreach ($data['items'] as $item) {
-                $menuItem = MenuItem::find($item['menu_item_id']);
-                $lineTotal = ($menuItem?->price ?? 0) * $item['quantity'];
+                // Load menu item with its relationships
+                $menuItem = MenuItem::with(['itemMaster'])->find($item['menu_item_id']);
+                if (!$menuItem) {
+                    throw new \Exception('Menu item not found');
+                }
+
+                // Calculate prices
+                $unitPrice = $menuItem->price ?? $menuItem->itemMaster->selling_price ?? 0;
+                $lineTotal = $unitPrice * $item['quantity'];
+                $itemTax = $lineTotal * 0.10; // 10% tax
                 $subtotal += $lineTotal;
 
+                // Get the item name from either MenuItem or ItemMaster
+                $itemName = $menuItem->name ?? $menuItem->itemMaster->name ?? 'Unknown Item';
+                if (empty($itemName) || $itemName === 'Unknown Item') {
+                    throw new \Exception('Item name cannot be empty or unknown');
+                }
+
+                // Create order item with all required fields
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_item_id' => $item['menu_item_id'],
+                    'item_name' => $itemName,
+                    'item_description' => $menuItem->description,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $menuItem?->price ?? 0,
+                    'unit_price' => $unitPrice,
                     'subtotal' => $lineTotal,
-                    'total_price' => $lineTotal,
+                    'total_price' => $lineTotal + $itemTax,
+                    'special_instructions' => $item['special_instructions'] ?? null,
+                    'status' => 'pending',
+                    'tax' => $itemTax,
+                    'discount' => 0, // Default discount is 0
+                    'inventory_item_id' => $menuItem->item_master_id,
+                    'notes' => sprintf('Added from menu item #%d', $menuItem->id)
                 ]);
 
                 if ($menuItem && $menuItem->itemMaster) {
