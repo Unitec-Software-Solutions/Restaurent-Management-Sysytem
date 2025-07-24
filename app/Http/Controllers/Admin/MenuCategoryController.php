@@ -28,62 +28,52 @@ class MenuCategoryController extends Controller
             abort(403, 'Unauthorized access.');
         }
 
+        $isSuperAdmin = $this->isSuperAdmin($admin);
+        $hasBranch = !empty($admin->getAttribute('branch_id'));
+        $hasOrg = !empty($admin->getAttribute('organization_id'));
 
-        // If admin is super admin, allow access even if branch_id or organization_id are missing
-        if (!property_exists($admin, 'branch_id') || !property_exists($admin, 'organization_id')) {
-            if ($this->isSuperAdmin($admin)) {
-                // Super admin: show all branches and organizations
-                $categories = MenuCategory::with(['branch', 'organization'])
-                    ->withCount('menuItems');
-                // No branch/org filter applied
-            } else {
-                abort(500, 'Admin model is missing branch_id or organization_id properties.');
-            }
-        }
+        $branches = $this->getAccessibleBranches($admin);
+        $organizations = $this->getAccessibleOrganizations($admin);
 
-        $categories = MenuCategory::with(['branch', 'organization'])
+        $categoriesQuery = MenuCategory::with(['branch', 'organization'])
             ->withCount('menuItems');
 
-        // Apply admin scope restrictions
-        if (!$this->isSuperAdmin($admin)) {
-            if (data_get($admin, 'branch_id')) {
-                $categories->where('branch_id', data_get($admin, 'branch_id'));
-            } elseif (data_get($admin, 'organization_id')) {
-                $categories->where('organization_id', data_get($admin, 'organization_id'));
+        // Only restrict for non-super admins
+        if (!$isSuperAdmin) {
+            if ($hasBranch) {
+                $categoriesQuery->where('branch_id', $admin->getAttribute('branch_id'));
+            } elseif ($hasOrg) {
+                $categoriesQuery->where('organization_id', $admin->getAttribute('organization_id'));
+            } else {
+                // If neither, show empty list and prompt to select org/branch
+                $categories = collect();
+                return view('admin.menu-categories.index', compact('categories', 'branches', 'organizations'));
             }
         }
 
         // Apply filters
         if ($request->filled('branch_id')) {
-            $categories->where('branch_id', $request->input('branch_id'));
+            $categoriesQuery->where('branch_id', $request->input('branch_id'));
         }
         if ($request->filled('organization_id')) {
-            $categories->where('organization_id', $request->input('organization_id'));
+            $categoriesQuery->where('organization_id', $request->input('organization_id'));
         }
         if ($request->filled('status')) {
             if ($request->input('status') === 'active') {
-                $categories->where('is_active', true);
+                $categoriesQuery->where('is_active', true);
             } elseif ($request->input('status') === 'inactive') {
-                $categories->where('is_active', false);
+                $categoriesQuery->where('is_active', false);
             }
         }
         if ($request->filled('search')) {
-            $categories->where('name', 'like', '%' . $request->input('search') . '%');
+            $categoriesQuery->where('name', 'like', '%' . $request->input('search') . '%');
         }
 
-        $categories = $categories->orderBy('sort_order')
+        $categories = $categoriesQuery->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(15);
 
-        // Get filter options
-        $branches = $this->getAccessibleBranches($admin);
-        $organizations = $this->getAccessibleOrganizations($admin);
-
-        return view('admin.menu-categories.index', compact(
-            'categories',
-            'branches',
-            'organizations'
-        ));
+        return view('admin.menu-categories.index', compact('categories', 'branches', 'organizations'));
     }
 
     /**
