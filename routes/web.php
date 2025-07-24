@@ -76,6 +76,7 @@ use App\Http\Controllers\PaymentController as MainPaymentController;
 use App\Http\Middleware\SuperAdmin;
 use App\Http\Controllers\ReservationWorkflowController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LoginController;
 
 
 
@@ -544,7 +545,7 @@ Route::middleware(['auth:admin'])->group(function () {
 
     // Menu categories API route for getting branches by organization
     Route::get('/admin/api/menu-categories/organizations/{organization}/branches', [
-        \App\Http\Controllers\Admin\MenuCategoryController::class,
+        MenuCategoryController::class,
         'getBranchesForOrganization'
     ])->name('admin.api.menu-categories.organizations.branches');
 });
