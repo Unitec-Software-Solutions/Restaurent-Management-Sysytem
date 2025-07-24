@@ -45,3 +45,4 @@ category-counter.txt
 
 laravel.log
 storage/logs/laravel.log
+storage/logs/*.log
