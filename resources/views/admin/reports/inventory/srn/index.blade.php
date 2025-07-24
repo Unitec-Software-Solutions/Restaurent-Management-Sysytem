@@ -29,7 +29,18 @@
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
                 </a> --}}
 
-                <!-- PDF Export Dropdown -->
+
+
+                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'excel'])) }}"
+                   class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
+                </a>
+                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'csv'])) }}"
+                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-file-csv mr-2"></i> Export CSV
+                </a>
+
+                                <!-- PDF Export Dropdown -->
                 <div class="relative inline-block text-left">
                     <button type="button" class="inline-flex justify-center w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="pdf-dropdown-button">
                         <i class="fas fa-file-pdf mr-2"></i>
@@ -79,15 +90,7 @@
                         </div>
                     </div>
                 </div>
-
-                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'excel'])) }}"
-                   class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
-                </a>
-                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'csv'])) }}"
-                   class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
-                    <i class="fas fa-file-csv mr-2"></i> Export CSV
-                </a>
+                
             </div>
         </div>
     </div>
