@@ -352,50 +352,74 @@ public function update(Request $request, Reservation $reservation)
 
     public function store(Request $request)
     {
-        $admin = auth('admin')->user();
+        $admin = auth()->user();
+
+        // Determine validation rules based on admin type
+        if ($admin->is_super_admin) {
+            $rules = [
+                'name' => 'nullable|string|max:255',
+                'phone' => 'required|string|min:10|max:15',
+                'email' => 'nullable|email|max:255',
+                'date' => 'required|date|after_or_equal:today',
+                'start_time' => 'required|date_format:H:i',
+                'end_time' => 'required|date_format:H:i|after:start_time',
+                'number_of_people' => 'required|integer|min:1',
+                'assigned_table_ids' => 'nullable|array',
+                'assigned_table_ids.*' => 'exists:tables,id',
+                'steward_id' => 'nullable|exists:employees,id',
+                'branch_id' => 'required|exists:branches,id',
+                'organization_id' => 'required|exists:organizations,id'
+            ];
+        } elseif ($admin->organization_id && !$admin->branch_id) {
+            $rules = [
+                'name' => 'nullable|string|max:255',
+                'phone' => 'required|string|min:10|max:15',
+                'email' => 'nullable|email|max:255',
+                'date' => 'required|date|after_or_equal:today',
+                'start_time' => 'required|date_format:H:i',
+                'end_time' => 'required|date_format:H:i|after:start_time',
+                'number_of_people' => 'required|integer|min:1',
+                'assigned_table_ids' => 'nullable|array',
+                'assigned_table_ids.*' => 'exists:tables,id',
+                'steward_id' => 'nullable|exists:employees,id',
+                'branch_id' => 'required|exists:branches,id'
+            ];
+        } else {
+            $rules = [
+                'name' => 'nullable|string|max:255',
+                'phone' => 'required|string|min:10|max:15',
+                'email' => 'nullable|email|max:255',
+                'date' => 'required|date|after_or_equal:today',
+                'start_time' => 'required|date_format:H:i',
+                'end_time' => 'required|date_format:H:i|after:start_time',
+                'number_of_people' => 'required|integer|min:1',
+                'assigned_table_ids' => 'nullable|array',
+                'assigned_table_ids.*' => 'exists:tables,id',
+                'steward_id' => 'nullable|exists:employees,id'
+            ];
+        }
+
+        $validated = $request->validate($rules);
+
+        // Assign branch/org IDs based on admin type
+        if ($admin->is_super_admin) {
+            $branchId = $validated['branch_id'];
+            $organizationId = $validated['organization_id'];
+        } elseif ($admin->organization_id && !$admin->branch_id) {
+            $branchId = $validated['branch_id'];
+            $organizationId = $admin->organization_id;
+        } else {
+            $branchId = $admin->branch_id;
+            $organizationId = $admin->organization_id;
+        }
+
+        // Validate branch exists and belongs to org
+        $branch = \App\Models\Branch::findOrFail($branchId);
+        if ($organizationId && $branch->organization_id != $organizationId) {
+            abort(403, 'Branch does not belong to your organization.');
+        }
+
         try {
-            // Super admin must select branch
-            if ($admin->isSuperAdmin()) {
-                $validated = $request->validate([
-                    'name' => 'nullable|string|max:255',
-                    'phone' => 'required|string|min:10|max:15',
-                    'email' => 'nullable|email|max:255',
-                    'date' => 'required|date|after_or_equal:today',
-                    'start_time' => 'required|date_format:H:i',
-                    'end_time' => 'required|date_format:H:i|after:start_time',
-                    'number_of_people' => 'required|integer|min:1',
-                    'assigned_table_ids' => 'nullable|array',
-                    'assigned_table_ids.*' => 'exists:tables,id',
-                    'steward_id' => 'nullable|exists:employees,id',
-                    'branch_id' => 'required|exists:branches,id',
-                ]);
-                $branch = Branch::find($validated['branch_id']);
-            } else {
-                // Organization admin must select branch if not assigned
-                if ($admin->organization_id && !$admin->branch_id) {
-                    return redirect()->route('admin.reservations.create')
-                        ->with('error', 'Please select a branch to create reservations.');
-                }
-                // Branch admin must have branch assigned
-                if (!$admin->branch_id || !$admin->branch) {
-                    \Log::error('Reservation creation failed: Admin missing branch assignment', ['admin_id' => $admin->id]);
-                    return redirect()->route('admin.reservations.create')
-                        ->with('error', 'You must be assigned to a branch to create reservations.');
-                }
-                $validated = $request->validate([
-                    'name' => 'nullable|string|max:255',
-                    'phone' => 'required|string|min:10|max:15',
-                    'email' => 'nullable|email|max:255',
-                    'date' => 'required|date|after_or_equal:today',
-                    'start_time' => 'required|date_format:H:i',
-                    'end_time' => 'required|date_format:H:i|after:start_time',
-                    'number_of_people' => 'required|integer|min:1',
-                    'assigned_table_ids' => 'nullable|array',
-                    'assigned_table_ids.*' => 'exists:tables,id',
-                    'steward_id' => 'nullable|exists:employees,id',
-                ]);
-                $branch = $admin->branch;
-            }
             // Validate branch exists and is active
             if (!$branch || !$branch->is_active) {
                 \Log::error('Reservation creation failed: Invalid branch', ['branch_id' => $branch?->id, 'admin_id' => $admin->id]);
@@ -493,6 +517,7 @@ public function update(Request $request, Reservation $reservation)
                 'number_of_people' => $validated['number_of_people'],
                 'status' => 'pending',
                 'branch_id' => $branchId,
+                'organization_id' => $organizationId,
                 'reservation_fee' => $reservationFee,
                 'cancellation_fee' => $cancellationFee,
                 'steward_id' => $validated['steward_id'],
@@ -525,91 +550,35 @@ public function update(Request $request, Reservation $reservation)
         }
     }
 
-    public function create(Request $request)
-    {
-        $admin = auth('admin')->user();
-        $isSuperAdmin = $admin->is_super_admin;
-        $organizations = Organization::where('is_active', true)->orderBy('name')->get();
+public function create(Request $request)
+{
+    $admin = auth('admin')->user();
 
-        // Determine organization and branch selection logic
-        $organization_id = $request->get('organization_id') ?? ($isSuperAdmin ? null : $admin->organization_id);
-        $branch_id = $request->get('branch_id') ?? ($isSuperAdmin ? null : $admin->branch_id);
-        // Branch selection logic
-        if ($isSuperAdmin) {
-            $branches = $organization_id ? Branch::where('organization_id', $organization_id)->get() : collect();
-        } elseif ($admin->organization_id && !$admin->branch_id) {
-            $branches = Branch::where('organization_id', $admin->organization_id)->get();
-        } else {
-            $branches = $admin->branch_id ? Branch::where('id', $admin->branch_id)->get() : collect();
-        }
-
-        $tables = $branch_id ? Table::where('branch_id', $branch_id)->get() : collect();
-        $availableTableIds = $tables->pluck('id')->toArray();
-        $defaultPhone = $branch_id ? (Branch::find($branch_id)->phone ?? '') : ($admin->branch->phone ?? '');
-        $defaultDate = now()->toDateString();
-        $now = now();
-        $start_time = $now->format('H:i');
-        $end_time = $now->copy()->addHours(2)->format('H:i');
-        $defaultName = 'Reservation #' . ((DB::table('reservations')->max('id') ?? 0) + 1);
-        $stewards = $branch_id ? Employee::where('branch_id', $branch_id)
-            ->where('is_active', true)
-            ->whereHas('roles', function($query) {
-                $query->where('name', 'steward');
-            })->get() : collect();
-
-        // If super admin and no org/branch selected, show only org/branch selection
-        if ($isSuperAdmin && (!$organization_id || !$branch_id)) {
-            return view('admin.reservations.create', compact(
-                'isSuperAdmin',
-                'organizations',
-                'organization_id',
-                'branches',
-                'branch_id',
-                'tables',
-                'availableTableIds',
-                'defaultPhone',
-                'defaultDate',
-                'defaultName',
-                'start_time',
-                'end_time',
-                'stewards'
-            ))->with('error', 'Please select an organization and branch to create a reservation.');
-        }
-        // If org admin and no branch selected, show branch selection
-        elseif ($admin->organization_id && !$admin->branch_id && !$branch_id) {
-            return view('admin.reservations.create', compact(
-                'isSuperAdmin',
-                'organizations',
-                'organization_id',
-                'branches',
-                'branch_id',
-                'tables',
-                'availableTableIds',
-                'defaultPhone',
-                'defaultDate',
-                'defaultName',
-                'start_time',
-                'end_time',
-                'stewards'
-            ))->with('error', 'Please select a branch to create a reservation.');
-        }
-
-        return view('admin.reservations.create', compact(
-            'isSuperAdmin',
-            'organizations',
-            'organization_id',
-            'branches',
-            'branch_id',
-            'tables',
-            'availableTableIds',
-            'defaultPhone',
-            'defaultDate',
-            'defaultName',
-            'start_time',
-            'end_time',
-            'stewards'
-        ));
+    if ($admin->is_super_admin) {
+        $organizations = Organization::where('is_active', true)->get();
+        return view('admin.reservations.create', compact('organizations'));
     }
+    elseif ($admin->organization_id && !$admin->branch_id) {
+        $branches = Branch::where('organization_id', $admin->organization_id)
+            ->where('is_active', true)
+            ->get();
+        return view('admin.reservations.create', compact('branches'));
+    }
+    else {
+        // Branch is pre-assigned
+        $branch = Branch::find($admin->branch_id);
+        $tables = Table::where('branch_id', $admin->branch_id)->get();
+        $stewards = Employee::where('branch_id', $admin->branch_id)
+            ->where('position', 'steward')
+            ->get();
+
+        return view('admin.reservations.create', [
+            'branch' => $branch,
+            'tables' => $tables,
+            'stewards' => $stewards
+        ]);
+    }
+}
 
 
 public function assignSteward(Request $request, Reservation $reservation)
