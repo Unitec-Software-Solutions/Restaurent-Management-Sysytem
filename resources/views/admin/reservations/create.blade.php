@@ -6,6 +6,7 @@
     $start_time = $now->format('H:i');
     $end_time = $now->copy()->addHours(2)->format('H:i');
     $defaultDate = $defaultDate ?? $now->format('Y-m-d');
+    $user = auth()->user();
 @endphp
 
 @section('content')
@@ -27,94 +28,78 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.reservations.store') }}">
+                <form action="{{ route('admin.reservations.store') }}" method="POST">
                     @csrf
 
-                    <!-- Organization/Branch Selection -->
-                    @if(isset($isSuperAdmin) && $isSuperAdmin)
-                        <div class="mb-6">
-                            <h2 class="text-lg font-semibold text-gray-700 mb-4">Select Organization & Branch</h2>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="organization_id" class="block text-sm font-medium text-gray-700 mb-1">Organization</label>
-                                    <select name="organization_id" id="organization_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                                        <option value="">Select Organization</option>
-                                        @foreach($organizations as $org)
-                                            <option value="{{ $org->id }}" {{ old('organization_id', $organization_id ?? '') == $org->id ? 'selected' : '' }}>{{ $org->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                                    <select name="branch_id" id="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                                        <option value="">Select Branch</option>
-                                        @foreach($branches as $branch)
-                                            <option value="{{ $branch->id }}" data-phone="{{ $branch->phone }}" {{ old('branch_id', $branch_id ?? '') == $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const orgSelect = document.getElementById('organization_id');
-                            const branchSelect = document.getElementById('branch_id');
-                            const phoneInput = document.getElementById('phone');
-                            function updateBranchPhone() {
-                                const selected = branchSelect.options[branchSelect.selectedIndex];
-                                const phone = selected && selected.dataset.phone ? selected.dataset.phone : '';
-                                if (phoneInput) phoneInput.value = phone;
-                            }
-                            branchSelect.addEventListener('change', updateBranchPhone);
-                            orgSelect.addEventListener('change', function() {
-                                fetch(`/api/organizations/${orgSelect.value}/branches`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        branchSelect.innerHTML = '<option value="">Select Branch</option>';
-                                        if (data.branches) {
-                                            data.branches.forEach(branch => {
-                                                const option = document.createElement('option');
-                                                option.value = branch.id;
-                                                option.textContent = branch.name;
-                                                option.setAttribute('data-phone', branch.phone || '');
-                                                branchSelect.appendChild(option);
-                                            });
-                                        }
-                                        updateBranchPhone();
-                                    });
-                            });
-                            updateBranchPhone();
-                        });
-                        </script>
-                    @elseif(isset($organization_id) && !$isSuperAdmin && !$branch_id && $branches->count() > 0)
-                        <div class="mb-6">
-                            <h2 class="text-lg font-semibold text-gray-700 mb-4">Select Branch</h2>
-                            <div>
-                                <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                                <select name="branch_id" id="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                                    <option value="">Select Branch</option>
-                                    @foreach($branches as $branch)
-                                        <option value="{{ $branch->id }}" data-phone="{{ $branch->phone }}" {{ old('branch_id', $branch_id ?? '') == $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
+                    <!-- Organization & Branch Selection -->
+                    <div class="grid grid-cols-2 gap-4">
+                        {{-- SUPER ADMIN --}}
+                        @if($user->isSuperAdmin())
+                            <div class="mb-4">
+                                <label>Organization</label>
+                                <select id="organization_id" name="organization_id" class="w-full" required>
+                                    <option value="">Select Organization</option>
+                                    @foreach($organizations ?? [] as $org)
+                                        <option value="{{ $org->id }}">{{ $org->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                        </div>
-                        <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const branchSelect = document.getElementById('branch_id');
-                            const phoneInput = document.getElementById('phone');
-                            function updateBranchPhone() {
-                                const selected = branchSelect.options[branchSelect.selectedIndex];
-                                const phone = selected && selected.dataset.phone ? selected.dataset.phone : '';
-                                if (phoneInput) phoneInput.value = phone;
-                            }
-                            branchSelect.addEventListener('change', updateBranchPhone);
-                            updateBranchPhone();
-                        });
-                        </script>
-                    @else
-                        <input type="hidden" name="branch_id" value="{{ $branch_id ?? '' }}">
-                    @endif
+                            <div class="mb-4">
+                                <label>Branch</label>
+                                <select id="branch_id" name="branch_id" class="w-full" required>
+                                    <option value="">Select Branch First</option>
+                                </select>
+                            </div>
+                        {{-- ORG ADMIN (NO BRANCH ASSIGNED) --}}
+                        @elseif($user->organization_id && !$user->branch_id)
+                            <div class="mb-4">
+                                <label>Branch</label>
+                                <select name="branch_id" class="w-full" required>
+                                    <option value="">Select Branch</option>
+                                    @isset($branches)
+                                        @foreach($branches as $branch)
+                                            <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                        @endforeach
+                                    @endisset
+                                </select>
+                            </div>
+                        {{-- ORG ADMIN (WITH BRANCH ASSIGNED) --}}
+                        @elseif($user->organization_id && $user->branch_id)
+                            <input type="hidden" name="branch_id" value="{{ $user->branch_id }}">
+                            <div class="mb-4">
+                                <strong>Branch:</strong> {{ $user->branch->name ?? '' }}
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- Phone Number Display --}}
+                    <div class="mt-4">
+                        <label>Branch Phone</label>
+                        <input type="text" id="branch_phone" class="form-input" readonly>
+                    </div>
+
+                    <script>
+                    function loadBranches(orgId) {
+                        fetch(`/api/organizations/${orgId}/branches`)
+                            .then(res => res.json())
+                            .then(branches => {
+                                const branchSelect = document.getElementById("branch_id");
+                                branchSelect.innerHTML = `<option value="">Select Branch</option>`;
+                                branches.forEach(branch => {
+                                    const opt = document.createElement("option");
+                                    opt.value = branch.id;
+                                    opt.text = branch.name;
+                                    opt.setAttribute("data-phone", branch.phone);
+                                    branchSelect.appendChild(opt);
+                                });
+                            });
+                    }
+
+                    function updatePhone(select) {
+                        const phone = select.options[select.selectedIndex].getAttribute('data-phone');
+                        document.getElementById('branch_phone').value = phone || '';
+                    }
+                    </script>
 
                     <!-- Customer Details -->
                     <div class="mb-6">
@@ -205,7 +190,7 @@
                             </span>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            @foreach ($tables as $table)
+                            @foreach (isset($tables) && $tables ? $tables : [] as $table)
                                 <label class="cursor-pointer">
                                     <input type="checkbox"
                                            name="assigned_table_ids[]"
@@ -389,6 +374,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial availability check
     updateTableAvailability();
+
+    @if(auth()->user()->isSuperAdmin())
+    document.getElementById('organization_id').addEventListener('change', function() {
+        const orgId = this.value;
+        loadBranches(orgId);
+    });
+    @endif
 });
 </script>
+
 @endsection
