@@ -17,7 +17,20 @@ class OrderItem extends Model
         'unit_price',
         'total_price',
         'subtotal',
+        'tax',
+        'discount',
         'inventory_item_id',
+        'special_instructions',
+        'status',
+        'notes',
+        'item_description',
+        'customizations',
+        'prepared_at',
+        'served_at'
+    ];
+
+    protected $attributes = [
+        'status' => 'pending'
     ];
 
     public function order()

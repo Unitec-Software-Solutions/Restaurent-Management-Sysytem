@@ -1094,7 +1094,8 @@ class OrderController extends Controller
                 // Generate KOT for kitchen using KotController
                 try {
                     $kotController = new \App\Http\Controllers\KotController();
-                    $kotResult = $kotController->generateKot(request(), $order);
+                    $response = $kotController->generateKot(request(), $order);
+                    $kotResult = json_decode($response->getContent(), true);
                     
                     if ($kotResult['success']) {
                         return redirect()->route('orders.takeaway.summary', $order)

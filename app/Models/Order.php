@@ -521,6 +521,14 @@ class Order extends Model
     }
 
     /**
+     * Get the admin who created the order
+     */
+    public function createdByAdmin()
+    {
+        return $this->belongsTo(\App\Models\Admin::class, 'created_by');
+    }
+
+    /**
      * Get admin defaults for order creation
      */
     public static function getAdminDefaults($admin): array
