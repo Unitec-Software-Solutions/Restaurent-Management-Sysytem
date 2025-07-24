@@ -1064,7 +1064,7 @@ Route::prefix('admin/menu-categories')->name('admin.menu-categories.')->middlewa
     // Standard CRUD routes
     Route::get('/', [MenuCategoryController::class, 'index'])->name('index');
     Route::get('/create', [MenuCategoryController::class, 'create'])->name('create');
-    Route::post('/', [MenuCategoryController::class, 'store'])->name('store');
+       Route::post('/', [MenuCategoryController::class, 'store'])->name('store');
     Route::get('/{menuCategory}', [MenuCategoryController::class, 'show'])->name('show');
     Route::get('/{menuCategory}/edit', [MenuCategoryController::class, 'edit'])->name('edit');
     Route::put('/{menuCategory}', [MenuCategoryController::class, 'update'])->name('update');
@@ -1116,4 +1116,8 @@ Route::middleware(['auth:admin', SuperAdmin::class])
         Route::resource('roles', RoleController::class);
         Route::get('roles/assign', [RoleController::class, 'assign'])->name('roles.assign');
     });
+
+Route::get('/admin/branches/{organization}', function (Organization $organization) {
+    return $organization->branches()->where('is_active', true)->get(['id', 'name']);
+});
 
