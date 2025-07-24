@@ -172,6 +172,21 @@ Route::middleware(['web'])->group(function () {
 Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AdminAuthController::class, 'login']);
 
+// Admin routes
+Route::middleware(['auth:admin'])->prefix('admin')->name('admin.')->group(function () {
+    // ... existing routes ...
+
+    // Add this route for table availability checking
+    Route::get('/check-table-availability', [App\Http\Controllers\AdminReservationController::class, 'checkTableAvailability'])
+        ->name('check-table-availability');
+
+    // Add route for getting branches by organization (for super admin)
+    Route::get('/branches/{organizationId}', [App\Http\Controllers\AdminReservationController::class, 'getBranchesByOrganization'])
+        ->name('branches.by-organization');
+
+    // ... rest of your routes ...
+});
+
 /*-------------------------------------------------------------------------
 | Admin Routes
 |------------------------------------------------------------------------*/
