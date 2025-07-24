@@ -10,10 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
-/**
- * Reservation Availability Scanner Service
- * Handles time-slot conflicts and resource assignment with enhanced logic
- */
+
 class ReservationAvailabilityService
 {
     /**
@@ -67,15 +64,13 @@ class ReservationAvailabilityService
                 return [
                     'available' => false,
                     'message' => 'Time slot conflicts with existing reservations',
-                    'conflicts' => $conflicts->map(function ($reservation) {
-                        return [
-                            'id' => $reservation->id,
-                            'customer' => $reservation->name,
-                            'start_time' => $reservation->start_time->format('H:i'),
-                            'end_time' => $reservation->end_time->format('H:i'),
-                            'people' => $reservation->number_of_people
-                        ];
-                    })->toArray()
+                    'conflicts' => $conflicts->map(fn($reservation) => [
+                        'id' => $reservation->id,
+                        'customer' => $reservation->name,
+                        'start_time' => $reservation->start_time->format('H:i'),
+                        'end_time' => $reservation->end_time->format('H:i'),
+                        'people' => $reservation->number_of_people
+                    ])->toArray()
                 ];
             }
 
@@ -113,16 +108,19 @@ class ReservationAvailabilityService
         } catch (\Exception $e) {
             Log::error('Reservation availability check failed', [
                 'error' => $e->getMessage(),
-                'branch_id' => $branchId,
-                'date' => $date,
-                'start_time' => $startTime,
-                'end_time' => $endTime
+                'trace' => $e->getTraceAsString(),
+                'branchId' => $branchId ?? null,
+                'requestStart' => $requestStart ?? null,
+                'requestEnd' => $requestEnd ?? null,
+                'numberOfPeople' => $numberOfPeople ?? null,
+                'excludeReservationId' => $excludeReservationId ?? null,
             ]);
-
+            // Optionally, return a more detailed error response for debugging
             return [
                 'available' => false,
-                'message' => 'Unable to check availability: ' . $e->getMessage(),
-                'conflicts' => []
+                'error' => true,
+                'error_message' => 'Reservation availability check failed: ' . $e->getMessage(),
+                'debug_trace' => $e->getTraceAsString(),
             ];
         }
     }
@@ -279,7 +277,7 @@ class ReservationAvailabilityService
         // Find single table that can accommodate all people
         $singleTable = $tables->first(function ($table) use ($numberOfPeople, $requestStart, $requestEnd, $excludeReservationId) {
             return $table->capacity >= $numberOfPeople &&
-                   $this->isTableAvailable($table->id, $requestStart, $requestEnd, $excludeReservationId);
+                $this->isTableAvailable($table->id, $requestStart, $requestEnd, $excludeReservationId);
         });
 
         if ($singleTable) {
@@ -292,11 +290,16 @@ class ReservationAvailabilityService
         }
 
         // Find combination of tables
-        $availableTables = $tables->filter(function ($table) use ($requestStart, $requestEnd, $excludeReservationId) {
-            return $this->isTableAvailable($table->id, $requestStart, $requestEnd, $excludeReservationId);
-        });
+        $availableTables = $tables->filter(fn($table) =>
+            $this->isTableAvailable($table->id, $requestStart, $requestEnd, $excludeReservationId)
+        )->map(function ($table) {
+            return [
+                'id' => $table->id,
+                'capacity' => $table->capacity
+            ];
+        })->values()->all();
 
-        $combination = $this->findTableCombination($availableTables->toArray(), $numberOfPeople);
+        $combination = $this->findTableCombination($availableTables, $numberOfPeople);
 
         if ($combination) {
             return [
@@ -340,39 +343,70 @@ class ReservationAvailabilityService
             }
         }
 
-        return true;
-    }
+    return true;
+}
 
-    /**
-     * Find table combination that fits the number of people
-     */
-    private function findTableCombination(array $tables, int $numberOfPeople): ?array
-    {
-        // Simple greedy algorithm - can be improved with dynamic programming
-        usort($tables, function ($a, $b) {
-            return $b['capacity'] - $a['capacity']; // Sort by capacity descending
-        });
+/**
+ * Find table combination that fits the number of people
+ */
+private function findTableCombination(array $tables, int $numberOfPeople): ?array
+{
+    // Simple greedy algorithm - can be improved with dynamic programming
+    usort($tables, fn($a, $b) => $b['capacity'] - $a['capacity']); // Sort by capacity descending
+    $totalCapacity = 0;
+    $combination = [];
 
-        $combination = [];
-        $totalCapacity = 0;
-
-        foreach ($tables as $table) {
-            if ($totalCapacity < $numberOfPeople) {
-                $combination[] = $table;
-                $totalCapacity += $table['capacity'];
-            }
+    foreach ($tables as $table) {
+        if ($totalCapacity < $numberOfPeople) {
+            $combination[] = $table;
+            $totalCapacity += $table['capacity'];
         }
-
-        return $totalCapacity >= $numberOfPeople ? $combination : null;
     }
 
-    /**
-     * Create reservation with automatic table assignment
-     */
-    public function createReservationWithTableAssignment(array $reservationData): array
+    return $totalCapacity >= $numberOfPeople ? $combination : null;
+}
+
+
+    public function createReservation($request)
     {
+        Log::info('Reservation create request', [
+            'request' => $request->all(),
+            'user' => Auth::user(),
+        ]);
+
+        DB::beginTransaction();
+
         try {
-            DB::beginTransaction();
+            // Example: decode JSON payload if present
+            if ($request->has('payload')) {
+                $payload = $request->input('payload');
+                try {
+                    $reservationData = json_decode($payload, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        throw new \Exception('JSON decode error: ' . json_last_error_msg());
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Reservation JSON decode failed', [
+                        'payload' => $payload,
+                        'error' => $e->getMessage(),
+                    ]);
+                    DB::rollBack();
+                    return response()->view('errors.generic', [
+                        'errorTitle' => 'Reservation Error',
+                        'errorCode' => '500',
+                        'errorHeading' => 'Reservation Creation Failed',
+                        'errorMessage' => 'Invalid reservation data format. Please contact support.',
+                        'headerClass' => 'bg-gradient-danger',
+                        'errorIcon' => 'fas fa-exclamation-triangle',
+                        'mainIcon' => 'fas fa-exclamation-triangle',
+                        'iconBgClass' => 'bg-red-100',
+                        'iconColor' => 'text-red-500',
+                        'buttonClass' => 'bg-[#EF5151] hover:bg-[#F06A6A]',
+                    ], 500);
+                }
+            } else {
+                $reservationData = $request->all();
+            }
 
             // Check availability first
             $availability = $this->checkTimeSlotAvailability(
@@ -384,6 +418,7 @@ class ReservationAvailabilityService
             );
 
             if (!$availability['available']) {
+                DB::rollBack();
                 return [
                     'success' => false,
                     'message' => $availability['message'],
@@ -408,6 +443,7 @@ class ReservationAvailabilityService
             ]);
 
             // Assign tables if available
+            $tableAssignment = null;
             if (isset($reservationData['auto_assign_tables']) && $reservationData['auto_assign_tables']) {
                 $tableAssignment = $this->findAvailableTables(
                     $reservationData['branch_id'],
@@ -441,7 +477,7 @@ class ReservationAvailabilityService
             DB::rollBack();
             Log::error('Reservation creation failed', [
                 'error' => $e->getMessage(),
-                'data' => $reservationData
+                'data' => isset($reservationData) ? $reservationData : []
             ]);
 
             return [
