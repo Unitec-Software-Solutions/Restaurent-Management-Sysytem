@@ -657,28 +657,37 @@ public function checkOut(Reservation $reservation)
         ], 500);
     }
 }
+
 public function checkTableAvailability(Request $request)
 {
     $request->validate([
         'date' => 'required|date|after_or_equal:today',
         'start_time' => 'required|date_format:H:i',
         'end_time' => 'required|date_format:H:i|after:start_time',
+        'branch_id' => 'sometimes|exists:branches,id',
     ]);
 
     $admin = auth('admin')->user();
+    $branchId = null;
 
-
-    if (!$admin->relationLoaded('branch')) {
-        $admin->load('branch');
-    }
-
-
-    $branchId = $admin->branch?->id;
-
-    if (!$branchId) {
-        return response()->json([
-            'error' => 'No branch assigned to admin',
-        ], 400);
+    // Super admin: branch_id must be provided
+    if ($admin->isSuperAdmin()) {
+        $branchId = $request->input('branch_id');
+        if (!$branchId) {
+            return response()->json(['error' => 'Branch ID required for super admin'], 400);
+        }
+    } elseif ($admin->organization_id && !$admin->branch_id) {
+        // Org admin: branch_id must be provided
+        $branchId = $request->input('branch_id');
+        if (!$branchId) {
+            return response()->json(['error' => 'Branch ID required for organization admin'], 400);
+        }
+    } else {
+        // Branch admin: use assigned branch
+        $branchId = $admin->branch_id;
+        if (!$branchId) {
+            return response()->json(['error' => 'No branch assigned to admin'], 400);
+        }
     }
 
     $conflictingReservations = Reservation::where('branch_id', $branchId)
@@ -694,15 +703,32 @@ public function checkTableAvailability(Request $request)
         ->with('tables')
         ->get();
 
-    $allTableIds = Table::where('branch_id', $branchId)->pluck('id');
+    $allTableIds = Table::where('branch_id', $branchId)->where('is_active', true)->pluck('id');
     $reservedTableIds = $conflictingReservations->flatMap(function ($reservation) {
         return $reservation->tables->pluck('id');
     })->unique();
     $availableTableIds = $allTableIds->diff($reservedTableIds)->values();
 
     return response()->json([
-        'available_table_ids' => $availableTableIds
+        'available_table_ids' => $availableTableIds,
+        'total_tables' => $allTableIds->count(),
+        'available_count' => $availableTableIds->count(),
     ]);
+}
+// Add this method if not present
+public function getBranchesByOrganization($organizationId)
+{
+    try {
+        $branches = \App\Models\Branch::where('organization_id', $organizationId)
+            ->where('is_active', true)
+            ->select('id', 'name', 'phone', 'address')
+            ->orderBy('name')
+            ->get();
+
+        return response()->json($branches);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch branches'], 500);
+    }
 }
 
 
