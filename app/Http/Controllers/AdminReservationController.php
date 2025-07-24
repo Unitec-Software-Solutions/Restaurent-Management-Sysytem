@@ -23,6 +23,123 @@ class AdminReservationController extends Controller
     {
         $admin = auth('admin')->user();
 
+        if (!$admin) {
+            return redirect()->route('admin.login');
+        }
+
+        try {
+            // Get filter parameters
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+            $status = $request->input('status');
+            $branchId = $request->input('branch_id');
+            $phone = $request->input('phone');
+            
+            // Base query with relationships
+            $query = Reservation::with(['branch', 'organization', 'steward', 'tables']);
+
+            // Apply admin-specific filters
+            if (!$admin->is_super_admin) {
+                if ($admin->branch_id) {
+                    $query->where('branch_id', $admin->branch_id);
+                } elseif ($admin->organization_id) {
+                    $query->where('organization_id', $admin->organization_id);
+                } else {
+                    return view('admin.reservations.index', [
+                        'reservations' => collect()->paginate(20),
+                        'branches' => collect(),
+                        'stewards' => collect(),
+                        'filters' => []
+                    ]);
+                }
+            }
+
+            // Date filter setup
+            if (!$startDate && !$endDate) {
+                $startDate = now()->startOfDay()->toDateString();
+                $endDate = now()->addDays(30)->toDateString();
+            }
+
+            // Apply date filters
+            if ($startDate) {
+                $query->where('date', '>=', $startDate);
+            }
+            if ($endDate) {
+                $query->where('date', '<=', $endDate);
+            }
+
+            // Apply other filters
+            if ($status) {
+                $query->where('status', $status);
+            }
+            if ($branchId) {
+                $query->where('branch_id', $branchId);
+            }
+            if ($phone) {
+                $query->where('phone', 'like', '%' . $phone . '%');
+            }
+
+            // Order by date and time
+            $query->orderBy('date', 'desc')->orderBy('start_time', 'desc');
+
+            // Get paginated results
+            $reservations = $query->paginate(20);
+
+            // Get branch options based on admin type
+            if ($admin->is_super_admin) {
+                $branches = Branch::where('is_active', true)->get();
+            } elseif ($admin->organization_id && !$admin->branch_id) {
+                $branches = Branch::where('organization_id', $admin->organization_id)
+                    ->where('is_active', true)
+                    ->get();
+            } else {
+                $branches = Branch::where('id', $admin->branch_id)
+                    ->where('is_active', true)
+                    ->get();
+            }
+
+            // Get stewards for the current branch
+            $stewards = Employee::when($admin->branch_id, function($query) use ($admin) {
+                    return $query->where('branch_id', $admin->branch_id);
+                })
+                ->whereHas('roles', function($query) {
+                    $query->where('name', 'steward');
+                })
+                ->where('is_active', true)
+                ->get();
+
+            // Prepare filters for view
+            $filters = [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'status' => $status,
+                'branchId' => $branchId,
+                'phone' => $phone,
+            ];
+
+            return view('admin.reservations.index', compact('reservations', 'branches', 'stewards', 'filters'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error in reservations index: ' . $e->getMessage(), [
+                'admin_id' => $admin->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->view('errors.generic', [
+                'errorTitle' => 'System Error',
+                'errorCode' => '500',
+                'errorHeading' => 'Internal Server Error',
+                'errorMessage' => 'An error occurred while loading reservations. Please try again later.',
+                'headerClass' => 'bg-gradient-danger',
+                'errorIcon' => 'fas fa-exclamation-triangle',
+                'mainIcon' => 'fas fa-exclamation-triangle',
+                'iconBgClass' => 'bg-red-100',
+                'iconColor' => 'text-red-500',
+                'buttonClass' => 'bg-red-500 hover:bg-red-600'
+            ], 500);
+        }
+
         // Get filter parameters
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
@@ -40,15 +157,13 @@ class AdminReservationController extends Controller
         // Base query with user permissions
         $query = Reservation::with(['branch', 'organization', 'steward', 'tables']);
 
+        // Apply permissions filter
         if ($admin->is_super_admin) {
             // Super admin can see all reservations
         } elseif ($admin->branch_id) {
             $query->where('branch_id', $admin->branch_id);
         } elseif ($admin->organization_id) {
             $query->where('organization_id', $admin->organization_id);
-        } else {
-            $reservations = collect()->paginate(20);
-            return view('admin.reservations.index', compact('reservations'));
         }
 
         // Apply filters
@@ -178,29 +293,84 @@ class AdminReservationController extends Controller
 
     public function edit(Reservation $reservation)
     {
-        $admin = auth('admin')->user();
+        try {
+            $admin = auth('admin')->user();
 
-        // Allow super admin to edit any reservation
-        if ($admin->isSuperAdmin()) {
-            $branches = Branch::where('is_active', true)->get();
-            $tables = Table::where('branch_id', $reservation->branch_id)->get();
+            if (!$admin) {
+                return redirect()->route('admin.login');
+            }
+
+            // Load necessary relationships
+            $reservation->load(['branch', 'tables', 'steward', 'organization']);
+
+            // Permission check based on admin type
+            if (!$admin->is_super_admin) {
+                if ($admin->branch_id) {
+                    // Branch admin can only edit reservations from their branch
+                    if ($reservation->branch_id !== $admin->branch_id) {
+                        throw new \Exception('You can only edit reservations from your assigned branch.');
+                    }
+                } elseif ($admin->organization_id) {
+                    // Organization admin can edit reservations from their organization
+                    if ($reservation->organization_id !== $admin->organization_id) {
+                        throw new \Exception('You can only edit reservations from your organization.');
+                    }
+                } else {
+                    throw new \Exception('You do not have permission to edit reservations.');
+                }
+            }
+
+            // Get tables for the reservation's branch
+            $tables = Table::where('branch_id', $reservation->branch_id)
+                ->where('is_active', true)
+                ->get();
+
+            // Get stewards for the branch
+            $stewards = Employee::where('branch_id', $reservation->branch_id)
+                ->whereHas('roles', function($query) {
+                    $query->where('name', 'steward');
+                })
+                ->where('is_active', true)
+                ->get();
+
+            // Get branches based on admin type
+            if ($admin->is_super_admin) {
+                $branches = Branch::where('is_active', true)->get();
+            } elseif ($admin->organization_id) {
+                $branches = Branch::where('organization_id', $admin->organization_id)
+                    ->where('is_active', true)
+                    ->get();
+            } else {
+                $branches = Branch::where('id', $admin->branch_id)
+                    ->where('is_active', true)
+                    ->get();
+            }
+
             $assignedTableIds = $reservation->tables->pluck('id')->toArray();
             $availableTableIds = $tables->pluck('id')->toArray();
-            return view('admin.reservations.edit', compact('reservation', 'tables', 'assignedTableIds', 'availableTableIds'));
-        }
 
-        // Load admin's branch relationship if not already loaded
-        if (!$admin->relationLoaded('branch')) {
-            $admin->load('branch');
-        }
+            return view('admin.reservations.edit', compact(
+                'reservation',
+                'tables',
+                'stewards',
+                'branches',
+                'assignedTableIds',
+                'availableTableIds'
+            ));
 
-        // Validate admin has a branch assigned
-        if (!$admin->branch_id || !$admin->branch) {
+        } catch (\Exception $e) {
+            \Log::error('Error in reservation edit: ' . $e->getMessage(), [
+                'admin_id' => $admin->id ?? null,
+                'reservation_id' => $reservation->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->view('errors.generic', [
-                'errorTitle' => 'Permission Denied',
+                'errorTitle' => $e->getMessage(),
                 'errorCode' => '403',
-                'errorHeading' => 'Permission Denied',
-                'errorMessage' => 'You must be assigned to a branch to edit reservations.',
+                'errorHeading' => 'Access Denied',
+                'errorMessage' => $e->getMessage(),
                 'headerClass' => 'bg-gradient-warning',
                 'errorIcon' => 'fas fa-ban',
                 'mainIcon' => 'fas fa-ban',
@@ -209,34 +379,6 @@ class AdminReservationController extends Controller
                 'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]'
             ], 403);
         }
-
-        // Load reservation relationships
-        $reservation->load(['branch', 'tables', 'steward']);
-
-        // Use null-safe operator for branch access
-        $branchId = $admin->branch?->id;
-        if (!$branchId) {
-            return response()->view('errors.generic', [
-                'errorTitle' => 'Permission Denied',
-                'errorCode' => '403',
-                'errorHeading' => 'Permission Denied',
-                'errorMessage' => 'Invalid branch assignment. Please contact administrator.',
-                'headerClass' => 'bg-gradient-warning',
-                'errorIcon' => 'fas fa-ban',
-                'mainIcon' => 'fas fa-ban',
-                'iconBgClass' => 'bg-yellow-100',
-                'iconColor' => 'text-yellow-500',
-                'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]'
-            ], 403);
-        }
-
-        $tables = Table::where('branch_id', $branchId)->get();
-        $assignedTableIds = $reservation->tables->pluck('id')->toArray();
-        $availableTableIds = $tables->pluck('id')->toArray();
-
-        return view('admin.reservations.edit', compact(
-            'reservation', 'tables', 'assignedTableIds', 'availableTableIds'
-        ));
     }
 
 public function update(Request $request, Reservation $reservation)
@@ -529,8 +671,12 @@ public function update(Request $request, Reservation $reservation)
                 return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
             }
 
+            // Generate reservation number
+            $lastReservation = Reservation::latest('id')->first();
+            $reservationNumber = 'RES' . str_pad(($lastReservation ? $lastReservation->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+
             $reservation = Reservation::create([
-                'name' => $validated['name'] ?: 'Reservation #' . ((DB::table('reservations')->max('id') ?? 0) + 1),
+                'name' => $validated['name'] ?: $reservationNumber,
                 'phone' => $validated['phone'] ?: $branch?->phone,
                 'email' => $validated['email'],
                 'date' => $validated['date'],
@@ -542,9 +688,10 @@ public function update(Request $request, Reservation $reservation)
                 'organization_id' => $organizationId,
                 'reservation_fee' => $reservationFee,
                 'cancellation_fee' => $cancellationFee,
-                'steward_id' => $validated['steward_id'],
+                'steward_id' => $validated['steward_id'] ?? null,
                 'created_by_admin_id' => $admin->id,
                 'type' => ReservationType::IN_CALL,
+                'reservation_number' => $reservationNumber,
             ]);
 
             \Log::info('Reservation created', [
@@ -558,8 +705,9 @@ public function update(Request $request, Reservation $reservation)
                 $reservation->tables()->sync($validated['assigned_table_ids']);
             }
 
+            // Redirect to edit page with steward assignment and check-in options
             return redirect()->route('admin.reservations.edit', $reservation)
-                ->with('success', 'Reservation created successfully. You can now check in.');
+                ->with('success', 'Reservation ' . $reservationNumber . ' created successfully. You can now assign a steward and check in the guest.');
         }
         catch (\Exception $e) {
             \Log::error('Reservation creation exception', [
@@ -575,31 +723,41 @@ public function update(Request $request, Reservation $reservation)
 public function create(Request $request)
 {
     $admin = auth('admin')->user();
+    $data = [];
 
     if ($admin->is_super_admin) {
-        $organizations = Organization::where('is_active', true)->get();
-        return view('admin.reservations.create', compact('organizations'));
+        // Super admin can select both organization and branch
+        $data['organizations'] = Organization::where('is_active', true)->get();
+        $data['branches'] = collect(); // Will be populated via AJAX
+        $data['isSelectingOrg'] = true;
     }
     elseif ($admin->organization_id && !$admin->branch_id) {
-        $branches = Branch::where('organization_id', $admin->organization_id)
+        // Organization admin can only select branch
+        $data['branches'] = Branch::where('organization_id', $admin->organization_id)
             ->where('is_active', true)
             ->get();
-        return view('admin.reservations.create', compact('branches'));
+        $data['organization'] = Organization::find($admin->organization_id);
+        $data['isSelectingBranch'] = true;
     }
     else {
-        // Branch is pre-assigned
-        $branch = Branch::find($admin->branch_id);
-        $tables = Table::where('branch_id', $admin->branch_id)->get();
-        $stewards = Employee::where('branch_id', $admin->branch_id)
-            ->where('position', 'steward')
+        // Branch admin has everything pre-assigned
+        $data['branch'] = Branch::find($admin->branch_id);
+        $data['organization'] = Organization::find($admin->organization_id);
+        $data['tables'] = Table::where('branch_id', $admin->branch_id)
+            ->where('is_active', true)
             ->get();
-
-        return view('admin.reservations.create', [
-            'branch' => $branch,
-            'tables' => $tables,
-            'stewards' => $stewards
-        ]);
+        $data['stewards'] = Employee::where('branch_id', $admin->branch_id)
+            ->where('position', 'steward')
+            ->where('is_active', true)
+            ->get();
     }
+
+    // Get next reservation number
+    $lastReservation = Reservation::latest('id')->first();
+    $nextReservationNumber = 'RES' . str_pad(($lastReservation ? $lastReservation->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+    $data['nextReservationNumber'] = $nextReservationNumber;
+
+    return view('admin.reservations.create', $data);
 }
 
 
@@ -628,23 +786,70 @@ public function assignSteward(Request $request, Reservation $reservation)
 
 public function checkIn(Reservation $reservation)
 {
-    if ($reservation->check_in_time) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Reservation already checked in'
-        ], 400);
-    }
-
+    DB::beginTransaction();
     try {
-        $reservation->update(['check_in_time' => now()]);
+        // Verify reservation exists and isn't already checked in
+        if (!$reservation->exists) {
+            throw new \Exception('Reservation not found');
+        }
+
+        if ($reservation->check_in_time) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reservation already checked in'
+            ], 400);
+        }
+
+        // Check if reservation is for today
+        if ($reservation->date != now()->toDateString()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Can only check in reservations for today'
+            ], 400);
+        }
+
+        // Check if within acceptable time range (e.g., 30 mins before start time)
+        $startTime = \Carbon\Carbon::parse($reservation->date . ' ' . $reservation->start_time);
+        $now = now();
+        if ($now->diffInMinutes($startTime, false) > 30) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too early to check in. Check-in opens 30 minutes before reservation time.'
+            ], 400);
+        }
+
+        // Update check-in time
+        $reservation->update([
+            'check_in_time' => $now,
+            'status' => 'checked_in'
+        ]);
+
+        // If steward is assigned, update their status
+        if ($reservation->steward_id) {
+            $reservation->steward()->update([
+                'current_status' => 'serving'
+            ]);
+        }
+
+        DB::commit();
 
         return response()->json([
             'success' => true,
             'message' => 'Reservation checked in successfully',
-            'check_in_time' => $reservation->fresh()->check_in_time->format('Y-m-d H:i:s'),
-            'check_out_time' => $reservation->check_out_time
+            'data' => [
+                'check_in_time' => $reservation->fresh()->check_in_time->format('Y-m-d H:i:s'),
+                'reservation_number' => $reservation->reservation_number,
+                'steward_name' => $reservation->steward ? $reservation->steward->name : null,
+                'table_numbers' => $reservation->tables->pluck('number')->join(', ')
+            ]
         ]);
     } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Check-in failed: ' . $e->getMessage(), [
+            'reservation_id' => $reservation->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
         return response()->json([
             'success' => false,
             'message' => 'Failed to check in: ' . $e->getMessage()
@@ -665,14 +870,59 @@ public function checkOut(Reservation $reservation)
             'message' => 'Reservation already checked out'
         ], 400);
     }
+
+    DB::beginTransaction();
     try {
+        // Update checkout time
         $reservation->update(['check_out_time' => now()]);
+
+        // Calculate total bill from orders
+        $orders = $reservation->orders()
+            ->where('status', '!=', 'cancelled')
+            ->get();
+
+        $totalBill = 0;
+        foreach ($orders as $order) {
+            $totalBill += $order->total_amount;
+        }
+
+        // Add reservation fee if applicable
+        if ($reservation->reservation_fee > 0) {
+            $totalBill += $reservation->reservation_fee;
+        }
+
+        // Create or update bill record
+        $bill = $reservation->bill()->updateOrCreate(
+            ['reservation_id' => $reservation->id],
+            [
+                'total_amount' => $totalBill,
+                'status' => 'pending',
+                'orders_total' => $orders->sum('total_amount'),
+                'reservation_fee' => $reservation->reservation_fee,
+                'generated_at' => now(),
+            ]
+        );
+
+        DB::commit();
+
         return response()->json([
             'success' => true,
             'message' => 'Reservation checked out successfully',
-            'check_out_time' => $reservation->fresh()->check_out_time->format('Y-m-d H:i:s')
+            'check_out_time' => $reservation->fresh()->check_out_time->format('Y-m-d H:i:s'),
+            'bill_details' => [
+                'total_amount' => $totalBill,
+                'orders_count' => $orders->count(),
+                'bill_id' => $bill->id,
+                'bill_status' => $bill->status
+            ]
         ]);
     } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Checkout failed: ' . $e->getMessage(), [
+            'reservation_id' => $reservation->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
         return response()->json([
             'success' => false,
             'message' => 'Failed to check out: ' . $e->getMessage()
