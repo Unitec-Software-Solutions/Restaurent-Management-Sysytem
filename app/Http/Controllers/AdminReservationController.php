@@ -51,10 +51,10 @@ class AdminReservationController extends Controller
 
         // Apply filters
         if ($startDate) {
-            $query->whereDate('date', '>=', $startDate);
+            $query->where('date', '>=', $startDate);
         }
         if ($endDate) {
-            $query->whereDate('date', '<=', $endDate);
+            $query->where('date', '<=', $endDate);
         }
         if ($status) {
             $query->where('status', $status);
