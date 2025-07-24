@@ -2,10 +2,10 @@
 
 @php
     use App\Models\Employee;
-    // Calculate default times
     $now = now();
     $start_time = $now->format('H:i');
     $end_time = $now->copy()->addHours(2)->format('H:i');
+    $defaultDate = $defaultDate ?? $now->format('Y-m-d');
 @endphp
 
 @section('content')
@@ -30,8 +30,8 @@
                 <form method="POST" action="{{ route('admin.reservations.store') }}">
                     @csrf
 
+                    <!-- Organization/Branch Selection -->
                     @if(isset($isSuperAdmin) && $isSuperAdmin)
-                        <!-- Super Admin: Select Organization and Branch -->
                         <div class="mb-6">
                             <h2 class="text-lg font-semibold text-gray-700 mb-4">Select Organization & Branch</h2>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -49,28 +49,23 @@
                                     <select name="branch_id" id="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                                         <option value="">Select Branch</option>
                                         @foreach($branches as $branch)
-                                            <option value="{{ $branch->id }}" data-phone="{{ $branch->phone }}">{{ $branch->name }}</option>
+                                            <option value="{{ $branch->id }}" data-phone="{{ $branch->phone }}" {{ old('branch_id', $branch_id ?? '') == $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                             </div>
                         </div>
                         <script>
-                        // Optional: AJAX branch loading for super admin
                         document.addEventListener('DOMContentLoaded', function() {
                             const orgSelect = document.getElementById('organization_id');
                             const branchSelect = document.getElementById('branch_id');
-
-                            // When branch changes, set the phone input value to the branch phone
+                            const phoneInput = document.getElementById('phone');
                             function updateBranchPhone() {
                                 const selected = branchSelect.options[branchSelect.selectedIndex];
                                 const phone = selected && selected.dataset.phone ? selected.dataset.phone : '';
-                                // Set the customer phone input value
-                                const customerPhoneInput = document.getElementById('phone');
-                                if (customerPhoneInput) customerPhoneInput.value = phone;
+                                if (phoneInput) phoneInput.value = phone;
                             }
                             branchSelect.addEventListener('change', updateBranchPhone);
-
                             orgSelect.addEventListener('change', function() {
                                 fetch(`/api/organizations/${orgSelect.value}/branches`)
                                     .then(response => response.json())
@@ -88,8 +83,32 @@
                                         updateBranchPhone();
                                     });
                             });
-
-                            // Set phone on page load if branch is preselected
+                            updateBranchPhone();
+                        });
+                        </script>
+                    @elseif(isset($organization_id) && !$isSuperAdmin && !$branch_id && $branches->count() > 0)
+                        <div class="mb-6">
+                            <h2 class="text-lg font-semibold text-gray-700 mb-4">Select Branch</h2>
+                            <div>
+                                <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                                <select name="branch_id" id="branch_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                                    <option value="">Select Branch</option>
+                                    @foreach($branches as $branch)
+                                        <option value="{{ $branch->id }}" data-phone="{{ $branch->phone }}" {{ old('branch_id', $branch_id ?? '') == $branch->id ? 'selected' : '' }}>{{ $branch->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const branchSelect = document.getElementById('branch_id');
+                            const phoneInput = document.getElementById('phone');
+                            function updateBranchPhone() {
+                                const selected = branchSelect.options[branchSelect.selectedIndex];
+                                const phone = selected && selected.dataset.phone ? selected.dataset.phone : '';
+                                if (phoneInput) phoneInput.value = phone;
+                            }
+                            branchSelect.addEventListener('change', updateBranchPhone);
                             updateBranchPhone();
                         });
                         </script>
@@ -97,21 +116,21 @@
                         <input type="hidden" name="branch_id" value="{{ $branch_id ?? '' }}">
                     @endif
 
-                    <!-- Customer Information -->
+                    <!-- Customer Details -->
                     <div class="mb-6">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Customer Information</h2>
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Customer Details</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                                 <input type="text"
                                        name="name"
                                        id="name"
-                                       value="{{ old('name', $defaultName ?? '') }}"
+                                       value="{{ old('name', 'Default Customer') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
                             <div>
-                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
                                 <input type="tel"
                                        name="phone"
                                        id="phone"
@@ -120,10 +139,11 @@
                                        required>
                             </div>
                             <div>
-                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                 <input type="email"
                                        name="email"
                                        id="email"
+                                       value="{{ old('email') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
                         </div>
@@ -134,16 +154,17 @@
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Reservation Details</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
                                 <input type="date"
                                        name="date"
                                        id="date"
-                                       value="{{ old('date', $defaultDate ?? '') }}"
+                                       min="{{ now()->format('Y-m-d') }}"
+                                       value="{{ old('date', $defaultDate) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
                             <div>
-                                <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                                <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
                                 <input type="time"
                                        name="start_time"
                                        id="start_time"
@@ -153,7 +174,7 @@
                                        required>
                             </div>
                             <div>
-                                <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                                <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
                                 <input type="time"
                                        name="end_time"
                                        id="end_time"
@@ -163,10 +184,12 @@
                                        required>
                             </div>
                             <div>
-                                <label for="number_of_people" class="block text-sm font-medium text-gray-700 mb-1">Number of People</label>
+                                <label for="number_of_people" class="block text-sm font-medium text-gray-700 mb-1">Number of People *</label>
                                 <input type="number"
                                        name="number_of_people"
                                        id="number_of_people"
+                                       min="1"
+                                       value="{{ old('number_of_people', 1) }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        required>
                             </div>
@@ -175,21 +198,27 @@
 
                     <!-- Assign Tables -->
                     <div class="mb-6">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Assign Tables</h2>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-700">Assign Tables</h2>
+                            <span id="capacity-info" class="text-sm text-gray-500">
+                                Total Capacity: <span id="selected-capacity">0</span>/<span id="required-capacity">{{ old('number_of_people', 1) }}</span>
+                            </span>
+                        </div>
                         <div class="flex flex-wrap gap-2">
                             @foreach ($tables as $table)
                                 <label class="cursor-pointer">
                                     <input type="checkbox"
                                            name="assigned_table_ids[]"
                                            value="{{ $table->id }}"
-                                           class="hidden peer"
+                                           class="hidden peer table-checkbox"
+                                           data-capacity="{{ $table->capacity }}"
                                            {{ in_array($table->id, $availableTableIds ?? []) ? '' : 'disabled' }}>
                                     <div data-table-id="{{ $table->id }}"
                                          class="table-selection w-20 h-20 flex flex-col items-center justify-center border rounded-md text-xs p-2
-                                            peer-checked:bg-blue-500 peer-checked:text-white
-                                            {{ in_array($table->id, $availableTableIds ?? [])
-                                                ? 'bg-white hover:bg-blue-100 cursor-pointer border-gray-300'
-                                                : 'bg-red-200 text-red-700 border-red-500 cursor-not-allowed opacity-70' }}">
+                                                peer-checked:bg-blue-500 peer-checked:text-white
+                                                {{ in_array($table->id, $availableTableIds ?? [])
+                                                    ? 'bg-white hover:bg-blue-100 cursor-pointer border-gray-300'
+                                                    : 'bg-gray-200 text-gray-700 border-gray-400 cursor-not-allowed opacity-70' }}">
                                         <span>Table {{ $table->id }}</span>
                                         <span>Cap: {{ $table->capacity }}</span>
                                         <span class="availability-text text-xs mt-1">
@@ -202,14 +231,14 @@
                         <p class="text-sm text-gray-500 mt-1">Unavailable tables are grayed out and cannot be selected.</p>
                     </div>
 
-                    <!-- Steward Assignment Section -->
+                    <!-- Steward Assignment -->
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4">Steward Assignment</h2>
                         <div>
                             <label for="steward_id" class="block text-sm font-medium text-gray-700 mb-1">Assign Steward</label>
                             <select name="steward_id" id="steward_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select Steward</option>
-                                @foreach(App\Models\Employee::all() as $steward)
+                                @foreach(Employee::where('position', 'steward')->get() as $steward)
                                     <option value="{{ $steward->id }}" {{ old('steward_id') == $steward->id ? 'selected' : '' }}>
                                         {{ $steward->name }}
                                     </option>
@@ -218,20 +247,12 @@
                         </div>
                     </div>
 
-                    <!-- Check-in/Check-out Section -->
-                    <div class="mb-6">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Check-in/Check-out</h2>
-                        <div class="text-gray-500">
-                            Check-in and check-out will be available after the reservation is created.
-                        </div>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <div class="flex justify-between items-center">
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- Submit Section -->
+                    <div class="flex justify-between items-center pt-6 border-t">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
                             Create Reservation
                         </button>
-                        <a href="{{ route('admin.reservations.index') }}" class="text-gray-600 hover:text-gray-800">
+                        <a href="{{ route('admin.reservations.index') }}" class="text-gray-600 hover:text-gray-800 font-medium">
                             Cancel
                         </a>
                     </div>
@@ -240,137 +261,95 @@
         </div>
     </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // --- Time logic ---
-    const startTimeInput = document.getElementById('start_time');
-    const endTimeInput = document.getElementById('end_time');
-    const dateInput = document.getElementById('date');
-
-    function pad(n) {
-        return n.toString().padStart(2, '0');
-    }
-
-    function setEndTimeFromStart() {
-        if (startTimeInput && endTimeInput) {
-            const [h, m] = startTimeInput.value.split(':').map(Number);
-            if (!isNaN(h) && !isNaN(m)) {
-                let endHour = h + 2;
-                let endMinute = m;
-                if (endHour >= 24) endHour -= 24;
-                endTimeInput.value = pad(endHour) + ':' + pad(endMinute);
-            }
-        }
-    }
-
-    // Always set start time to local time on page load
-    if (startTimeInput) {
-        const now = new Date();
-        startTimeInput.value = pad(now.getHours()) + ':' + pad(now.getMinutes());
-    }
-    setEndTimeFromStart();
-
-    if (startTimeInput) {
-        startTimeInput.addEventListener('change', function() {
-            setEndTimeFromStart();
-            updateTableAvailability();
-        });
-    }
-    if (dateInput) {
-        dateInput.addEventListener('change', updateTableAvailability);
-    }
-    if (endTimeInput) {
-        endTimeInput.addEventListener('change', updateTableAvailability);
-    }
-
-    // --- Table availability logic ---
-    async function updateTableAvailability() {
-        const date = dateInput.value;
-        const startTime = startTimeInput.value;
-        const endTime = endTimeInput.value;
-
-        if (!date || !startTime || !endTime) return;
-
-        try {
-            const response = await fetch(`{{ route('admin.check-table-availability') }}?date=${date}&start_time=${startTime}&end_time=${endTime}`);
-            const data = await response.json();
-
-            document.querySelectorAll('.table-selection').forEach(tableDiv => {
-                const tableId = parseInt(tableDiv.dataset.tableId);
-                const isAvailable = data.available_table_ids.includes(tableId);
-
-                // Remove all possible classes first
-                tableDiv.classList.remove(
-                    'bg-red-200', 'text-red-700', 'border-red-500', 'opacity-70',
-                    'bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300', 'cursor-not-allowed'
-                );
-
-                // Add classes based on availability
-                if (isAvailable) {
-                    tableDiv.classList.add('bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300');
-                } else {
-                    tableDiv.classList.add('bg-red-200', 'text-red-700', 'border-red-500', 'cursor-not-allowed', 'opacity-70');
-                }
-
-                // Update checkbox state
-                const checkbox = tableDiv.parentElement.querySelector('input[type="checkbox"]');
-                if (checkbox) checkbox.disabled = !isAvailable;
-
-                // Update availability text
-                const textElement = tableDiv.querySelector('.availability-text');
-                if (textElement) {
-                    textElement.textContent = isAvailable ? '' : 'Unavailable';
-                }
-            });
-        } catch (error) {
-            console.error('Error checking table availability:', error);
-        }
-    }
-
-    // Initial check on page load (after times are set)
-    updateTableAvailability();
-});
-</script>
 @endsection
 
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Elements
     const dateInput = document.getElementById('date');
     const startTimeInput = document.getElementById('start_time');
     const endTimeInput = document.getElementById('end_time');
+    const branchSelect = document.getElementById('branch_id');
+    const phoneInput = document.getElementById('phone');
+    const peopleInput = document.getElementById('number_of_people');
+    const capacityInfo = document.getElementById('selected-capacity');
+    const requiredCapacity = document.getElementById('required-capacity');
+    const tableCheckboxes = document.querySelectorAll('.table-checkbox');
 
+    // Update capacity display
+    function updateCapacityDisplay() {
+        let totalCapacity = 0;
+        tableCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                totalCapacity += parseInt(checkbox.dataset.capacity);
+            }
+        });
+        capacityInfo.textContent = totalCapacity;
+        requiredCapacity.textContent = peopleInput.value;
+
+        // Highlight if insufficient capacity
+        if (totalCapacity < parseInt(peopleInput.value)) {
+            capacityInfo.parentElement.classList.add('text-red-600');
+        } else {
+            capacityInfo.parentElement.classList.remove('text-red-600');
+        }
+    }
+
+    // Update phone number from branch selection
+    function updatePhoneFromBranch() {
+        if (branchSelect && phoneInput) {
+            const selectedOption = branchSelect.options[branchSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset.phone) {
+                phoneInput.value = selectedOption.dataset.phone;
+            }
+        }
+    }
+
+    // Check table availability
     async function updateTableAvailability() {
         const date = dateInput.value;
         const startTime = startTimeInput.value;
         const endTime = endTimeInput.value;
 
-        if (!date || !startTime || !endTime) return;
+        // Get branch ID - either from select or hidden input
+        let branchId;
+        if (branchSelect) {
+            branchId = branchSelect.value;
+        } else {
+            const hiddenBranchInput = document.querySelector('input[name="branch_id"]');
+            branchId = hiddenBranchInput ? hiddenBranchInput.value : null;
+        }
+
+        if (!date || !startTime || !endTime || !branchId) return;
 
         try {
-            const response = await fetch(`{{ route('admin.check-table-availability') }}?date=${date}&start_time=${startTime}&end_time=${endTime}`);
+            const response = await fetch(
+                `{{ route('admin.check-table-availability') }}?date=${date}&start_time=${startTime}&end_time=${endTime}&branch_id=${branchId}`
+            );
             const data = await response.json();
 
             document.querySelectorAll('.table-selection').forEach(tableDiv => {
                 const tableId = parseInt(tableDiv.dataset.tableId);
                 const isAvailable = data.available_table_ids.includes(tableId);
+                const tableCheckbox = tableDiv.parentElement.querySelector('input[type="checkbox"]');
 
-                // Remove all possible classes first
+                // Reset classes
                 tableDiv.classList.remove(
-                    'bg-red-200', 'text-red-700', 'border-red-500', 'opacity-70',
-                    'bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300', 'cursor-not-allowed'
+                    'bg-red-200', 'text-red-700', 'border-red-500',
+                    'bg-white', 'hover:bg-blue-100', 'border-gray-300'
                 );
 
-                // Add classes based on availability
                 if (isAvailable) {
-                    tableDiv.classList.add('bg-white', 'hover:bg-blue-100', 'cursor-pointer', 'border-gray-300');
+                    tableDiv.classList.add('bg-white', 'hover:bg-blue-100', 'border-gray-300');
+                    if (tableCheckbox) tableCheckbox.disabled = false;
                 } else {
-                    tableDiv.classList.add('bg-red-200', 'text-red-700', 'border-red-500', 'cursor-not-allowed', 'opacity-70');
+                    tableDiv.classList.add('bg-gray-200', 'text-gray-700', 'border-gray-400');
+                    if (tableCheckbox) {
+                        tableCheckbox.disabled = true;
+                        tableCheckbox.checked = false;
+                    }
                 }
-
-                // Update checkbox state
-                const checkbox = tableDiv.parentElement.querySelector('input[type="checkbox"]');
-                if (checkbox) checkbox.disabled = !isAvailable;
 
                 // Update availability text
                 const textElement = tableDiv.querySelector('.availability-text');
@@ -378,15 +357,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     textElement.textContent = isAvailable ? '' : 'Unavailable';
                 }
             });
+
+            updateCapacityDisplay();
         } catch (error) {
             console.error('Error checking table availability:', error);
         }
     }
 
-    [dateInput, startTimeInput, endTimeInput].forEach(input => {
-        input.addEventListener('change', updateTableAvailability);
+    // Initialize
+    updatePhoneFromBranch();
+    updateCapacityDisplay();
+
+    // Event Listeners
+    if (startTimeInput) {
+        startTimeInput.addEventListener('change', updateTableAvailability);
+    }
+
+    if (endTimeInput) endTimeInput.addEventListener('change', updateTableAvailability);
+    if (dateInput) dateInput.addEventListener('change', updateTableAvailability);
+    if (branchSelect) {
+        branchSelect.addEventListener('change', function() {
+            updatePhoneFromBranch();
+            updateTableAvailability();
+        });
+    }
+    if (peopleInput) peopleInput.addEventListener('input', updateCapacityDisplay);
+
+    document.querySelectorAll('.table-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateCapacityDisplay);
     });
 
+    // Initial availability check
     updateTableAvailability();
 });
 </script>
