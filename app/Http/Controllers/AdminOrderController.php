@@ -244,6 +244,7 @@ protected function getAdminAccessibleBranches($admin)
 
         DB::beginTransaction();
         try {
+            // Initialize required fields with default values
             $order = Order::create([
                 'branch_id' => $data['branch_id'],
                 'customer_name' => $data['customer_name'],
@@ -254,6 +255,14 @@ protected function getAdminAccessibleBranches($admin)
                 'status' => 'pending',
                 'created_by' => $admin->id,
                 'order_date' => now(),
+                'subtotal' => 0,
+                'tax_amount' => 0,
+                'discount_amount' => 0,
+                'service_charge' => 0,
+                'delivery_fee' => 0,
+                'total_amount' => 0,
+                'total' => 0,
+                'currency' => 'USD' // or your default currency
             ]);
 
             $subtotal = 0;
@@ -281,10 +290,18 @@ protected function getAdminAccessibleBranches($admin)
             }
 
             $tax = $subtotal * 0.10;
+            // Calculate all amounts
+            $serviceCharge = $subtotal * 0.05; // 5% service charge
+            $total = $subtotal + $tax + $serviceCharge;
+            
             $order->update([
                 'subtotal' => $subtotal,
                 'tax' => $tax,
-                'total' => $subtotal + $tax,
+                'tax_amount' => $tax,
+                'service_charge' => $serviceCharge,
+                'total' => $total,
+                'total_amount' => $total,
+                'updated_at' => now()
             ]);
 
             DB::commit();
