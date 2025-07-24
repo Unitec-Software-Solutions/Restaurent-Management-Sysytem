@@ -33,8 +33,8 @@ class Reservation extends Model
         'check_in_time',
         'check_out_time',
         'send_notification',
-        'created_by_admin_id', 
-        'assigned_table_ids', 
+        'created_by_admin_id',
+        'assigned_table_ids',
     ];
 
     protected $casts = [
@@ -55,22 +55,22 @@ class Reservation extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($reservation) {
             // Set default reservation type if not provided
             if (!$reservation->type) {
                 $reservation->type = ReservationType::ONLINE;
             }
-            
+
             // Apply reservation fee based on type
             if (!$reservation->reservation_fee && $reservation->branch_id) {
                 $reservation->reservation_fee = RestaurantConfig::getReservationFee(
-                    $reservation->type->value, 
+                    $reservation->type->value,
                     $reservation->branch_id,
                     $reservation->branch?->organization_id
                 );
             }
-            
+
             // Link customer phone
             if ($reservation->phone && !$reservation->customer_phone_fk) {
                 $customer = Customer::findOrCreateByPhone($reservation->phone, [
@@ -80,7 +80,7 @@ class Reservation extends Model
                 $reservation->customer_phone_fk = $customer->phone;
             }
         });
-        
+
         static::updating(function ($reservation) {
             // Update customer info if phone changed
             if ($reservation->isDirty('phone') && $reservation->phone) {
@@ -186,12 +186,12 @@ class Reservation extends Model
                 });
         });
     }
-   
+
     public function orders()
     {
         return $this->hasMany(Order::class);
     }
-    
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -214,7 +214,7 @@ class Reservation extends Model
     {
         return $this->belongsTo(Admin::class, 'created_by_admin_id');
     }
-    
+
     public function payments()
     {
         return $this->morphMany(Payment::class, 'payable');
@@ -236,10 +236,10 @@ class Reservation extends Model
         if ($this->status !== 'cancelled') {
             return false;
         }
-        
+
         $reservationTime = Carbon::parse($this->date . ' ' . $this->start_time->format('H:i'));
         $config = RestaurantConfig::getCancellationFeeRules($this->branch_id, $this->branch?->organization_id);
-        
+
         return now()->diffInHours($reservationTime) < ($config['hours_before'] ?? 24);
     }
 
@@ -251,7 +251,7 @@ class Reservation extends Model
         if ($this->isCancelledLate()) {
             $fee = RestaurantConfig::calculateCancellationFee($this);
             $this->update(['cancellation_fee' => $fee]);
-            
+
             // Here you would integrate with payment service
             // PaymentService::charge($this->customer, $fee);
         }
@@ -274,9 +274,9 @@ class Reservation extends Model
             'id' => $this->id,
             'name' => $this->name,
             'phone' => $this->phone,
-            'date' => $this->date->format('Y-m-d'),
-            'start_time' => $this->start_time->format('H:i'),
-            'end_time' => $this->end_time->format('H:i'),
+            'date' => ($this->date instanceof \Carbon\Carbon) ? $this->date->format('Y-m-d') : $this->date,
+            'start_time' => ($this->start_time instanceof \Carbon\Carbon) ? $this->start_time->format('H:i') : $this->start_time,
+            'end_time' => ($this->end_time instanceof \Carbon\Carbon) ? $this->end_time->format('H:i') : $this->end_time,
             'number_of_people' => $this->number_of_people,
             'type' => $this->getTypeLabel(),
             'reservation_fee' => $this->reservation_fee,
@@ -371,7 +371,7 @@ class Reservation extends Model
     public function arrangeTables(): array
     {
         $tableSize = $this->table_size ?? $this->number_of_people;
-        
+
         // Get available tables that can accommodate the party size
         $availableTables = Table::where('branch_id', $this->branch_id)
             ->where('capacity', '>=', $tableSize)
@@ -388,7 +388,7 @@ class Reservation extends Model
 
         foreach ($availableTables as $table) {
             if ($remainingSeats <= 0) break;
-            
+
             $selectedTables[] = $table->id;
             $remainingSeats -= $table->capacity;
         }
