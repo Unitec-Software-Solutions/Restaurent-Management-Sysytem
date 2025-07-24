@@ -3,13 +3,6 @@
 @section('content')
 <div >
     <div class="mx-auto px-4 py-8">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Digital Menu Management - Sample Page</h1>
-            <a href="#" class="bg-[#515DEF] text-white px-4 py-2 rounded-lg hover:bg-[#6A71F0] transition">
-                Add Menu Item
-            </a>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Menu Category Cards -->
             <div class="bg-white rounded-lg shadow overflow-hidden">
