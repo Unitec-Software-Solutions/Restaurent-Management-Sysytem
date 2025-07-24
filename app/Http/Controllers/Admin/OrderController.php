@@ -42,14 +42,15 @@ class OrderController extends Controller
      */
     public function reservations()
     {
-        // You can pass the same data as for index, or filter for reservation orders
-        $orders = $this->getReservationOrders(); // Implement this method as needed
-        $branches = $this->getBranches(); // Implement as needed
-        // Paginate the orders for compatibility with the view
-        if ($orders instanceof \Illuminate\Database\Eloquent\Collection) {
-            $orders = $orders->paginate(20);
-        }
-        return view('admin.orders.index', compact('orders', 'branches'));
+        // Get orders query builder and branches
+        $orders = $this->getReservationOrders()->paginate(20);
+        $branches = $this->getBranches();
+        
+        return view('admin.orders.index', [
+            'orders' => $orders,
+            'branches' => $branches,
+            'showReservations' => true // To indicate we're viewing reservation orders
+        ]);
     }
 
     /**
@@ -303,8 +304,22 @@ class OrderController extends Controller
      */
     protected function getReservationOrders()
     {
-        // You can filter by order_type or join with reservations as needed
-        return \App\Models\Order::whereNotNull('reservation_id')->latest()->get();
+        $admin = auth('admin')->user();
+        $query = \App\Models\Order::with(['reservation', 'orderItems', 'branch'])
+            ->whereNotNull('reservation_id');
+            
+        // Apply admin-specific filters
+        if (!$admin->is_super_admin) {
+            if ($admin->branch_id) {
+                $query->where('branch_id', $admin->branch_id);
+            } elseif ($admin->organization_id) {
+                $query->whereHas('branch', function($q) use ($admin) {
+                    $q->where('organization_id', $admin->organization_id);
+                });
+            }
+        }
+        
+        return $query->latest();
     }
 
     /**
