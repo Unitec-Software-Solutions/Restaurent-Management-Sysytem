@@ -22,6 +22,7 @@ use App\Exports\GrnMultiSheetExport;
 use App\Exports\GtnMultiSheetExport;
 use App\Exports\StockMultiSheetExport;
 use App\Exports\SrnMultiSheetExport;
+use App\Services\PdfExportService;
 
 class ReportController extends Controller
 {
@@ -99,6 +100,10 @@ class ReportController extends Controller
 
         // Handle export requests
         if ($exportFormat) {
+            $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            if ($exportFormat === 'pdf') {
+                return $this->exportStockReportPdf($reportData, $dateFrom, $dateTo, $itemId, $categoryId, $branchId, $transactionType, $viewType);
+            }
             return $this->exportStockReportMultiSheet($itemId, $branchId, $dateFrom, $dateTo, $exportFormat);
         }
 
@@ -371,6 +376,10 @@ class ReportController extends Controller
         $reportData = $this->generateGrnReport($dateFrom, $dateTo, $status, $supplierId, $branchId, $orgId);
 
         if ($exportFormat) {
+            $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            if ($exportFormat === 'pdf') {
+                return $this->exportGrnReportPdf($reportData['grns'], $dateFrom, $dateTo, $status, $supplierId, $branchId, $viewType);
+            }
             return $this->exportGrnReportMultiSheet($status, $supplierId, $branchId, $dateFrom, $dateTo, $exportFormat);
         }
 
@@ -476,6 +485,10 @@ class ReportController extends Controller
         $reportData = $this->generateGtnReport($dateFrom, $dateTo, $originStatus, $receiverStatus, $fromBranchId, $toBranchId, $orgId);
 
         if ($exportFormat) {
+            $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            if ($exportFormat === 'pdf') {
+                return $this->exportGtnReportPdf($reportData['gtns'], $dateFrom, $dateTo, $originStatus, $fromBranchId, $toBranchId, $viewType);
+            }
             return $this->exportGtnReportMultiSheet($originStatus, $receiverStatus, $fromBranchId, $toBranchId, $dateFrom, $dateTo, $exportFormat);
         }
 
@@ -588,6 +601,10 @@ class ReportController extends Controller
         $reportData = $this->generateSrnReport($dateFrom, $dateTo, $releaseType, $branchId, $itemId, $orgId, $status);
 
         if ($exportFormat) {
+            $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            if ($exportFormat === 'pdf') {
+                return $this->exportSrnReportPdf($reportData['srns'], $dateFrom, $dateTo, $status, $branchId, $releaseType, $viewType);
+            }
             return $this->exportSrnReportMultiSheet($releaseType, $branchId, $itemId, $status, $dateFrom, $dateTo, $exportFormat);
         }
 
@@ -1006,5 +1023,143 @@ class ReportController extends Controller
             new SrnMultiSheetExport($srnIds, $dateFrom, $dateTo, $filters),
             $filename
         );
+    }
+
+    /**
+     * Export Stock Report as PDF
+     */
+    protected function exportStockReportPdf($reportData, $dateFrom = null, $dateTo = null, $itemId = null, $categoryId = null, $branchId = null, $transactionType = null, $viewType = 'detailed')
+    {
+        $pdfService = new PdfExportService();
+
+        // Build filters for PDF display
+        $filters = array_filter([
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'item_name' => $itemId ? ItemMaster::find($itemId)?->name : null,
+            'category_name' => $categoryId ? ItemCategory::find($categoryId)?->name : null,
+            'branch_name' => $branchId ? Branch::find($branchId)?->name : null,
+            'transaction_type' => $transactionType,
+        ]);
+
+        $pdf = $pdfService->generateStockReportPdf($reportData, $filters, $viewType);
+
+        $filename = 'stock_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export Stock Transactions Report as PDF
+     */
+    protected function exportStockTransactionsPdf($transactions, $dateFrom = null, $dateTo = null, $itemId = null, $branchId = null, $transactionType = null, $viewType = 'detailed')
+    {
+        $pdfService = new PdfExportService();
+
+        // Build filters for PDF display
+        $filters = array_filter([
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'item_name' => $itemId ? ItemMaster::find($itemId)?->name : null,
+            'branch_name' => $branchId ? Branch::find($branchId)?->name : null,
+            'transaction_type' => $transactionType,
+        ]);
+
+        $pdf = $pdfService->generateStockTransactionsPdf($transactions, $filters, $viewType);
+
+        $filename = 'stock_transactions_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export GTN Report as PDF
+     */
+    protected function exportGtnReportPdf($gtns, $dateFrom = null, $dateTo = null, $status = null, $fromBranch = null, $toBranch = null, $viewType = 'detailed')
+    {
+        $pdfService = new PdfExportService();
+
+        // Build filters for PDF display
+        $filters = array_filter([
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'status' => $status,
+            'from_branch' => $fromBranch ? Branch::find($fromBranch)?->name : null,
+            'to_branch' => $toBranch ? Branch::find($toBranch)?->name : null,
+        ]);
+
+        $pdf = $pdfService->generateGtnReportPdf($gtns, $filters, $viewType);
+
+        $filename = 'gtn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export SRN Report as PDF
+     */
+    protected function exportSrnReportPdf($srns, $dateFrom = null, $dateTo = null, $status = null, $branchId = null, $releaseType = null, $viewType = 'detailed')
+    {
+        $pdfService = new PdfExportService();
+
+        // Build filters for PDF display
+        $filters = array_filter([
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'status' => $status,
+            'branch_name' => $branchId ? Branch::find($branchId)?->name : null,
+            'release_type' => $releaseType,
+        ]);
+
+        $pdf = $pdfService->generateSrnReportPdf($srns, $filters, $viewType);
+
+        $filename = 'srn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export GRN Report as PDF
+     */
+    protected function exportGrnReportPdf($grns, $dateFrom = null, $dateTo = null, $status = null, $supplierId = null, $branchId = null, $viewType = 'detailed')
+    {
+        $pdfService = new PdfExportService();
+
+        // Build filters for PDF display
+        $filters = array_filter([
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'status' => $status,
+            'supplier_name' => $supplierId ? Supplier::find($supplierId)?->name : null,
+            'branch_name' => $branchId ? Branch::find($branchId)?->name : null,
+        ]);
+
+        $pdf = $pdfService->generateGrnReportPdf($grns, $filters, $viewType);
+
+        $filename = 'grn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export Category Report as PDF
+     */
+    protected function exportCategoryReportPdf($categories, $dateFrom = null, $dateTo = null, $categoryId = null, $branchId = null, $viewType = 'detailed')
+    {
+        $pdfService = new PdfExportService();
+
+        // Build filters for PDF display
+        $filters = array_filter([
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'category_name' => $categoryId ? ItemCategory::find($categoryId)?->name : null,
+            'branch_name' => $branchId ? Branch::find($branchId)?->name : null,
+        ]);
+
+        $pdf = $pdfService->generateCategoryReportPdf($categories, $filters, $viewType);
+
+        $filename = 'category_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        return $pdf->download($filename);
     }
 }
