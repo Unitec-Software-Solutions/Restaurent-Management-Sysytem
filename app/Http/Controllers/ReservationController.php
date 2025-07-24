@@ -56,14 +56,14 @@ class ReservationController extends Controller
                 $organization_id = $request->get('organization_id');
                 $branch_id = $request->get('branch_id');
                 if ($organization_id) {
-                    $branches = \App\Models\Branch::where('organization_id', $organization_id)->get();
+                    $branches = Branch::where('organization_id', $organization_id)->get();
                 }
             } else if ($admin) {
                 // Admin: auto-fill
                 $organization_id = $admin->organization_id;
                 $branch_id = $admin->branch_id;
                 if ($organization_id) {
-                    $branches = \App\Models\Branch::where('organization_id', $organization_id)->get();
+                    $branches = Branch::where('organization_id', $organization_id)->get();
                 }
             }
 
@@ -216,10 +216,10 @@ class ReservationController extends Controller
                 'errors' => $e->errors(),
                 'request_data' => $request->all()
             ]);
-            
+
             return back()->withErrors($e->errors())->withInput()
                 ->with('error', 'Please check the form and correct the highlighted errors.');
-                
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Reservation creation failed', [
