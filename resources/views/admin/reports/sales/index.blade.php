@@ -1,4 +1,5 @@
-@extends('layouts.admin')
+<!--- Unused Remove -->
+{{-- @extends('layouts.admin')
 
 @section('title', 'Sales Dashboard')
 @section('header-title', 'Sales Dashboard')
@@ -16,4 +17,4 @@
 
 
     </div>
-@endsection
+@endsection --}}
