@@ -1107,6 +1107,9 @@ Route::middleware('auth')->group(function () {
 // Include reservation workflow routes
 require __DIR__.'/reservation_workflow.php';
 
+// Include reservation orders routes
+require __DIR__.'/reservation_orders.php';
+
 // Include public route groups
 require __DIR__.'/groups/public.php';
 

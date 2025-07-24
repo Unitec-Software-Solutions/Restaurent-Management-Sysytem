@@ -19,11 +19,19 @@
                 </div>
                 <p class="text-gray-600 mt-1">Manage and track all orders across your organization</p>
             </div>
-            <a href="{{ route('admin.orders.create') }}"
-               class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
-                <i class="fas fa-plus mr-2"></i>
-                Create Order
-            </a>
+            @if(isset($showReservations) && $showReservations)
+                <a href="{{ route('admin.orders.reservations.create') }}"
+                   class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Reservation Order
+                </a>
+            @else
+                <a href="{{ route('admin.orders.create') }}"
+                   class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Order
+                </a>
+            @endif
         </div>
     </div>
 
@@ -131,10 +139,12 @@
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 w-10 h-10">
                                         @php
-                                            // Fix: Convert enum to string value for comparison
-                                            $orderTypeValue = $order->order_type instanceof \App\Enums\OrderType
-                                                ? $order->order_type->value
-                                                : (string) $order->order_type;
+                                            // Handle order type value safely
+                                            $orderTypeValue = $order->order_type_raw ?? (
+                                                $order->order_type instanceof \App\Enums\OrderType 
+                                                    ? $order->order_type->value 
+                                                    : (string) $order->order_type
+                                            );
                                         @endphp
 
                                         @if(str_contains($orderTypeValue, 'takeaway'))
