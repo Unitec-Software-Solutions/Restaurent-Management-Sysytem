@@ -69,13 +69,13 @@
                             </div>
 
                             <!-- Master Only View Options -->
-                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Master Only</div>
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Supplier Details</div>
                             <div class="flex">
-                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'master_only', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'supplier_details', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     <i class="fas fa-eye mr-2 text-blue-500"></i>
                                     Preview
                                 </a>
-                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'master_only'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'supplier_details'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
                                     <i class="fas fa-download mr-2 text-green-500"></i>
                                     Download
                                 </a>
