@@ -31,20 +31,51 @@
 
                 <!-- PDF Export Dropdown -->
                 <div class="relative inline-block text-left">
-                    <button type="button" id="pdf-dropdown-button" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-file-pdf mr-2"></i> Export PDF <i class="fas fa-chevron-down ml-2"></i>
+                    <button type="button" class="inline-flex justify-center w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="pdf-dropdown-button">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        PDF Options
+                        <i class="fas fa-chevron-down ml-2"></i>
                     </button>
-                    <div id="pdf-dropdown-menu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 hidden">
-                        <div class="py-1">
-                            <a href="#" onclick="exportPDF('detailed')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="fas fa-list-alt mr-2"></i> Detailed View
-                            </a>
-                            <a href="#" onclick="exportPDF('summary')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="fas fa-chart-bar mr-2"></i> Summary View
-                            </a>
-                            <a href="#" onclick="exportPDF('master_only')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="fas fa-table mr-2"></i> Master Records Only
-                            </a>
+                    <div id="pdf-dropdown-menu" class="hidden origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                        <div class="py-1" role="menu" aria-orientation="vertical">
+                            <!-- Detailed View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b">Detailed View</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'detailed', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'detailed'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+
+                            <!-- Summary View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Summary View</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'summary', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'summary'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+
+                            <!-- Master Only View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Master Only</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'master_only', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'master_only'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

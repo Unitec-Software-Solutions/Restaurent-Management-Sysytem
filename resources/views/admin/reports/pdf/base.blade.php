@@ -19,11 +19,11 @@
             background: white;
         }
 
-        .page {
+                .page {
             width: 210mm;
             min-height: 297mm;
-            padding: 0;
-            margin: 0;
+            padding: 15mm;
+            margin: 0 auto;
             background: white;
             position: relative;
             box-sizing: border-box;
@@ -294,22 +294,144 @@
             body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                color-adjust: exact;
             }
+
             .page {
                 margin: 0;
-                padding: 0;
+                padding: 15mm;
                 width: 210mm;
                 min-height: 297mm;
                 box-sizing: border-box;
+                box-shadow: none;
             }
+
             @page {
                 size: A4 portrait;
                 margin: 0;
+            }
+
+            /* Ensure page breaks work properly */
+            .page-break {
+                page-break-before: always;
+            }
+
+            .avoid-break {
+                page-break-inside: avoid;
+            }
+
+            /* Ensure footer is positioned correctly */
+            .report-footer {
+                position: fixed;
+                bottom: 10mm;
+                left: 15mm;
+                right: 15mm;
+            }
+
+            /* Hide elements that shouldn't print */
+            .no-print {
+                display: none !important;
+            }
+
+            /* Ensure tables break properly */
+            table {
+                page-break-inside: auto;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            thead {
+                display: table-header-group;
+            }
+
+            tfoot {
+                display: table-footer-group;
+            }
+        }
+
+        /* Browser print preview adjustments */
+        @media screen {
+            body {
+                background: #f5f5f5;
+                padding-top: 80px; /* Space for toolbar */
+            }
+
+            .page {
+                margin: 20px auto;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+        }
+
+        /* Print toolbar styles */
+        .print-toolbar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+        }
+
+        .print-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .print-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .print-btn.secondary {
+            background: #6b7280;
+        }
+
+        .print-btn.secondary:hover {
+            background: #4b5563;
+        }
+
+        @media print {
+            .print-toolbar {
+                display: none !important;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Print Toolbar (only visible in browser preview) -->
+    <div class="print-toolbar">
+        <button onclick="window.print()" class="print-btn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+            </svg>
+            Print Document
+        </button>
+        <button onclick="window.close()" class="print-btn secondary">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+            </svg>
+            Close Preview
+        </button>
+    </div>
+
     <div class="page">
         <!-- Header Section -->
         <div class="report-header">

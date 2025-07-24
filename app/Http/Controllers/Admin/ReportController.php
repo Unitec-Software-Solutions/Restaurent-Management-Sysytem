@@ -101,8 +101,15 @@ class ReportController extends Controller
         // Handle export requests
         if ($exportFormat) {
             $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            $preview = $request->get('preview', false); // Check if it's a preview request
             if ($exportFormat === 'pdf') {
-                return $this->exportStockReportPdf($reportData, $dateFrom, $dateTo, $itemId, $categoryId, $branchId, $transactionType, $viewType);
+                if ($preview) {
+                    // Return web preview page instead of PDF
+                    return $this->showStockReportPreview($reportData, $dateFrom, $dateTo, $itemId, $categoryId, $branchId, $transactionType, $viewType);
+                } else {
+                    // Return actual PDF download
+                    return $this->exportStockReportPdf($reportData, $dateFrom, $dateTo, $itemId, $categoryId, $branchId, $transactionType, $viewType, false);
+                }
             }
             return $this->exportStockReportMultiSheet($itemId, $branchId, $dateFrom, $dateTo, $exportFormat);
         }
@@ -202,7 +209,7 @@ class ReportController extends Controller
             'opening_stock' => $openingStock,
             'stock_in' => $stockIn,
             'stock_out' => $stockOut,
-            'current_stock' => $currentStock,
+            'current_stock' => $item->stock ? $item->stock->currentStock : 0,
             'closing_stock' => $openingStock + $stockIn - $stockOut,
             'sales_quantity' => $salesQuantity,
             'production_used' => $productionUsed,
@@ -377,8 +384,15 @@ class ReportController extends Controller
 
         if ($exportFormat) {
             $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            $preview = $request->get('preview', false); // Check if it's a preview request
             if ($exportFormat === 'pdf') {
-                return $this->exportGrnReportPdf($reportData['grns'], $dateFrom, $dateTo, $status, $supplierId, $branchId, $viewType);
+                if ($preview) {
+                    // Return web preview page instead of PDF
+                    return $this->showGrnReportPreview($reportData, $dateFrom, $dateTo, $status, $supplierId, $branchId, $viewType);
+                } else {
+                    // Return actual PDF download
+                    return $this->exportGrnReportPdf($reportData['grns'], $dateFrom, $dateTo, $status, $supplierId, $branchId, $viewType, false);
+                }
             }
             return $this->exportGrnReportMultiSheet($status, $supplierId, $branchId, $dateFrom, $dateTo, $exportFormat);
         }
@@ -440,7 +454,9 @@ class ReportController extends Controller
         }
 
         return [
-            'grns' => collect($reportData)->sortByDesc('received_date'),
+            'grns' => $grns, // Return actual model objects, not arrays
+            'suppliers' => Supplier::all(), // Add suppliers for filters
+            'branches' => Branch::where('is_active', true)->get(), // Add branches for filters
             'summary' => [
                 'total_grns' => count($reportData),
                 'total_purchase_value' => collect($reportData)->sum('total_purchase_value'),
@@ -486,8 +502,15 @@ class ReportController extends Controller
 
         if ($exportFormat) {
             $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            $preview = $request->get('preview', false); // Check if it's a preview request
             if ($exportFormat === 'pdf') {
-                return $this->exportGtnReportPdf($reportData['gtns'], $dateFrom, $dateTo, $originStatus, $fromBranchId, $toBranchId, $viewType);
+                if ($preview) {
+                    // Return web preview page instead of PDF
+                    return $this->showGtnReportPreview($reportData, $dateFrom, $dateTo, $originStatus, $fromBranchId, $toBranchId, $viewType);
+                } else {
+                    // Return actual PDF download
+                    return $this->exportGtnReportPdf($reportData['gtns'], $dateFrom, $dateTo, $originStatus, $fromBranchId, $toBranchId, $viewType, false);
+                }
             }
             return $this->exportGtnReportMultiSheet($originStatus, $receiverStatus, $fromBranchId, $toBranchId, $dateFrom, $dateTo, $exportFormat);
         }
@@ -539,27 +562,28 @@ class ReportController extends Controller
             });
 
             $reportData[] = [
-                'gtn_id' => $gtn->gtn_id,
-                'gtn_number' => $gtn->gtn_number,
+                'gtn_id' => $gtn->gtn_id ?? 'N/A',
+                'gtn_number' => $gtn->gtn_number ?? 'N/A',
                 'from_branch' => $gtn->fromBranch->name ?? 'N/A',
                 'to_branch' => $gtn->toBranch->name ?? 'N/A',
-                'transfer_date' => $gtn->transfer_date,
-                'origin_status' => $gtn->origin_status,
-                'receiver_status' => $gtn->receiver_status,
-                'items_count' => $gtn->items->count(),
-                'total_quantity' => $gtn->items->sum('transfer_quantity'),
-                'accepted_quantity' => $gtn->items->sum('quantity_accepted'),
-                'rejected_quantity' => $gtn->items->sum('quantity_rejected'),
-                'total_transfer_value' => $totalTransferValue,
-                'total_accepted_value' => $totalAcceptedValue,
-                'total_rejected_value' => $totalRejectedValue,
+                'transfer_date' => $gtn->transfer_date ?? 'N/A',
+                'origin_status' => $gtn->origin_status ?? 'N/A',
+                'receiver_status' => $gtn->receiver_status ?? 'N/A',
+                'items_count' => $gtn->items->count() ?? 0,
+                'total_quantity' => $gtn->items->sum('transfer_quantity') ?? 0,
+                'accepted_quantity' => $gtn->items->sum('quantity_accepted') ?? 0,
+                'rejected_quantity' => $gtn->items->sum('quantity_rejected') ?? 0,
+                'total_transfer_value' => $totalTransferValue ?? 0,
+                'total_accepted_value' => $totalAcceptedValue ?? 0,
+                'total_rejected_value' => $totalRejectedValue ?? 0,
                 'acceptance_rate' => $gtn->items->sum('transfer_quantity') > 0 ?
                     ($gtn->items->sum('quantity_accepted') / $gtn->items->sum('transfer_quantity')) * 100 : 0,
             ];
         }
 
         return [
-            'gtns' => collect($reportData)->sortByDesc('transfer_date'),
+            'gtns' => $gtns, // Return actual model objects, not arrays
+            'branches' => Branch::where('is_active', true)->get(), // Add branches for filters
             'summary' => [
                 'total_gtns' => $gtns->count(),
                 'total_transfer_value' => collect($reportData)->sum('total_transfer_value'),
@@ -602,8 +626,15 @@ class ReportController extends Controller
 
         if ($exportFormat) {
             $viewType = $request->get('view_type', 'detailed'); // detailed, summary, master_only
+            $preview = $request->get('preview', false); // Check if it's a preview request
             if ($exportFormat === 'pdf') {
-                return $this->exportSrnReportPdf($reportData['srns'], $dateFrom, $dateTo, $status, $branchId, $releaseType, $viewType);
+                if ($preview) {
+                    // Return web preview page instead of PDF
+                    return $this->showSrnReportPreview($reportData, $dateFrom, $dateTo, $status, $branchId, $releaseType, $viewType);
+                } else {
+                    // Return actual PDF download
+                    return $this->exportSrnReportPdf($reportData['srns'], $dateFrom, $dateTo, $status, $branchId, $releaseType, $viewType, false);
+                }
             }
             return $this->exportSrnReportMultiSheet($releaseType, $branchId, $itemId, $status, $dateFrom, $dateTo, $exportFormat);
         }
@@ -673,7 +704,9 @@ class ReportController extends Controller
         $avgDailyLoss = $days > 0 ? $totalCostImpact / $days : 0;
 
         return [
-            'srns' => collect($reportData)->sortByDesc('release_date'),
+            'srns' => $srns, // Return actual model objects, not arrays
+            'branches' => Branch::where('is_active', true)->get(), // Add branches for filters
+            'items' => ItemMaster::all(), // Add items for filters
             'summary' => [
                 'total_srns' => collect($reportData)->count(),
                 'total_quantity_released' => collect($reportData)->sum('total_quantity'),
@@ -1026,9 +1059,33 @@ class ReportController extends Controller
     }
 
     /**
+     * Show stock report preview page (web version for print)
+     */
+    private function showStockReportPreview($reportData, $dateFrom, $dateTo, $itemId, $categoryId, $branchId, $transactionType, $viewType)
+    {
+        // Same data structure as PDF but for web preview
+        $pdfData = [
+            'reportData' => $reportData,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'viewType' => $viewType,
+            'reportTitle' => 'Stock Report - ' . ucfirst($viewType) . ' View',
+            'generated_at' => now()->format('d/m/Y H:i:s'),
+            'filters' => [
+                'item' => $itemId ? $reportData['items']->firstWhere('id', $itemId)?->name : 'All Items',
+                'category' => $categoryId ? $reportData['categories']->firstWhere('id', $categoryId)?->name : 'All Categories',
+                'branch' => $branchId ? $reportData['branches']->firstWhere('id', $branchId)?->name : 'All Branches',
+                'transaction_type' => $transactionType ?: 'All Types'
+            ]
+        ];
+
+        return view('admin.reports.inventory.stock.print', $pdfData);
+    }
+
+    /**
      * Export Stock Report as PDF
      */
-    protected function exportStockReportPdf($reportData, $dateFrom = null, $dateTo = null, $itemId = null, $categoryId = null, $branchId = null, $transactionType = null, $viewType = 'detailed')
+    protected function exportStockReportPdf($reportData, $dateFrom = null, $dateTo = null, $itemId = null, $categoryId = null, $branchId = null, $transactionType = null, $viewType = 'detailed', $preview = false)
     {
         $pdfService = new PdfExportService();
 
@@ -1045,6 +1102,11 @@ class ReportController extends Controller
         $pdf = $pdfService->generateStockReportPdf($reportData, $filters, $viewType);
 
         $filename = 'stock_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        // Return preview or download based on request
+        if ($preview) {
+            return $pdf->stream($filename);
+        }
 
         return $pdf->download($filename);
     }
@@ -1073,9 +1135,33 @@ class ReportController extends Controller
     }
 
     /**
+     * Show GTN report preview page (web version for print)
+     */
+    private function showGtnReportPreview($reportData, $dateFrom, $dateTo, $originStatus, $fromBranchId, $toBranchId, $viewType)
+    {
+        // Same data structure as PDF but for web preview
+        $pdfData = [
+            'reportData' => $reportData,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'viewType' => $viewType,
+            'reportTitle' => 'GTN Report - ' . ucfirst($viewType) . ' View',
+            'generated_at' => now()->format('d/m/Y H:i:s'),
+            'filters' => [
+                'status' => $originStatus ?: 'All Status',
+                'from_branch' => $fromBranchId ? $reportData['branches']->firstWhere('id', $fromBranchId)?->name : 'All Branches',
+                'to_branch' => $toBranchId ? $reportData['branches']->firstWhere('id', $toBranchId)?->name : 'All Branches',
+                'date_range' => ($dateFrom ? date('d/m/Y', strtotime($dateFrom)) : 'Start') . ' to ' . ($dateTo ? date('d/m/Y', strtotime($dateTo)) : 'End')
+            ]
+        ];
+
+        return view('admin.reports.inventory.gtn.print', $pdfData);
+    }
+
+    /**
      * Export GTN Report as PDF
      */
-    protected function exportGtnReportPdf($gtns, $dateFrom = null, $dateTo = null, $status = null, $fromBranch = null, $toBranch = null, $viewType = 'detailed')
+    protected function exportGtnReportPdf($gtns, $dateFrom = null, $dateTo = null, $status = null, $fromBranch = null, $toBranch = null, $viewType = 'detailed', $preview = false)
     {
         $pdfService = new PdfExportService();
 
@@ -1092,13 +1178,42 @@ class ReportController extends Controller
 
         $filename = 'gtn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
 
+        // Return preview or download based on request
+        if ($preview) {
+            return $pdf->stream($filename);
+        }
+
         return $pdf->download($filename);
+    }
+
+    /**
+     * Show SRN report preview page (web version for print)
+     */
+    private function showSrnReportPreview($reportData, $dateFrom, $dateTo, $status, $branchId, $releaseType, $viewType)
+    {
+        // Same data structure as PDF but for web preview
+        $pdfData = [
+            'reportData' => $reportData,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'viewType' => $viewType,
+            'reportTitle' => 'SRN Report - ' . ucfirst($viewType) . ' View',
+            'generated_at' => now()->format('d/m/Y H:i:s'),
+            'filters' => [
+                'status' => $status ?: 'All Status',
+                'branch' => $branchId ? $reportData['branches']->firstWhere('id', $branchId)?->name : 'All Branches',
+                'release_type' => $releaseType ?: 'All Types',
+                'date_range' => ($dateFrom ? date('d/m/Y', strtotime($dateFrom)) : 'Start') . ' to ' . ($dateTo ? date('d/m/Y', strtotime($dateTo)) : 'End')
+            ]
+        ];
+
+        return view('admin.reports.inventory.srn.print', $pdfData);
     }
 
     /**
      * Export SRN Report as PDF
      */
-    protected function exportSrnReportPdf($srns, $dateFrom = null, $dateTo = null, $status = null, $branchId = null, $releaseType = null, $viewType = 'detailed')
+    protected function exportSrnReportPdf($srns, $dateFrom = null, $dateTo = null, $status = null, $branchId = null, $releaseType = null, $viewType = 'detailed', $preview = false)
     {
         $pdfService = new PdfExportService();
 
@@ -1115,13 +1230,42 @@ class ReportController extends Controller
 
         $filename = 'srn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
 
+        // Return preview or download based on request
+        if ($preview) {
+            return $pdf->stream($filename);
+        }
+
         return $pdf->download($filename);
+    }
+
+    /**
+     * Show GRN report preview page (web version for print)
+     */
+    private function showGrnReportPreview($reportData, $dateFrom, $dateTo, $status, $supplierId, $branchId, $viewType)
+    {
+        // Same data structure as PDF but for web preview
+        $pdfData = [
+            'reportData' => $reportData,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'viewType' => $viewType,
+            'reportTitle' => 'GRN Report - ' . ucfirst($viewType) . ' View',
+            'generated_at' => now()->format('d/m/Y H:i:s'),
+            'filters' => [
+                'status' => $status ?: 'All Status',
+                'supplier' => $supplierId ? $reportData['suppliers']->firstWhere('id', $supplierId)?->name : 'All Suppliers',
+                'branch' => $branchId ? $reportData['branches']->firstWhere('id', $branchId)?->name : 'All Branches',
+                'date_range' => ($dateFrom ? date('d/m/Y', strtotime($dateFrom)) : 'Start') . ' to ' . ($dateTo ? date('d/m/Y', strtotime($dateTo)) : 'End')
+            ]
+        ];
+
+        return view('admin.reports.inventory.grn.print', $pdfData);
     }
 
     /**
      * Export GRN Report as PDF
      */
-    protected function exportGrnReportPdf($grns, $dateFrom = null, $dateTo = null, $status = null, $supplierId = null, $branchId = null, $viewType = 'detailed')
+    protected function exportGrnReportPdf($grns, $dateFrom = null, $dateTo = null, $status = null, $supplierId = null, $branchId = null, $viewType = 'detailed', $preview = false)
     {
         $pdfService = new PdfExportService();
 
@@ -1137,6 +1281,11 @@ class ReportController extends Controller
         $pdf = $pdfService->generateGrnReportPdf($grns, $filters, $viewType);
 
         $filename = 'grn_report_' . ($dateFrom ?? 'all') . '_to_' . ($dateTo ?? 'all') . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+        // Return preview or download based on request
+        if ($preview) {
+            return $pdf->stream($filename);
+        }
 
         return $pdf->download($filename);
     }
