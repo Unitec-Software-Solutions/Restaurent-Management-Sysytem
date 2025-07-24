@@ -21,6 +21,11 @@ use App\Http\Controllers\{
     ReportsGenController,
 };
 
+// Auth controllers
+use App\Http\Controllers\Auth\{
+    LoginController
+};
+
  // Admin namespace controllers
 use App\Http\Controllers\Admin\{
     ProductionOrderController,
@@ -69,6 +74,15 @@ use App\Http\Controllers\Admin\
 // Report controllers
 use App\Http\Controllers\Admin\{
     ReportController
+};
+
+// Specific Report Controllers
+use App\Http\Controllers\Admin\Reports\{
+    ReportsMainController,
+    GrnReportsController,
+    GtnReportsController,
+    SrnReportsController,
+    StockReportsController
 };
 
 
@@ -482,25 +496,45 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('/{productionOrder}/complete-production', [ProductionSessionController::class, 'completeProduction'])->name('complete-production');
             });
 
-
         });
 
         Route::prefix('reports')->name('reports.')->group(function () {
-            // Route::get('/', [ReportController::class, 'index'])->name('index');
+            // Main Reports Dashboard
+            Route::get('/', [ReportsMainController::class, 'index'])->name('index');
+
+            // Sales Reports
             Route::prefix('sales')->name('sales.')->group(function () {
                 Route::get('/', [ReportController::class, 'salesReport'])->name('index');
             });
+
+            // Inventory Reports
             Route::prefix('inventory')->name('inventory.')->group(function () {
                 Route::get('/', [ReportController::class, 'inventoryReport'])->name('index');
-                Route::get('/stock', [ReportController::class, 'inventoryStock'])->name('stock');
-                Route::get('/category', [ReportController::class, 'categoryReport'])->name('category');
-                Route::get('/grn', [ReportController::class, 'inventoryGrn'])->name('grn');
-                Route::get('/gtn', [ReportController::class, 'inventoryGtn'])->name('gtn');
-                Route::get('/srn', [ReportController::class, 'inventorySrn'])->name('srn');
-                // Route::get('/items', [ReportController::class, 'inventory_items'])->name('items');
-                // Route::get('/summary', [ReportController::class, 'inventory_summary'])->name('summary');
-            });
 
+                // Stock Reports
+                Route::get('/stock', [StockReportsController::class, 'index'])->name('stock');
+                Route::get('/stock/current', [StockReportsController::class, 'currentStock'])->name('stock.current');
+                Route::get('/stock/movement', [StockReportsController::class, 'stockMovement'])->name('stock.movement');
+                Route::get('/stock/valuation', [StockReportsController::class, 'stockValuation'])->name('stock.valuation');
+
+                // Category Reports
+                Route::get('/category', [ReportController::class, 'categoryReport'])->name('category');
+
+                // GRN Reports
+                Route::get('/grn', [GrnReportsController::class, 'index'])->name('grn');
+                Route::get('/grn/master', [GrnReportsController::class, 'masterReports'])->name('grn.master');
+                Route::get('/grn/items', [GrnReportsController::class, 'itemReports'])->name('grn.items');
+
+                // GTN Reports
+                Route::get('/gtn', [GtnReportsController::class, 'index'])->name('gtn');
+                Route::get('/gtn/master', [GtnReportsController::class, 'masterReports'])->name('gtn.master');
+                Route::get('/gtn/items', [GtnReportsController::class, 'itemReports'])->name('gtn.items');
+
+                // SRN Reports
+                Route::get('/srn', [SrnReportsController::class, 'index'])->name('srn');
+                Route::get('/srn/master', [SrnReportsController::class, 'masterReports'])->name('srn.master');
+                Route::get('/srn/items', [SrnReportsController::class, 'itemReports'])->name('srn.items');
+            });
         });
 
         // Additional Admin Routes
@@ -758,6 +792,7 @@ Route::get('customers/index', [App\Http\Controllers\Admin\CustomerController::cl
 // Route::get('digital-menu/index', [App\Http\Controllers\Admin\DigitalMenuController::class, 'index'])->middleware(['auth:admin'])->name('admin.digital-menu.index');
 Route::get('settings/index', [App\Http\Controllers\Admin\SettingController::class, 'index'])->middleware(['auth:admin'])->name('admin.settings.index');
 Route::get('admin/reports/index', [App\Http\Controllers\Admin\ReportController::class, 'index'])->middleware(['auth:admin'])->name('admin.reports.index');
+// Route::get('admin/reports/index', [ReportsMainController::class, 'index'])->middleware(['auth:admin'])->name('admin.reports.index');
 Route::get('debug/routes', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes');
 Route::get('debug/routes/test', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.test');
 Route::get('debug/routes/generate', [App\Http\Controllers\Admin\DebugController::class, 'routes'])->middleware(['auth:admin'])->name('admin.debug.routes.generate');
