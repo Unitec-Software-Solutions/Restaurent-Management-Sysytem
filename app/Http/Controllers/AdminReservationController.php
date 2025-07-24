@@ -102,18 +102,20 @@ class AdminReservationController extends Controller
             'branchId' => $branchId,
             'phone' => $phone,
         ];
-        // If no branch assigned, prompt user to select branch (and org if super admin)
+        // If no branch assigned, show error page
         if (!$admin->branch_id) {
-            if ($admin->is_super_admin) {
-                return redirect()->route('admin.reservations.create')
-                    ->with('error', 'Please select an organization and branch to view reservations.');
-            } elseif ($admin->organization_id) {
-                return redirect()->route('admin.reservations.create')
-                    ->with('error', 'Please select a branch to view reservations.');
-            } else {
-                return redirect()->route('admin.reservations.create')
-                    ->with('error', 'No branch or organization assigned. Please contact administrator.');
-            }
+            return response()->view('errors.generic', [
+                'errorTitle' => 'Permission Denied',
+                'errorCode' => '403',
+                'errorHeading' => 'Permission Denied',
+                'errorMessage' => 'You do not have permission to view reservations. Please contact administrator.',
+                'headerClass' => 'bg-gradient-warning',
+                'errorIcon' => 'fas fa-ban',
+                'mainIcon' => 'fas fa-ban',
+                'iconBgClass' => 'bg-yellow-100',
+                'iconColor' => 'text-yellow-500',
+                'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]'
+            ], 403);
         }
         return view('admin.reservations.index', compact('reservations', 'branches', 'stewards', 'filters'));
     }
@@ -194,8 +196,18 @@ class AdminReservationController extends Controller
 
         // Validate admin has a branch assigned
         if (!$admin->branch_id || !$admin->branch) {
-            return redirect()->route('admin.reservations.index')
-                ->with('error', 'You must be assigned to a branch to edit reservations.');
+            return response()->view('errors.generic', [
+                'errorTitle' => 'Permission Denied',
+                'errorCode' => '403',
+                'errorHeading' => 'Permission Denied',
+                'errorMessage' => 'You must be assigned to a branch to edit reservations.',
+                'headerClass' => 'bg-gradient-warning',
+                'errorIcon' => 'fas fa-ban',
+                'mainIcon' => 'fas fa-ban',
+                'iconBgClass' => 'bg-yellow-100',
+                'iconColor' => 'text-yellow-500',
+                'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]'
+            ], 403);
         }
 
         // Load reservation relationships
@@ -204,8 +216,18 @@ class AdminReservationController extends Controller
         // Use null-safe operator for branch access
         $branchId = $admin->branch?->id;
         if (!$branchId) {
-            return redirect()->route('admin.reservations.index')
-                ->with('error', 'Invalid branch assignment. Please contact administrator.');
+            return response()->view('errors.generic', [
+                'errorTitle' => 'Permission Denied',
+                'errorCode' => '403',
+                'errorHeading' => 'Permission Denied',
+                'errorMessage' => 'Invalid branch assignment. Please contact administrator.',
+                'headerClass' => 'bg-gradient-warning',
+                'errorIcon' => 'fas fa-ban',
+                'mainIcon' => 'fas fa-ban',
+                'iconBgClass' => 'bg-yellow-100',
+                'iconColor' => 'text-yellow-500',
+                'buttonClass' => 'bg-[#FF9800] hover:bg-[#e68a00]'
+            ], 403);
         }
 
         $tables = Table::where('branch_id', $branchId)->get();
@@ -352,7 +374,7 @@ public function update(Request $request, Reservation $reservation)
 
     public function store(Request $request)
     {
-        $admin = auth()->user();
+        $admin = auth('admin')->user();
 
         // Determine validation rules based on admin type
         if ($admin->is_super_admin) {
@@ -735,7 +757,8 @@ public function getBranchesByOrganization($organizationId)
 public function createOrder(Reservation $reservation)
 {
 
-    return redirect()->route('admin.orders.reservations.create', ['reservation' => $reservation->id]);
+    // Use the correct route name for order creation from reservation
+    return redirect()->route('admin.orders.create', ['reservation' => $reservation->id]);
 }
 
     private function exportReservations($reservations, $format)
