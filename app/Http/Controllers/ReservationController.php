@@ -179,7 +179,7 @@ class ReservationController extends Controller
                 'start_time' => Carbon::parse($validated['date'] . ' ' . $validated['start_time']),
                 'end_time' => Carbon::parse($validated['date'] . ' ' . $validated['end_time']),
                 'number_of_people' => $validated['number_of_people'],
-                'table_size' => $validated['number_of_people'], // Set table size
+                'table_size' => $validated['number_of_people'],
                 'comments' => $validated['comments'],
                 'type' => ReservationType::from($reservationType),
                 'status' => 'pending',
