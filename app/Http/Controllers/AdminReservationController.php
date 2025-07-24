@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Reservation;
 use App\Models\Payment;
 use App\Models\Table;
+use App\Models\Branch;
+use App\Models\Organization;
 use App\Traits\Exportable;
 use App\Enums\ReservationType;
 use Illuminate\Http\Request;
@@ -54,7 +56,6 @@ class AdminReservationController extends Controller
             $query->where('date', '>=', $startDate);
         }
         if ($endDate) {
-            $query->where('date', '<=', $endDate);
         }
         if ($status) {
             $query->where('status', $status);
@@ -62,10 +63,6 @@ class AdminReservationController extends Controller
         if ($branchId) {
             $query->where('branch_id', $branchId);
         }
-        if ($phone) {
-            $query->where('phone', 'like', "%{$phone}%");
-        }
-
         $query->orderBy('date', 'desc')->orderBy('start_time', 'desc');
 
         // Apply filters and search for potential export
@@ -81,12 +78,22 @@ class AdminReservationController extends Controller
         $reservations = $query->paginate(20);
 
         // Get filter options
-        $branches = \App\Models\Branch::where('is_active', true)->get();
-        $stewards = \App\Models\Employee::whereHas('roles', function($query) {
+        $branches = Branch::where('is_active', true)->get();
+        $stewards = Employee::whereHas('roles', function($query) {
                 $query->where('name', 'steward');
             })
             ->where('is_active', true)
             ->get();
+        // Branch selection logic for super admin and org admin without branch
+        if ($admin->is_super_admin) {
+            $branches = Branch::where('is_active', true)->get();
+        } elseif ($admin->organization_id && !$admin->branch_id) {
+            $branches = Branch::where('organization_id', $admin->organization_id)
+                ->where('is_active', true)
+                ->get();
+        } else {
+            $branches = Branch::where('id', $admin->branch_id)->where('is_active', true)->get();
+        }
 
         $filters = [
             'startDate' => $startDate,
@@ -95,19 +102,31 @@ class AdminReservationController extends Controller
             'branchId' => $branchId,
             'phone' => $phone,
         ];
-
+        // If no branch assigned, prompt user to select branch (and org if super admin)
+        if (!$admin->branch_id) {
+            if ($admin->is_super_admin) {
+                return redirect()->route('admin.reservations.create')
+                    ->with('error', 'Please select an organization and branch to view reservations.');
+            } elseif ($admin->organization_id) {
+                return redirect()->route('admin.reservations.create')
+                    ->with('error', 'Please select a branch to view reservations.');
+            } else {
+                return redirect()->route('admin.reservations.create')
+                    ->with('error', 'No branch or organization assigned. Please contact administrator.');
+            }
+        }
         return view('admin.reservations.index', compact('reservations', 'branches', 'stewards', 'filters'));
     }
 
     /**
      * Get searchable columns for reservations
      */
-    protected function getSearchableColumns(): array
+   protected function getSearchableColumns(): array
     {
         return ['name', 'phone', 'email'];
     }
 
-        public function show(Reservation $reservation)
+    public function show(Reservation $reservation)
     {
         $reservation->load(['branch', 'user']);
         return view('admin.reservations.show', compact('reservation'));
@@ -143,7 +162,7 @@ class AdminReservationController extends Controller
                 'type' => 'refund'
             ]);
 
-            // TODO: Implement actual refund logic with payment gateway
+
         }
 
         // Send rejection email
@@ -161,7 +180,7 @@ class AdminReservationController extends Controller
 
         // Allow super admin to edit any reservation
         if ($admin->isSuperAdmin()) {
-            $branches = \App\Models\Branch::where('is_active', true)->get();
+            $branches = Branch::where('is_active', true)->get();
             $tables = Table::where('branch_id', $reservation->branch_id)->get();
             $assignedTableIds = $reservation->tables->pluck('id')->toArray();
             $availableTableIds = $tables->pluck('id')->toArray();
@@ -334,172 +353,246 @@ public function update(Request $request, Reservation $reservation)
     public function store(Request $request)
     {
         $admin = auth('admin')->user();
-        // Allow super admin to create reservation for any branch
-        if ($admin->isSuperAdmin()) {
-            $validated = $request->validate([
-                'name' => 'nullable|string|max:255',
-                'phone' => 'required|string|min:10|max:15',
-                'email' => 'nullable|email|max:255',
-                'date' => 'required|date|after_or_equal:today',
-                'start_time' => 'required|date_format:H:i',
-                'end_time' => 'required|date_format:H:i|after:start_time',
-                'number_of_people' => 'required|integer|min:1',
-                'assigned_table_ids' => 'nullable|array',
-                'assigned_table_ids.*' => 'exists:tables,id',
-                'steward_id' => 'nullable|exists:employees,id',
-                'branch_id' => 'required|exists:branches,id',
+        try {
+            // Super admin must select branch
+            if ($admin->isSuperAdmin()) {
+                $validated = $request->validate([
+                    'name' => 'nullable|string|max:255',
+                    'phone' => 'required|string|min:10|max:15',
+                    'email' => 'nullable|email|max:255',
+                    'date' => 'required|date|after_or_equal:today',
+                    'start_time' => 'required|date_format:H:i',
+                    'end_time' => 'required|date_format:H:i|after:start_time',
+                    'number_of_people' => 'required|integer|min:1',
+                    'assigned_table_ids' => 'nullable|array',
+                    'assigned_table_ids.*' => 'exists:tables,id',
+                    'steward_id' => 'nullable|exists:employees,id',
+                    'branch_id' => 'required|exists:branches,id',
+                ]);
+                $branch = Branch::find($validated['branch_id']);
+            } else {
+                // Organization admin must select branch if not assigned
+                if ($admin->organization_id && !$admin->branch_id) {
+                    return redirect()->route('admin.reservations.create')
+                        ->with('error', 'Please select a branch to create reservations.');
+                }
+                // Branch admin must have branch assigned
+                if (!$admin->branch_id || !$admin->branch) {
+                    \Log::error('Reservation creation failed: Admin missing branch assignment', ['admin_id' => $admin->id]);
+                    return redirect()->route('admin.reservations.create')
+                        ->with('error', 'You must be assigned to a branch to create reservations.');
+                }
+                $validated = $request->validate([
+                    'name' => 'nullable|string|max:255',
+                    'phone' => 'required|string|min:10|max:15',
+                    'email' => 'nullable|email|max:255',
+                    'date' => 'required|date|after_or_equal:today',
+                    'start_time' => 'required|date_format:H:i',
+                    'end_time' => 'required|date_format:H:i|after:start_time',
+                    'number_of_people' => 'required|integer|min:1',
+                    'assigned_table_ids' => 'nullable|array',
+                    'assigned_table_ids.*' => 'exists:tables,id',
+                    'steward_id' => 'nullable|exists:employees,id',
+                ]);
+                $branch = $admin->branch;
+            }
+            // Validate branch exists and is active
+            if (!$branch || !$branch->is_active) {
+                \Log::error('Reservation creation failed: Invalid branch', ['branch_id' => $branch?->id, 'admin_id' => $admin->id]);
+                return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
+            }
+
+            // Validate branch operating hours with null-safe operators
+            $branchOpenTime = $branch?->opening_time ? \Carbon\Carbon::parse($branch->opening_time)->format('H:i') : '00:00';
+            $branchCloseTime = $branch?->closing_time ? \Carbon\Carbon::parse($branch->closing_time)->format('H:i') : '23:59';
+
+            if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
+                \Log::warning('Reservation time outside branch hours', [
+                    'branch_id' => $branch?->id,
+                    'start_time' => $validated['start_time'],
+                    'end_time' => $validated['end_time'],
+                    'branchOpenTime' => $branchOpenTime,
+                    'branchCloseTime' => $branchCloseTime,
+                ]);
+                return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')'])->withInput();
+            }
+            // Check capacity with null-safe operations
+            $totalCapacity = $branch?->total_capacity ?? 0;
+
+            if ($totalCapacity > 0) {
+                $reservedCapacity = $branch->reservations()
+                    ->where('date', $validated['date'])
+                    ->where(function($query) use ($validated) {
+                        $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                            ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                            ->orWhere(function($q) use ($validated) {
+                                $q->where('start_time', '<=', $validated['start_time'])
+                                    ->where('end_time', '>=', $validated['end_time']);
+                            });
+                    })
+                    ->where('reservations.status', '!=', 'cancelled')
+                    ->sum('number_of_people');
+
+                $availableCapacity = $totalCapacity - $reservedCapacity;
+                if ($availableCapacity < $validated['number_of_people']) {
+                    \Log::info('Reservation creation failed: Not enough capacity', [
+                        'branch_id' => $branch?->id,
+                        'requested_people' => $validated['number_of_people'],
+                        'availableCapacity' => $availableCapacity,
+                        'reservedCapacity' => $reservedCapacity
+                    ]);
+                    return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
+                }
+            }
+
+            // Check if any selected tables are already reserved for the same date and overlapping time
+            if (!empty($validated['assigned_table_ids'])) {
+                $conflictingTables = Table::whereIn('id', $validated['assigned_table_ids'])
+                    ->whereHas('reservations', function ($query) use ($validated) {
+                        $query->where('date', $validated['date'])
+                            ->where(function ($q) use ($validated) {
+                                $q->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
+                                  ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
+                                  ->orWhere(function($q2) use ($validated) {
+                                      $q2->where('start_time', '<=', $validated['start_time'])
+                                         ->where('end_time', '>=', $validated['end_time']);
+                                  });
+                            })
+                            ->where('reservations.id', '!=', $reservation->id ?? null)
+                            ->where('reservations.status', '!=', 'cancelled');
+                    })
+                    ->pluck('number')
+                    ->toArray();
+                if (count($conflictingTables) > 0) {
+                    \Log::info('Reservation creation failed: Table conflict', [
+                        'branch_id' => $branch?->id,
+                        'conflicting_tables' => $conflictingTables,
+                        'requested_tables' => $validated['assigned_table_ids']
+                    ]);
+                    return back()->withErrors(['assigned_table_ids' => 'The following tables are already reserved for the selected time: ' . implode(', ', $conflictingTables)])->withInput();
+                }
+            }
+
+            // Calculate fees with null-safe operators
+            $reservationFee = $branch?->reservation_fee ?? 0;
+            $cancellationFee = $branch?->cancellation_fee ?? 0;
+            $branchId = $branch?->id;
+
+            if (!$branchId) {
+                \Log::error('Reservation creation failed: Branch ID missing', ['branch' => $branch, 'admin_id' => $admin->id]);
+                return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
+            }
+
+            $reservation = Reservation::create([
+                'name' => $validated['name'] ?: 'Reservation #' . ((DB::table('reservations')->max('id') ?? 0) + 1),
+                'phone' => $validated['phone'] ?: $branch?->phone,
+                'email' => $validated['email'],
+                'date' => $validated['date'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'number_of_people' => $validated['number_of_people'],
+                'status' => 'pending',
+                'branch_id' => $branchId,
+                'reservation_fee' => $reservationFee,
+                'cancellation_fee' => $cancellationFee,
+                'steward_id' => $validated['steward_id'],
+                'created_by_admin_id' => $admin->id,
+                'type' => ReservationType::IN_CALL,
             ]);
-            $branch = \App\Models\Branch::find($validated['branch_id']);
-        } else {
-            // Load branch relationship if not already loaded
-            if (!$admin->relationLoaded('branch')) {
-                $admin->load('branch');
-            }
 
-            // Validate admin has a branch assigned
-            if (!$admin->branch_id || !$admin->branch) {
-                return redirect()->route('admin.reservations.index')
-                    ->with('error', 'You must be assigned to a branch to create reservations.');
-            }
-            $validated = $request->validate([
-                'name' => 'nullable|string|max:255',
-                'phone' => 'required|string|min:10|max:15',
-                'email' => 'nullable|email|max:255',
-                'date' => 'required|date|after_or_equal:today',
-                'start_time' => 'required|date_format:H:i',
-                'end_time' => 'required|date_format:H:i|after:start_time',
-                'number_of_people' => 'required|integer|min:1',
-                'assigned_table_ids' => 'nullable|array',
-                'assigned_table_ids.*' => 'exists:tables,id',
-                'steward_id' => 'nullable|exists:employees,id',
+            \Log::info('Reservation created', [
+                'reservation_id' => $reservation->id,
+                'admin_id' => $admin->id,
+                'branch_id' => $branchId,
+                'data' => $validated
             ]);
-            $branch = $admin->branch;
-        }
 
-
-        if ($admin->isSuperAdmin()) {
-            $branch = \App\Models\Branch::find($validated['branch_id']);
-        } else {
-            $branch = $admin->branch;
-        }
-        // Validate branch exists and is active
-        if (!$branch || !$branch->is_active) {
-            return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
-        }
-
-        // Validate branch operating hours with null-safe operators
-        $branchOpenTime = $branch?->opening_time ? \Carbon\Carbon::parse($branch->opening_time)->format('H:i') : '00:00';
-        $branchCloseTime = $branch?->closing_time ? \Carbon\Carbon::parse($branch->closing_time)->format('H:i') : '23:59';
-
-        if ($validated['start_time'] < $branchOpenTime || $validated['end_time'] > $branchCloseTime) {
-            return back()->withErrors(['time' => 'Reservation time must be within branch operating hours (' . $branchOpenTime . ' - ' . $branchCloseTime . ')'])->withInput();
-        }
-        // Check capacity with null-safe operations
-        $totalCapacity = $branch?->total_capacity ?? 0;
-
-        if ($totalCapacity > 0) {
-            $reservedCapacity = $branch->reservations()
-                ->where('date', $validated['date'])
-                ->where(function($query) use ($validated) {
-                    $query->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                        ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                        ->orWhere(function($q) use ($validated) {
-                            $q->where('start_time', '<=', $validated['start_time'])
-                                ->where('end_time', '>=', $validated['end_time']);
-                        });
-                })
-                ->where('reservations.status', '!=', 'cancelled')
-                ->sum('number_of_people');
-
-            $availableCapacity = $totalCapacity - $reservedCapacity;
-            if ($availableCapacity < $validated['number_of_people']) {
-                return back()->withErrors(['number_of_people' => 'Not enough capacity for the selected time slot.'])->withInput();
+            if (!empty($validated['assigned_table_ids'])) {
+                $reservation->tables()->sync($validated['assigned_table_ids']);
             }
+
+            return redirect()->route('admin.reservations.edit', $reservation)
+                ->with('success', 'Reservation created successfully. You can now check in.');
         }
-
-        // Check if any selected tables are already reserved for the same date and overlapping time
-        if (!empty($validated['assigned_table_ids'])) {
-            $conflictingTables = Table::whereIn('id', $validated['assigned_table_ids'])
-                ->whereHas('reservations', function ($query) use ($validated) {
-                    $query->where('date', $validated['date'])
-                        ->where(function ($q) use ($validated) {
-                            $q->whereBetween('start_time', [$validated['start_time'], $validated['end_time']])
-                              ->orWhereBetween('end_time', [$validated['start_time'], $validated['end_time']])
-                              ->orWhere(function($q2) use ($validated) {
-                                  $q2->where('start_time', '<=', $validated['start_time'])
-                                     ->where('end_time', '>=', $validated['end_time']);
-                              });
-                        })
-                        ->where('reservations.id', '!=', $reservation->id ?? null)
-                        ->where('reservations.status', '!=', 'cancelled');
-                })
-                ->pluck('number')
-                ->toArray();
-            if (count($conflictingTables) > 0) {
-                return back()->withErrors(['assigned_table_ids' => 'The following tables are already reserved for the selected time: ' . implode(', ', $conflictingTables)])->withInput();
-            }
+        catch (\Exception $e) {
+            \Log::error('Reservation creation exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'admin_id' => $admin->id,
+                'request_data' => $request->all()
+            ]);
+            return back()->withErrors(['error' => 'Reservation creation failed: ' . $e->getMessage()])->withInput();
         }
-
-        // Calculate fees with null-safe operators
-        $reservationFee = $branch?->reservation_fee ?? 0;
-        $cancellationFee = $branch?->cancellation_fee ?? 0;
-        $branchId = $branch?->id;
-
-        if (!$branchId) {
-            return back()->withErrors(['error' => 'Invalid branch assignment. Cannot create reservation.'])->withInput();
-        }
-
-        $reservation = Reservation::create([
-            'name' => $validated['name'] ?: 'Reservation #' . ((DB::table('reservations')->max('id') ?? 0) + 1),
-            'phone' => $validated['phone'] ?: $branch?->phone,
-            'email' => $validated['email'],
-            'date' => $validated['date'],
-            'start_time' => $validated['start_time'],
-            'end_time' => $validated['end_time'],
-            'number_of_people' => $validated['number_of_people'],
-            'status' => 'pending',
-            'branch_id' => $branchId,
-            'reservation_fee' => $reservationFee,
-            'cancellation_fee' => $cancellationFee,
-            'steward_id' => $validated['steward_id'],
-            'created_by_admin_id' => $admin->id,
-            'type' => ReservationType::IN_CALL,
-        ]);
-
-        if (!empty($validated['assigned_table_ids'])) {
-            $reservation->tables()->sync($validated['assigned_table_ids']);
-        }
-
-
-        return redirect()->route('admin.reservations.edit', $reservation)
-            ->with('success', 'Reservation created successfully. You can now check in.');
     }
 
     public function create(Request $request)
     {
         $admin = auth('admin')->user();
         $isSuperAdmin = $admin->is_super_admin;
-        $organizations = \App\Models\Organization::where('is_active', true)->orderBy('name')->get();
+        $organizations = Organization::where('is_active', true)->orderBy('name')->get();
 
+        // Determine organization and branch selection logic
         $organization_id = $request->get('organization_id') ?? ($isSuperAdmin ? null : $admin->organization_id);
         $branch_id = $request->get('branch_id') ?? ($isSuperAdmin ? null : $admin->branch_id);
-        $branches = collect();
-        if ($organization_id) {
-            $branches = \App\Models\Branch::where('organization_id', $organization_id)->get();
+        // Branch selection logic
+        if ($isSuperAdmin) {
+            $branches = $organization_id ? Branch::where('organization_id', $organization_id)->get() : collect();
+        } elseif ($admin->organization_id && !$admin->branch_id) {
+            $branches = Branch::where('organization_id', $admin->organization_id)->get();
+        } else {
+            $branches = $admin->branch_id ? Branch::where('id', $admin->branch_id)->get() : collect();
         }
+
         $tables = $branch_id ? Table::where('branch_id', $branch_id)->get() : collect();
         $availableTableIds = $tables->pluck('id')->toArray();
-        $defaultPhone = $branch_id ? (\App\Models\Branch::find($branch_id)->phone ?? '') : ($admin->branch->phone ?? '');
+        $defaultPhone = $branch_id ? (Branch::find($branch_id)->phone ?? '') : ($admin->branch->phone ?? '');
         $defaultDate = now()->toDateString();
         $now = now();
         $start_time = $now->format('H:i');
         $end_time = $now->copy()->addHours(2)->format('H:i');
         $defaultName = 'Reservation #' . ((DB::table('reservations')->max('id') ?? 0) + 1);
-        $stewards = $branch_id ? \App\Models\Employee::where('branch_id', $branch_id)
+        $stewards = $branch_id ? Employee::where('branch_id', $branch_id)
             ->where('is_active', true)
             ->whereHas('roles', function($query) {
                 $query->where('name', 'steward');
             })->get() : collect();
+
+        // If super admin and no org/branch selected, show only org/branch selection
+        if ($isSuperAdmin && (!$organization_id || !$branch_id)) {
+            return view('admin.reservations.create', compact(
+                'isSuperAdmin',
+                'organizations',
+                'organization_id',
+                'branches',
+                'branch_id',
+                'tables',
+                'availableTableIds',
+                'defaultPhone',
+                'defaultDate',
+                'defaultName',
+                'start_time',
+                'end_time',
+                'stewards'
+            ))->with('error', 'Please select an organization and branch to create a reservation.');
+        }
+        // If org admin and no branch selected, show branch selection
+        elseif ($admin->organization_id && !$admin->branch_id && !$branch_id) {
+            return view('admin.reservations.create', compact(
+                'isSuperAdmin',
+                'organizations',
+                'organization_id',
+                'branches',
+                'branch_id',
+                'tables',
+                'availableTableIds',
+                'defaultPhone',
+                'defaultDate',
+                'defaultName',
+                'start_time',
+                'end_time',
+                'stewards'
+            ))->with('error', 'Please select a branch to create a reservation.');
+        }
 
         return view('admin.reservations.create', compact(
             'isSuperAdmin',
@@ -527,7 +620,7 @@ public function assignSteward(Request $request, Reservation $reservation)
         ]);
 
         $reservation->update(['steward_id' => $validated['steward_id']]);
-        $employee = \App\Models\Employee::find($validated['steward_id']);
+        $employee =Employee::find($validated['steward_id']);
 
         return response()->json([
             'success' => true,
@@ -616,12 +709,10 @@ public function checkTableAvailability(Request $request)
     if (!$branchId) {
         return response()->json([
             'error' => 'No branch assigned to admin',
-            'available_table_ids' => []
         ], 400);
     }
 
     $conflictingReservations = Reservation::where('branch_id', $branchId)
-        ->where('date', $request->date)
         ->where('status', '!=', 'cancelled')
         ->where(function($query) use ($request) {
             $query->whereBetween('start_time', [$request->start_time, $request->end_time])
@@ -634,8 +725,10 @@ public function checkTableAvailability(Request $request)
         ->with('tables')
         ->get();
 
-    $allTableIds = \App\Models\Table::where('branch_id', $branchId)->pluck('id');
-    $reservedTableIds = $conflictingReservations->flatMap->tables->pluck('id')->unique();
+    $allTableIds = Table::where('branch_id', $branchId)->pluck('id');
+    $reservedTableIds = $conflictingReservations->flatMap(function ($reservation) {
+        return $reservation->tables->pluck('id');
+    })->unique();
     $availableTableIds = $allTableIds->diff($reservedTableIds)->values();
 
     return response()->json([
@@ -666,9 +759,10 @@ public function createOrder(Reservation $reservation)
 
                 fputcsv($file, [
                     'ID', 'Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time',
-                    'Number of People', 'Status', 'Branch', 'Steward', 'Tables',
-                    'Reservation Fee', 'Cancellation Fee', 'Created At'
-                ]);
+                'ID', 'Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time',
+                'Number of People', 'Status', 'Branch', 'Steward', 'Tables',
+                'Reservation Fee', 'Cancellation Fee', 'Created At'
+            ]);
 
 
                 foreach ($reservations as $reservation) {
