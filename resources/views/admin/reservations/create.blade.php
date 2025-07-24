@@ -28,7 +28,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('admin.reservations.store') }}" method="POST">
+                <form method="POST" action="{{ route('admin.reservations.store') }}">
                     @csrf
 
                     <!-- Organization & Branch Selection -->
@@ -248,6 +248,9 @@
 </div>
 @endsection
 
+
+
+
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -375,13 +378,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial availability check
     updateTableAvailability();
 
+    // Super Admin Organization/Branch Selection
     @if(auth()->user()->isSuperAdmin())
     document.getElementById('organization_id').addEventListener('change', function() {
         const orgId = this.value;
-        loadBranches(orgId);
+        if (orgId) {
+            fetch(`/admin/branches/${orgId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const branchSelect = document.getElementById('branch_id');
+                    branchSelect.innerHTML = '<option value="">Select Branch</option>';
+                    data.forEach(branch => {
+                        const option = document.createElement('option');
+                        option.value = branch.id;
+                        option.textContent = branch.name;
+                        branchSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error fetching branches:', error));
+        } else {
+            document.getElementById('branch_id').innerHTML = '<option value="">Select Branch First</option>';
+        }
     });
     @endif
 });
 </script>
-
 @endsection
