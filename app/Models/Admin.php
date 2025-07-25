@@ -9,20 +9,39 @@ use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use App\Models\Branch;
 
 class Admin extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, SoftDeletes;
 
     /**
-     * The roles that belong to the admin.
+     * The primary key for the model.
+     *
+     * @var string
      */
-    public function roles()
-    {
-        return $this->belongsToMany(\Spatie\Permission\Models\Role::class, 'admin_role', 'admin_id', 'role_id');
-    }
-    use HasFactory, Notifiable, HasRoles, SoftDeletes;
+    protected $primaryKey = 'id';
 
+    /**
+     * Guard name for Spatie permissions
+     */
+    protected $guard_name = 'admin';
+
+    /**
+     * The model type used for role assignments
+     */
+    protected string $model_type = 'App\Models\Admin';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<string>
+     */
     protected $fillable = [
         'name',
         'email',
@@ -49,137 +68,263 @@ class Admin extends Authenticatable
 
     /**
      * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
         'remember_token',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
+    ];
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'id' => 'integer',
+        'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'locked_until' => 'datetime',
+        'password_changed_at' => 'datetime',
+        'is_super_admin' => 'boolean',
+        'is_active' => 'boolean',
+        'ui_settings' => 'array',
+        'preferences' => 'array',
+        'failed_login_attempts' => 'integer',
+        'organization_id' => 'integer',
+        'branch_id' => 'integer',
+        'current_role_id' => 'integer',
+    ];
+    // ...existing code...
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'is_active' => true,
+        'is_super_admin' => false,
+        'failed_login_attempts' => 0,
+        'status' => 'active',
+        'ui_settings' => '{}',
+        'preferences' => '{}',
     ];
 
     /**
-     * Get the attributes that should be cast following UI/UX data types.
+     * The accessors to append to the model's array form.
+     *
+     * @var array
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'last_login_at' => 'datetime',
-            'locked_until' => 'datetime',
-            'password_changed_at' => 'datetime',
-            'two_factor_confirmed_at' => 'datetime',
-            'is_super_admin' => 'boolean',
-            'is_active' => 'boolean',
-            'preferences' => 'array',
-            'ui_settings' => 'array',
-            'two_factor_recovery_codes' => 'encrypted:array',
-            'password' => 'hashed',
-        ];
-    }
+    protected $appends = [
+        'display_name',
+        'avatar_url',
+        'status_badge',
+        'role_badge',
+    ];
 
     /**
-     * Guard name for Spatie permissions
+     * Get all effective permissions for the admin, including those from super admin status and roles.
+     *
+     * @return \Illuminate\Support\Collection
      */
-    protected $guard_name = 'admin';
-
-    /**
-     * Boot method to set default UI settings and handle role migration
-     */
-    protected static function boot()
+    public function getEffectivePermissions(): Collection
     {
-        parent::boot();
-
-        static::creating(function ($admin) {
-            // Set default UI settings following the UI/UX guidelines
-            if (empty($admin->ui_settings)) {
-                $admin->ui_settings = [
-                    'theme' => 'light',
-                    'sidebar_collapsed' => false,
-                    'dashboard_layout' => 'grid',
-                    'notifications_enabled' => true,
-                    'preferred_language' => 'en',
-                    'cards_per_row' => 4,
-                    'show_help_tips' => true,
-                ];
-            }
-
-            if (empty($admin->preferences)) {
-                $admin->preferences = [
-                    'timezone' => 'Asia/Colombo',
-                    'date_format' => 'Y-m-d',
-                    'time_format' => '24h',
-                    'currency' => 'LKR',
-                ];
-            }
-
-            // Handle legacy role field
-            if ($admin->role && !$admin->current_role_id) {
-                $admin->migrateLegacyRole();
-            }
-        });
-
-        static::updating(function ($admin) {
-            // Handle legacy role field updates
-            if ($admin->isDirty('role') && $admin->role && !$admin->current_role_id) {
-                $admin->migrateLegacyRole();
-            }
-        });
-    }
-
-    /**
-     * Migrate legacy role to Spatie role system
-     */
-    public function migrateLegacyRole(): void
-    {
-        if (!$this->role) return;
-
-        // Map legacy roles to Spatie roles
-        $roleMapping = [
-            'admin' => 'Organization Admin',
-            'super_admin' => 'Super Admin',
-            'branch_admin' => 'Branch Admin',
-            'manager' => 'Branch Manager',
-            'staff' => 'Staff',
-        ];
-
-        $roleName = $roleMapping[$this->role] ?? $this->role;
-
-        try {
-            $spatieRole = \Spatie\Permission\Models\Role::where('name', $roleName)
-                ->where('guard_name', 'admin')
-                ->first();
-
-            if ($spatieRole) {
-                $this->current_role_id = $spatieRole->id;
-                if (!$this->hasRole($spatieRole)) {
-                    $this->assignRole($spatieRole);
-                }
-            }
-        } catch (\Exception $e) {
-            // Silently handle role migration errors
+        if ($this->isSuperAdmin()) {
+            return Permission::where('guard_name', 'admin')->get();
         }
+        return $this->getAllPermissions();
     }
 
     /**
-     * Relationships following UI/UX guidelines
+     * Get formatted permissions array with source information
+     *
+     * @return array
+     */
+    public function getFormattedPermissions(): array
+    {
+        $permissions = $this->getEffectivePermissions();
+
+        $formatted = [];
+        foreach ($permissions as $permission) {
+            $formatted[] = [
+                'id' => $permission->id,
+                'name' => $permission->name,
+                'source' => $this->getPermissionSource($permission)
+            ];
+        }
+
+        return $formatted;
+    }
+
+    /**
+     * Determine the source of a permission (Direct or via Role)
+     *
+     * @param Permission $permission
+     * @return string
+     */
+    protected function getPermissionSource($permission): string
+    {
+        if ($this->hasDirectPermission($permission)) {
+            return 'Direct';
+        }
+
+        $roles = $this->roles()->with('permissions')->get();
+        foreach ($roles as $role) {
+            if ($role->hasPermissionTo($permission)) {
+                return "Via Role: {$role->name}";
+            }
+        }
+
+        return 'Unknown';
+    }
+
+    /**
+     * Check if admin has any of the given permissions through any of their roles
+     *
+     * @param array|string $permissions
+     * @return bool
+     */
+    public function hasAnyPermissionThroughRole($permissions): bool
+    {
+        return $this->hasAnyPermission($permissions);
+    }
+
+    /**
+     * Define organization relationship
      */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
+    /**
+     * Define branch relationship
+     */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /**
+     * Current active role relationship
+     */
     public function currentRole(): BelongsTo
     {
-        return $this->belongsTo(\Spatie\Permission\Models\Role::class, 'current_role_id');
+        return $this->belongsTo(Role::class, 'current_role_id');
     }
 
     /**
-     * Scopes for UI filtering following UI/UX patterns
+     * Get all permissions assigned to the admin through roles
+     */
+    public function getAllEffectivePermissions()
+    {
+        return $this->getAllPermissions();
+    }
+
+    /**
+     * Check if admin has super admin role or is_super_admin flag
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) ($this->attributes['is_super_admin'] ?? false) || $this->hasRole('Super Admin');
+    }
+
+    /**
+     * Check if admin is an organization admin (has org but no branch)
+     */
+    public function isOrganizationAdmin(): bool
+    {
+        return !$this->isSuperAdmin()
+            && !is_null($this->organization_id)
+            && is_null($this->branch_id);
+    }
+
+    /**
+     * Check if admin is a branch admin (has both org and branch)
+     */
+    public function isBranchAdmin(): bool
+    {
+        return !$this->isSuperAdmin()
+            && !is_null($this->organization_id)
+            && !is_null($this->branch_id);
+    }
+
+    /**
+     * Get the admin's display name
+     */
+    protected function displayName(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->name ?? $this->getAttribute('email'),
+        );
+    }
+
+    // /**
+    //  * Get the admin's avatar URL
+    //  */
+    // protected function avatarUrl(): Attribute
+    // {
+    //     return Attribute::make(
+    //         get: function () {
+    //             if ($this->profile_image) {
+    //                 return asset('storage/' . $this->profile_image);
+    //             }
+
+    //             $name = $this->name ?? $this->email;
+    //             $initials = collect(explode(' ', $name))
+    //                 ->map(fn($segment) => mb_substr($segment, 0, 1, 'UTF-8'))
+    //                 ->take(2)
+    //                 ->map(fn($initial) => strtoupper($initial))
+    //                 ->join('');
+
+    //             return "https://ui-avatars.com/api/?name=" . urlencode($initials) . "&color=FFFFFF&background=6366F1";
+    //         }
+    //     );
+    // }
+
+    /**
+     * Get the admin's status badge
+     */
+    protected function statusBadge(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $status = $this->status ?? 'unknown';
+
+                return match($status) {
+                    'active' => ['text' => 'Active', 'class' => 'bg-green-100 text-green-800'],
+                    'inactive' => ['text' => 'Inactive', 'class' => 'bg-gray-100 text-gray-800'],
+                    'suspended' => ['text' => 'Suspended', 'class' => 'bg-red-100 text-red-800'],
+                    'pending' => ['text' => 'Pending', 'class' => 'bg-yellow-100 text-yellow-800'],
+                    default => ['text' => 'Unknown', 'class' => 'bg-gray-100 text-gray-800'],
+                };
+            }
+        );
+    }
+
+    /**
+     * Get the admin's role badge
+     */
+    protected function roleBadge(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->isSuperAdmin()) {
+                    return ['text' => 'Super Admin', 'class' => 'bg-purple-100 text-purple-800'];
+                }
+
+                $role = $this->roles()->first();
+                return [
+                    'text' => $role ? $role->name : 'No Role',
+                    'class' => $role ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                ];
+            }
+        );
+    }
+
+    /**
+     * Scopes for UI filtering
      */
     public function scopeActive($query)
     {
@@ -212,128 +357,7 @@ class Admin extends Authenticatable
     }
 
     /**
-     * Accessors for UI display following UI/UX guidelines
-     */
-    protected function displayName(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->name ?? $this->email,
-        );
-    }
-
-    protected function statusBadge(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                if ($this->is_super_admin) {
-                    return [
-                        'text' => 'Super Admin',
-                        'class' => 'bg-purple-100 text-purple-800'
-                    ];
-                }
-
-                return match($this->status) {
-                    'active' => [
-                        'text' => 'Active',
-                        'class' => 'bg-green-100 text-green-800'
-                    ],
-                    'inactive' => [
-                        'text' => 'Inactive',
-                        'class' => 'bg-gray-100 text-gray-800'
-                    ],
-                    'suspended' => [
-                        'text' => 'Suspended',
-                        'class' => 'bg-red-100 text-red-800'
-                    ],
-                    'pending' => [
-                        'text' => 'Pending',
-                        'class' => 'bg-yellow-100 text-yellow-800'
-                    ],
-                    default => [
-                        'text' => 'Unknown',
-                        'class' => 'bg-gray-100 text-gray-800'
-                    ]
-                };
-            }
-        );
-    }
-
-    protected function roleBadge(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                $primaryRole = $this->roles->first();
-                if ($primaryRole) {
-                    return [
-                        'text' => $primaryRole->name,
-                        'class' => 'bg-indigo-100 text-indigo-800'
-                    ];
-                }
-
-                // Fallback to legacy role
-                if ($this->role) {
-                    return [
-                        'text' => ucfirst(str_replace('_', ' ', $this->role)),
-                        'class' => 'bg-blue-100 text-blue-800'
-                    ];
-                }
-
-                return [
-                    'text' => 'No Role',
-                    'class' => 'bg-gray-100 text-gray-800'
-                ];
-            }
-        );
-    }
-
-    protected function avatarUrl(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                if ($this->profile_image) {
-                    return asset('storage/' . $this->profile_image);
-                }
-
-                // Generate avatar with initials following UI/UX guidelines
-                $initials = collect(explode(' ', $this->name))
-                    ->take(2)
-                    ->map(fn($word) => strtoupper(substr($word, 0, 1)))
-                    ->join('');
-
-                return "https://ui-avatars.com/api/?name={$initials}&background=6366f1&color=fff&size=128";
-            }
-        );
-    }
-
-    /**
-     * Permission checking methods following UI/UX access control
-     */
-    public function canAccessOrganization(int $organizationId): bool
-    {
-        if ($this->is_super_admin) {
-            return true;
-        }
-
-        return $this->organization_id === $organizationId;
-    }
-
-    public function canAccessBranch(int $branchId): bool
-    {
-        if ($this->is_super_admin) {
-            return true;
-        }
-
-        if ($this->branch_id === null) {
-            // Organization admin can access all branches in their organization
-            $branch = Branch::find($branchId);
-            return $branch && $branch->organization_id === $this->organization_id;
-        }
-
-        return $this->branch_id === $branchId;
-    }
-
-    /**
-     * Security methods following UI/UX guidelines
+     * Security methods
      */
     public function isLocked(): bool
     {
@@ -344,7 +368,6 @@ class Admin extends Authenticatable
     {
         $this->increment('failed_login_attempts');
 
-        // Lock account after 5 failed attempts
         if ($this->failed_login_attempts >= 5) {
             $this->update([
                 'locked_until' => now()->addMinutes(30),
@@ -364,7 +387,121 @@ class Admin extends Authenticatable
     }
 
     /**
-     * UI preference methods following UI/UX customization
+     * Helper function to get formated admin data
+     */
+    public function toDetailedArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->getAttribute('name'),
+            'email' => $this->getAttribute('email'),
+            'organization' => $this->organization ? [
+                'id' => $this->organization->id,
+                'name' => $this->organization->name,
+            ] : null,
+            'branch' => $this->branch ? [
+                'id' => $this->branch->id,
+                'name' => $this->branch->name,
+            ] : null,
+            'roles' => $this->roles->map(fn($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+            ]),
+            'status' => $this->getAttribute('status'),
+            'status_badge' => $this->getAccessorValue('status_badge'),
+            'role_badge' => $this->getAccessorValue('role_badge'),
+            'is_super_admin' => $this->getAttribute('is_super_admin'),
+            'is_active' => $this->getAttribute('is_active'),
+            'department' => $this->getAttribute('department'),
+            'job_title' => $this->getAttribute('job_title'),
+            'avatar_url' => $this->getAccessorValue('avatar_url'),
+            'last_login_at' => $this->getAttribute('last_login_at'),
+        ];
+    }
+
+    /**
+     * Boot method to set default UI settings and handle role migration
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($admin) {
+            if (empty($admin->ui_settings)) {
+                $admin->ui_settings = [
+                    'theme' => 'light',
+                    'sidebar_collapsed' => false,
+                    'dashboard_layout' => 'grid',
+                    'notifications_enabled' => true,
+                    'preferred_language' => 'en',
+                    'cards_per_row' => 4,
+                    'show_help_tips' => true,
+                ];
+            }
+
+            if (empty($admin->preferences)) {
+                $admin->preferences = [
+                    'timezone' => 'Asia/Colombo',
+                    'date_format' => 'Y-m-d',
+                    'time_format' => '24h',
+                    'currency' => 'LKR',
+                ];
+            }
+
+            if ($admin->role && !$admin->current_role_id) {
+                $admin->migrateLegacyRole();
+            }
+        });
+
+        static::updating(function ($admin) {
+            if ($admin->isDirty('role') && $admin->role && !$admin->current_role_id) {
+                $admin->migrateLegacyRole();
+            }
+        });
+    }
+
+    /**
+     * Override roles method to enforce admin guard and model type
+     */
+    public function roles()
+    {
+        return $this->morphToMany(
+            \App\Models\Role::class,
+            'model',
+            'model_has_roles',
+            'model_id',
+            'role_id'
+        )->where('guard_name', $this->guard_name);
+    }
+
+    /**
+     * Permission checking methods
+     */
+    public function canAccessOrganization(int $organizationId): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        return $this->organization_id === $organizationId;
+    }
+
+    public function canAccessBranch(int $branchId): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (!$this->branch_id && $this->organization_id) {
+            return Branch::where('id', $branchId)
+                ->where('organization_id', $this->organization_id)
+                ->exists();
+        }
+
+        return $this->branch_id === $branchId;
+    }
+
+    /**
+     * UI preference methods
      */
     public function getUiPreference(string $key, $default = null)
     {
@@ -375,151 +512,176 @@ class Admin extends Authenticatable
     {
         $settings = $this->ui_settings ?? [];
         data_set($settings, $key, $value);
-        $this->update(['ui_settings' => $settings]);
+        $this->ui_settings = $settings;
     }
 
     /**
-     * Check if admin is a super admin
-     * Uses both the is_super_admin column and Spatie roles for flexibility
-     */
-    public function isSuperAdmin(): bool
-    {
-        // Check the direct column first (fastest)
-        if ($this->is_super_admin) {
-            return true;
-        }
-
-        // Check if they have the 'Super Admin' role through Spatie
-        try {
-            return $this->hasRole('Super Admin', 'admin');
-        } catch (\Exception $e) {
-            // Fallback if Spatie roles aren't set up
-            return false;
-        }
-    }
-
-    /**
-     * Check if user is an admin
-     * Since this is the Admin model, all instances are admins by definition
-     */
-    public function isAdmin(): bool
-    {
-        return true;
-    }
-
-    /**
-     * Check if admin has organization-level access
-     * Super admins have global access, regular admins need organization assignment
-     */
-    public function hasOrganizationAccess($organizationId = null): bool
-    {
-        // Super admins have access to all organizations
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
-        // Regular admins need organization assignment
-        if (!$this->organization_id) {
-            return false;
-        }
-
-        // If specific organization is requested, check match
-        if ($organizationId !== null) {
-            return $this->organization_id == $organizationId;
-        }
-
-        return true;
-    }
-
-    /**
-     * Check if admin can manage other admins
-     */
-    public function canManageAdmins(): bool
-    {
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
-        try {
-            return $this->hasPermissionTo('manage admins', 'admin');
-        } catch (\Exception $e) {
-            // If permission doesn't exist, fall back to role check
-            return $this->hasRole(['Admin Manager', 'Super Admin'], 'admin');
-        }
-    }
-
-    /**
-     * Check if admin can access system-wide settings
-     */
-    public function canManageSystem(): bool
-    {
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
-        try {
-            return $this->hasPermissionTo('manage system', 'admin');
-        } catch (\Exception $e) {
-            // If permission doesn't exist, only super admins can manage system
-            return false;
-        }
-    }
-
-    /**
-     * Check if admin can manage a specific organization
-     * Super admins can manage all organizations
-     * Organization admins can manage their own organization
-     */
-    public function canManageOrganization($organization): bool
-    {
-        if ($this->isSuperAdmin()) {
-            return true;
-        }
-
-        // Organization admins can manage their own organization
-        if ($this->organization_id && $this->organization_id == $organization->id) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Dashboard data methods following UI/UX metrics
+     * Dashboard data methods
      */
     public function getDashboardStats(): array
     {
         return [
-            'total_logins' => 0, // Would be tracked in audit logs
-            'last_login' => optional(\Illuminate\Support\Carbon::parse($this->last_login_at))->diffForHumans() ?? 'Never',
-            'account_status' => $this->status_badge['text'],
-            'role_status' => $this->role_badge['text'],
+            'total_logins' => 0,
+            'last_login' => optional($this->last_login_at)->diffForHumans() ?? 'Never',
+            'account_status' => $this->getAccessorValue('status_badge')['text'],
+            'role_status' => $this->getAccessorValue('role_badge')['text'],
             'permissions_count' => $this->getAllPermissions()->count(),
             'organization' => $this->organization?->name,
             'branch' => $this->branch?->name,
-            'department' => $this->department,
-            'job_title' => $this->job_title,
+            'department' => $this->getAttribute('department'),
+            'job_title' => $this->getAttribute('job_title'),
         ];
     }
 
     /**
-     * Check if admin is an organization admin (has org but no branch)
+     * Migrate legacy role to Spatie role system
      */
-    public function isOrganizationAdmin()
+    protected function migrateLegacyRole(): void
     {
+        if (!$this->getAttribute('role')) return;
 
-        return !$this->is_super_admin
-            && !is_null($this->organization_id)
-            && is_null($this->branch_id);
+        $roleMapping = [
+            'admin' => 'Organization Admin',
+            'super_admin' => 'Super Admin',
+            'branch_admin' => 'Branch Admin',
+            'manager' => 'Branch Manager',
+            'staff' => 'Staff',
+        ];
+
+        $legacyRole = $this->getAttribute('role');
+        $roleName = $roleMapping[$legacyRole] ?? $legacyRole;
+
+        try {
+            $spatieRole = Role::where('name', $roleName)
+                ->where('guard_name', 'admin')
+                ->first();
+
+            if ($spatieRole) {
+                $this->current_role_id = $spatieRole->id;
+                $this->assignRole($spatieRole);
+            }
+        } catch (\Exception $e) {
+            // Handle exception
+        }
     }
 
     /**
-     * Check if admin is a branch admin (has both org and branch)
+     * Ensure status property always returns a value
      */
-    public function isBranchAdmin()
+    public function getStatusAttribute($value)
     {
-        return !$this->is_super_admin
-            && !empty($this->organization_id)
-            && !empty($this->branch_id);
+        return $value ?? 'inactive';
+    }
+
+    /**
+     * Get detailed role and permission information for debugging
+     */
+    public function getRolePermissionDetails(): array
+    {
+        $this->load(['roles.permissions']);
+        
+        $roleDetails = $this->roles->map(function($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'guard_name' => $role->guard_name,
+                'permissions_count' => $role->permissions->count(),
+                'permissions' => $role->permissions->pluck('name')->toArray()
+            ];
+        })->toArray();
+
+        $effectivePermissions = $this->getAllPermissions();
+        
+        return [
+            'admin_id' => $this->id,
+            'admin_email' => $this->email,
+            'is_super_admin' => $this->isSuperAdmin(),
+            'roles_count' => $this->roles->count(),
+            'roles' => $roleDetails,
+            'effective_permissions_count' => $effectivePermissions->count(),
+            'effective_permissions' => $effectivePermissions->pluck('name')->toArray(),
+            'direct_permissions' => $this->getDirectPermissions()->pluck('name')->toArray(),
+            'permissions_via_roles' => $this->getPermissionsViaRoles()->pluck('name')->toArray()
+        ];
+    }
+
+    /**
+     * Verify admin role assignments in database
+     */
+    public function verifyRoleAssignments(): array
+    {
+        $modelHasRoles = \DB::table('model_has_roles')
+            ->where('model_type', self::class)
+            ->where('model_id', $this->id)
+            ->pluck('role_id')
+            ->toArray();
+
+        $actualRoles = $this->roles()->pluck('roles.id')->toArray();
+
+        return [
+            'admin_id' => $this->id,
+            'admin_email' => $this->email,
+            'pivot_table_role_ids' => $modelHasRoles,
+            'model_role_ids' => $actualRoles,
+            'sync_status' => array_diff($modelHasRoles, $actualRoles) === [] && 
+                           array_diff($actualRoles, $modelHasRoles) === [] ? 'synced' : 'out_of_sync',
+            'missing_in_model' => array_diff($modelHasRoles, $actualRoles),
+            'missing_in_pivot' => array_diff($actualRoles, $modelHasRoles)
+        ];
+    }
+
+    /**
+     * Force refresh admin roles and permissions from database
+     */
+    public function refreshRolesAndPermissions(): self
+    {
+        // Clear any cached relationships
+        unset($this->relations['roles']);
+        unset($this->relations['permissions']);
+        
+        // Clear Spatie permission cache
+        app()['cache']->forget(config('permission.cache.key'));
+        
+        // Reload roles and permissions
+        $this->load(['roles.permissions']);
+        
+        return $this;
+    }
+
+    /**
+     * Test permission inheritance from roles
+     */
+    public function testPermissionInheritance(): array
+    {
+        $this->load(['roles.permissions']);
+        
+        $results = [];
+        
+        foreach ($this->roles as $role) {
+            $rolePermissions = $role->permissions->pluck('name')->toArray();
+            
+            $inheritanceTest = [];
+            foreach ($rolePermissions as $permission) {
+                $inheritanceTest[$permission] = [
+                    'has_permission' => $this->hasPermissionTo($permission),
+                    'can_permission' => $this->can($permission),
+                    'role_has_permission' => $role->hasPermissionTo($permission)
+                ];
+            }
+            
+            $results[$role->name] = [
+                'role_id' => $role->id,
+                'role_permissions_count' => count($rolePermissions),
+                'inheritance_test' => $inheritanceTest
+            ];
+        }
+        
+        return [
+            'admin_id' => $this->id,
+            'admin_email' => $this->email,
+            'roles_tested' => count($this->roles),
+            'results' => $results
+        ];
     }
 }
+

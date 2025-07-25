@@ -23,7 +23,7 @@ class MenuController extends Controller
     {
         $date = $request->date ? Carbon::parse($request->date) : Carbon::now();
         $menu = $this->menuService->getDailyMenu($branch, $date);
-        
+
         return view('menu.index', [
             'branch' => $branch,
             'menu' => $menu,
@@ -36,7 +36,7 @@ class MenuController extends Controller
     {
         $item = \App\Models\MenuItem::where('branch_id', $branch->id)
             ->findOrFail($itemId);
-            
+
         return view('menu.show', [
             'branch' => $branch,
             'item' => $item,

@@ -105,7 +105,7 @@
                         </select>
                         <p class="mt-1 text-sm text-gray-500">Leave empty for organization-wide role</p>
                     </div>
-                @elseif(auth('admin')->user()->organization_id && !auth('admin')->user()->branch_id)
+                @elseif(optional(auth('admin')->user())->organization_id && !optional(auth('admin')->user())->branch_id)
                     <!-- Organization Admin -->
                     <input type="hidden" name="organization_id" value="{{ auth('admin')->user()->organization_id }}">
                     <div class="mb-4">

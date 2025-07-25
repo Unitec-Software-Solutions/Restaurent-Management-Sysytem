@@ -25,7 +25,7 @@
             <!-- Search -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input type="text" name="search" value="{{ request('search') }}" 
+                <input type="text" name="search" value="{{ request('search') }}"
                        placeholder="Search categories..."
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
             </div>
@@ -58,11 +58,8 @@
             <!-- Filter Actions -->
             <div class="flex items-end gap-2">
                 <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
-                    <i class="fas fa-filter mr-1"></i> Filter
+                    Filter
                 </button>
-                <a href="{{ route('admin.menu-categories.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">
-                    <i class="fas fa-times mr-1"></i> Clear
-                </a>
             </div>
         </form>
     </div>
@@ -117,11 +114,11 @@
 
                         <!-- Actions -->
                         <div class="flex gap-2">
-                            <a href="{{ route('admin.menu-categories.show', $category) }}" 
+                            <a href="{{ route('admin.menu-categories.show', $category) }}"
                                class="flex-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-2 rounded text-sm text-center transition-colors">
                                 <i class="fas fa-eye mr-1"></i> View
                             </a>
-                            <a href="{{ route('admin.menu-categories.edit', $category) }}" 
+                            <a href="{{ route('admin.menu-categories.edit', $category) }}"
                                class="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm text-center transition-colors">
                                 <i class="fas fa-edit mr-1"></i> Edit
                             </a>

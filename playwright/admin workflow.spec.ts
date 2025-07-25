@@ -9,14 +9,19 @@ import { activateBranch } from './helpers/activateBranch';
 import { createSupplier } from './helpers/createSupplier';
 import { addItemsToInventory } from './helpers/addItemsToInventory';
 import { createBranch } from './helpers/createBranch';
+import { createMenuCategory } from './helpers/createMenuCategory';
 
 test.skip('Admin Workflow 🚀', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await createSubscriptionPlan(page);
-    await createOrganization(page);
+    //await createOrganization(page);
 });
-
-test.skip('Create Organization 🏢', async ({ page }) => {
+test('Create Subscription Plan 🚀', async ({ page }) => {
+    await loginAsSuperAdmin(page);
+    await createSubscriptionPlan(page);
+    //await createOrganization(page);
+});
+test('Create Organization 🏢', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await createOrganization(page);
 });
@@ -115,6 +120,11 @@ test('Add Items to Inventory 📦', async ({ page }) => {
     const items = JSON.parse(fs.readFileSync(itemsPath, 'utf-8'));
     await loginAsSuperAdmin(page);
     await addItemsToInventory(page, items);
+});
+
+test('Create Breakfast Menu Category 🍳', async ({ page }) => {
+    await loginAsSuperAdmin(page);
+    await createMenuCategory(page);
 });
 
 

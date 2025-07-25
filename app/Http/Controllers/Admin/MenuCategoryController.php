@@ -23,57 +23,57 @@ class MenuCategoryController extends Controller
     public function index(Request $request): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized access.');
         }
 
-        $query = MenuCategory::with(['branch', 'organization'])
+        $isSuperAdmin = $this->isSuperAdmin($admin);
+        $hasBranch = !empty($admin->getAttribute('branch_id'));
+        $hasOrg = !empty($admin->getAttribute('organization_id'));
+
+        $branches = $this->getAccessibleBranches($admin);
+        $organizations = $this->getAccessibleOrganizations($admin);
+
+        $categoriesQuery = MenuCategory::with(['branch', 'organization'])
             ->withCount('menuItems');
 
-        // Apply admin scope restrictions
-        if (!$this->isSuperAdmin($admin)) {
-            if ($admin->branch_id) {
-                $query->where('branch_id', $admin->branch_id);
-            } elseif ($admin->organization_id) {
-                $query->where('organization_id', $admin->organization_id);
+        // Only restrict for non-super admins
+        if (!$isSuperAdmin) {
+            if ($hasBranch) {
+                $categoriesQuery->where('branch_id', $admin->getAttribute('branch_id'));
+            } elseif ($hasOrg) {
+                $categoriesQuery->where('organization_id', $admin->getAttribute('organization_id'));
+            } else {
+                // If neither, show empty list and prompt to select org/branch
+                $categories = collect();
+                return view('admin.menu-categories.index', compact('categories', 'branches', 'organizations'));
             }
         }
 
         // Apply filters
         if ($request->filled('branch_id')) {
-            $query->where('branch_id', $request->branch_id);
+            $categoriesQuery->where('branch_id', $request->input('branch_id'));
         }
-
         if ($request->filled('organization_id')) {
-            $query->where('organization_id', $request->organization_id);
+            $categoriesQuery->where('organization_id', $request->input('organization_id'));
         }
-
         if ($request->filled('status')) {
-            if ($request->status === 'active') {
-                $query->where('is_active', true);
-            } elseif ($request->status === 'inactive') {
-                $query->where('is_active', false);
+            if ($request->input('status') === 'active') {
+                $categoriesQuery->where('is_active', true);
+            } elseif ($request->input('status') === 'inactive') {
+                $categoriesQuery->where('is_active', false);
             }
         }
-
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $categoriesQuery->where('name', 'like', '%' . $request->input('search') . '%');
         }
 
-        $categories = $query->orderBy('sort_order')
+        $categories = $categoriesQuery->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(15);
 
-        // Get filter options
-        $branches = $this->getAccessibleBranches($admin);
-        $organizations = $this->getAccessibleOrganizations($admin);
-
-        return view('admin.menu-categories.index', compact(
-            'categories', 
-            'branches', 
-            'organizations'
-        ));
+        return view('admin.menu-categories.index', compact('categories', 'branches', 'organizations'));
     }
 
     /**
@@ -82,7 +82,7 @@ class MenuCategoryController extends Controller
     public function create(): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized access.');
         }
@@ -99,7 +99,7 @@ class MenuCategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized access.');
         }
@@ -121,17 +121,17 @@ class MenuCategoryController extends Controller
         if ($this->isSuperAdmin($admin)) {
             $rules['branch_id'] = 'required|exists:branches,id';
             $rules['organization_id'] = 'required|exists:organizations,id';
-        } elseif ($admin->organization_id && !$admin->branch_id) {
+        } elseif (data_get($admin, 'organization_id') && !data_get($admin, 'branch_id')) {
             // Organization admin can choose branch
             $rules['branch_id'] = [
                 'required',
                 'exists:branches,id',
-                Rule::exists('branches', 'id')->where('organization_id', $admin->organization_id)
+                Rule::exists('branches', 'id')->where('organization_id', data_get($admin, 'organization_id'))
             ];
         }
 
         // Add unique name validation scoped to branch
-        $branchId = $request->branch_id ?? $admin->branch_id;
+        $branchId = $request->input('branch_id') ?? data_get($admin, 'branch_id');
         if ($branchId) {
             $rules['name'][] = Rule::unique('menu_categories', 'name')
                 ->where('branch_id', $branchId)
@@ -145,18 +145,18 @@ class MenuCategoryController extends Controller
 
             // Set branch and organization based on admin level
             if (!$this->isSuperAdmin($admin)) {
-                if ($admin->branch_id) {
-                    $validated['branch_id'] = $admin->branch_id;
-                    $validated['organization_id'] = $admin->organization_id;
-                } elseif ($admin->organization_id) {
-                    $validated['organization_id'] = $admin->organization_id;
+                if (data_get($admin, 'branch_id')) {
+                    $validated['branch_id'] = data_get($admin, 'branch_id');
+                    $validated['organization_id'] = data_get($admin, 'organization_id');
+                } elseif (data_get($admin, 'organization_id')) {
+                    $validated['organization_id'] = data_get($admin, 'organization_id');
                     // branch_id should be validated and set from request
                 }
             }
 
             // Set default sort order if not provided
             if (!isset($validated['sort_order'])) {
-                $maxOrder = MenuCategory::where('branch_id', $validated['branch_id'])
+                $maxOrder = MenuCategory::where('branch_id', $validated['branch_id'] ?? null)
                     ->max('sort_order') ?? 0;
                 $validated['sort_order'] = $maxOrder + 1;
             }
@@ -172,7 +172,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Menu category creation failed: ' . $e->getMessage());
-            
+
             return back()
                 ->withInput()
                 ->with('error', 'Failed to create menu category: ' . $e->getMessage());
@@ -185,7 +185,7 @@ class MenuCategoryController extends Controller
     public function show(MenuCategory $menuCategory): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -211,7 +211,7 @@ class MenuCategoryController extends Controller
     public function edit(MenuCategory $menuCategory): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -229,7 +229,7 @@ class MenuCategoryController extends Controller
     public function update(Request $request, MenuCategory $menuCategory): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -241,8 +241,8 @@ class MenuCategoryController extends Controller
                 'string',
                 'max:255',
                 Rule::unique('menu_categories', 'name')
-                    ->where('branch_id', $menuCategory->branch_id)
-                    ->ignore($menuCategory->id)
+                    ->where('branch_id', $menuCategory->getAttribute('branch_id'))
+                    ->ignore($menuCategory->getAttribute('id'))
                     ->whereNull('deleted_at')
             ],
             'description' => 'nullable|string|max:1000',
@@ -268,7 +268,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Menu category update failed: ' . $e->getMessage());
-            
+
             return back()
                 ->withInput()
                 ->with('error', 'Failed to update menu category: ' . $e->getMessage());
@@ -281,7 +281,7 @@ class MenuCategoryController extends Controller
     public function destroy(MenuCategory $menuCategory): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -306,7 +306,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Menu category deletion failed: ' . $e->getMessage());
-            
+
             return back()->with('error', 'Failed to delete menu category: ' . $e->getMessage());
         }
     }
@@ -317,13 +317,13 @@ class MenuCategoryController extends Controller
     public function getCategoriesForBranch(Request $request, Branch $branch): JsonResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessBranch($admin, $branch)) {
             return response()->json(['error' => 'Unauthorized access'], 403);
         }
 
-        $categories = MenuCategory::where('branch_id', $branch->id)
+        $categories = MenuCategory::where('branch_id', $branch->getAttribute('id'))
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -341,7 +341,7 @@ class MenuCategoryController extends Controller
     public function updateSortOrder(Request $request): JsonResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
@@ -357,7 +357,7 @@ class MenuCategoryController extends Controller
 
             foreach ($validated['categories'] as $categoryData) {
                 $category = MenuCategory::find($categoryData['id']);
-                
+
                 // Check access permissions
                 if (!$this->canAccessCategory($admin, $category)) {
                     continue;
@@ -376,7 +376,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Category sort order update failed: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update category order: ' . $e->getMessage()
@@ -391,20 +391,20 @@ class MenuCategoryController extends Controller
     public function getBranchesForOrganization(Request $request, Organization $organization): JsonResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessOrganization($admin, $organization)) {
             return response()->json(['error' => 'Unauthorized access'], 403);
         }
 
-        $branches = Branch::where('organization_id', $organization->id)
+        $branches = Branch::where('organization_id', $organization->getAttribute('id'))
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name', 'address', 'is_head_office']);
 
         Log::info('Branches fetched for organization in menu categories', [
-            'admin_id' => $admin->id,
-            'organization_id' => $organization->id,
+            'admin_id' => data_get($admin, 'id'),
+            'organization_id' => $organization->getAttribute('id'),
             'branches_count' => $branches->count()
         ]);
 
@@ -435,12 +435,12 @@ class MenuCategoryController extends Controller
             return true;
         }
 
-        if ($admin->branch_id) {
-            return $category->branch_id === $admin->branch_id;
+        if (data_get($admin, 'branch_id')) {
+            return $category->getAttribute('branch_id') === data_get($admin, 'branch_id');
         }
 
-        if ($admin->organization_id) {
-            return $category->organization_id === $admin->organization_id;
+        if (data_get($admin, 'organization_id')) {
+            return $category->getAttribute('organization_id') === data_get($admin, 'organization_id');
         }
 
         return false;
@@ -459,12 +459,12 @@ class MenuCategoryController extends Controller
             return true;
         }
 
-        if ($admin->branch_id) {
-            return $branch->id === $admin->branch_id;
+        if (data_get($admin, 'branch_id')) {
+            return $branch->getAttribute('id') === data_get($admin, 'branch_id');
         }
 
-        if ($admin->organization_id) {
-            return $branch->organization_id === $admin->organization_id;
+        if (data_get($admin, 'organization_id')) {
+            return $branch->getAttribute('organization_id') === data_get($admin, 'organization_id');
         }
 
         return false;
@@ -483,8 +483,8 @@ class MenuCategoryController extends Controller
             return true;
         }
 
-        if ($admin->organization_id) {
-            return $organization->id === $admin->organization_id;
+        if (data_get($admin, 'organization_id')) {
+            return $organization->getAttribute('id') === data_get($admin, 'organization_id');
         }
 
         return false;
@@ -499,12 +499,12 @@ class MenuCategoryController extends Controller
             return Branch::orderBy('name')->get();
         }
 
-        if ($admin->branch_id) {
-            return Branch::where('id', $admin->branch_id)->get();
+        if (data_get($admin, 'branch_id')) {
+            return Branch::where('id', data_get($admin, 'branch_id'))->get();
         }
 
-        if ($admin->organization_id) {
-            return Branch::where('organization_id', $admin->organization_id)
+        if (data_get($admin, 'organization_id')) {
+            return Branch::where('organization_id', data_get($admin, 'organization_id'))
                 ->orderBy('name')->get();
         }
 
@@ -520,8 +520,8 @@ class MenuCategoryController extends Controller
             return Organization::orderBy('name')->get();
         }
 
-        if ($admin->organization_id) {
-            return Organization::where('id', $admin->organization_id)->get();
+        if (data_get($admin, 'organization_id')) {
+            return Organization::where('id', data_get($admin, 'organization_id'))->get();
         }
 
         return collect([]);

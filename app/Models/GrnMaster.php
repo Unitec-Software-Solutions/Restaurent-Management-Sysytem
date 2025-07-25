@@ -69,6 +69,11 @@ class GrnMaster extends Model
         return $this->hasMany(GrnItem::class, 'grn_id');
     }
 
+    public function grnPayments()
+    {
+        return $this->hasMany(\App\Models\GrnPayment::class, 'grn_id');
+    }
+
     public function purchaseOrder()
     {
         return $this->belongsTo(PurchaseOrder::class, 'po_id', 'po_id');

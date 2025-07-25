@@ -3,7 +3,7 @@ import { Page } from '@playwright/test';
 export async function activateBranch(page: Page, branchData: { branchId?: string }) {
   const branchId = branchData.branchId || '1';
   console.log('Navigating to branch summary page');
-  await page.goto(`https://rms.test/admin/branches/${branchId}/summary`);
+  await page.goto(`https://rms-unitec.test/admin/branches/${branchId}/summary`);
   const testRunId = process.env.TEST_RUN_ID || 'default';
   await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-1-summary.png` });
 
@@ -35,7 +35,7 @@ export async function activateBranch(page: Page, branchData: { branchId?: string
 
   // Go to activation page and use the key
   console.log('Navigating to activation page');
-  await page.goto('https://rms.test/admin/branches/activate');
+  await page.goto('https://rms-unitec.test/admin/branches/activate');
   await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-4-activation-page.png` });
   await page.getByRole('textbox').fill(activationKey);
   await page.screenshot({ path: `test-results/screen-shots/${testRunId}/activate-branch-step-5-key-filled.png` });

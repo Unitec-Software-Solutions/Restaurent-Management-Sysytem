@@ -463,7 +463,7 @@ class OrganizationAutomationService
                 $admin->givePermissionTo($permission);
                 $assigned++;
             } catch (\Exception $e) {
-                \Log::warning('[OrganizationAutomationService@assignSubscriptionPermissions] Failed to assign permission', [
+                Log::warning('[OrganizationAutomationService@assignSubscriptionPermissions] Failed to assign permission', [
                     'permission' => $permissionName,
                     'admin_id' => $admin->id,
                     'error' => $e->getMessage()
@@ -471,7 +471,7 @@ class OrganizationAutomationService
             }
         }
 
-        \Log::info('[OrganizationAutomationService@assignSubscriptionPermissions] Organization admin permissions assigned', [
+        Log::info('[OrganizationAutomationService@assignSubscriptionPermissions] Organization admin permissions assigned', [
             'organization_id' => $organization->id,
             'admin_id' => $admin->id,
             'permissions_assigned' => $assigned
@@ -646,7 +646,7 @@ class OrganizationAutomationService
                 $branchAdmin->givePermissionTo($permission);
                 $assigned++;
             } catch (\Exception $e) {
-                \Log::warning('[OrganizationAutomationService@assignBranchPermissions] Failed to assign permission', [
+                Log::warning('[OrganizationAutomationService@assignBranchPermissions] Failed to assign permission', [
                     'permission' => $permissionName,
                     'admin_id' => $branchAdmin->id,
                     'error' => $e->getMessage()
@@ -654,7 +654,7 @@ class OrganizationAutomationService
             }
         }
 
-        \Log::info('[OrganizationAutomationService@assignBranchPermissions] Branch admin permissions assigned', [
+        Log::info('[OrganizationAutomationService@assignBranchPermissions] Branch admin permissions assigned', [
             'organization_id' => $organization->id,
             'branch_id' => $branch->id,
             'admin_id' => $branchAdmin->id,

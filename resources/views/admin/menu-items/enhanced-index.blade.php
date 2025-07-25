@@ -5,7 +5,7 @@
 @section('content')
 <div class="p-6">
     <!-- Breadcrumb Navigation -->
-    <x-breadcrumb 
+    <x-breadcrumb
         :items="[['name' => 'Menu Items', 'url' => route('admin.menu-items.enhanced.index')]]"
         current="All Menu Items"
         type="menu-items" />
@@ -16,7 +16,7 @@
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 mb-2">Menu Items Management</h1>
                 <p class="text-gray-600 mb-3">Manage all your menu items: Buy & Sell items (from inventory) + KOT recipes (dishes)</p>
-                
+
                 <!-- Quick Stats -->
                 <div class="flex items-center gap-6 text-sm">
                     <div class="flex items-center">
@@ -33,25 +33,7 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="flex gap-3">
-                <a href="{{ route('admin.menu-items.create') }}" 
-                   class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
-                    <i class="fas fa-plus mr-2"></i>Add Menu Item
-                    <span class="ml-2 text-xs bg-indigo-500 px-2 py-0.5 rounded-full">Single</span>
-                </a>
-                <a href="{{ route('admin.menu-items.create-kot') }}" 
-                   class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center">
-                    <i class="fas fa-warehouse mr-2"></i>Bulk Add from Inventory
-                    <span class="ml-2 text-xs bg-orange-500 px-2 py-0.5 rounded-full">Bulk</span>
-                </a>
-                <a href="{{ route('admin.menu-categories.index') }}" 
-                   class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center">
-                    <i class="fas fa-tags mr-2"></i>Categories
-                </a>
-            </div>
-        </div>
-    </div>
+
 
     <!-- System Explanation -->
     <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-6">
@@ -97,7 +79,7 @@
                 <!-- Search -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                    <input type="text" name="search" value="{{ request('search') }}" 
+                    <input type="text" name="search" value="{{ request('search') }}"
                            placeholder="Search by name, description..."
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
@@ -154,7 +136,7 @@
                     </select>
                 </div>
             </div>
-            
+
             <div class="flex justify-between items-center">
                 <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                     <i class="fas fa-search mr-2"></i>Apply Filters
@@ -240,15 +222,15 @@
                 <!-- Item Image/Header -->
                 <div class="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200">
                     @if($item->image_path)
-                        <img src="{{ asset('storage/' . $item->image_path) }}" 
-                             alt="{{ $item->name }}" 
+                        <img src="{{ asset('storage/' . $item->image_path) }}"
+                             alt="{{ $item->name }}"
                              class="w-full h-full object-cover">
                     @else
                         <div class="w-full h-full flex items-center justify-center">
                             <i class="fas fa-utensils text-4xl text-gray-400"></i>
                         </div>
                     @endif
-                    
+
                     <!-- Status Badge -->
                     <div class="absolute top-3 left-3">
                         @if($item->is_available)
@@ -299,7 +281,7 @@
                         @if($item->type == App\Models\MenuItem::TYPE_BUY_SELL)
                             <div class="flex items-center text-blue-600">
                                 <i class="fas fa-boxes mr-2"></i>
-                                <span><strong>Source:</strong> Item Master (Inventory) 
+                                <span><strong>Source:</strong> Item Master (Inventory)
                                 @if($item->itemMaster)
                                     - Code: {{ $item->itemMaster->item_code }}
                                 @endif
@@ -328,7 +310,7 @@
                                 <span class="text-lg font-bold text-gray-900">LKR {{ number_format($item->price, 2) }}</span>
                             @endif
                         </div>
-                        
+
                         <!-- Stock/Preparation Info -->
                         <div class="text-right text-sm">
                             @if($item->type == App\Models\MenuItem::TYPE_BUY_SELL && $item->itemMaster)
@@ -370,11 +352,11 @@
 
                     <!-- Action Buttons -->
                     <div class="flex gap-2">
-                        <a href="{{ route('admin.menu-items.show', $item) }}" 
+                        <a href="{{ route('admin.menu-items.show', $item) }}"
                            class="flex-1 px-3 py-2 bg-indigo-600 text-white text-center rounded-lg hover:bg-indigo-700 transition-colors text-sm">
                             <i class="fas fa-eye mr-1"></i>View
                         </a>
-                        <a href="{{ route('admin.menu-items.edit', $item) }}" 
+                        <a href="{{ route('admin.menu-items.edit', $item) }}"
                            class="flex-1 px-3 py-2 bg-gray-600 text-white text-center rounded-lg hover:bg-gray-700 transition-colors text-sm">
                             <i class="fas fa-edit mr-1"></i>Edit
                         </a>
@@ -388,7 +370,7 @@
                 </div>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No Menu Items Found</h3>
                 <p class="text-gray-500 mb-4">Get started by creating your first menu item.</p>
-                <a href="{{ route('admin.menu-items.create') }}" 
+                <a href="{{ route('admin.menu-items.create') }}"
                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>Create Menu Item
                 </a>
@@ -414,7 +396,7 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
+
             <form id="createFromItemMasterForm" method="POST" action="{{ route('admin.menu-items.create-from-item-master') }}">
                 @csrf
                 <div class="p-6 max-h-96 overflow-y-auto">
@@ -434,13 +416,13 @@
                         <p class="text-gray-500 text-center py-8">Loading available items...</p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
-                    <button type="button" onclick="closeCreateFromItemMasterModal()" 
+                    <button type="button" onclick="closeCreateFromItemMasterModal()"
                             class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit"
                             class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                         <i class="fas fa-plus mr-2"></i>Create Menu Items
                     </button>
@@ -466,18 +448,18 @@ function loadItemMasterData() {
         .then(response => response.json())
         .then(data => {
             const container = document.getElementById('itemMasterList');
-            
+
             if (data.success && data.items.length > 0) {
                 let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
-                
+
                 data.items.forEach(item => {
                     const typeClass = item.menu_item_type === 'Buy & Sell' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800';
                     const typeIcon = item.menu_item_type === 'Buy & Sell' ? 'fas fa-boxes' : 'fas fa-fire';
-                    
+
                     html += `
                         <div class="border rounded-lg p-4 hover:bg-gray-50">
                             <label class="flex items-start cursor-pointer">
-                                <input type="checkbox" name="item_master_ids[]" value="${item.id}" 
+                                <input type="checkbox" name="item_master_ids[]" value="${item.id}"
                                        class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                                 <div class="ml-3 flex-1">
                                     <div class="flex items-center justify-between">
@@ -487,7 +469,7 @@ function loadItemMasterData() {
                                         </span>
                                     </div>
                                     <div class="text-sm text-gray-600 mt-1">
-                                        Code: ${item.item_code || 'N/A'} | 
+                                        Code: ${item.item_code || 'N/A'} |
                                         Selling Price: LKR ${parseFloat(item.selling_price).toFixed(2)}
                                     </div>
                                     <div class="text-sm text-gray-500 mt-1">
@@ -501,7 +483,7 @@ function loadItemMasterData() {
                         </div>
                     `;
                 });
-                
+
                 html += '</div>';
                 container.innerHTML = html;
             } else {

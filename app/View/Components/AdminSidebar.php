@@ -65,13 +65,35 @@ class AdminSidebar extends Component
     private function getPendingOrganizationsCount(): int
     {
         $admin = Auth::guard('admin')->user();
-        if (!$admin || !$this->isSuperAdmin($admin)) return 0;
+        if (!$admin) return 0;
 
-        try {
-            return \App\Models\Organization::where('status', 'pending')->count();
-        } catch (\Exception $e) {
-            return 0;
+        // Super admins can see all pending organizations
+        if ($this->isSuperAdmin($admin)) {
+            try {
+                return \App\Models\Organization::where('status', 'pending')->count();
+            } catch (\Exception $e) {
+                return 0;
+            }
         }
+
+        // Non-super admins with organization permissions can see organization-related counts
+        if ($this->hasPermission($admin, 'organizations.view')) {
+            try {
+                // If they have organization_id, show count for their organization
+                if ($admin->organization_id) {
+                    return \App\Models\Organization::where('id', $admin->organization_id)
+                        ->where('status', 'pending')
+                        ->count();
+                } else {
+                    // If they don't have organization_id but have permissions, show all pending
+                    return \App\Models\Organization::where('status', 'pending')->count();
+                }
+            } catch (\Exception $e) {
+                return 0;
+            }
+        }
+
+        return 0;
     }
 
     private function getActiveBranchesCount(): int
@@ -465,48 +487,88 @@ class AdminSidebar extends Component
             ];
         }
 
-        // Organization Management (For Organization Admins to manage their own organization)
-        if ($admin->organization_id && !$this->isSuperAdmin($admin) && $this->hasPermission($admin, 'organizations.view')) {
-            $menuItems[] = [
-                'title' => 'Organization Management',
-                'route' => 'admin.organization.show',
-                'route_params' => ['organization' => $admin->organization_id],
-                'icon' => 'fas fa-building',
-                'icon_type' => 'fa',
-                'permission' => 'organizations.view',
-                'badge' => 0,
-                'badge_color' => 'blue',
-                'is_route_valid' => $this->validateRoute('admin.organization.show', ['organization' => $admin->organization_id]),
-                'sub_items' => [
-                    [
-                        'title' => 'Organization Details',
-                        'route' => 'admin.organization.show',
-                        'route_params' => ['organization' => $admin->organization_id],
-                        'icon' => 'fas fa-eye',
-                        'icon_type' => 'fa',
-                        'permission' => 'organization.view',
-                        'is_route_valid' => $this->validateRoute('admin.organization.show', ['organization' => $admin->organization_id])
-                    ],
-                    [
-                        'title' => 'Edit Organization',
-                        'route' => 'admin.organization.edit',
-                        'route_params' => ['organization' => $admin->organization_id],
-                        'icon' => 'fas fa-pencil-alt',
-                        'icon_type' => 'fa',
-                        'permission' => 'organization.edit',
-                        'is_route_valid' => $this->validateRoute('admin.organization.edit', ['organization' => $admin->organization_id])
-                    ],
-                    [
-                        'title' => 'Organization Settings',
-                        'route' => 'admin.organization.settings',
-                        'route_params' => ['organization' => $admin->organization_id],
-                        'icon' => 'fas fa-cog',
-                        'icon_type' => 'fa',
-                        'permission' => 'organization.settings',
-                        'is_route_valid' => $this->validateRoute('admin.organization.settings', ['organization' => $admin->organization_id])
+        // Organization Management (For admins with organization permissions)
+        if (!$this->isSuperAdmin($admin) && $this->hasPermission($admin, 'organizations.view')) {
+            // Try organization-specific routes first if admin has organization_id
+            $useSpecificRoutes = false;
+            if ($admin->organization_id) {
+                $useSpecificRoutes = $this->validateRoute('admin.organization.show', ['organization' => $admin->organization_id]);
+            }
+
+            if ($useSpecificRoutes) {
+                // Show specific organization management
+                $menuItems[] = [
+                    'title' => 'Organization Management',
+                    'route' => 'admin.organization.show',
+                    'route_params' => ['organization' => $admin->organization_id],
+                    'icon' => 'fas fa-building',
+                    'icon_type' => 'fa',
+                    'permission' => 'organizations.view',
+                    'badge' => 0,
+                    'badge_color' => 'blue',
+                    'is_route_valid' => true,
+                    'sub_items' => [
+                        [
+                            'title' => 'Organization Details',
+                            'route' => 'admin.organization.show',
+                            'route_params' => ['organization' => $admin->organization_id],
+                            'icon' => 'fas fa-eye',
+                            'icon_type' => 'fa',
+                            'permission' => 'organizations.view',
+                            'is_route_valid' => $this->validateRoute('admin.organization.show', ['organization' => $admin->organization_id])
+                        ],
+                        [
+                            'title' => 'Edit Organization',
+                            'route' => 'admin.organization.edit',
+                            'route_params' => ['organization' => $admin->organization_id],
+                            'icon' => 'fas fa-pencil-alt',
+                            'icon_type' => 'fa',
+                            'permission' => 'organizations.edit',
+                            'is_route_valid' => $this->validateRoute('admin.organization.edit', ['organization' => $admin->organization_id])
+                        ],
+                        [
+                            'title' => 'Organization Settings',
+                            'route' => 'admin.organization.settings',
+                            'route_params' => ['organization' => $admin->organization_id],
+                            'icon' => 'fas fa-cog',
+                            'icon_type' => 'fa',
+                            'permission' => 'organizations.settings',
+                            'is_route_valid' => $this->validateRoute('admin.organization.settings', ['organization' => $admin->organization_id])
+                        ]
                     ]
-                ]
-            ];
+                ];
+            } else {
+                // Fall back to general organization management (works for both cases)
+                $menuItems[] = [
+                    'title' => 'Organizations',
+                    'route' => 'admin.organizations.index',
+                    'route_params' => [],
+                    'icon' => 'fas fa-building',
+                    'icon_type' => 'fa',
+                    'permission' => 'organizations.view',
+                    'badge' => $this->getPendingOrganizationsCount(),
+                    'badge_color' => 'blue',
+                    'is_route_valid' => $this->validateRoute('admin.organizations.index'),
+                    'sub_items' => [
+                        [
+                            'title' => 'All Organizations',
+                            'route' => 'admin.organizations.index',
+                            'icon' => 'fas fa-list',
+                            'icon_type' => 'fa',
+                            'permission' => 'organizations.view',
+                            'is_route_valid' => $this->validateRoute('admin.organizations.index')
+                        ],
+                        [
+                            'title' => 'Add Organization',
+                            'route' => 'admin.organizations.create',
+                            'icon' => 'fas fa-plus',
+                            'icon_type' => 'fa',
+                            'permission' => 'organizations.create',
+                            'is_route_valid' => $this->validateRoute('admin.organizations.create')
+                        ]
+                    ]
+                ];
+            }
         }
 
         // Branches (Organization/Super Admin)
@@ -726,13 +788,12 @@ class AdminSidebar extends Component
             ];
         }
 
-        // UPDATED: Show ALL menu items but enhance with access level indicators
-        // Only filter out items with invalid routes
+        // Filter menu items based on permissions and route validity
         return array_map(function($item) use ($admin) {
             return $this->enhanceMenuItemWithAccessLevel($item, $admin);
         }, array_filter($menuItems, function ($item) use ($admin) {
-            // Only check route validity, show all items regardless of permissions
-            return ($item['is_route_valid'] ?? true);
+            // Check both route validity and permissions
+            return $this->isMenuItemAccessible($item, $admin);
         }));
     }
 
@@ -829,7 +890,7 @@ class AdminSidebar extends Component
     }
 
     /**
-     * UPDATED: Check if menu item is accessible by admin - SHOW ALL items for org/branch admins
+     * UPDATED: Check if menu item is accessible by admin - Filter based on actual permissions
      */
     private function isMenuItemAccessible(array $item, $admin): bool
     {
@@ -838,8 +899,18 @@ class AdminSidebar extends Component
             return false;
         }
 
-        // ALWAYS SHOW MENU ITEMS for organizational and branch admins - let the UI and middleware handle restrictions
-        return true;
+        // Super admins can access everything
+        if ($this->isSuperAdmin($admin)) {
+            return true;
+        }
+
+        // If no permission is required, show the item
+        if (!isset($item['permission']) || $item['permission'] === null) {
+            return true;
+        }
+
+        // Check if admin has the required permission
+        return $this->hasPermission($admin, $item['permission']);
     }
 
     /**
@@ -861,18 +932,21 @@ class AdminSidebar extends Component
     }
 
     /**
-     * UPDATED: Enhanced menu items with access level indicators
+     * UPDATED: Enhanced menu items with access level indicators and sub-item filtering
      */
     private function enhanceMenuItemWithAccessLevel(array $item, $admin): array
     {
         $item['is_permitted'] = $this->isMenuItemPermitted($item, $admin);
         $item['access_level'] = $this->getAccessLevel($admin);
 
-        // Enhance sub-items if they exist
+        // Filter and enhance sub-items if they exist
         if (isset($item['sub_items']) && is_array($item['sub_items'])) {
             $item['sub_items'] = array_map(function($subItem) use ($admin) {
                 return $this->enhanceMenuItemWithAccessLevel($subItem, $admin);
-            }, $item['sub_items']);
+            }, array_filter($item['sub_items'], function($subItem) use ($admin) {
+                // Filter sub-items based on permissions
+                return $this->isMenuItemAccessible($subItem, $admin);
+            }));
         }
 
         return $item;
@@ -1050,14 +1124,6 @@ class AdminSidebar extends Component
                 'permission' => $this->isSuperAdmin($admin) ? null : 'menus.view',
                 'is_route_valid' => $this->validateRoute('admin.menu-items.index')
             ],
-            // [
-            //     'title' => 'Add Menu Item',
-            //     'route' => 'admin.menu-items.create',
-            //     'icon' => 'fas fa-plus-circle',
-            //     'icon_type' => 'fa',
-            //     'permission' => $this->isSuperAdmin($admin) ? null : 'menus.create',
-            //     'is_route_valid' => $this->validateRoute('admin.menu-items.create')
-            // ],
             [
                 'title' => 'Create KOT Items',
                 'route' => 'admin.menu-items.create-kot',
@@ -1288,21 +1354,53 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         return [
-            [
-                'title' => 'Sales Reports',
-                'route' => 'admin.reports.sales',
-                'icon' => 'fas fa-chart-line',
-                'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
-                'is_route_valid' => $this->validateRoute('admin.reports.sales')
-            ],
+            // [
+            //     'title' => 'Sales Reports',
+            //     'route' => 'admin.reports.sales',
+            //     'icon' => 'fas fa-chart-line',
+            //     'icon_type' => 'fa',
+            //     'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+            //     'is_route_valid' => $this->validateRoute('admin.reports.sales')
+            // ],
             [
                 'title' => 'Inventory Reports',
-                'route' => 'admin.reports.inventory',
-                'icon' => 'fas fa-box',
+                'route' => 'admin.reports.inventory.index',
+                'icon' => 'fas fa-clipboard-list',
                 'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
-                'is_route_valid' => $this->validateRoute('admin.reports.inventory')
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.index')
+            ],
+            [
+                'title' => 'Stock Report',
+                'route' => 'admin.reports.inventory.stock',
+                'icon' => 'fas fa-cubes',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.stock')
+            ],
+            [
+                'title' => 'GRN Reports',
+                'route' => 'admin.reports.inventory.grn',
+                'icon' => 'fas fa-file-invoice-dollar',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.grn')
+            ],
+            [
+                'title' => 'GTN Reports',
+                'route' => 'admin.reports.inventory.gtn',
+                'icon' => 'fas fa-exchange-alt',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.gtn')
+            ],
+            [
+                'title' => 'SRN Reports',
+                'route' => 'admin.reports.inventory.srn',
+                'icon' => 'fas fa-receipt',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.srn')
             ]
         ];
     }

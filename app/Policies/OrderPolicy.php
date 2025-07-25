@@ -20,11 +20,7 @@ class OrderPolicy
      */
     public function viewAny(Admin $admin): bool
     {
-        if ($admin->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['orders.view']) && $admin->hasPermissionTo('view orders');
+        return $admin->hasPermissionTo('orders.view');
     }
 
     /**
@@ -32,13 +28,9 @@ class OrderPolicy
      */
     public function view(Admin $admin, Order $order): bool
     {
-        if ($admin->is_super_admin) {
-            return true;
-        }
-
-        // Admin can view orders from their branch/organization
-        return $admin->branch_id === $order->branch_id ||
-               $admin->organization_id === $order->organization_id;
+        if (!$admin->hasPermissionTo('orders.view')) return false;
+        // Only allow if same organization
+        return data_get($admin, 'organization_id') === data_get($order, 'organization_id');
     }
 
     /**
@@ -46,11 +38,7 @@ class OrderPolicy
      */
     public function create(Admin $admin): bool
     {
-        if ($admin->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-        return isset($availablePermissions['orders.create']) && $admin->hasPermissionTo('orders.create');
+        return $admin->hasPermissionTo('orders.create');
     }
 
     /**
@@ -61,14 +49,8 @@ class OrderPolicy
         if (in_array($order->status, [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])) {
             return false;
         }
-        if ($admin->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-        if (!isset($availablePermissions['orders.edit']) || !$admin->hasPermissionTo('update orders')) {
-            return false;
-        }
-        return $admin->branch_id === $order->branch_id || $admin->organization_id === $order->organization_id;
+        if (!$admin->hasPermissionTo('orders.edit')) return false;
+        return data_get($admin, 'organization_id') === data_get($order, 'organization_id');
     }
 
     /**
@@ -79,14 +61,8 @@ class OrderPolicy
         if (in_array($order->status, [Order::STATUS_COMPLETED, Order::STATUS_CANCELLED])) {
             return false;
         }
-        if ($admin->is_super_admin) return true;
-        $permissionDefinitions = $this->permissionService->getPermissionDefinitions();
-        $modulesConfig = config('modules');
-        $availablePermissions = $this->permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-        if (!isset($availablePermissions['orders.cancel']) || !$admin->hasPermissionTo('cancel orders')) {
-            return false;
-        }
-        return $admin->branch_id === $order->branch_id || $admin->organization_id === $order->organization_id;
+        if (!$admin->hasPermissionTo('orders.cancel')) return false;
+        return data_get($admin, 'organization_id') === data_get($order, 'organization_id');
     }
 
     /**
