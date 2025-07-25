@@ -95,7 +95,7 @@
                         @enderror
                     </div>
                 </div>
-            @elseif(auth('admin')->user()->organization_id && !auth('admin')->user()->branch_id)
+            @elseif(optional(auth('admin')->user())->getAttribute('organization_id') && !optional(auth('admin')->user())->getAttribute('branch_id'))
                 <!-- Organization admin can select branch -->
                 <div class="mb-6">
                     <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-1">

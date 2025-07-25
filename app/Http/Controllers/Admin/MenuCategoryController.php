@@ -23,63 +23,57 @@ class MenuCategoryController extends Controller
     public function index(Request $request): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized access.');
         }
 
-        // Ensure $admin is an instance of the correct Admin model
-        // and has branch_id and organization_id properties
-        if (!property_exists($admin, 'branch_id') || !property_exists($admin, 'organization_id')) {
-            abort(500, 'Admin model is missing branch_id or organization_id properties.');
-        }
+        $isSuperAdmin = $this->isSuperAdmin($admin);
+        $hasBranch = !empty($admin->getAttribute('branch_id'));
+        $hasOrg = !empty($admin->getAttribute('organization_id'));
 
-        $query = MenuCategory::with(['branch', 'organization'])
+        $branches = $this->getAccessibleBranches($admin);
+        $organizations = $this->getAccessibleOrganizations($admin);
+
+        $categoriesQuery = MenuCategory::with(['branch', 'organization'])
             ->withCount('menuItems');
 
-        // Apply admin scope restrictions
-        if (!$this->isSuperAdmin($admin)) {
-            if (data_get($admin, 'branch_id')) {
-                $query->where('branch_id', data_get($admin, 'branch_id'));
-            } elseif (data_get($admin, 'organization_id')) {
-                $query->where('organization_id', data_get($admin, 'organization_id'));
+        // Only restrict for non-super admins
+        if (!$isSuperAdmin) {
+            if ($hasBranch) {
+                $categoriesQuery->where('branch_id', $admin->getAttribute('branch_id'));
+            } elseif ($hasOrg) {
+                $categoriesQuery->where('organization_id', $admin->getAttribute('organization_id'));
+            } else {
+                // If neither, show empty list and prompt to select org/branch
+                $categories = collect();
+                return view('admin.menu-categories.index', compact('categories', 'branches', 'organizations'));
             }
         }
 
         // Apply filters
         if ($request->filled('branch_id')) {
-            $query->where('branch_id', $request->input('branch_id'));
+            $categoriesQuery->where('branch_id', $request->input('branch_id'));
         }
-
         if ($request->filled('organization_id')) {
-            $query->where('organization_id', $request->input('organization_id'));
+            $categoriesQuery->where('organization_id', $request->input('organization_id'));
         }
-
         if ($request->filled('status')) {
             if ($request->input('status') === 'active') {
-                $query->where('is_active', true);
+                $categoriesQuery->where('is_active', true);
             } elseif ($request->input('status') === 'inactive') {
-                $query->where('is_active', false);
+                $categoriesQuery->where('is_active', false);
             }
         }
-
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->input('search') . '%');
+            $categoriesQuery->where('name', 'like', '%' . $request->input('search') . '%');
         }
 
-        $categories = $query->orderBy('sort_order')
+        $categories = $categoriesQuery->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(15);
 
-        // Get filter options
-        $branches = $this->getAccessibleBranches($admin);
-        $organizations = $this->getAccessibleOrganizations($admin);
-
-        return view('admin.menu-categories.index', compact(
-            'categories', 
-            'branches', 
-            'organizations'
-        ));
+        return view('admin.menu-categories.index', compact('categories', 'branches', 'organizations'));
     }
 
     /**
@@ -88,7 +82,7 @@ class MenuCategoryController extends Controller
     public function create(): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized access.');
         }
@@ -105,7 +99,7 @@ class MenuCategoryController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             abort(403, 'Unauthorized access.');
         }
@@ -178,7 +172,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Menu category creation failed: ' . $e->getMessage());
-            
+
             return back()
                 ->withInput()
                 ->with('error', 'Failed to create menu category: ' . $e->getMessage());
@@ -191,7 +185,7 @@ class MenuCategoryController extends Controller
     public function show(MenuCategory $menuCategory): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -217,7 +211,7 @@ class MenuCategoryController extends Controller
     public function edit(MenuCategory $menuCategory): View
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -235,7 +229,7 @@ class MenuCategoryController extends Controller
     public function update(Request $request, MenuCategory $menuCategory): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -274,7 +268,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Menu category update failed: ' . $e->getMessage());
-            
+
             return back()
                 ->withInput()
                 ->with('error', 'Failed to update menu category: ' . $e->getMessage());
@@ -287,7 +281,7 @@ class MenuCategoryController extends Controller
     public function destroy(MenuCategory $menuCategory): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessCategory($admin, $menuCategory)) {
             abort(403, 'Unauthorized access to this category.');
@@ -312,7 +306,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Menu category deletion failed: ' . $e->getMessage());
-            
+
             return back()->with('error', 'Failed to delete menu category: ' . $e->getMessage());
         }
     }
@@ -323,7 +317,7 @@ class MenuCategoryController extends Controller
     public function getCategoriesForBranch(Request $request, Branch $branch): JsonResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessBranch($admin, $branch)) {
             return response()->json(['error' => 'Unauthorized access'], 403);
@@ -347,7 +341,7 @@ class MenuCategoryController extends Controller
     public function updateSortOrder(Request $request): JsonResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         if (!$admin) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
@@ -363,7 +357,7 @@ class MenuCategoryController extends Controller
 
             foreach ($validated['categories'] as $categoryData) {
                 $category = MenuCategory::find($categoryData['id']);
-                
+
                 // Check access permissions
                 if (!$this->canAccessCategory($admin, $category)) {
                     continue;
@@ -382,7 +376,7 @@ class MenuCategoryController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Category sort order update failed: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update category order: ' . $e->getMessage()
@@ -397,7 +391,7 @@ class MenuCategoryController extends Controller
     public function getBranchesForOrganization(Request $request, Organization $organization): JsonResponse
     {
         $admin = Auth::guard('admin')->user();
-        
+
         // Check access permissions
         if (!$this->canAccessOrganization($admin, $organization)) {
             return response()->json(['error' => 'Unauthorized access'], 403);
