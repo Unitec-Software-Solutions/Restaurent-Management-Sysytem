@@ -17,7 +17,7 @@ export async function createBranch(page: Page,
   tables: { table_id: number; capacity: number }[];
 }) {
   // Go to the branch creation page
-  await page.goto(`https://restaurant-management-system.test/admin/organizations/${branchData.organizationId || '1'}/branches/create`);
+  await page.goto(`https://rms-unitec.test/admin/organizations/${branchData.organizationId || '1'}/branches/create`);
 
   // Fill out branch details
   await page.fill('input[name="name"]', branchData.name);

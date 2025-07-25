@@ -62,7 +62,7 @@ export async function addItemsToInventory(page: Page, itemsOrCount: number | Inv
     const item = items[i];
     console.log('Navigating to create page for item:', item.name);
     try {
-      await page.goto('https://restaurant-management-system.test/admin/inventory/items/create', {
+      await page.goto('https://rms-unitec.test/admin/inventory/items/create', {
         waitUntil: 'domcontentloaded',
         timeout: 30000
       });

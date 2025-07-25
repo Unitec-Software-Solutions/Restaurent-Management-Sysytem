@@ -9,6 +9,7 @@ import { activateBranch } from './helpers/activateBranch';
 import { createSupplier } from './helpers/createSupplier';
 import { addItemsToInventory } from './helpers/addItemsToInventory';
 import { createBranch } from './helpers/createBranch';
+import { createMenuCategory } from './helpers/createMenuCategory';
 
 test.skip('Admin Workflow 🚀', async ({ page }) => {
     await loginAsSuperAdmin(page);
@@ -119,6 +120,11 @@ test('Add Items to Inventory 📦', async ({ page }) => {
     const items = JSON.parse(fs.readFileSync(itemsPath, 'utf-8'));
     await loginAsSuperAdmin(page);
     await addItemsToInventory(page, items);
+});
+
+test('Create Breakfast Menu Category 🍳', async ({ page }) => {
+    await loginAsSuperAdmin(page);
+    await createMenuCategory(page);
 });
 
 

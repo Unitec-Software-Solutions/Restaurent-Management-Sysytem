@@ -2,7 +2,7 @@ import { Page } from '@playwright/test';
 
 export async function createSubscriptionPlan(page: Page) {
     // Navigate to Subscriptions and Create Plan
-    await page.goto(`https://restaurant-management-system.test/admin/subscription-plans/create`);
+    await page.goto(`https://rms-unitec.test/admin/subscription-plans/create`);
 
   // Fill basic information
   await page.getByLabel('Plan Name').fill('Pro Plan');
@@ -16,7 +16,7 @@ export async function createSubscriptionPlan(page: Page) {
   await page.getByLabel('Reservation Management').check();
   await page.getByLabel('Staff Management').check();
   await page.getByLabel('Reporting').check();
-  
+
   await page.getByLabel('System Settings').check();
 
   // Fill pricing and limits
