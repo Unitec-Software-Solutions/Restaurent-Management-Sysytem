@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -140,6 +141,10 @@ class ReportController extends Controller
 
         $items = $itemQuery->get();
 
+        if ($items->isEmpty()) {
+            Log::info('No items found for the given filters.', compact('itemId', 'categoryId', 'orgId'));
+        }
+
         foreach ($items as $item) {
             // Get branches to analyze
             $branchQuery = Branch::where('is_active', true);
@@ -151,12 +156,22 @@ class ReportController extends Controller
 
             $branchesToAnalyze = $branchQuery->get();
 
+            if ($branchesToAnalyze->isEmpty()) {
+                Log::info('No branches found for the given filters.', compact('branchId', 'orgId'));
+            }
+
             foreach ($branchesToAnalyze as $branch) {
                 $stockInfo = $this->calculateStockForItem($item, $branch, $dateFrom, $dateTo, $transactionType);
+                Log::debug('Stock info calculated for item and branch.', compact('item', 'branch', 'stockInfo'));
+
                 if ($stockInfo['has_activity'] || $stockInfo['current_stock'] > 0) {
                     $stockData[] = $stockInfo;
                 }
             }
+        }
+
+        if (empty($stockData)) {
+            Log::warning('No stock data generated.', compact('dateFrom', 'dateTo', 'itemId', 'categoryId', 'branchId', 'transactionType', 'orgId'));
         }
 
         return collect($stockData)->sortBy(['item_name', 'branch_name']);
@@ -171,6 +186,7 @@ class ReportController extends Controller
             ->where('created_at', '<', $dateFrom);
 
         $openingStock = $openingStockQuery->sum('quantity');
+        Log::debug('Opening stock calculated.', compact('item', 'branch', 'openingStock'));
 
         // Get transactions within the period
         $transactionQuery = ItemTransaction::where('inventory_item_id', $item->id)
@@ -183,6 +199,7 @@ class ReportController extends Controller
         }
 
         $transactions = $transactionQuery->get();
+        Log::debug('Transactions fetched for item and branch.', compact('item', 'branch', 'transactions'));
 
         // Calculate stock movements
         $stockIn = $transactions->where('quantity', '>', 0)->sum('quantity');
@@ -1063,6 +1080,9 @@ class ReportController extends Controller
      */
     private function showStockReportPreview($reportData, $dateFrom, $dateTo, $itemId, $categoryId, $branchId, $transactionType, $viewType)
     {
+        // Ensure 'stocks' key exists in the report data
+        $reportData['stocks'] = $reportData['stocks'] ?? collect();
+
         // Same data structure as PDF but for web preview
         $pdfData = [
             'reportData' => $reportData,
