@@ -98,7 +98,7 @@
     <!-- Back and Action Buttons -->
     <div class="no-print mb-6">
         <div class="flex justify-between items-center mb-6">
-            <a href="javascript:history.back()" class="flex items-center text-indigo-600 hover:text-indigo-800">
+            <a href="#" onclick="window.close();" class="flex items-center text-indigo-600 hover:text-indigo-800">
                 <i class="fas fa-arrow-left mr-2"></i> Back
             </a>
             <div class="flex space-x-2">

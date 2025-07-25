@@ -9,10 +9,10 @@
         <x-nav-buttons :items="[
             ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
             ['name' => 'Stock Report', 'link' => route('admin.reports.inventory.stock')],
-            ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
             ['name' => 'Goods Transfer Note Report', 'link' => route('admin.reports.inventory.gtn')],
             ['name' => 'Goods Receipt Note Report', 'link' => route('admin.reports.inventory.grn')],
             ['name' => 'Stock Release Note Report', 'link' => route('admin.reports.inventory.srn')],
+            ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
         ]" active="Stock Report" />
     </div>
 
