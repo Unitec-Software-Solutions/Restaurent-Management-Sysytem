@@ -67,7 +67,7 @@ class BranchAutomationService
 
         $admin = Admin::create($adminData);
 
-        \Log::info('[BranchAutomationService@createBranchAdmin] Created branch admin', [
+        Log::info('[BranchAutomationService@createBranchAdmin] Created branch admin', [
             'admin_id' => $admin->id,
             'branch_id' => $branch->id,
             'organization_id' => $branch->organization_id
@@ -88,7 +88,7 @@ class BranchAutomationService
         );
         $admin->syncRoles([$branchAdminRole]);
 
-        \Log::info('[BranchAutomationService@createBranchAdmin] Assigned Branch Administrator role', [
+        Log::info('[BranchAutomationService@createBranchAdmin] Assigned Branch Administrator role', [
             'admin_id' => $admin->id,
             'role_id' => $branchAdminRole->id
         ]);
@@ -99,7 +99,7 @@ class BranchAutomationService
             $permissionDefinitions = $permissionService->getPermissionDefinitions();
             $modulesConfig = config('modules');
             $availablePermissions = $permissionService->filterPermissionsBySubscription($admin, $permissionDefinitions, $modulesConfig);
-            \Log::info('[BranchAutomationService@createBranchAdmin] Assigning permissions to Branch Administrator role', [
+            Log::info('[BranchAutomationService@createBranchAdmin] Assigning permissions to Branch Administrator role', [
                 'role_id' => $branchAdminRole->id,
                 'permissions' => array_keys($availablePermissions)
             ]);
