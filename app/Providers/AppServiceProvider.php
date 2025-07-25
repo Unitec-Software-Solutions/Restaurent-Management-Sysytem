@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Register observer
         // Organization::observe(OrganizationObserver::class); // DISABLED: Using OrganizationAutomationService instead
-        
+
         // Register policy
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Module::class, ModulePolicy::class);
@@ -91,13 +91,13 @@ class AppServiceProvider extends ServiceProvider
 
         // Enhanced safe link directive with fallback text and styling
         Blade::directive('safeLink', function ($expression) {
-            return "<?php 
+            return "<?php
                 \$args = {$expression};
                 \$route = \$args[0] ?? '#';
                 \$text = \$args[1] ?? 'Link';
                 \$attributes = \$args[2] ?? [];
                 \$fallbackText = \$args[3] ?? 'Unavailable';
-                
+
                 if (\\Illuminate\\Support\\Facades\\Route::has(\$route)) {
                     \$url = route(\$route);
                     \$attrStr = '';
@@ -113,7 +113,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Safe form action directive
         Blade::directive('safeAction', function ($expression) {
-            return "<?php 
+            return "<?php
                 \$route = {$expression};
                 if (\\Illuminate\\Support\\Facades\\Route::has(\$route)) {
                     echo route(\$route);
@@ -126,7 +126,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Organization-aware route directive for admin routes
         Blade::directive('adminRoute', function ($expression) {
-            return "<?php 
+            return "<?php
                 \$routeName = {$expression};
                 if (\\Illuminate\\Support\\Facades\\Route::has(\$routeName)) {
                     \$params = [];
@@ -184,12 +184,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Organization-aware route directive
         Blade::directive('orgRoute', function ($expression) {
-            return "<?php 
+            return "<?php
                 \$args = {$expression};
                 \$routeName = \$args[0] ?? '';
                 \$parameters = \$args[1] ?? [];
                 \$fallback = \$args[2] ?? '#';
-                
+
                 // Auto-inject organization if route requires it and not provided
                 if (str_contains(\$routeName, 'admin.branches.') || str_contains(\$routeName, 'admin.organizations.')) {
                     if (!isset(\$parameters['organization']) && auth('admin')->check()) {
@@ -199,7 +199,7 @@ class AppServiceProvider extends ServiceProvider
                         }
                     }
                 }
-                
+
                 try {
                     if (\\Illuminate\\Support\\Facades\\Route::has(\$routeName)) {
                         echo route(\$routeName, \$parameters);
@@ -216,14 +216,14 @@ class AppServiceProvider extends ServiceProvider
 
         // Organization-aware link directive
         Blade::directive('orgLink', function ($expression) {
-            return "<?php 
+            return "<?php
                 \$args = {$expression};
                 \$routeName = \$args[0] ?? '';
                 \$text = \$args[1] ?? 'Link';
                 \$parameters = \$args[2] ?? [];
                 \$attributes = \$args[3] ?? [];
                 \$fallbackText = \$args[4] ?? 'Unavailable';
-                
+
                 // Auto-inject organization if route requires it and not provided
                 if (str_contains(\$routeName, 'admin.branches.') || str_contains(\$routeName, 'admin.organizations.')) {
                     if (!isset(\$parameters['organization']) && auth('admin')->check()) {
@@ -233,7 +233,7 @@ class AppServiceProvider extends ServiceProvider
                         }
                     }
                 }
-                
+
                 try {
                     if (\\Illuminate\\Support\\Facades\\Route::has(\$routeName)) {
                         \$url = route(\$routeName, \$parameters);
@@ -265,7 +265,7 @@ class AppServiceProvider extends ServiceProvider
                 return Route::get($uri, $action)->name($routeName);
             } catch (\Exception $e) {
                 Log::error("Route registration failed for GET {$uri}: " . $e->getMessage());
-                
+
                 // Register fallback route
                 return Route::get($uri, function () use ($uri) {
                     return response()->view('errors.route-unavailable', [
@@ -295,23 +295,23 @@ class AppServiceProvider extends ServiceProvider
                 public function exists(string $routeName): bool {
                     return Route::has($routeName);
                 }
-                
+
                 public function validate(string $routeName): array {
                     if (!Route::has($routeName)) {
                         return ['status' => 'missing', 'message' => "Route '{$routeName}' not found"];
                     }
-                    
+
                     try {
                         $route = Route::getRoutes()->getByName($routeName);
                         $controller = $route->getActionName();
-                        
+
                         if (Str::contains($controller, '@') || Str::contains($controller, '::')) {
                             $controllerClass = Str::before($controller, '@') ?: Str::before($controller, '::');
                             if (!class_exists($controllerClass)) {
                                 return ['status' => 'controller_missing', 'message' => "Controller '{$controllerClass}' not found"];
                             }
                         }
-                        
+
                         return ['status' => 'valid', 'message' => 'Route is valid'];
                     } catch (\Exception $e) {
                         return ['status' => 'error', 'message' => $e->getMessage()];
@@ -344,11 +344,11 @@ class AppServiceProvider extends ServiceProvider
                     if (\Illuminate\Support\Facades\Route::has($name)) {
                         return route($name, $parameters);
                     }
-                    
-                    \Illuminate\Support\Facades\Log::warning("Route '{$name}' not found, using fallback");
+
+                    Log::warning("Route '{$name}' not found, using fallback");
                     return $fallback;
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("Error generating route '{$name}': " . $e->getMessage());
+                    Log::error("Error generating route '{$name}': " . $e->getMessage());
                     return $fallback;
                 }
             }
@@ -367,11 +367,11 @@ class AppServiceProvider extends ServiceProvider
                 if (!\Illuminate\Support\Facades\Route::has($name)) {
                     return null;
                 }
-                
+
                 try {
                     return route($name, $parameters);
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("Error validating route '{$name}': " . $e->getMessage());
+                    Log::error("Error validating route '{$name}': " . $e->getMessage());
                     return null;
                 }
             }
@@ -387,7 +387,7 @@ class AppServiceProvider extends ServiceProvider
             // Only add admin context variables to admin views
             if (auth('admin')->check()) {
                 $admin = auth('admin')->user();
-                
+
                 $view->with([
                     'currentAdmin' => $admin,
                     'currentOrganization' => $admin->organization ?? null,
