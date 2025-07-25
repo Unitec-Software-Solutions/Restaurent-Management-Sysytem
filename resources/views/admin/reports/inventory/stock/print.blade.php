@@ -1,478 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $reportTitle }}</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-
-        .container {
-            max-width: 210mm;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            min-height: 100vh;
-        }
-
-        /* Print Toolbar */
-        .print-toolbar {
-            background: #2c3e50;
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .toolbar-title {
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .toolbar-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-print {
-            background: #3498db;
-            color: white;
-        }
-
-        .btn-print:hover {
-            background: #2980b9;
-        }
-
-        .btn-close {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-close:hover {
-            background: #7f8c8d;
-        }
-
-        /* Report Content */
-        .report-content {
-            padding: 30px;
-        }
-
-        .report-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .report-title {
-            font-size: 20px;
-            color: #34495e;
-            margin-bottom: 10px;
-        }
-
-        .report-date {
-            font-size: 14px;
-            color: #7f8c8d;
-        }
-
-        /* Filters Section */
-        .filters-section {
-            background: #ecf0f1;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 25px;
-        }
-
-        .filters-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-        }
-
-        .filter-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #bdc3c7;
-        }
-
-        .filter-label {
-            font-weight: 500;
-            color: #34495e;
-        }
-
-        .filter-value {
-            color: #2c3e50;
-        }
-
-        /* Summary Cards */
-        .summary-section {
-            margin-bottom: 30px;
-        }
-
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .summary-card {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .summary-card.success {
-            background: linear-gradient(135deg, #27ae60, #229954);
-        }
-
-        .summary-card.warning {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-        }
-
-        .summary-card.danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-        }
-
-        .card-value {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .card-label {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        /* Table Styles */
-        .table-container {
-            overflow-x: auto;
-            margin-bottom: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 12px;
-        }
-
-        th, td {
-            padding: 8px 6px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #34495e;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 11px;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-
-        tr:hover {
-            background-color: #e8f4f8;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        /* Status badges */
-        .badge {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .badge-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .badge-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .badge-danger {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        /* Print Styles */
         @media print {
-            body {
-                background: white !important;
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
+            @page {
+                size: A4;
+                margin: 0;
             }
 
-            .print-toolbar {
+            html,
+            body {
+                width: 210mm;
+                height: 297mm;
+                padding: 0;
+                margin: 0;
+                background: white;
+                font-size: 11px;
+                line-height: 1.4;
+                color: #000;
+            }
+
+            .no-print {
                 display: none !important;
             }
 
-            .container {
-                box-shadow: none !important;
-                max-width: none !important;
-                margin: 0 !important;
-            }
-
-            .report-content {
-                padding: 15px !important;
-            }
-
-            @page {
-                size: A4;
-                margin: 0.5in;
-            }
-
-            table {
+            .page-break {
+                page-break-before: always;
                 page-break-inside: avoid;
-                font-size: 10px;
+                break-inside: avoid;
             }
 
-            th, td {
-                padding: 4px 3px;
+            .avoid-break {
+                page-break-inside: avoid;
+                break-inside: avoid;
             }
 
-            .summary-cards {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 10px;
-            }
-
-            .summary-card {
-                padding: 10px;
-                margin-bottom: 10px;
-            }
-
-            .card-value {
-                font-size: 18px;
-            }
-
-            .filters-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media screen and (max-width: 768px) {
-            .container {
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
                 margin: 0;
-                box-shadow: none;
-            }
-
-            .report-content {
-                padding: 15px;
-            }
-
-            .summary-cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .filters-grid {
-                grid-template-columns: 1fr;
+                padding: 0;
+                width: 100%;
+                height: auto;
             }
 
             table {
-                font-size: 10px;
+                border-collapse: collapse !important;
+                width: 100% !important;
             }
 
-            th, td {
-                padding: 4px 2px;
+            th,
+            td {
+                padding: 4px 6px !important;
+                font-size: 10px !important;
+                border: 1px solid #ddd !important;
             }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <!-- Print Toolbar -->
-        <div class="print-toolbar">
-            <div class="toolbar-title">
-                <i class="fas fa-print"></i> Print Preview - {{ $reportTitle }}
+
+<body class="bg-gray-100 p-4 md:p-8">
+    <!-- Back and Action Buttons -->
+    <div class="no-print mb-6">
+        <div class="flex justify-between items-center mb-6">
+            <a href="javascript:history.back()" class="flex items-center text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i> Back
+            </a>
+            <div class="flex space-x-2">
+                <button onclick="window.print()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-print mr-2"></i> Print
+                </button>
             </div>
-            <div class="toolbar-actions">
-                <button class="btn btn-print" onclick="window.print()">
-                    <i class="fas fa-print"></i> Print
-                </button>
-                <button class="btn btn-close" onclick="window.close()">
-                    <i class="fas fa-times"></i> Close
-                </button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm print-container">
+        <!-- Header Section -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-900">{{ $reportTitle }}</h1>
+                <p class="text-sm text-gray-600">Generated on: {{ $generated_at }}</p>
+                @if($dateFrom || $dateTo)
+                    <p class="text-sm text-gray-600">
+                        Period: {{ $dateFrom ? date('d/m/Y', strtotime($dateFrom)) : 'Start' }} to {{ $dateTo ? date('d/m/Y', strtotime($dateTo)) : 'End' }}
+                    </p>
+                @endif
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold mb-4">Report Filters</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <span class="font-medium text-gray-700">Item:</span>
+                    <span class="text-gray-900">{{ $filters['item'] }}</span>
+                </div>
+                <div>
+                    <span class="font-medium text-gray-700">Category:</span>
+                    <span class="text-gray-900">{{ $filters['category'] }}</span>
+                </div>
+                <div>
+                    <span class="font-medium text-gray-700">Branch:</span>
+                    <span class="text-gray-900">{{ $filters['branch'] }}</span>
+                </div>
+                <div>
+                    <span class="font-medium text-gray-700">Transaction Type:</span>
+                    <span class="text-gray-900">{{ $filters['transaction_type'] }}</span>
+                </div>
             </div>
         </div>
 
         <!-- Report Content -->
-        <div class="report-content">
-            <!-- Report Header -->
-            <div class="report-header">
-                <div class="company-name">Restaurant Management System</div>
-                <div class="report-title">{{ $reportTitle }}</div>
-                <div class="report-date">Generated on: {{ $generated_at }}</div>
-                @if($dateFrom || $dateTo)
-                    <div class="report-date">
-                        Period: {{ $dateFrom ? date('d/m/Y', strtotime($dateFrom)) : 'Start' }} to {{ $dateTo ? date('d/m/Y', strtotime($dateTo)) : 'End' }}
-                    </div>
-                @endif
-            </div>
-
-            <!-- Filters Section -->
-            <div class="filters-section">
-                <div class="filters-title">Report Filters</div>
-                <div class="filters-grid">
-                    <div class="filter-item">
-                        <span class="filter-label">Item:</span>
-                        <span class="filter-value">{{ $filters['item'] }}</span>
-                    </div>
-                    <div class="filter-item">
-                        <span class="filter-label">Category:</span>
-                        <span class="filter-value">{{ $filters['category'] }}</span>
-                    </div>
-                    <div class="filter-item">
-                        <span class="filter-label">Branch:</span>
-                        <span class="filter-value">{{ $filters['branch'] }}</span>
-                    </div>
-                    <div class="filter-item">
-                        <span class="filter-label">Transaction Type:</span>
-                        <span class="filter-value">{{ $filters['transaction_type'] }}</span>
-                    </div>
-                </div>
-            </div>
-
-            @if($viewType === 'summary' || $viewType === 'detailed')
-                <!-- Summary Section -->
-                <div class="summary-section">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-chart-bar"></i> Stock Summary
-                    </h3>
-                    <div class="summary-cards">
-                        <div class="summary-card">
-                            <div class="card-value">{{ $reportData['stocks']->count() }}</div>
-                            <div class="card-label">Total Items</div>
-                        </div>
-                        <div class="summary-card success">
-                            <div class="card-value">{{ $reportData['stocks']->where('current_stock', '>', 0)->count() }}</div>
-                            <div class="card-label">Items in Stock</div>
-                        </div>
-                        <div class="summary-card warning">
-                            <div class="card-value">{{ $reportData['stocks']->where('current_stock', '<=', 10)->where('current_stock', '>', 0)->count() }}</div>
-                            <div class="card-label">Low Stock</div>
-                        </div>
-                        <div class="summary-card danger">
-                            <div class="card-value">{{ $reportData['stocks']->where('current_stock', '<=', 0)->count() }}</div>
-                            <div class="card-label">Out of Stock</div>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            @if($viewType === 'detailed')
-                <!-- Detailed Stock Report -->
-                <div class="table-container">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-list-alt"></i> Detailed Stock Report
-                    </h3>
-                    <table>
-                        <thead>
+        @if($viewType === 'detailed')
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-4">Detailed Stock Report</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border border-gray-200">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th>Item Name</th>
-                                <th>Category</th>
-                                <th>Branch</th>
-                                <th>Unit</th>
-                                <th class="text-right">Current Stock</th>
-                                <th class="text-right">Min Level</th>
-                                <th class="text-right">Max Level</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-right">Total Value</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Current Stock</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Min Level</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Max Level</th>
+                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total Value</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bg-white divide-y divide-gray-200">
                             @forelse($reportData['stocks'] as $stock)
                                 <tr>
-                                    <td>{{ $stock->item->name ?? 'N/A' }}</td>
-                                    <td>{{ $stock->item->category->name ?? 'N/A' }}</td>
-                                    <td>{{ $stock->branch->name ?? 'N/A' }}</td>
-                                    <td>{{ $stock->item->unit ?? 'N/A' }}</td>
-                                    <td class="text-right">{{ number_format($stock->current_stock, 2) }}</td>
-                                    <td class="text-right">{{ number_format($stock->min_level ?? 0, 2) }}</td>
-                                    <td class="text-right">{{ number_format($stock->max_level ?? 0, 2) }}</td>
-                                    <td class="text-center">
+                                    <td class="px-4 py-2 text-sm text-gray-700">{{ $stock->item->name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">{{ $stock->item->category->name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">{{ $stock->branch->name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">{{ $stock->item->unit ?? 'N/A' }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-gray-700">{{ number_format($stock->current_stock, 2) }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-gray-700">{{ number_format($stock->min_level ?? 0, 2) }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-gray-700">{{ number_format($stock->max_level ?? 0, 2) }}</td>
+                                    <td class="px-4 py-2 text-sm text-center">
                                         @if($stock->current_stock <= 0)
-                                            <span class="badge badge-danger">Out of Stock</span>
+                                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">Out of Stock</span>
                                         @elseif($stock->current_stock <= 10)
-                                            <span class="badge badge-warning">Low Stock</span>
+                                            <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">Low Stock</span>
                                         @else
-                                            <span class="badge badge-success">In Stock</span>
+                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">In Stock</span>
                                         @endif
                                     </td>
-                                    <td class="text-right">${{ number_format($stock->unit_price ?? 0, 2) }}</td>
-                                    <td class="text-right">${{ number_format(($stock->current_stock ?? 0) * ($stock->unit_price ?? 0), 2) }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-gray-700">${{ number_format($stock->unit_price ?? 0, 2) }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-gray-700">${{ number_format(($stock->current_stock ?? 0) * ($stock->unit_price ?? 0), 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="text-center" style="padding: 20px; color: #7f8c8d;">
-                                        <i class="fas fa-inbox"></i> No stock data available for the selected criteria.
-                                    </td>
+                                    <td colspan="10" class="px-4 py-2 text-center text-gray-500">No stock data available for the selected criteria.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         @if($reportData['stocks']->isNotEmpty())
-                            <tfoot>
-                                <tr style="background-color: #34495e; color: white; font-weight: bold;">
-                                    <td colspan="9" class="text-right">Total Value:</td>
-                                    <td class="text-right">
+                            <tfoot class="bg-gray-50">
+                                <tr>
+                                    <td colspan="9" class="px-4 py-2 text-right font-semibold text-gray-700">Total Value:</td>
+                                    <td class="px-4 py-2 text-right font-bold text-gray-900">
                                         ${{ number_format($reportData['stocks']->sum(function($stock) {
                                             return ($stock->current_stock ?? 0) * ($stock->unit_price ?? 0);
                                         }), 2) }}
@@ -482,95 +179,96 @@
                         @endif
                     </table>
                 </div>
-            @elseif($viewType === 'summary')
-                <!-- Summary Table -->
-                <div class="table-container">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-table"></i> Stock Summary by Category
-                    </h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th class="text-right">Total Items</th>
-                                <th class="text-right">In Stock</th>
-                                <th class="text-right">Low Stock</th>
-                                <th class="text-right">Out of Stock</th>
-                                <th class="text-right">Total Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php
-                                $categoryStats = $reportData['stocks']->groupBy('item.category.name');
-                            @endphp
-                            @forelse($categoryStats as $category => $stocks)
-                                <tr>
-                                    <td>{{ $category ?: 'Uncategorized' }}</td>
-                                    <td class="text-right">{{ $stocks->count() }}</td>
-                                    <td class="text-right">{{ $stocks->where('current_stock', '>', 0)->count() }}</td>
-                                    <td class="text-right">{{ $stocks->where('current_stock', '<=', 10)->where('current_stock', '>', 0)->count() }}</td>
-                                    <td class="text-right">{{ $stocks->where('current_stock', '<=', 0)->count() }}</td>
-                                    <td class="text-right">
-                                        ${{ number_format($stocks->sum(function($stock) {
-                                            return ($stock->current_stock ?? 0) * ($stock->unit_price ?? 0);
-                                        }), 2) }}
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center" style="padding: 20px; color: #7f8c8d;">
-                                        <i class="fas fa-inbox"></i> No stock data available.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            @elseif($viewType === 'master_only')
-                <!-- Master Items Only -->
-                <div class="table-container">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-list"></i> Master Items List
-                    </h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Item Name</th>
-                                <th>Category</th>
-                                <th>Unit</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($reportData['items'] as $item)
-                                <tr>
-                                    <td>{{ $item->name }}</td>
-                                    <td>{{ $item->category->name ?? 'N/A' }}</td>
-                                    <td>{{ $item->unit ?? 'N/A' }}</td>
-                                    <td class="text-right">${{ number_format($item->price ?? 0, 2) }}</td>
-                                    <td class="text-center">
-                                        <span class="badge badge-success">Active</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center" style="padding: 20px; color: #7f8c8d;">
-                                        <i class="fas fa-inbox"></i> No items available.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-
-            <!-- Footer -->
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #34495e; text-align: center; color: #7f8c8d; font-size: 12px;">
-                <p>This report was automatically generated by the Restaurant Management System</p>
-                <p>Generated on {{ $generated_at }}</p>
             </div>
+        @elseif($viewType === 'summary')
+            <!-- Summary Table -->
+            <div class="table-container">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">
+                    <i class="fas fa-table"></i> Stock Summary by Category
+                </h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-right">Total Items</th>
+                            <th class="text-right">In Stock</th>
+                            <th class="text-right">Low Stock</th>
+                            <th class="text-right">Out of Stock</th>
+                            <th class="text-right">Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php
+                            $categoryStats = $reportData['stocks']->groupBy('item.category.name');
+                        @endphp
+                        @forelse($categoryStats as $category => $stocks)
+                            <tr>
+                                <td>{{ $category ?: 'Uncategorized' }}</td>
+                                <td class="text-right">{{ $stocks->count() }}</td>
+                                <td class="text-right">{{ $stocks->where('current_stock', '>', 0)->count() }}</td>
+                                <td class="text-right">{{ $stocks->where('current_stock', '<=', 10)->where('current_stock', '>', 0)->count() }}</td>
+                                <td class="text-right">{{ $stocks->where('current_stock', '<=', 0)->count() }}</td>
+                                <td class="text-right">
+                                    ${{ number_format($stocks->sum(function($stock) {
+                                        return ($stock->current_stock ?? 0) * ($stock->unit_price ?? 0);
+                                    }), 2) }}
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center" style="padding: 20px; color: #7f8c8d;">
+                                    <i class="fas fa-inbox"></i> No stock data available.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        @elseif($viewType === 'master_only')
+            <!-- Master Items Only -->
+            <div class="table-container">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">
+                    <i class="fas fa-list"></i> Master Items List
+                </h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Category</th>
+                            <th>Unit</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($reportData['items'] as $item)
+                            <tr>
+                                <td>{{ $item->name }}</td>
+                                <td>{{ $item->category->name ?? 'N/A' }}</td>
+                                <td>{{ $item->unit ?? 'N/A' }}</td>
+                                <td class="text-right">${{ number_format($item->price ?? 0, 2) }}</td>
+                                <td class="text-center">
+                                    <span class="badge badge-success">Active</span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center" style="padding: 20px; color: #7f8c8d;">
+                                    <i class="fas fa-inbox"></i> No items available.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        <!-- Footer -->
+        <div class="p-6 border-t border-gray-200 text-center text-sm text-gray-500">
+            <p>This report was automatically generated by the Restaurant Management System</p>
+            <p>Generated on {{ $generated_at }}</p>
         </div>
     </div>
 </body>
+
 </html>
