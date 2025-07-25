@@ -8,10 +8,10 @@
         <x-nav-buttons :items="[
             ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
             ['name' => 'Stock Report', 'link' => route('admin.reports.inventory.stock')],
-            ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
             ['name' => 'Goods Transfer Note Report', 'link' => route('admin.reports.inventory.gtn')],
             ['name' => 'Goods Receipt Note Report', 'link' => route('admin.reports.inventory.grn')],
             ['name' => 'Stock Release Note Report', 'link' => route('admin.reports.inventory.srn')],
+            ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
         ]" active="Goods Receipt Note Report" />
     </div>
 
@@ -31,6 +31,73 @@
                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-csv mr-2"></i> Export CSV
                 </a>
+
+                <!-- PDF Export Dropdown -->
+                <div class="relative inline-block text-left">
+                    <button type="button" class="inline-flex justify-center w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="pdf-export-menu-grn" onclick="togglePdfMenuGRN()">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        PDF Options
+                        <i class="fas fa-chevron-down ml-2"></i>
+                    </button>
+
+                    <div class="hidden origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50" id="pdf-menu-grn">
+                        <div class="py-1" role="menu" aria-orientation="vertical">
+                            <!-- Detailed View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b">Detailed View</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'detailed', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'detailed'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+
+                            <!-- Summary View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Summary View</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'summary', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'summary'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+
+                            <!-- Master Only View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Supplier Details</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'supplier_details', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.grn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'supplier_details'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                function togglePdfMenuGRN() {
+                    const menu = document.getElementById('pdf-menu-grn');
+                    menu.classList.toggle('hidden');
+
+                    // Close menu when clicking outside
+                    document.addEventListener('click', function closeMenu(e) {
+                        if (!document.getElementById('pdf-export-menu-grn').contains(e.target)) {
+                            menu.classList.add('hidden');
+                            document.removeEventListener('click', closeMenu);
+                        }
+                    });
+                }
+                </script>
             </div>
         </div>
     </div>

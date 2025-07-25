@@ -1354,21 +1354,53 @@ class AdminSidebar extends Component
     {
         $admin = Auth::guard('admin')->user();
         return [
-            [
-                'title' => 'Sales Reports',
-                'route' => 'admin.reports.sales',
-                'icon' => 'fas fa-chart-line',
-                'icon_type' => 'fa',
-                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
-                'is_route_valid' => $this->validateRoute('admin.reports.sales')
-            ],
+            // [
+            //     'title' => 'Sales Reports',
+            //     'route' => 'admin.reports.sales',
+            //     'icon' => 'fas fa-chart-line',
+            //     'icon_type' => 'fa',
+            //     'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+            //     'is_route_valid' => $this->validateRoute('admin.reports.sales')
+            // ],
             [
                 'title' => 'Inventory Reports',
-                'route' => 'admin.reports.inventory',
-                'icon' => 'fas fa-box',
+                'route' => 'admin.reports.inventory.index',
+                'icon' => 'fas fa-clipboard-list',
                 'icon_type' => 'fa',
                 'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
-                'is_route_valid' => $this->validateRoute('admin.reports.inventory')
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.index')
+            ],
+            [
+                'title' => 'Stock Report',
+                'route' => 'admin.reports.inventory.stock',
+                'icon' => 'fas fa-cubes',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.stock')
+            ],
+            [
+                'title' => 'GRN Reports',
+                'route' => 'admin.reports.inventory.grn',
+                'icon' => 'fas fa-file-invoice-dollar',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.grn')
+            ],
+            [
+                'title' => 'GTN Reports',
+                'route' => 'admin.reports.inventory.gtn',
+                'icon' => 'fas fa-exchange-alt',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.gtn')
+            ],
+            [
+                'title' => 'SRN Reports',
+                'route' => 'admin.reports.inventory.srn',
+                'icon' => 'fas fa-receipt',
+                'icon_type' => 'fa',
+                'permission' => $this->isSuperAdmin($admin) ? null : 'reports.view',
+                'is_route_valid' => $this->validateRoute('admin.reports.inventory.srn')
             ]
         ];
     }

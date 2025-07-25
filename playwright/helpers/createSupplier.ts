@@ -11,13 +11,13 @@ export async function createSupplier(page: Page, supplier: {
     email: string
 }) {
     console.log('\n📄 ◾ Navigating to suppliers page');
-    await page.goto('https://restaurant-management-system.test/admin/suppliers');
+    await page.goto('https://rms-unitec.test/admin/suppliers');
     const testRunId = process.env.TEST_RUN_ID || 'default';
     await page.screenshot({ path: `test-results/screen-shots/${testRunId}/supplier-step-1-suppliers-list.png` });
 
     console.log('➕ ◾ Clicking "+ Add New Supplier"');
     // await page.getByRole('link', { name: '+ Add New Supplier' }).click();
-    await page.goto('https://restaurant-management-system.test/admin/suppliers/create');
+    await page.goto('https://rms-unitec.test/admin/suppliers/create');
     await page.screenshot({ path: `test-results/screen-shots/${testRunId}/supplier-step-2-add-form.png` });
 
     console.log('🏢 ◾ Selecting organization:', supplier.organization);
@@ -58,7 +58,7 @@ export async function createSupplier(page: Page, supplier: {
     await page.getByRole('button', { name: 'Create Supplier' }).click();
 
     console.log('🔙 Navigating back to suppliers management page');
-    await page.goto('https://restaurant-management-system.test/admin/suppliers');
+    await page.goto('https://rms-unitec.test/admin/suppliers');
     await page.screenshot({ path: `test-results/screen-shots/${testRunId}/supplier-step-1-suppliers-list.png` });
 
     console.log(`\n✨ Supplier ${supplier.companyName} creation completed`);

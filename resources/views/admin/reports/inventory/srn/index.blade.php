@@ -9,10 +9,10 @@
         <x-nav-buttons :items="[
             ['name' => 'Inventory Report', 'link' => route('admin.reports.inventory.index')],
             ['name' => 'Stock Report', 'link' => route('admin.reports.inventory.stock')],
-            ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
             ['name' => 'Goods Transfer Note Report', 'link' => route('admin.reports.inventory.gtn')],
             ['name' => 'Goods Receipt Note Report', 'link' => route('admin.reports.inventory.grn')],
             ['name' => 'Stock Release Note Report', 'link' => route('admin.reports.inventory.srn')],
+            ['name' => 'Category Report', 'link' => route('admin.reports.inventory.category')],
         ]" active="Stock Release Note Report" />
     </div>
 
@@ -28,6 +28,9 @@
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
                 </a> --}}
+
+
+
                 <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'excel'])) }}"
                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-excel mr-2"></i> Export Excel (Multi-Sheet)
@@ -36,6 +39,58 @@
                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                     <i class="fas fa-file-csv mr-2"></i> Export CSV
                 </a>
+
+                                <!-- PDF Export Dropdown -->
+                <div class="relative inline-block text-left">
+                    <button type="button" class="inline-flex justify-center w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="pdf-dropdown-button">
+                        <i class="fas fa-file-pdf mr-2"></i>
+                        PDF Options
+                        <i class="fas fa-chevron-down ml-2"></i>
+                    </button>
+                    <div id="pdf-dropdown-menu" class="hidden origin-top-right absolute right-0 mt-2 w-72 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                        <div class="py-1" role="menu" aria-orientation="vertical">
+                            <!-- Detailed View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b">Detailed View</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'detailed', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'detailed'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+
+                            <!-- Summary View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Summary View</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'summary', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'summary'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+
+                            <!-- Master Only View Options -->
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-t">Master Only</div>
+                            <div class="flex">
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'master_only', 'preview' => true])) }}" target="_blank" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-eye mr-2 text-blue-500"></i>
+                                    Preview
+                                </a>
+                                <a href="{{ route('admin.reports.inventory.srn', array_merge(request()->query(), ['export' => 'pdf', 'view_type' => 'master_only'])) }}" class="flex-1 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-l">
+                                    <i class="fas fa-download mr-2 text-green-500"></i>
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -367,3 +422,38 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    // PDF Dropdown functionality
+    const pdfDropdownButton = document.getElementById('pdf-dropdown-button');
+    const pdfDropdownMenu = document.getElementById('pdf-dropdown-menu');
+
+    if (pdfDropdownButton && pdfDropdownMenu) {
+        pdfDropdownButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            pdfDropdownMenu.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!pdfDropdownButton.contains(e.target) && !pdfDropdownMenu.contains(e.target)) {
+                pdfDropdownMenu.classList.add('hidden');
+            }
+        });
+    }
+
+    // PDF Export function
+    function exportPDF(viewType) {
+        const currentParams = new URLSearchParams(window.location.search);
+        currentParams.set('export', 'pdf');
+        currentParams.set('view_type', viewType);
+
+        const exportUrl = `{{ route('admin.reports.inventory.srn') }}?${currentParams.toString()}`;
+        window.open(exportUrl, '_blank');
+
+        // Hide dropdown after export
+        document.getElementById('pdf-dropdown-menu').classList.add('hidden');
+    }
+</script>
+@endpush

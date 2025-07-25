@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class LoginController extends Controller
 {
@@ -44,11 +45,11 @@ class LoginController extends Controller
         // First, try logging in as a regular user
         if (Auth::guard('web')->attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            
+
             $user = Auth::guard('web')->user();
-            
+
             // Log successful login
-            \Illuminate\Support\Facades\Log::info('User logged in', [
+            Log::info('User logged in', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'organization_id' => $user->organization_id,
@@ -63,11 +64,11 @@ class LoginController extends Controller
         // If user login fails, try admin login (for organizational admins)
         if (Auth::guard('admin')->attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            
+
             $admin = Auth::guard('admin')->user();
-            
+
             // Log successful admin login
-            \Illuminate\Support\Facades\Log::info('Admin logged in through user portal', [
+            Log::info('Admin logged in through user portal', [
                 'admin_id' => $admin->id,
                 'email' => $admin->email,
                 'organization_id' => $admin->organization_id,
@@ -97,7 +98,7 @@ class LoginController extends Controller
         // Check if user has a role assigned
         if ($user->role_id && $user->userRole) {
             $roleName = $user->userRole->name;
-            
+
             // Redirect based on role
             switch ($roleName) {
                 case 'Manager':
@@ -149,10 +150,10 @@ class LoginController extends Controller
     {
         $user = Auth::guard('web')->user();
         $admin = Auth::guard('admin')->user();
-        
+
         // Log logout for user
         if ($user) {
-            \Illuminate\Support\Facades\Log::info('User logged out', [
+            Log::info('User logged out', [
                 'user_id' => $user->id,
                 'email' => $user->email
             ]);
@@ -161,7 +162,7 @@ class LoginController extends Controller
 
         // Log logout for admin
         if ($admin) {
-            \Illuminate\Support\Facades\Log::info('Admin logged out through user portal', [
+            Log::info('Admin logged out through user portal', [
                 'admin_id' => $admin->id,
                 'email' => $admin->email
             ]);
