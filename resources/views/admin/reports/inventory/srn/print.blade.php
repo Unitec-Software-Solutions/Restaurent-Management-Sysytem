@@ -4,590 +4,195 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $reportTitle }}</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-                                             <td class="text-right">{{ $reportData['srns']->sum(function($srn) { return $srn->items->count(); }) }}</td>
-                                    <td class="text-right">{{ $reportData['srns']->sum(function($srn) { return $srn->items->sum('release_quantity'); }) }}</td>
-                                    <td class="text-right">
-                                        ${{ number_format($reportData['srns']->sum(function($srn) {
-                                            return $srn->items->sum(function($item) {
-                                                return $item->release_quantity * $item->unit_price;
-                                            });
-                                        }), 2) }}round-color: #f5f5f5;
-            color: #333;
-        }
-
-        .container {
-            max-width: 210mm;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            min-height: 100vh;
-        }
-
-        /* Print Toolbar */
-        .print-toolbar {
-            background: #2c3e50;
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .toolbar-title {
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .toolbar-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-print {
-            background: #3498db;
-            color: white;
-        }
-
-        .btn-print:hover {
-            background: #2980b9;
-        }
-
-        .btn-close {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-close:hover {
-            background: #7f8c8d;
-        }
-
-        /* Report Content */
-        .report-content {
-            padding: 30px;
-        }
-
-        .report-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .report-title {
-            font-size: 20px;
-            color: #34495e;
-            margin-bottom: 10px;
-        }
-
-        .report-date {
-            font-size: 14px;
-            color: #7f8c8d;
-        }
-
-        /* Filters Section */
-        .filters-section {
-            background: #ecf0f1;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 25px;
-        }
-
-        .filters-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-        }
-
-        .filter-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #bdc3c7;
-        }
-
-        .filter-label {
-            font-weight: 500;
-            color: #34495e;
-        }
-
-        .filter-value {
-            color: #2c3e50;
-        }
-
-        /* Summary Cards */
-        .summary-section {
-            margin-bottom: 30px;
-        }
-
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .summary-card {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .summary-card.success {
-            background: linear-gradient(135deg, #27ae60, #229954);
-        }
-
-        .summary-card.warning {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-        }
-
-        .summary-card.danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-        }
-
-        .card-value {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .card-label {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        /* Table Styles */
-        .table-container {
-            overflow-x: auto;
-            margin-bottom: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 12px;
-        }
-
-        th, td {
-            padding: 8px 6px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #34495e;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 11px;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-
-        tr:hover {
-            background-color: #e8f4f8;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        /* Status badges */
-        .badge {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .badge-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .badge-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .badge-danger {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .badge-info {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        /* Print Styles */
         @media print {
-            body {
-                background: white !important;
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
-            }
-
-            .print-toolbar {
-                display: none !important;
-            }
-
-            .container {
-                box-shadow: none !important;
-                max-width: none !important;
-                margin: 0 !important;
-            }
-
-            .report-content {
-                padding: 15px !important;
-            }
-
             @page {
                 size: A4;
-                margin: 0.5in;
-            }
-
-            table {
-                page-break-inside: avoid;
-                font-size: 10px;
-            }
-
-            th, td {
-                padding: 4px 3px;
-            }
-
-            .summary-cards {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 10px;
-            }
-
-            .summary-card {
-                padding: 10px;
-                margin-bottom: 10px;
-            }
-
-            .card-value {
-                font-size: 18px;
-            }
-
-            .filters-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media screen and (max-width: 768px) {
-            .container {
                 margin: 0;
-                box-shadow: none;
             }
-
-            .report-content {
-                padding: 15px;
+            html, body {
+                width: 210mm;
+                height: 297mm;
+                padding: 0;
+                margin: 0;
+                background: white;
+                font-size: 11px;
+                line-height: 1.4;
+                color: #000;
             }
-
-            .summary-cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .filters-grid {
-                grid-template-columns: 1fr;
-            }
-
-            table {
-                font-size: 10px;
-            }
-
-            th, td {
-                padding: 4px 2px;
-            }
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; page-break-inside: avoid; break-inside: avoid; }
+            .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+            .print-container { box-shadow: none !important; border: none !important; margin: 0; padding: 0; width: 100%; height: auto; }
+            .srn-table th, .srn-table td { padding: 4px 6px !important; font-size: 10px !important; border: 1px solid #ddd !important; }
+            .srn-table { border-collapse: collapse !important; width: 100% !important; }
+            h1 { font-size: 18px !important; }
+            h2 { font-size: 16px !important; }
+            h3 { font-size: 14px !important; }
+            h4 { font-size: 12px !important; }
+            .header-section { margin-bottom: 8px !important; }
+            .details-section { margin-bottom: 6px !important; }
+            .footer-section { position: fixed; bottom: 10mm; left: 0; right: 0; width: 100%; }
         }
+        .status-badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+        .status-pending { @apply bg-yellow-100 text-yellow-800; }
+        .status-completed { @apply bg-green-100 text-green-800; }
+        .status-other { @apply bg-gray-100 text-gray-800; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <!-- Print Toolbar -->
-        <div class="print-toolbar">
-            <div class="toolbar-title">
-                <i class="fas fa-print"></i> Print Preview - {{ $reportTitle }}
-            </div>
-            <div class="toolbar-actions">
-                <button class="btn btn-print" onclick="window.print()">
-                    <i class="fas fa-print"></i> Print
+<body class="bg-gray-100 p-4 md:p-8">
+    <!-- Back and Action Buttons -->
+    <div class="no-print mb-6">
+        <div class="flex justify-between items-center mb-6">
+            <a href="#" onclick="window.close()" class="flex items-center text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-arrow-left mr-2"></i> Close
+            </a>
+            <div class="flex space-x-2">
+                <button onclick="window.print()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-print mr-2"></i> Print
                 </button>
-                <button class="btn btn-close" onclick="window.close()">
-                    <i class="fas fa-times"></i> Close
-                </button>
-            </div>
-        </div>
-
-        <!-- Report Content -->
-        <div class="report-content">
-            <!-- Report Header -->
-            <div class="report-header">
-                <div class="company-name">Restaurant Management System</div>
-                <div class="report-title">{{ $reportTitle }}</div>
-                <div class="report-date">Generated on: {{ $generated_at }}</div>
-                @if($dateFrom || $dateTo)
-                    <div class="report-date">
-                        Period: {{ $dateFrom ? date('d/m/Y', strtotime($dateFrom)) : 'Start' }} to {{ $dateTo ? date('d/m/Y', strtotime($dateTo)) : 'End' }}
-                    </div>
-                @endif
-            </div>
-
-            <!-- Filters Section -->
-            <div class="filters-section">
-                <div class="filters-title">Report Filters</div>
-                <div class="filters-grid">
-                    <div class="filter-item">
-                        <span class="filter-label">Status:</span>
-                        <span class="filter-value">{{ $filters['status'] }}</span>
-                    </div>
-                    <div class="filter-item">
-                        <span class="filter-label">Branch:</span>
-                        <span class="filter-value">{{ $filters['branch'] }}</span>
-                    </div>
-                    <div class="filter-item">
-                        <span class="filter-label">Release Type:</span>
-                        <span class="filter-value">{{ $filters['release_type'] }}</span>
-                    </div>
-                    <div class="filter-item">
-                        <span class="filter-label">Date Range:</span>
-                        <span class="filter-value">{{ $filters['date_range'] }}</span>
-                    </div>
-                </div>
-            </div>
-
-            @if($viewType === 'summary' || $viewType === 'detailed')
-                <!-- Summary Section -->
-                <div class="summary-section">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-chart-bar"></i> SRN Summary
-                    </h3>
-                    <div class="summary-cards">
-                        <div class="summary-card">
-                            <div class="card-value">{{ $reportData['srns']->count() }}</div>
-                            <div class="card-label">Total SRNs</div>
-                        </div>
-                        <div class="summary-card success">
-                            <div class="card-value">{{ $reportData['srns']->where('status', 'completed')->count() }}</div>
-                            <div class="card-label">Completed</div>
-                        </div>
-                        <div class="summary-card warning">
-                            <div class="card-value">{{ $reportData['srns']->where('status', 'pending')->count() }}</div>
-                            <div class="card-label">Pending</div>
-                        </div>
-                        <div class="summary-card info">
-                            <div class="card-value">{{ $reportData['srns']->where('release_type', 'sale')->count() }}</div>
-                            <div class="card-label">Sales</div>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            @if($viewType === 'detailed')
-                <!-- Detailed SRN Report -->
-                <div class="table-container">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-list-alt"></i> Detailed SRN Report
-                    </h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>SRN No.</th>
-                                <th>Date</th>
-                                <th>Branch</th>
-                                <th>Release Type</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-right">Total Items</th>
-                                <th class="text-right">Total Qty</th>
-                                <th class="text-right">Total Value</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($reportData['srns'] as $srn)
-                                <tr>
-                                    <td>{{ $srn->srn_number ?? 'N/A' }}</td>
-                                    <td>{{ $srn->release_date ? date('d/m/Y', strtotime($srn->release_date)) : 'N/A' }}</td>
-                                    <td>{{ $srn->branch->name ?? 'N/A' }}</td>
-                                    <td>{{ ucfirst($srn->release_type ?? 'N/A') }}</td>
-                                    <td class="text-center">
-                                        @if($srn->status === 'completed')
-                                            <span class="badge badge-success">Completed</span>
-                                        @elseif($srn->status === 'pending')
-                                            <span class="badge badge-warning">Pending</span>
-                                        @else
-                                            <span class="badge badge-info">{{ ucfirst($srn->status) }}</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-right">{{ $srn->items->count() ?? 0 }}</td>
-                                    <td class="text-right">{{ $srn->items->sum('release_quantity') ?? 0 }}</td>
-                                    <td class="text-right">${{ number_format($srn->items->sum(function($item) { return $item->release_quantity * $item->unit_price; }) ?? 0, 2) }}</td>
-                                    <td>{{ $srn->notes ?? 'N/A' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center" style="padding: 20px; color: #7f8c8d;">
-                                        <i class="fas fa-inbox"></i> No SRN data available for the selected criteria.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                        @if($reportData['srns']->isNotEmpty())
-                            <tfoot>
-                                <tr style="background-color: #34495e; color: white; font-weight: bold;">
-                                    <td colspan="5" class="text-right">Totals:</td>
-                                    <td class="text-right">{{ $reportData['srns']->sum(function($srn) { return $srn->items->count(); }) }}</td>
-                                    <td class="text-right">{{ $reportData['srns']->sum(function($srn) { return $srn->items->sum('quantity'); }) }}</td>
-                                    <td class="text-right">
-                                        ${{ number_format($reportData['srns']->sum(function($srn) {
-                                            return $srn->items->sum(function($item) {
-                                                return $item->quantity * $item->unit_price;
-                                            });
-                                        }), 2) }}
-                                    </td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        @endif
-                    </table>
-                </div>
-            @elseif($viewType === 'summary')
-                <!-- Summary Table -->
-                <div class="table-container">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-table"></i> SRN Summary by Release Type
-                    </h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Release Type</th>
-                                <th class="text-right">Total SRNs</th>
-                                <th class="text-right">Completed</th>
-                                <th class="text-right">Pending</th>
-                                <th class="text-right">Total Quantity</th>
-                                <th class="text-right">Total Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php
-                                $typeStats = $reportData['srns']->groupBy('release_type');
-                            @endphp
-                            @forelse($typeStats as $releaseType => $srns)
-                                <tr>
-                                    <td>{{ ucfirst($releaseType ?: 'Unknown') }}</td>
-                                    <td class="text-right">{{ $srns->count() }}</td>
-                                    <td class="text-right">{{ $srns->where('status', 'completed')->count() }}</td>
-                                    <td class="text-right">{{ $srns->where('status', 'pending')->count() }}</td>
-                                    <td class="text-right">{{ $srns->sum(function($srn) { return $srn->items->sum('release_quantity'); }) }}</td>
-                                    <td class="text-right">
-                                        ${{ number_format($srns->sum(function($srn) {
-                                            return $srn->items->sum(function($item) {
-                                                return $item->release_quantity * $item->unit_price;
-                                            });
-                                        }), 2) }}
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center" style="padding: 20px; color: #7f8c8d;">
-                                        <i class="fas fa-inbox"></i> No SRN data available.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            @elseif($viewType === 'master_only')
-                <!-- Master Items Only -->
-                <div class="table-container">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">
-                        <i class="fas fa-list"></i> Master Items List
-                    </h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Item Name</th>
-                                <th>Category</th>
-                                <th>Unit</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($reportData['items'] as $item)
-                                <tr>
-                                    <td>{{ $item->name }}</td>
-                                    <td>{{ $item->category->name ?? 'N/A' }}</td>
-                                    <td>{{ $item->unit ?? 'N/A' }}</td>
-                                    <td class="text-right">${{ number_format($item->price ?? 0, 2) }}</td>
-                                    <td class="text-center">
-                                        <span class="badge badge-success">Active</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center" style="padding: 20px; color: #7f8c8d;">
-                                        <i class="fas fa-inbox"></i> No items available.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-
-            <!-- Footer -->
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #34495e; text-align: center; color: #7f8c8d; font-size: 12px;">
-                <p>This report was automatically generated by the Restaurant Management System</p>
-                <p>Generated on {{ $generated_at }}</p>
             </div>
         </div>
     </div>
+
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm print-container">
+        <!-- Header with Organization and SRN Details -->
+        <div class="header-section p-6 border-b border-gray-200">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="text-2xl font-bold mb-1 text-gray-900">Restaurant Management System</div>
+                </div>
+                <div class="text-right">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">STOCK RELEASE NOTE</h1>
+                    <div class="text-lg font-medium">{{ $reportTitle }}</div>
+                    <div class="text-sm text-gray-600 mt-1">Generated on: {{ $generated_at }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SRN Status and Summary -->
+        <div class="details-section p-6 border-b border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500">Total SRNs</h4>
+                    <p class="font-medium">{{ $reportData['srns']->count() }}</p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500">Completed</h4>
+                    <p class="font-medium">{{ $reportData['srns']->where('status', 'completed')->count() }}</p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500">Pending</h4>
+                    <p class="font-medium">{{ $reportData['srns']->where('status', 'pending')->count() }}</p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500">Sales</h4>
+                    <p class="font-medium">{{ $reportData['srns']->where('release_type', 'sale')->count() }}</p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500">Total Value</h4>
+                    <p class="font-bold text-lg">${{ number_format($reportData['srns']->sum(function($srn) { return $srn->items->sum(function($item) { return $item->release_quantity * $item->unit_price; }); }), 2) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="details-section grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-gray-200">
+            <div>
+                <h3 class="text-lg font-semibold mb-3 border-b pb-2">Report Filters</h3>
+                <div class="space-y-2">
+                    <p><span class="font-bold text-gray-900">Status:</span> <span class="text-gray-700">{{ $filters['status'] }}</span></p>
+                    <p><span class="font-bold text-gray-900">Branch:</span> <span class="text-gray-700">{{ $filters['branch'] }}</span></p>
+                    <p><span class="font-bold text-gray-900">Release Type:</span> <span class="text-gray-700">{{ $filters['release_type'] }}</span></p>
+                    <p><span class="font-bold text-gray-900">Date Range:</span> <span class="text-gray-700">{{ $filters['date_range'] }}</span></p>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-3 border-b pb-2">Report Period</h3>
+                <div class="space-y-2">
+                    <p class="text-gray-700">{{ $dateFrom ? date('d/m/Y', strtotime($dateFrom)) : 'Start' }} to {{ $dateTo ? date('d/m/Y', strtotime($dateTo)) : 'End' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SRN Table -->
+        <div class="avoid-break">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold mb-4">Released Items</h3>
+                <table class="min-w-full srn-table">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">SRN No.</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Branch</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Release Type</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border">Status</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border">Total Items</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border">Total Qty</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border">Total Value</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse($reportData['srns'] as $srn)
+                            <tr>
+                                <td class="px-4 py-3 text-sm border">{{ $srn->srn_number ?? 'N/A' }}</td>
+                                <td class="px-4 py-3 text-sm border">{{ $srn->release_date ? date('d/m/Y', strtotime($srn->release_date)) : 'N/A' }}</td>
+                                <td class="px-4 py-3 text-sm border">{{ $srn->branch->name ?? 'N/A' }}</td>
+                                <td class="px-4 py-3 text-sm border">{{ ucfirst($srn->release_type ?? 'N/A') }}</td>
+                                <td class="px-4 py-3 text-center border">
+                                    @if($srn->status === 'completed')
+                                        <span class="status-badge status-completed">Completed</span>
+                                    @elseif($srn->status === 'pending')
+                                        <span class="status-badge status-pending">Pending</span>
+                                    @else
+                                        <span class="status-badge status-other">{{ ucfirst($srn->status) }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-right border">{{ $srn->items->count() ?? 0 }}</td>
+                                <td class="px-4 py-3 text-right border">{{ $srn->items->sum('release_quantity') ?? 0 }}</td>
+                                <td class="px-4 py-3 text-right border">${{ number_format($srn->items->sum(function($item) { return $item->release_quantity * $item->unit_price; }) ?? 0, 2) }}</td>
+                                <td class="px-4 py-3 text-sm border">{{ $srn->notes ?? 'N/A' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center px-4 py-6 text-gray-500 bg-gray-50">
+                                    <i class="fas fa-inbox"></i> No SRN data available for the selected criteria.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if($reportData['srns']->isNotEmpty())
+                        <tfoot class="bg-gray-50">
+                            <tr>
+                                <th colspan="5" class="px-4 py-3 text-right font-semibold border">Totals:</th>
+                                <th class="px-4 py-3 text-right border">{{ $reportData['srns']->sum(function($srn) { return $srn->items->count(); }) }}</th>
+                                <th class="px-4 py-3 text-right border">{{ $reportData['srns']->sum(function($srn) { return $srn->items->sum('release_quantity'); }) }}</th>
+                                <th class="px-4 py-3 text-right border">${{ number_format($reportData['srns']->sum(function($srn) { return $srn->items->sum(function($item) { return $item->release_quantity * $item->unit_price; }); }), 2) }}</th>
+                                <th class="border"></th>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-section p-6 border-t border-gray-200 bg-gray-50 mt-8">
+            <div class="mt-8 text-xs text-gray-500 text-center border-t pt-4">
+                <p>This report was automatically generated by the Restaurant Management System</p>
+                <p class="mt-1">Printed on {{ now()->format('d M Y H:i') }} | {{ $reportTitle }}</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-print when the page loads
+        window.addEventListener('load', function() {
+            setTimeout(() => { window.print(); }, 500);
+        });
+    </script>
 </body>
 </html>
