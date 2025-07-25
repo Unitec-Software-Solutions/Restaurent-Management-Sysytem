@@ -226,7 +226,7 @@ class ReportController extends Controller
             'opening_stock' => $openingStock,
             'stock_in' => $stockIn,
             'stock_out' => $stockOut,
-            'current_stock' => $item->stock ? $item->stock->currentStock : 0,
+            'current_stock' => $currentStock,
             'closing_stock' => $openingStock + $stockIn - $stockOut,
             'sales_quantity' => $salesQuantity,
             'production_used' => $productionUsed,
@@ -1080,22 +1080,66 @@ class ReportController extends Controller
      */
     private function showStockReportPreview($reportData, $dateFrom, $dateTo, $itemId, $categoryId, $branchId, $transactionType, $viewType)
     {
-        // Ensure 'stocks' key exists in the report data
-        $reportData['stocks'] = $reportData['stocks'] ?? collect();
+        $orgId = $this->getOrganizationId();
 
-        // Same data structure as PDF but for web preview
+        // Get available items, categories, and branches for filter display
+        $itemsQuery = ItemMaster::query();
+        $this->applyOrganizationFilter($itemsQuery, $orgId);
+        $items = $itemsQuery->where('is_active', true)->get();
+
+        $categoriesQuery = ItemCategory::query();
+        $this->applyOrganizationFilter($categoriesQuery, $orgId);
+        $categories = $categoriesQuery->get();
+
+        $branchesQuery = Branch::query();
+        $this->applyOrganizationFilter($branchesQuery, $orgId);
+        $branches = $branchesQuery->where('is_active', true)->get();
+
+        // Get recent transactions for detailed view
+        $transactions = collect();
+        if ($viewType === 'detailed' && $reportData->isNotEmpty()) {
+            $transactionQuery = ItemTransaction::with(['item', 'branch'])
+                ->where('is_active', true)
+                ->whereBetween('created_at', [$dateFrom, $dateTo . ' 23:59:59'])
+                ->orderBy('created_at', 'desc')
+                ->limit(50);
+
+            $this->applyOrganizationFilter($transactionQuery, $orgId);
+
+            if ($itemId) {
+                $transactionQuery->where('inventory_item_id', $itemId);
+            }
+            if ($branchId) {
+                $transactionQuery->where('branch_id', $branchId);
+            }
+            if ($transactionType) {
+                $transactionQuery->where('transaction_type', $transactionType);
+            }
+
+            $transactions = $transactionQuery->get();
+        }
+
+        // Structure the data properly for the view
+        $structuredReportData = [
+            'stocks' => $reportData,
+            'items' => $items,
+            'categories' => $categories,
+            'branches' => $branches,
+            'transactions' => $transactions
+        ];
+
         $pdfData = [
-            'reportData' => $reportData,
+            'reportData' => $structuredReportData,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'viewType' => $viewType,
             'reportTitle' => 'Stock Report - ' . ucfirst($viewType) . ' View',
             'generated_at' => now()->format('d/m/Y H:i:s'),
             'filters' => [
-                'item' => $itemId ? $reportData['items']->firstWhere('id', $itemId)?->name : 'All Items',
-                'category' => $categoryId ? $reportData['categories']->firstWhere('id', $categoryId)?->name : 'All Categories',
-                'branch' => $branchId ? $reportData['branches']->firstWhere('id', $branchId)?->name : 'All Branches',
-                'transaction_type' => $transactionType ?: 'All Types'
+                'item' => $itemId ? $items->firstWhere('id', $itemId)?->name ?? 'Unknown Item' : 'All Items',
+                'category' => $categoryId ? $categories->firstWhere('id', $categoryId)?->name ?? 'Unknown Category' : 'All Categories',
+                'branch' => $branchId ? $branches->firstWhere('id', $branchId)?->name ?? 'Unknown Branch' : 'All Branches',
+                'transaction_type' => $transactionType ? ucfirst(str_replace('_', ' ', $transactionType)) : 'All Types'
             ]
         ];
 
